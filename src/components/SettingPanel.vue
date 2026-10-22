@@ -585,7 +585,7 @@ onBeforeUnmount(() => {
                 <button type="button" class="sej-panel-close" title="关闭" aria-label="关闭"
                     @click.stop="close" @mousedown.stop>✕</button>
             </div>
-            <!-- 设置主体区域 -->
+            <!-- 引擎列表管理区域 -->
             <div id="sej-settings-body">
                 <!-- 分类列表 -->
                 <div v-for="(category, ci) in draft.categories" :id="category.key" :key="category._id"
@@ -634,13 +634,11 @@ onBeforeUnmount(() => {
                     <span class="sej-add-category-plus">+</span>
                 </div>
             </div>
-            <!-- 底部设置按钮 -->
+            <!-- 底部设置按钮区域 -->
             <div id="btnEle">
                 <div class="btnEleLayer">
                     <div class="sej-footer-options">
-                        <span id="xin-modification" title="配置文件" @click="openConfig">
-                            配置文件
-                        </span>
+                        <span id="xin-modification" title="配置文件" @click="openConfig">配置文件</span>
                         <span id="xin-selectSearch" title="划词搜索">
                             <label>划词搜索<input type="checkbox" v-model="draft.selectSearch" /></label>
                         </span>
@@ -650,7 +648,7 @@ onBeforeUnmount(() => {
                         <span id="iqxin-fixedTopS" title="固定到顶端">
                             <label>固定到顶端<input type="checkbox" v-model="draft.fixedTop" /></label>
                         </span>
-                        <span id="iqxin-fixedTopUpward" title="仅上拉显示">
+                        <span v-show="draft.fixedTop" id="iqxin-fixedTopUpward" title="仅上拉显示">
                             <label>仅上拉显示<input type="checkbox" v-model="draft.fixedTopUpward" /></label>
                         </span>
                         <span id="xin-HideTheSameLink" title="隐藏同站链接">

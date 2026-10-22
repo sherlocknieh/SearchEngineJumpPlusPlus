@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         SearchEngineJump++
-// @namespace    https://github.com/sherlocknieh/Monkey-Scripts
+// @namespace    https://github.com/sherlocknieh/
 // @version      2026.10.22.24
 // @author       sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -118,10 +118,10 @@
 	}
 	var listDelimiterRE = /;(?![^(]*\))/g;
 	var propertyDelimiterRE = /:([^]+)/;
-	var styleCommentRE = /\/\*[^]*?\*\//g;
+	var styleCommentRE = /"(?:[^"\\]|\\[^])*"|'(?:[^'\\]|\\[^])*'|\\[^]|\/\*[^]*?\*\//g;
 	function parseStringStyle(cssText) {
 		const ret = {};
-		cssText.replace(styleCommentRE, "").split(listDelimiterRE).forEach((item) => {
+		cssText.replace(styleCommentRE, (match) => match.startsWith("/*") ? "" : match).split(listDelimiterRE).forEach((item) => {
 			if (item) {
 				const tmp = item.split(propertyDelimiterRE);
 				tmp.length > 1 && (ret[tmp[0].trim()] = tmp[1].trim());
@@ -141,25 +141,23 @@
 		}
 		return res.trim();
 	}
-	var specialBooleanAttrs = `itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,readonly`;
-	var isSpecialBooleanAttr = makeMap(specialBooleanAttrs);
-	specialBooleanAttrs + "";
+	var isSpecialBooleanAttr = makeMap(`itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`);
 	function includeBooleanAttr(value) {
 		return !!value || value === "";
 	}
-	function looseCompareArrays(a, b) {
+	function looseCompareArrays(a, b, seen) {
 		if (a.length !== b.length) return false;
 		let equal = true;
-		for (let i = 0; equal && i < a.length; i++) equal = looseEqual(a[i], b[i]);
+		for (let i = 0; equal && i < a.length; i++) equal = looseEqual(a[i], b[i], seen);
 		return equal;
 	}
-	function looseCompareCollections(a, b) {
+	function looseCompareCollections(a, b, seen) {
 		if (a.size !== b.size) return false;
 		const candidates = Array.from(b);
 		const matched = new Uint8Array(candidates.length);
 		for (const item of a) {
 			let index = -1;
-			for (let i = 0; i < candidates.length; i++) if (!matched[i] && looseEqual(item, candidates[i])) {
+			for (let i = 0; i < candidates.length; i++) if (!matched[i] && looseEqual(item, candidates[i], seen)) {
 				index = i;
 				break;
 			}
@@ -168,7 +166,33 @@
 		}
 		return true;
 	}
-	function looseEqual(a, b) {
+	function looseCompareObjects(a, b, seen) {
+		let aValidType = isMap(a);
+		let bValidType = isMap(b);
+		if (aValidType || bValidType) return aValidType && bValidType ? looseCompareCollections(a, b, seen) : false;
+		aValidType = isSet(a);
+		bValidType = isSet(b);
+		if (aValidType || bValidType) return aValidType && bValidType ? looseCompareCollections(a, b, seen) : false;
+		if (Object.keys(a).length !== Object.keys(b).length) return false;
+		for (const key in a) {
+			const aHasKey = a.hasOwnProperty(key);
+			const bHasKey = b.hasOwnProperty(key);
+			if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a[key], b[key], seen)) return false;
+		}
+		return String(a) === String(b);
+	}
+	function looseCompareNested(a, b, seen, compare) {
+		if (!seen) seen = [new Map(), new Map()];
+		const [seenA, seenB] = seen;
+		if (seenA.has(a) || seenB.has(b)) return seenA.get(a) === b && seenB.get(b) === a;
+		seenA.set(a, b);
+		seenB.set(b, a);
+		const equal = compare(a, b, seen);
+		seenA.delete(a);
+		seenB.delete(b);
+		return equal;
+	}
+	function looseEqual(a, b, seen) {
 		if (a === b) return true;
 		let aValidType = isDate(a);
 		let bValidType = isDate(b);
@@ -178,23 +202,12 @@
 		if (aValidType || bValidType) return a === b;
 		aValidType = isArray(a);
 		bValidType = isArray(b);
-		if (aValidType || bValidType) return aValidType && bValidType ? looseCompareArrays(a, b) : false;
+		if (aValidType || bValidType) return aValidType && bValidType ? looseCompareNested(a, b, seen, looseCompareArrays) : false;
 		aValidType = isObject(a);
 		bValidType = isObject(b);
 		if (aValidType || bValidType) {
 			if (!aValidType || !bValidType) return false;
-			aValidType = isMap(a);
-			bValidType = isMap(b);
-			if (aValidType || bValidType) return aValidType && bValidType ? looseCompareCollections(a, b) : false;
-			aValidType = isSet(a);
-			bValidType = isSet(b);
-			if (aValidType || bValidType) return aValidType && bValidType ? looseCompareCollections(a, b) : false;
-			if (Object.keys(a).length !== Object.keys(b).length) return false;
-			for (const key in a) {
-				const aHasKey = a.hasOwnProperty(key);
-				const bHasKey = b.hasOwnProperty(key);
-				if (aHasKey && !bHasKey || !aHasKey && bHasKey || !looseEqual(a[key], b[key])) return false;
-			}
+			return looseCompareNested(a, b, seen, looseCompareObjects);
 		}
 		return String(a) === String(b);
 	}
@@ -700,7 +713,9 @@
 		const raw = toRaw(array);
 		if (raw === array) return raw;
 		track(raw, "iterate", ARRAY_ITERATE_KEY);
-		return isShallow(array) ? raw : raw.map(toReactive);
+		if (isShallow(array)) return raw;
+		if (!isReadonly(array)) return raw.map(toReactive);
+		return isReactive(array) ? raw.map((item) => toReadonly(toReactive(item))) : raw.map(toReadonly);
 	}
 	function shallowReadArray(arr) {
 		track(arr = toRaw(arr), "iterate", ARRAY_ITERATE_KEY);
@@ -799,16 +814,32 @@
 	};
 	function iterator(self, method, wrapValue) {
 		const arr = shallowReadArray(self);
-		const iter = arr[method]();
+		const methodFn = arr[method];
+		const iter = methodFn.call(arr);
 		if (arr !== self && !isShallow(self)) {
+			if (iter[Symbol.toStringTag] === "Array Iterator") {
+				const wrapped = Object.create(Object.getPrototypeOf(iter));
+				wrapped.next = () => wrapResult(iter.next(), wrapValue);
+				if (methodFn !== arrayProto[method]) Object.defineProperties(wrapped, {
+					return: { get() {
+						const fn = iter.return;
+						return typeof fn === "function" ? fn.bind(iter) : fn;
+					} },
+					throw: { get() {
+						const fn = iter.throw;
+						return typeof fn === "function" ? fn.bind(iter) : fn;
+					} }
+				});
+				return wrapped;
+			}
 			iter._next = iter.next;
-			iter.next = () => {
-				const result = iter._next();
-				if (!result.done) result.value = wrapValue(result.value);
-				return result;
-			};
+			iter.next = () => wrapResult(iter._next(), wrapValue);
 		}
 		return iter;
+	}
+	function wrapResult(result, wrapValue) {
+		if (!result.done) result.value = wrapValue(result.value);
+		return result;
 	}
 	var arrayProto = Array.prototype;
 	function apply(self, method, fn, thisArg, wrappedRetFn, args) {
@@ -1112,6 +1143,7 @@
 		return (target, key, receiver) => {
 			if (key === "__v_isReactive") return !isReadonly2;
 			else if (key === "__v_isReadonly") return isReadonly2;
+			else if (key === "__v_isShallow") return shallow;
 			else if (key === "__v_raw") return target;
 			return Reflect.get(hasOwn(instrumentations, key) && key in target ? instrumentations : target, key, receiver);
 		};
@@ -1342,9 +1374,11 @@
 		if (once && cb) {
 			const _cb = cb;
 			cb = (...args) => {
-				const res = _cb(...args);
-				watchHandle();
-				return res;
+				try {
+					return _cb(...args);
+				} finally {
+					watchHandle();
+				}
 			};
 		}
 		let oldValue = isMultiSource ? new Array(source.length).fill(INITIAL_WATCHER_VALUE) : INITIAL_WATCHER_VALUE;
@@ -1353,10 +1387,11 @@
 			if (cb) {
 				const newValue = effect.run();
 				if (immediateFirstRun || deep || forceTrigger || (isMultiSource ? newValue.some((v, i) => hasChanged(v, oldValue[i])) : hasChanged(newValue, oldValue))) {
-					if (cleanup) cleanup();
 					const currentWatcher = activeWatcher;
-					activeWatcher = effect;
+					pauseTracking();
 					try {
+						if (cleanup) cleanup();
+						activeWatcher = effect;
 						const args = [
 							newValue,
 							oldValue === INITIAL_WATCHER_VALUE ? void 0 : isMultiSource && oldValue[0] === INITIAL_WATCHER_VALUE ? [] : oldValue,
@@ -1366,6 +1401,7 @@
 						call ? call(cb, 3, args) : cb(...args);
 					} finally {
 						activeWatcher = currentWatcher;
+						resetTracking();
 					}
 				}
 			} else effect.run();
@@ -1507,23 +1543,33 @@
 		} else for (let i = 0; i < cb.length; i++) pendingPostFlushCbs.push(cb[i]);
 		queueFlush();
 	}
-	function flushPreFlushCbs(instance, seen, i = flushIndex + 1) {
+	function flushPreFlushCbs(instance, minUid, seen, i = flushIndex + 1) {
 		for (; i < queue.length; i++) {
 			const cb = queue[i];
 			if (cb && cb.flags & 2) {
-				if (instance && cb.id !== instance.uid) continue;
+				if (instance && cb.id !== instance.uid || minUid !== void 0 && !(cb.id >= minUid)) continue;
 				queue.splice(i, 1);
-				i--;
+				i = instance ? i - 1 : flushIndex;
 				if (cb.flags & 4) cb.flags &= -2;
 				cb();
 				if (!(cb.flags & 4)) cb.flags &= -2;
 			}
 		}
 	}
-	function flushPostFlushCbs(seen) {
+	function flushPostFlushCbs(seen, skip, minUid = 0) {
 		if (pendingPostFlushCbs.length) {
-			const deduped = [...new Set(pendingPostFlushCbs)].sort((a, b) => getId(a) - getId(b));
-			pendingPostFlushCbs.length = 0;
+			let cbs = pendingPostFlushCbs;
+			let kept = 0;
+			if (skip) {
+				cbs = [];
+				for (let i = 0; i < pendingPostFlushCbs.length; i++) {
+					const cb = pendingPostFlushCbs[i];
+					if (cb.i !== void 0 ? !cb.i || cb.i.uid < minUid : skip.has(cb)) pendingPostFlushCbs[kept++] = cb;
+					else cbs.push(cb);
+				}
+			}
+			const deduped = [...new Set(cbs)].sort((a, b) => getId(a) - getId(b));
+			pendingPostFlushCbs.length = kept;
 			if (activePostFlushCbs) {
 				for (let i = 0; i < deduped.length; i++) activePostFlushCbs.push(deduped[i]);
 				return;
@@ -1537,6 +1583,22 @@
 			}
 			activePostFlushCbs = null;
 			postFlushIndex = 0;
+		}
+	}
+	var isFlushing = false;
+	function flushOnAppMount(fn, minUid) {
+		if (isFlushing) {
+			fn();
+			return;
+		}
+		const queued = minUid === void 0 ? void 0 : new Set(pendingPostFlushCbs);
+		fn();
+		isFlushing = true;
+		try {
+			flushPreFlushCbs(void 0, minUid);
+			flushPostFlushCbs(void 0, queued, minUid);
+		} finally {
+			isFlushing = false;
 		}
 	}
 	var getId = (job) => job.id == null ? job.flags & 2 ? -1 : Infinity : job.id;
@@ -1683,6 +1745,7 @@
 		baseWatchOptions.call = (fn, type, args) => callWithAsyncErrorHandling(fn, instance, type, args);
 		let isPre = false;
 		if (flush === "post") baseWatchOptions.scheduler = (job) => {
+			job.i = instance;
 			queuePostRenderEffect(job, instance && instance.suspense);
 		};
 		else if (flush !== "sync") {
@@ -1855,7 +1918,11 @@
 		hydrate: hydrateTeleport
 	};
 	function moveTeleport(vnode, container, parentAnchor, { o: { insert }, m: move }, moveType = 2) {
-		if (moveType === 0) insert(vnode.targetAnchor, container, parentAnchor);
+		if (moveType === 0) {
+			if (vnode.targetStart) insert(vnode.targetStart, container, parentAnchor);
+			insert(vnode.targetAnchor, container, parentAnchor);
+			parentAnchor = vnode.targetAnchor;
+		}
 		const { el, anchor, shapeFlag, children, props } = vnode;
 		const isReorder = moveType === 2;
 		if (isReorder) insert(el, container, parentAnchor);
@@ -1968,7 +2035,21 @@
 		} else if (vnode.shapeFlag & 128) {
 			vnode.ssContent.transition = hooks.clone(vnode.ssContent);
 			vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
-		} else vnode.transition = hooks;
+		} else {
+			vnode.transition = hooks;
+			if (vnode.type === Fragment && isArray(vnode.children)) {
+				const child = filterSingleRoot(vnode.children, false);
+				if (child) setTransitionHooks(child, hooks);
+			}
+		}
+	}
+	function getTransitionRoot(vnode) {
+		if (vnode.component) return getTransitionRoot(vnode.component.subTree);
+		if (vnode.type === Fragment) {
+			const child = isArray(vnode.children) && filterSingleRoot(vnode.children, false);
+			return child ? getTransitionRoot(child) : void 0;
+		}
+		if (vnode.type !== Comment) return vnode;
 	}
 	function markAsyncBoundary(instance) {
 		instance.ids = [
@@ -2148,8 +2229,11 @@
 			ret = new Array(source.length);
 			for (let i = 0, l = source.length; i < l; i++) ret[i] = renderItem(needsWrap ? isReadonlySource ? toReadonly(toReactive(source[i])) : toReactive(source[i]) : source[i], i, void 0, cached && cached[i]);
 		} else if (typeof source === "number") {
-			ret = new Array(source);
-			for (let i = 0; i < source; i++) ret[i] = renderItem(i + 1, i, void 0, cached && cached[i]);
+			if (!Number.isInteger(source) || source < 0) ret = [];
+			else {
+				ret = new Array(source);
+				for (let i = 0; i < source; i++) ret[i] = renderItem(i + 1, i, void 0, cached && cached[i]);
+			}
 		} else if (isObject(source)) {
 			if (source[Symbol.iterator]) ret = Array.from(source, (item, i) => renderItem(item, i, void 0, cached && cached[i]));
 			else {
@@ -2663,6 +2747,19 @@
 		setCurrentRenderingInstance(prev);
 		return result;
 	}
+	function filterSingleRoot(children, recurse = true) {
+		let singleRoot;
+		for (let i = 0; i < children.length; i++) {
+			const child = children[i];
+			if (isVNode(child)) {
+				if (child.type !== Comment || child.children === "v-if") {
+					if (singleRoot) return;
+					else singleRoot = child;
+				}
+			} else return;
+		}
+		return singleRoot;
+	}
 	var getFunctionalFallthrough = (attrs) => {
 		let res;
 		for (const key in attrs) if (key === "class" || key === "style" || isOn(key)) (res || (res = {}))[key] = attrs[key];
@@ -2706,7 +2803,7 @@
 		if (nextKeys.length !== Object.keys(prevProps).length) return true;
 		for (let i = 0; i < nextKeys.length; i++) {
 			const key = nextKeys[i];
-			if (hasPropValueChanged(nextProps, prevProps, key) && !isEmitListener(emitsOptions, key)) return true;
+			if (!hasOwn(prevProps, key) || hasPropValueChanged(nextProps, prevProps, key) && !isEmitListener(emitsOptions, key)) return true;
 		}
 		return false;
 	}
@@ -2979,6 +3076,10 @@
 				optimized = false;
 				n2.dynamicChildren = null;
 			}
+			if (n2.dynamicChildren && n1 && n1.dynamicChildren && n1.dynamicChildren.hasOnce) {
+				if (n2.dynamicChildren === EMPTY_ARR) n2.dynamicChildren = [];
+				n2.dynamicChildren.hasOnce = true;
+			}
 			const { type, ref, shapeFlag } = n2;
 			switch (type) {
 				case Text:
@@ -3139,7 +3240,8 @@
 			for (let i = 0; i < newChildren.length; i++) {
 				const oldVNode = oldChildren[i];
 				const newVNode = newChildren[i];
-				const container = oldVNode.el && (oldVNode.type === Fragment || !isSameVNodeType(oldVNode, newVNode) || oldVNode.shapeFlag & 198) ? hostParentNode(oldVNode.el) : fallbackContainer;
+				const oldEl = oldVNode.el || resolveAsyncComponentPlaceholder(oldVNode);
+				const container = oldEl && (oldVNode.type === Fragment || !isSameVNodeType(oldVNode, newVNode) || oldVNode.shapeFlag & 198) ? hostParentNode(oldEl) : fallbackContainer;
 				patch(oldVNode, newVNode, container, null, parentComponent, parentSuspense, namespace, slotScopeIds, true);
 			}
 		};
@@ -3183,7 +3285,7 @@
 			if (isKeepAlive(initialVNode)) instance.ctx.renderer = internals;
 			setupComponent(instance, false, optimized);
 			if (instance.asyncDep) {
-				parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect, optimized);
+				parentSuspense && parentSuspense.registerDep(instance, setupRenderEffect, optimized, namespace);
 				if (!initialVNode.el) {
 					const placeholder = instance.subTree = createVNode(Comment);
 					processCommentNode(null, placeholder, container, anchor);
@@ -3195,6 +3297,8 @@
 			const instance = n2.component = n1.component;
 			if (shouldUpdateComponent(n1, n2, optimized)) {
 				if (instance.asyncDep && !instance.asyncResolved) {
+					n2.el = n1.el;
+					n2.placeholder = n1.placeholder;
 					updateComponentPreRender(instance, n2, optimized);
 					return;
 				} else {
@@ -3203,6 +3307,7 @@
 				}
 			} else {
 				n2.el = n1.el;
+				n2.placeholder = n1.placeholder;
 				instance.vnode = n2;
 			}
 		};
@@ -3474,13 +3579,13 @@
 		};
 		const unmount = (vnode, parentComponent, parentSuspense, doRemove = false, optimized = false) => {
 			const { type, props, ref, children, dynamicChildren, shapeFlag, patchFlag, dirs, cacheIndex, memo } = vnode;
-			if (patchFlag === -2) optimized = false;
+			if (patchFlag === -2 || dynamicChildren && dynamicChildren.hasOnce) optimized = false;
 			if (ref != null) {
 				pauseTracking();
 				setRef(ref, null, parentSuspense, vnode, true);
 				resetTracking();
 			}
-			if (cacheIndex != null) parentComponent.renderCache[cacheIndex] = void 0;
+			if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) parentComponent.renderCache[cacheIndex] = void 0;
 			if (shapeFlag & 256) {
 				parentComponent.ctx.deactivate(vnode);
 				return;
@@ -3510,22 +3615,28 @@
 		};
 		const remove = (vnode) => {
 			const { type, el, anchor, transition } = vnode;
-			if (type === Fragment) {
+			const isFragment = type === Fragment;
+			if (isFragment && !transition) {
 				removeFragment(el, anchor);
 				return;
 			}
 			if (type === Static) {
 				removeStaticNode(vnode);
+				if (transition && !transition.persisted && transition.afterLeave) transition.afterLeave();
 				return;
 			}
+			const leavingNode = isFragment ? getTransitionRoot(vnode) : vnode;
 			const performRemove = () => {
-				hostRemove(el);
+				if (isFragment) {
+					if (hostParentNode(el)) removeFragment(el, anchor);
+				} else hostRemove(el);
 				if (transition && !transition.persisted && transition.afterLeave) transition.afterLeave();
 			};
-			if (vnode.shapeFlag & 1 && transition && !transition.persisted) {
+			if (leavingNode && leavingNode.shapeFlag & 1 && transition && !transition.persisted) {
 				const { leave, delayLeave } = transition;
-				const performLeave = () => leave(el, performRemove);
-				if (delayLeave) delayLeave(vnode.el, performRemove, performLeave);
+				const leavingEl = leavingNode.el;
+				const performLeave = () => leave(leavingEl, performRemove);
+				if (delayLeave) delayLeave(leavingEl, performRemove, performLeave);
 				else performLeave();
 			} else performRemove();
 		};
@@ -3547,6 +3658,9 @@
 			if (job) {
 				job.flags |= 8;
 				unmount(subTree, instance, parentSuspense, doRemove);
+			} else if (instance.vnode.el && subTree) {
+				subTree.transition = instance.vnode.transition;
+				unmount(subTree, instance, parentSuspense, doRemove);
 			}
 			if (um) queuePostRenderEffect(um, parentSuspense);
 			queuePostRenderEffect(() => {
@@ -3563,22 +3677,13 @@
 			const teleportEnd = el && el[TeleportEndKey];
 			return teleportEnd ? hostNextSibling(teleportEnd) : el;
 		};
-		let isFlushing = false;
 		const render = (vnode, container, namespace) => {
-			let instance;
-			if (vnode == null) {
-				if (container._vnode) {
-					unmount(container._vnode, null, null, true);
-					instance = container._vnode.component;
-				}
-			} else patch(container._vnode || null, vnode, container, null, null, null, namespace);
-			container._vnode = vnode;
-			if (!isFlushing) {
-				isFlushing = true;
-				flushPreFlushCbs(instance);
-				flushPostFlushCbs();
-				isFlushing = false;
-			}
+			flushOnAppMount(() => {
+				if (vnode == null) {
+					if (container._vnode) unmount(container._vnode, null, null, true);
+				} else patch(container._vnode || null, vnode, container, null, null, null, namespace);
+				container._vnode = vnode;
+			}, vnode && container._vnode ? void 0 : vnode && vnode.component ? vnode.component.uid : getNextUid());
 		};
 		const internals = {
 			p: patch,
@@ -3839,7 +3944,8 @@
 			el: vnode.el,
 			anchor: vnode.anchor,
 			ctx: vnode.ctx,
-			ce: vnode.ce
+			ce: vnode.ce,
+			cacheIndex: vnode.cacheIndex
 		};
 		if (transition && cloneTransition) setTransitionHooks(cloned, transition.clone(cloned));
 		return cloned;
@@ -3931,6 +4037,9 @@
 	}
 	var emptyAppContext = createAppContext();
 	var uid = 0;
+	function getNextUid() {
+		return uid;
+	}
 	function createComponentInstance(vnode, parent, suspense) {
 		const type = vnode.type;
 		const appContext = (parent ? parent.appContext : vnode.appContext) || emptyAppContext;
@@ -4133,7 +4242,7 @@
 	var computed = (getterOrOptions, debugOptions) => {
 		return computed$1(getterOrOptions, debugOptions, isInSSRComponentSetup);
 	};
-	var version = "3.5.42";
+	var version = "3.5.44";
 	var policy = void 0;
 	var tt = typeof window !== "undefined" && window.trustedTypes;
 	if (tt) try {
@@ -4200,6 +4309,36 @@
 	}
 	var vShowOriginalDisplay = Symbol("_vod");
 	var vShowHidden = Symbol("_vsh");
+	var vShow = {
+		name: "show",
+		beforeMount(el, { value }, { transition }) {
+			el[vShowOriginalDisplay] = el.style.display === "none" ? "" : el.style.display;
+			if (transition && value) transition.beforeEnter(el);
+			else setDisplay(el, value);
+		},
+		mounted(el, { value }, { transition }) {
+			if (transition && value) transition.enter(el);
+		},
+		updated(el, { value, oldValue }, { transition }) {
+			if (!value === !oldValue) return;
+			if (transition) {
+				if (value) {
+					transition.beforeEnter(el);
+					setDisplay(el, true);
+					transition.enter(el);
+				} else transition.leave(el, () => {
+					setDisplay(el, false);
+				});
+			} else setDisplay(el, value);
+		},
+		beforeUnmount(el, { value }) {
+			setDisplay(el, value);
+		}
+	};
+	function setDisplay(el, value) {
+		el.style.display = value ? el[vShowOriginalDisplay] : "none";
+		el[vShowHidden] = !value;
+	}
 	var CSS_VAR_TEXT = Symbol("");
 	var displayRE = /(?:^|;)\s*display\s*:/;
 	function patchStyle(el, prev, next) {
@@ -4231,7 +4370,7 @@
 			}
 		} else if (prev) el.removeAttribute("style");
 		if (vShowOriginalDisplay in el) {
-			el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : "";
+			if (!isCssString || prev !== next) el[vShowOriginalDisplay] = hasControlledDisplay ? style.display : "";
 			if (el[vShowHidden]) style.display = "none";
 		}
 	}
@@ -7604,6 +7743,15 @@
 		const nonceElement = document.querySelector("style[nonce], script[nonce]");
 		return nonceElement?.nonce || nonceElement?.getAttribute("nonce") || "";
 	}
+	var INSTANCE_ROLE = "prod";
+	var HOST_ID = "sej-shadow-host";
+	var HOST_SELECTOR = "#sej-shadow-host, #sej-shadow-host-dev";
+	var ROLE_RANK = {
+		prod: 0,
+		dev: 1
+	};
+	var STACK_GAP = 8;
+	var TOAST_STACK_STEP = 43;
 	var shadowHost = null;
 	var shadowRoot = null;
 	var constructableSheets = [];
@@ -7613,7 +7761,8 @@
 	function initialize() {
 		if (shadowHost) return shadowRoot;
 		shadowHost = document.createElement("div");
-		shadowHost.id = "sej-shadow-host";
+		shadowHost.id = HOST_ID;
+		shadowHost.dataset.sejInstance = INSTANCE_ROLE;
 		shadowRoot = shadowHost.attachShadow({ mode: "open" });
 		return shadowRoot;
 	}
@@ -7673,6 +7822,69 @@
 		shadowRoot = null;
 		dropRoot = null;
 		constructableSheets.length = 0;
+		stackSheet = null;
+		stackSheetText = "";
+	}
+	function getInstanceHosts() {
+		return Array.from(document.querySelectorAll(HOST_SELECTOR));
+	}
+	function getContainerEl(host) {
+		return host.shadowRoot?.querySelector("#sej-container") || null;
+	}
+	function isOverlayHost(host) {
+		if (host.style.position === "fixed") return true;
+		const container = getContainerEl(host);
+		return Boolean(container) && getComputedStyle(container).position === "fixed";
+	}
+	function renderedHeight(host) {
+		const rect = host.getBoundingClientRect();
+		if (rect.height > .5) return rect.height;
+		const container = getContainerEl(host);
+		return container ? container.getBoundingClientRect().height : 0;
+	}
+	function getStackOffset() {
+		if (!shadowHost) return 0;
+		const selfRank = ROLE_RANK["prod"] ?? 0;
+		let offset = 0;
+		for (const host of getInstanceHosts()) {
+			if (host === shadowHost) continue;
+			if ((ROLE_RANK[host.dataset.sejInstance] ?? 0) >= selfRank || !isOverlayHost(host)) continue;
+			offset += renderedHeight(host) + STACK_GAP;
+		}
+		return Math.round(offset);
+	}
+	var stackSheet = null;
+	var stackSheetText = "";
+	function writeStackSheet(cssText) {
+		if (cssText === stackSheetText) return;
+		if (!shadowRoot) initialize();
+		if (!stackSheet) {
+			if (supportsConstructableStylesheets()) try {
+				stackSheet = new CSSStyleSheet();
+				stackSheet.replaceSync("");
+				shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, stackSheet];
+			} catch (e) {
+				stackSheet = null;
+			}
+			if (!stackSheet) {
+				stackSheet = document.createElement("style");
+				const nonce = getCSPNonce();
+				if (nonce) stackSheet.setAttribute("nonce", nonce);
+				shadowRoot.appendChild(stackSheet);
+			}
+		}
+		if (typeof stackSheet.replaceSync === "function") stackSheet.replaceSync(cssText);
+		else stackSheet.textContent = cssText;
+		stackSheetText = cssText;
+	}
+	function refreshStackLayout() {
+		if (!shadowRoot) return;
+		const offset = getStackOffset();
+		const toastOffset = getInstanceHosts().length > 1 ? TOAST_STACK_STEP : 0;
+		const rules = [];
+		if (offset > 0) rules.push(`#sej-container.selectSearch { top: calc(2px + ${offset}px); }`);
+		if (toastOffset > 0) rules.push(`#iqixn-global-tip { bottom: calc(5% + ${toastOffset}px); }`);
+		writeStackSheet(rules.join("\n"));
 	}
 	var pageStyleEl = null;
 	function addPageStyle(cssText) {
@@ -15714,7 +15926,7 @@
 			function getFixedHeaderBottom(barLeft, barWidth) {
 				let bottom = 0;
 				const consider = (el) => {
-					if (!el || el === getHost()) return;
+					if (!el || el === getHost() || el.dataset?.sejInstance) return;
 					const style = getComputedStyle(el);
 					if (style.position !== "fixed" && style.position !== "sticky") return;
 					const rect = el.getBoundingClientRect();
@@ -15757,7 +15969,7 @@
 					const left = Math.max(0, parseFloat(host.dataset.originalLeft) || 0);
 					const width = parseFloat(host.dataset.originalWidth) || 0;
 					const headerBottom = getFixedHeaderBottom(left, width);
-					const top = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
+					const top = (headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP) + getStackOffset();
 					host.style.display = "block";
 					host.style.width = width > 0 ? `${Math.ceil(width)}px` : "max-content";
 					host.style.maxWidth = `calc(100vw - ${left + 12}px)`;
@@ -15819,6 +16031,23 @@
 					barVisible.value = true;
 				}
 			}
+			let stackTimer = 0;
+			let stackTries = 0;
+			function startStackSync() {
+				refreshStackLayout();
+				window.addEventListener("resize", refreshStackLayout);
+				clearInterval(stackTimer);
+				stackTries = 0;
+				stackTimer = setInterval(() => {
+					refreshStackLayout();
+					if (++stackTries >= 20) stopStackSync();
+				}, 500);
+			}
+			function stopStackSync() {
+				clearInterval(stackTimer);
+				stackTimer = 0;
+				window.removeEventListener("resize", refreshStackLayout);
+			}
 			onMounted(async () => {
 				if (!initTargets()) return;
 				ready.value = true;
@@ -15829,6 +16058,7 @@
 				}
 				await nextTick();
 				injectHost();
+				startStackSync();
 				if (isSelectSearch.value) {
 					document.addEventListener("selectionchange", onSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
@@ -15848,6 +16078,7 @@
 				window.removeEventListener("wheel", onWheel);
 				if (scrollRaf) cancelAnimationFrame(scrollRaf);
 				fixedTopTimers.forEach(clearTimeout);
+				stopStackSync();
 			});
 			return (_ctx, _cache) => {
 				return ready.value ? (openBlock(), createElementBlock("div", {
@@ -17011,7 +17242,7 @@
 							id: "xin-modification",
 							title: "配置文件",
 							onClick: openConfig
-						}, " 配置文件 "),
+						}, "配置文件"),
 						createBaseVNode("span", _hoisted_20, [createBaseVNode("label", null, [_cache[16] || (_cache[16] = createTextVNode("划词搜索", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => draft.selectSearch = $event)
@@ -17024,10 +17255,10 @@
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => draft.fixedTop = $event)
 						}, null, 512), [[vModelCheckbox, draft.fixedTop]])])]),
-						createBaseVNode("span", _hoisted_23, [createBaseVNode("label", null, [_cache[19] || (_cache[19] = createTextVNode("仅上拉显示", -1)), withDirectives(createBaseVNode("input", {
+						withDirectives(createBaseVNode("span", _hoisted_23, [createBaseVNode("label", null, [_cache[19] || (_cache[19] = createTextVNode("仅上拉显示", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => draft.fixedTopUpward = $event)
-						}, null, 512), [[vModelCheckbox, draft.fixedTopUpward]])])]),
+						}, null, 512), [[vModelCheckbox, draft.fixedTopUpward]])])], 512), [[vShow, draft.fixedTop]]),
 						createBaseVNode("span", _hoisted_24, [createBaseVNode("label", null, [_cache[20] || (_cache[20] = createTextVNode("隐藏同站链接", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => draft.HideTheSameLink = $event)
@@ -17271,7 +17502,7 @@
 	var app = null;
 	var menuRegistered = false;
 	function isRunning() {
-		return Boolean(document.querySelector("#sej-shadow-host"));
+		return Boolean(document.getElementById(HOST_ID));
 	}
 	function printBanner() {
 		try {

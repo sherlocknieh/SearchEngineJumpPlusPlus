@@ -4,7 +4,7 @@ import monkey from 'vite-plugin-monkey';
 
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
-  server: { host: 'localhost' },
+  server: { host: 'localhost' }, // 调试 Wikipedia 等安全策略严格的网站时, localhost 域名会被信任, 而 127.0.0.1 会被卡权限;
   plugins: [
     vue(),
     monkey({
@@ -12,7 +12,7 @@ export default defineConfig({
       build: { fileName: 'SearchEngineJump++.user.js' },
       userscript: {
         name: 'SearchEngineJump++',
-        namespace:'https://github.com/sherlocknieh/Monkey-Scripts',
+        namespace:'https://github.com/sherlocknieh/',
         version: '2026.10.22.24',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: 'Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。',
