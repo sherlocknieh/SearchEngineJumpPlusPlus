@@ -25,3 +25,30 @@
 ![设置导出界面](images/export.png)
 
 
+## TODO
+
+- [ ] 修复一些 bug
+
+
+
+
+## 开发环境
+- 基本环境:
+    - [Node.js](https://nodejs.org/)
+    - [pnpm](https://pnpm.io/installation)
+
+- 用到的库 (无需手动安装, `pnpm dev` 会自动安装):
+    - Vue3
+    - [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey)
+
+- 开始调试
+    ```bash
+    pnpm dev
+    ``` 
+    浏览器打开 `http://localhost:5173` 可实时查看效果。
+
+- 打包构建
+    ```bash
+    pnpm build
+    ```
+    构建完成后, 会在 `dist` 目录下找到生成的脚本文件。
