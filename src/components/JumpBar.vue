@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
-import { addStyle, getHost, insertHost } from '../core/shadow.js';
+import { addStyle, getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -134,7 +134,8 @@ const FIXED_GAP = 8;
 function getFixedHeaderBottom(barLeft, barWidth) {
   let bottom = 0;
   const consider = (el) => {
-    if (!el || el === getHost()) return;
+    // 其他脚本实例的宿主单独处理，避免重复避让
+    if (!el || el === getHost() || el.dataset?.sejInstance) return;
     const style = getComputedStyle(el);
     if (style.position !== 'fixed' && style.position !== 'sticky') return;
     const rect = el.getBoundingClientRect();
@@ -199,7 +200,9 @@ function fixedToTop(fixedTopValue, color) {
     const left = Math.max(0, parseFloat(host.dataset.originalLeft) || 0);
     const width = parseFloat(host.dataset.originalWidth) || 0;
     const headerBottom = getFixedHeaderBottom(left, width);
-    const top = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
+    const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
+    // 另一个实例的固定跳转条也在视口顶部时，向下让位
+    const top = baseTop + getStackOffset();
 
     host.style.display = 'block';
     // 站点样式可能约束宿主宽度，固定后按固定前的实际宽度撑开，
@@ -275,6 +278,28 @@ function onSelectionChange() {
   }
 }
 
+// 另一个实例可能稍后才挂载，短暂轮询 + 窗口尺寸变化时重新计算避让间距
+let stackTimer = 0;
+let stackTries = 0;
+
+function startStackSync() {
+  refreshStackLayout();
+  window.addEventListener('resize', refreshStackLayout);
+
+  clearInterval(stackTimer);
+  stackTries = 0;
+  stackTimer = setInterval(() => {
+    refreshStackLayout();
+    if (++stackTries >= 20) stopStackSync();
+  }, 500);
+}
+
+function stopStackSync() {
+  clearInterval(stackTimer);
+  stackTimer = 0;
+  window.removeEventListener('resize', refreshStackLayout);
+}
+
 onMounted(async () => {
   if (!initTargets()) return;
   ready.value = true;
@@ -289,6 +314,7 @@ onMounted(async () => {
 
   await nextTick();
   injectHost();
+  startStackSync();
 
   if (isSelectSearch.value) {
     document.addEventListener('selectionchange', onSelectionChange);
@@ -322,6 +348,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('wheel', onWheel);
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
   fixedTopTimers.forEach(clearTimeout);
+  stopStackSync();
 });
 </script>
 

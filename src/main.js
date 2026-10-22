@@ -2,7 +2,7 @@ import { createApp } from 'vue';
 import { GM_info, GM_registerMenuCommand } from '$';
 import App from './App.vue';
 import globalCss from './assets/global.css?raw';
-import { initialize, getRoot, getHost, addStyle, reset } from './core/shadow.js';
+import { initialize, getRoot, getHost, addStyle, reset, HOST_ID, INSTANCE_ROLE } from './core/shadow.js';
 import { applyDarkModeIfNeeded, watchDarkModeChanges } from './core/darkMode.js';
 import { onRestartRequest } from './core/appControl.js';
 import { useSettings, STORAGE_KEY } from './stores/settings.js';
@@ -60,7 +60,8 @@ let app = null;
 let menuRegistered = false;
 
 function isRunning() {
-  return Boolean(document.querySelector('#sej-shadow-host'));
+  // 只看自己的宿主，开发版与正式版可以同时运行
+  return Boolean(document.getElementById(HOST_ID));
 }
 
 function printBanner() {
@@ -125,7 +126,10 @@ function boot() {
         : gmMenu;
     if (registerMenu) {
       try {
-        registerMenu('设置菜单', openSettingPanel);
+        registerMenu(
+          INSTANCE_ROLE === 'dev' ? '设置菜单（开发版）' : '设置菜单',
+          openSettingPanel,
+        );
         menuRegistered = true;
       } catch (e) {
         console.warn('[SEJ] 注册菜单命令失败', e);
