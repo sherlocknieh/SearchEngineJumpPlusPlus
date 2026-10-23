@@ -189,8 +189,9 @@
   pointer-events: none;
 }
 .sejtitle {
-  text-align: left;
-  padding: 5px 56px 5px 8px;
+  text-align: center;
+  /* 左右留出等宽空间，让标题相对卡片居中，同时避开右侧的眼睛/设置按钮 */
+  padding: 5px 56px;
   margin-bottom: 2px;
   overflow: hidden;
   white-space: nowrap;
@@ -826,6 +827,20 @@ span#setBtn:hover {
 }
 span#setBtn:active {
   background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));
+}
+#setBtn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+/* 跳转条换行时，把设置按钮推到最右侧，避免停在行中间 */
+#sej-container > #setBtn {
+  margin-left: auto;
+}
+#setBtn:focus-visible {
+  opacity: 1;
+  outline: 2px solid var(--sej-accent, #4285f4);
+  outline-offset: -2px;
 }
 #sej-container {
   display: flex;
