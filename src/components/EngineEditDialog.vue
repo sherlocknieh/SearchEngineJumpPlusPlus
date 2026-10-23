@@ -1,6 +1,7 @@
 <script setup>
 import {
   computed,
+  nextTick,
   onBeforeUnmount,
   onMounted,
   reactive,
@@ -69,6 +70,24 @@ function faviconFromUrl(raw) {
   }
 }
 
+// 站点主机名（保留子域，去掉 www.）
+function hostFromUrl(raw) {
+  const value = String(raw || '').trim();
+  if (!value) return '';
+  try {
+    return new URL(value.includes('://') ? value : `https://${value}`)
+      .hostname.toLowerCase()
+      .replace(/\.$/, '')
+      .replace(/^www\./, '');
+  } catch {
+    return '';
+  }
+}
+
+const siteHost = computed(
+  () => hostFromUrl(form.url) || hostFromUrl(form.favicon),
+);
+
 // 标题/图标为空（或未手动改过）时，随链接自动更新
 const titleEdited = ref(Boolean((props.initial.name || '').trim()));
 const faviconEdited = ref(Boolean((props.initial.favicon || '').trim()));
@@ -79,6 +98,7 @@ function markTitleEdited() {
 
 function markFaviconEdited() {
   faviconEdited.value = true;
+  previewSteps.value = [];
 }
 
 watch(
@@ -90,18 +110,45 @@ watch(
     if (!faviconEdited.value || !form.favicon.trim()) {
       form.favicon = faviconFromUrl(form.url);
     }
+    previewSteps.value = [];
   },
 );
 
 const previewData = ref('');
 const previewLoading = ref(false);
 const previewFailed = ref(false);
+// 本次获取依次尝试的来源及结果
+const previewSteps = ref([]);
 const previewCache = new Map();
 let previewToken = 0;
 
 const dataIconLink = computed(() => previewData.value.trim());
 const previewImage = computed(() => /^data:image\//i.test(dataIconLink.value));
-const canPreview = computed(() => /^(https?:\/\/|data:)/i.test(form.favicon.trim()));
+const canPreview = computed(
+  () =>
+    Boolean(siteHost.value) ||
+    /^(https?:\/\/|data:)/i.test(form.favicon.trim()),
+);
+const previewLabel = computed(() => {
+  if (previewLoading.value) return '取消';
+  if (previewFailed.value || previewImage.value) return '重新获取';
+  return '获取图标';
+});
+const extractorUrl = computed(() => {
+  const host = siteHost.value;
+  if (!host) return '';
+  return (
+    'https://convertico.com/favicon-extractor/?url=' +
+    encodeURIComponent(host)
+  );
+});
+const STEP_STATUS_TEXT = {
+  pending: '等待',
+  loading: '获取中…',
+  ok: '已获取',
+  failed: '不可用',
+  canceled: '已取消',
+};
 
 // 用户手动填写 data 链接后，不再被图标转换结果覆盖
 const dataEdited = ref(false);
@@ -137,43 +184,115 @@ watch(
   { immediate: true },
 );
 
+function cancelPreview() {
+  previewToken++;
+  previewLoading.value = false;
+  previewFailed.value = true;
+  const current = previewSteps.value.find((step) => step.status === 'loading');
+  if (current) current.status = 'canceled';
+}
+
+// 命中可用结果：写回图标地址与缓存，并保留来源记录
+async function applyPreview(step, data) {
+  step.status = 'ok';
+  previewLoading.value = false;
+  previewFailed.value = false;
+  previewCache.set(step.url, data);
+  if (form.favicon.trim() !== step.url) {
+    form.favicon = step.url;
+    // 等 favicon 的 watch 清理旧预览后再写入转换结果
+    await nextTick();
+  }
+  setPreviewData(data);
+}
+
 async function previewIcon() {
-  if (props.busy || previewLoading.value) return;
+  if (props.busy) return;
+  if (previewLoading.value) {
+    cancelPreview();
+    return;
+  }
+
   const url = form.favicon.trim();
   if (/^data:/i.test(url)) {
     setPreviewData(url);
     previewFailed.value = false;
-    return;
-  }
-  if (!/^https?:\/\//i.test(url)) return;
-  if (url === initialFavicon && props.initial.faviconData) {
-    setPreviewData(props.initial.faviconData);
-    return;
-  }
-  if (previewCache.has(url)) {
-    setPreviewData(previewCache.get(url));
-    previewFailed.value = false;
+    previewSteps.value = [];
     return;
   }
 
+  // 依次尝试：当前地址 → 公共图标服务
+  const candidates = [];
+  if (/^https?:\/\//i.test(url)) candidates.push({ url });
+  const host = siteHost.value;
+  if (host) {
+    // 公共图标服务使用完整主机名，保留 chat. 这类子域
+    const serviceUrl = `https://a.favicon.im/${host}`;
+    if (!candidates.some((item) => item.url === serviceUrl)) {
+      candidates.push({ url: serviceUrl });
+    }
+  }
+  if (!candidates.length) return;
+
   const token = ++previewToken;
-  const previous = previewData.value;
-  previewData.value = '';
   previewFailed.value = false;
   previewLoading.value = true;
-  const result = await embedFavicon(url);
-  if (token !== previewToken) return;
-  previewLoading.value = false;
-  if (result !== url) {
-    setPreviewData(result);
-    previewCache.set(url, result);
-  } else {
-    previewData.value = previous;
-    previewFailed.value = true;
+  previewSteps.value = candidates.map((item) => ({
+    ...item,
+    status: 'pending',
+  }));
+
+  for (const step of previewSteps.value) {
+    if (previewCache.has(step.url)) {
+      await applyPreview(step, previewCache.get(step.url));
+      return;
+    }
+    step.status = 'loading';
+    const result = await embedFavicon(step.url);
+    if (token !== previewToken) return;
+    if (result !== step.url) {
+      await applyPreview(step, result);
+      return;
+    }
+    step.status = 'failed';
   }
+
+  previewLoading.value = false;
+  previewFailed.value = true;
 }
 
 onMounted(() => urlInput.value?.focus());
+
+const faviconFileInput = ref(null);
+
+function pickFaviconFile() {
+  faviconFileInput.value?.click();
+}
+
+function uploadFavicon(event) {
+  const file = event.target.files?.[0];
+  event.target.value = '';
+  if (!file) return;
+  const isImage =
+    file.type.startsWith('image/') ||
+    /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name);
+  if (!isImage) {
+    alert('请选择图片文件');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    // 本地上传优先于进行中的远程获取
+    previewToken++;
+    previewLoading.value = false;
+    previewFailed.value = false;
+    previewSteps.value = [];
+    previewData.value = String(reader.result || '');
+    dataEdited.value = true;
+  };
+  reader.onerror = () => alert('读取图片失败');
+  reader.readAsDataURL(file);
+}
 
 onBeforeUnmount(() => {
   previewToken++;
@@ -203,30 +322,49 @@ function submit() {
     </label>
     <label class="sej-field">
       <span>标题</span>
-      <input v-model="form.name" placeholder="必填，留空自动取域名" :disabled="busy"
+      <input v-model="form.name" placeholder="必填" :disabled="busy"
         @input="markTitleEdited" />
     </label>
     <div class="sej-field">
       <span>图标</span>
       <div class="sej-field-row">
-        <input v-model="form.favicon" placeholder="选填，默认 域名/favicon.ico" :disabled="busy"
+        <input v-model="form.favicon" placeholder="选填" :disabled="busy"
           @input="markFaviconEdited" />
         <button type="button" class="sej-icon-preview-btn"
-          :disabled="busy || previewLoading || !canPreview" @click="previewIcon">
-          {{ previewLoading ? '转换中…' : '预览' }}
+          :disabled="busy || (!previewLoading && !canPreview)" @click="previewIcon">
+          {{ previewLabel }}
         </button>
+      </div>
+      <!-- 依次尝试的来源与结果 -->
+      <div v-if="previewSteps.length" class="sej-preview-steps">
+        <div v-for="step in previewSteps" :key="step.url" :title="step.url"
+          class="sej-preview-step" :class="'is-' + step.status">
+          <span class="sej-preview-dot"></span>
+          <span class="sej-preview-url">{{ step.url }}</span>
+          <span class="sej-preview-state">{{ STEP_STATUS_TEXT[step.status] }}</span>
+        </div>
+        <a v-if="extractorUrl" class="sej-preview-extractor"
+          :href="extractorUrl" target="_blank" rel="noopener">
+          ↗试试在线提取工具
+        </a>
       </div>
     </div>
     <div class="sej-field">
-      <span>图标缓存</span>
+      <span>图标数据</span>
       <div class="sej-data-line">
         <input v-model="previewData" class="sej-data-input"
           placeholder="选填，可粘贴 data:image/... 链接" :disabled="busy"
           @input="markDataEdited" />
-        <img v-if="previewImage" class="sej-icon-preview" :src="dataIconLink" alt="" />
+        <button type="button" class="sej-icon-preview-btn"
+          :class="{ 'sej-has-icon': previewImage }" :disabled="busy"
+          :title="previewImage ? '本地上传（替换当前图标）' : '本地上传'"
+          @click="pickFaviconFile">
+          <img v-if="previewImage" class="sej-icon-preview" :src="dataIconLink" alt="" />
+          <template v-else>本地上传</template>
+        </button>
       </div>
-      <span v-if="previewLoading" class="sej-field-value">转换中…</span>
-      <span v-else-if="previewFailed" class="sej-field-value">转换失败（保存时会重试）</span>
+      <input ref="faviconFileInput" class="sej-file-input" type="file"
+        accept="image/*,.ico" @change="uploadFavicon" />
     </div>
     <label class="sej-field">
       <span>打开方式</span>

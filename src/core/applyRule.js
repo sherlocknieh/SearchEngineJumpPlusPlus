@@ -71,7 +71,7 @@ export function resolveRuleStyle(rule, settingData) {
     style = rule.style_ZhihuChenglinz || style;
   }
 
-  if (settingData.center == 1) {
+  if (settingData.center) {
     style += FORCE_CENTER_STYLE;
   }
 

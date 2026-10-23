@@ -26,6 +26,9 @@
   stylish: CSS样式，可选，修改原网页样式以适应搜索引擎跳转工具栏
 */
 
+
+// 下面的分类只是为了方便手动查找和编辑，代码实际用到时会全部解包到同一个数组
+
 const webRules = [
   {
     name: "google网页搜索",
@@ -1787,6 +1790,7 @@ const codingRules = [
   },
 ];
 
+// 解包所有规则
 const searchEngineJumpPlusRules = [
   ...webRules,
   ...knowledgeRules,

@@ -10,7 +10,7 @@ import {
   getInsertPositionLabel,
   resolveRuleStyle,
   applyStylish,
-} from '../core/rule.js';
+} from '../core/applyRule.js';
 import {
   extractKeyword,
   performJump,

@@ -13,10 +13,19 @@ import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
-import { COPY, EYE, EYE_OFF } from '../data/icons.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
+const COPY =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+const EYE =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"/><path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"/><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+const PENCIL =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const TRASH =
+    '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>';
 
 const settings = useSettings();
 const source = computed(() => settings.settingData);
@@ -99,6 +108,8 @@ function buildResult() {
     const result = {};
     for (const key of OPTION_KEYS) result[key] = draft[key];
     Object.assign(result, buildEngineData());
+    // version 由保存时刷新；这里沿用当前值，避免无改动也被判为有修改
+    result.version = source.value.version;
     return result;
 }
 
@@ -277,8 +288,11 @@ async function loadAllIcons() {
     }
 }
 
-function reset() {
-    if (confirm('将会删除用户设置！')) {
+function reset(exported = false) {
+    const message = exported
+        ? '当前配置已导出为备份文件，确定要恢复默认设置吗？'
+        : '将会删除用户设置！';
+    if (confirm(message)) {
         cancelAutoSave();
         remoteSynced = false;
         deleteValue(STORAGE_KEY);
@@ -601,7 +615,7 @@ function onDragPointerDown(e, type, ci, ei = null) {
     resetStaleDrag();
     suppressClick = false;
     if (e.button !== 0) return;
-    if (e.target?.closest?.('.iqxin-set-toggle')) return;
+    if (e.target?.closest?.('.iqxin-set-toggle, .sej-hover-delete')) return;
     const sourceEl = sourceElement(type, ci, ei);
     if (!sourceEl) return;
 
@@ -1243,9 +1257,12 @@ onBeforeUnmount(() => {
                         @pointerdown="onDragPointerDown($event, 'category', ci)"
                         @click.stop="openCategoryDialog(ci)">
                         <span class="iqxin-pointer-events">{{ category.name }}</span>
+                        <span class="sej-hover-edit" v-html="PENCIL"></span>
                         <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': !category.enabled }"
                             :title="category.enabled ? '隐藏' : '显示'" @click.stop="toggleCategory(ci)"
                             v-html="category.enabled ? EYE : EYE_OFF"></span>
+                        <span class="sej-hover-delete" title="删除分类" @pointerdown.stop
+                            @click.stop="deleteCategory(ci)" v-html="TRASH"></span>
                     </div>
 
                     <!-- 具体条目 -->
@@ -1263,17 +1280,19 @@ onBeforeUnmount(() => {
                                 <img class="sej-engine-icon" :src="getFaviconSrc(engine)" alt="" />
                                 <span>{{ engine.name }}</span>
                             </span>
+                            <span class="sej-hover-edit" v-html="PENCIL"></span>
                             <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': engine.disable }"
                                 :title="engine.disable ? '显示' : '隐藏'" @click.stop="toggleEngine(ci, ei)"
                                 v-html="engine.disable ? EYE_OFF : EYE"></span>
+                            <span class="sej-hover-delete" title="删除引擎" @pointerdown.stop
+                                @click.stop="deleteEngine(ci, ei)" v-html="TRASH"></span>
                         </span>
                         <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
                         <span class="iqxin-additem" :class="{ 'sej-copy-target': copyTargetCi === ci }"
-                            :title="copyTargetCi === ci ? '复制一份到此类别' : '添加搜索引擎'"
                             @click.stop="addEngine(ci)">
                             <span v-if="copyTargetCi === ci" class="sej-copy-icon" v-html="COPY"></span>
                             <template v-else>+</template>
-                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制一份到此类别</span>
+                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制一份到此栏目</span>
                         </span>
                     </div>
                 </div>
@@ -1288,32 +1307,28 @@ onBeforeUnmount(() => {
             <div id="btnEle">
                 <div class="btnEleLayer">
                     <div class="sej-footer-options">
-                        <span id="xin-modification" title="配置文件" @click="openConfig">配置文件</span>
-                        <span id="xin-selectSearch" title="划词搜索">
+                        <span id="xin-HideTheSameLink" title="比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索">
+                            <label>防止原地跳转<input type="checkbox" v-model="draft.HideTheSameLink" /></label>
+                        </span>
+                        <span id="xin-selectSearch">
                             <label>划词搜索<input type="checkbox" v-model="draft.selectSearch" /></label>
                         </span>
-                        <span id="xin-transtion" title="动画">
-                            <label>动画<input type="checkbox" v-model="draft.transtion" /></label>
+                        <span id="xin-transtion">
+                            <label>过渡动画<input type="checkbox" v-model="draft.transtion" /></label>
                         </span>
-                        <span id="iqxin-fixedTopS" title="固定到顶端">
-                            <label>固定到顶端<input type="checkbox" v-model="draft.fixedTop" /></label>
+                        <span id="xin-centerDisplay" title="搜索条始终居中显示">
+                            <label>强制居中<input type="checkbox" v-model="draft.center" /></label>
                         </span>
-                        <span v-show="draft.fixedTop" id="iqxin-fixedTopUpward" title="仅上拉显示">
-                            <label>仅上拉显示<input type="checkbox" v-model="draft.fixedTopUpward" /></label>
+                        <span id="iqxin-fixedTopS" title="页面下滑时搜索条固定在顶部显示">
+                            <label>固顶显示<input type="checkbox" v-model="draft.fixedTop" /></label>
                         </span>
-                        <span id="xin-HideTheSameLink" title="隐藏同站链接">
-                            <label>隐藏同站链接<input type="checkbox" v-model="draft.HideTheSameLink" /></label>
+                        <span v-show="draft.fixedTop" id="iqxin-fixedTopUpward" title="仅在向上滚动页面时显示">
+                            <label>下滑不显示<input type="checkbox" v-model="draft.fixedTopUpward" /></label>
                         </span>
                     </div>
                     <div class="sej-footer-bar">
                         <div class="sej-footer-selects">
-                            <span id="xin-centerDisplay" title="居中显示">
-                                居中：
-                                <select v-model.number="draft.center">
-                                    <option :value="0">默认</option>
-                                    <option :value="1">强制居中</option>
-                                </select>
-                            </span>
+                            <span id="xin-modification" @click="openConfig">编辑配置文件</span>
                             <span id="xin-loadIcons" title="把所有远程图标内嵌为 data 链接"
                                 :class="{ 'sej-loading': loadingIcons }" @click="loadAllIcons">
                                 {{ loadingIcons ? '加载中…' : '加载所有图标缓存' }}
@@ -1345,7 +1360,7 @@ onBeforeUnmount(() => {
                 :name="draft.categories[categoryDialog.index]?.name || ''" @submit="submitCategory"
                 @delete="deleteCategoryFromDialog" @cancel="cancelCategoryDialog" />
 
-            <ConfigEditor v-if="configOpen" :initial-text="configText" @save="saveConfig" @reset="reset"
+            <ConfigEditor v-if="configOpen" :initial-text="configText" @save="saveConfig" @reset="reset(true)"
                 @close="configOpen = false" @copy="showToast('复制成功')" @notify="showToast" />
         </div>
     </div>

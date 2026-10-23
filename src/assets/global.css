@@ -195,7 +195,7 @@
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
 }
 #settingLayer .sej-engine {
-  padding: 0 36px 0 8px;
+  padding: 0 82px 0 8px;
   width: 100%;
   height: 30px;
   box-sizing: border-box;
@@ -217,8 +217,8 @@
 }
 .sejtitle {
   text-align: left;
-  /* 左侧与引擎条目对齐，右侧避开显隐按钮 */
-  padding: 5px 36px 5px 8px;
+  /* 左侧与引擎条目对齐，右侧避开编辑/删除/显隐按钮 */
+  padding: 5px 82px 5px 8px;
   margin-bottom: 2px;
   overflow: hidden;
   white-space: nowrap;
@@ -320,10 +320,6 @@
   align-items: center;
   gap: 6px;
   color: inherit;
-}
-#btnEle #xin-centerDisplay {
-  gap: 2px;
-  padding-right: 4px;
 }
 #btnEle span:hover {
   background: var(--sej-surface-hover);
@@ -475,7 +471,7 @@
   cursor: pointer;
   transition: opacity 0.12s ease-out, background-color 0.12s ease-out,
     color 0.12s ease-out;
-  right: 8px;
+  right: 6px;
   display: inline-flex;
   align-items: center;
   color: var(--font-color-qxin);
@@ -490,6 +486,55 @@
   opacity: 1;
   background: var(--sej-surface-hover);
 }
+/* 悬浮操作：右侧依次为编辑、删除、显隐按钮 */
+.sej-hover-edit,
+.sej-hover-delete {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  color: var(--font-color-qxin);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+.sej-hover-edit {
+  top: 0;
+  bottom: 0;
+  right: 54px;
+  height: fit-content;
+  margin: auto 0;
+  padding: 3px;
+  border-radius: 6px;
+}
+.sej-hover-delete {
+  top: 0;
+  bottom: 0;
+  right: 30px;
+  height: fit-content;
+  margin: auto 0;
+  padding: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.sej-hover-edit svg,
+.sej-hover-delete svg {
+  display: block;
+}
+.sejtitle:hover .sej-hover-edit,
+#settingLayer .sejcon > .drag:hover > .sej-hover-edit {
+  opacity: 0.4;
+}
+.sejtitle:hover .sej-hover-delete,
+#settingLayer .sejcon > .drag:hover > .sej-hover-delete {
+  opacity: 0.8;
+  pointer-events: auto;
+}
+.sej-hover-delete:hover {
+  opacity: 1;
+  background: var(--sej-danger-weak, rgba(220, 53, 69, 0.12));
+  color: var(--sej-danger, #dc3545);
+}
 span.iqxin-additem {
   display: inline-block;
   position: relative;
@@ -498,7 +543,7 @@ span.iqxin-additem {
   box-sizing: border-box;
   margin: auto 0 2px;
   padding: 5px 0;
-  border: 1px dashed var(--sej-checkbox-border);
+  border: 1px dashed currentColor;
   border-radius: 8px;
   color: var(--font-color-qxin);
   opacity: 0.55;
@@ -611,6 +656,16 @@ span.iqxin-additem.sej-copy-target {
   opacity: 0.5;
   cursor: not-allowed;
 }
+/* 已有图标时按钮只显示缩略图 */
+.sej-icon-preview-btn.sej-has-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
 .sej-icon-preview {
   flex: 0 0 auto;
   width: 20px;
@@ -630,10 +685,67 @@ span.iqxin-additem.sej-copy-target {
   width: auto;
   min-width: 0;
 }
-.sej-field-value {
-  color: var(--font-color-qxin);
-  opacity: 0.5;
+.sej-file-input {
+  display: none;
+}
+/* 图标获取来源列表 */
+.sej-preview-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--sej-surface-2);
   font-size: 12px;
+}
+.sej-preview-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 18px;
+  color: var(--font-color-qxin);
+}
+.sej-preview-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sej-checkbox-border);
+}
+.sej-preview-step.is-loading .sej-preview-dot {
+  background: var(--sej-accent);
+}
+.sej-preview-step.is-ok .sej-preview-dot {
+  background: #34a853;
+}
+.sej-preview-step.is-failed .sej-preview-dot {
+  background: var(--sej-danger);
+}
+.sej-preview-step.is-failed,
+.sej-preview-step.is-pending,
+.sej-preview-step.is-canceled {
+  opacity: 0.6;
+}
+.sej-preview-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sej-preview-state {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+.sej-preview-extractor {
+  align-self: flex-start;
+  margin-top: 2px;
+  color: var(--sej-accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+.sej-preview-extractor:hover {
+  text-decoration: underline;
 }
 .sej-field-inline {
   display: flex;
@@ -709,32 +821,6 @@ span.iqxin-additem.sej-copy-target {
   background: var(--sej-danger-weak);
   border-color: var(--sej-danger);
   color: var(--sej-danger);
-}
-#xin-centerDisplay select {
-  height: 24px;
-  margin: -1px 0;
-  border: 1px solid transparent;
-  outline: none;
-  color: var(--font-color-qxin);
-  font-size: 13px;
-  font-family: inherit;
-  padding: 0 4px;
-  border-radius: 5px;
-  cursor: pointer;
-  text-decoration: none;
-  background: transparent;
-  transition: border-color 0.12s ease-out, background-color 0.12s ease-out;
-}
-#xin-centerDisplay select:hover {
-  background: var(--sej-surface-hover);
-}
-#xin-centerDisplay select:focus {
-  border-color: var(--sej-accent);
-  background: var(--sej-input-bg);
-}
-#xin-centerDisplay select option {
-  background: var(--sej-input-bg);
-  color: var(--font-color-qxin);
 }
 .iqxin-closeBtn,
 .iqxin-enterBtn {
@@ -824,9 +910,6 @@ span.iqxin-additem.sej-copy-target {
 #iqxin-editCodeBox textarea:focus {
   border-color: var(--sej-accent);
   box-shadow: 0 0 0 3px var(--sej-focus-ring);
-}
-#iqxin-editCodeBox .sej-file-input {
-  display: none;
 }
 .iqxin-warning {
   color: var(--sej-danger);

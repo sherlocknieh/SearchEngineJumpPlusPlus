@@ -8,7 +8,7 @@
 
 安装地址: 
 
-- [GitHub](https://github.com/sherlocknieh/SearchEngineJumpPlusPlus/raw/main/dist/SearchEngineJump++.user.js)
+- https://github.com/sherlocknieh/SearchEngineJumpPlusPlus/raw/main/dist/SearchEngineJump++.user.js
 
 ## 新版效果
 
@@ -28,9 +28,8 @@
 ## TODO
 
 - [ ] 优化图标获取逻辑: 支持本地上传, 图标默认填写的链接不必包含 www 前缀, 辅助用户搜索图标(https://convertico.com/), 
-- [ ] 配置文件优化: 精简不必要的字段, 导出文件名固定为 `SearchEngineJump.json`
-- [ ] 设置界面优化: 调整各设置按钮的相对位置, 增加设置按钮的图标, 修改设置按钮的悬浮提示
-- [ ] 提供一个设置项, 能使各大搜索引擎搜索框居中显示
+- [x] 设置界面优化: 调整各设置按钮的相对位置, 增加设置按钮的图标, 修改设置按钮的悬浮提示
+- [x] 配置文件优化: 精简不必要的字段, 导出文件名固定为 `SearchEngineJump.json`
 - [x] 设置保存优化: 发生重要编辑时自动保存, 比如添加/删除/修改搜索引擎, 或调整排序时, 但是不在每次修改输入框内容时保存, 以减少频繁的写入操作
 - [x] 优化拖动排序: 设置界面拖动元素到目标位置时展示其他元素被挤到新位置的过程
 - [x] 设置界面分类面板的标题应居中显示

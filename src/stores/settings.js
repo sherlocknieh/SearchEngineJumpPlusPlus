@@ -1,18 +1,36 @@
+/**
+ * useSettings: 设置存储模块: 负责配置文件和挂载规则的加载,整理,写入;
+ */
 import { reactive } from 'vue';
 import defaultEngines from '../data/engineList.js';
 import rules from '../data/rules.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
 
+
+/** GM 存储中配置数据使用的键名 */
 export const STORAGE_KEY = 'searchEngineJumpData';
 
+// 生成人类可读的本地时间：YYYY-MM-DD HH:mm:ss
+function nowText() {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return (
+    `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ` +
+    `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`
+  );
+}
+
+
+// 生成默认配置
 function createDefaultSettings() {
   return {
-    fixedTop: true,
+    HideTheSameLink: true,    // 默认隐藏与当前站点相同的引擎，避免重复跳转
+    fixedTop: false,    // 默认不固定跳转条，不启用“仅上拉显示”
     fixedTopUpward: false,
-    HideTheSameLink: true,
-    center: 0,
-    transtion: true,
-    selectSearch: true,
+    transtion: true,    // 默认开启动画
+    selectSearch: true, // 默认开启划词搜索
+    center: false,    // 默认跟随各站点规则排版，不强制居中
+    // 默认分类及顺序；第三项表示该分类是否在跳转条中显示
     engineCategories: [
       ['网页', 'web', true],
       ['翻译', 'translate', true],
@@ -27,54 +45,41 @@ function createDefaultSettings() {
       ['新闻', 'news', false],
       ['常用', 'mine', false],
     ],
+    // 默认引擎列表；从 engineList.js 导入
     engineList: defaultEngines,
   };
 }
 
-const OPTION_FLAGS = [
-  'fixedTop',
-  'fixedTopUpward',
-  'HideTheSameLink',
-  'transtion',
-  'selectSearch',
-];
-const ENGINE_STRINGS = ['name', 'url', 'favicon', 'faviconData'];
-
-// 兼容性白名单：当前字段 ← 旧版本字段名；读取时回退，写出时只用当前字段。
-// engineDetails 是 engineCategories 的旧名字，仍需兼容历史配置。
-const COMPAT_FIELDS = {
-  engineCategories: ['engineDetails'],
-};
-
+// 检验本地配置格式
 function isObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-// 只拷贝白名单字段，其余字段（blank、_id 等）在读入时即被丢弃
+// 加载引擎数据
 function normalizeEngine(raw) {
   if (!isObject(raw)) return null;
   const engine = {};
+  const ENGINE_STRINGS = ['name', 'url', 'favicon', 'faviconData'];
   for (const key of ENGINE_STRINGS) {
     if (typeof raw[key] === 'string') engine[key] = raw[key];
   }
+  // url 是搜索跳转的必需字段，没有就视为无效引擎
   if (!engine.url) return null;
+  // 仅在新标签页以外的打开方式才记录，减少冗余字段
   if (raw.target === '_self') engine.target = '_self';
+  // 只有明确为 true 才视为隐藏，其他值一律按显示处理
   if (raw.disable === true) engine.disable = true;
+
   return engine;
 }
 
-// 新字段优先，缺失时按兼容性白名单回退到旧字段
-function readCompat(data, key) {
-  if (Array.isArray(data[key])) return data[key];
-  for (const legacy of COMPAT_FIELDS[key] || []) {
-    if (Array.isArray(data[legacy])) return data[legacy];
-  }
-  return null;
-}
-
-// 返回 null 表示数据不可用，需要回退到默认分类
+// 加载类别数据
 function normalizeCategories(data) {
-  const raw = readCompat(data, 'engineCategories');
+  const raw = Array.isArray(data.engineCategories) // 优先使用新字段名: engineCategories
+    ? data.engineCategories
+    : Array.isArray(data.engineDetails) // 兼容旧字段: engineDetails
+      ? data.engineDetails
+      : null;
   if (!raw) return null;
   const seen = new Set();
   const categories = [];
@@ -92,23 +97,32 @@ function normalizeCategories(data) {
   return categories;
 }
 
-/**
- * 按白名单重建配置：不认识或已废弃的字段不会进入内存与存储。
- */
+// 加载设置数据
 function normalizeSettings(raw, defaults) {
   const data = isObject(raw) ? raw : {};
   const settings = {};
-
+  const OPTION_FLAGS = [
+    'fixedTop',
+    'fixedTopUpward',
+    'HideTheSameLink',
+    'transtion',
+    'selectSearch',
+  ];
+  // version 记录配置最近一次写入的时间，读取时原样保留
+  settings.version = typeof data.version === 'string' ? data.version : '';
+  // 布尔开关：类型正确才采用，否则回退默认值
   for (const key of OPTION_FLAGS) {
     settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
   }
-  // center 只有两种模式：1 = 强制居中，其余一律按默认布局处理
-  settings.center = data.center === 1 || data.center === '1' ? 1 : 0;
+  // center 兼容旧版的 0/1 写法，统一转为布尔值
+  settings.center = data.center === true || data.center === 1 || data.center === '1';
 
+  // 分类数据损坏时整体回退到默认分类（复制一份，避免修改默认值）
   const categories =
     normalizeCategories(data) ||
     defaults.engineCategories.map((entry) => entry.slice());
 
+  // 没有可用的 engineList 时，全部使用默认引擎
   const rawList = isObject(data.engineList) ? data.engineList : null;
   const engineList = {};
   for (const [, key] of categories) {
@@ -125,14 +139,20 @@ function normalizeSettings(raw, defaults) {
   return settings;
 }
 
+// 设置管理器
 export class Settings {
+  // 初始化操作
   constructor() {
+    // 加载本地配置
     this.storedSettingData = getValue(STORAGE_KEY, null);
+    // 加载默认配置
     this.scriptSettingData = createDefaultSettings();
+    // 实际生效的配置
     this.settingData = null;
     this.initSettings();
   }
 
+  // 初始化设置
   initSettings() {
     if (this.storedSettingData) {
       this.settingData = normalizeSettings(
@@ -141,6 +161,7 @@ export class Settings {
       );
       // 旧配置读取后立即回写为规范形式，避免每次启动重复规范化
       if (!isSameValue(this.settingData, this.storedSettingData)) {
+        this.settingData.version = nowText();
         setValue(STORAGE_KEY, this.settingData);
       }
     } else {
@@ -153,9 +174,11 @@ export class Settings {
     }
   }
 
-  // 原地应用设置：保持 settingData 引用不变，供已挂载的组件响应
+  // 应用到
   applyNormalized(normalized) {
+    // 先复制一份，避免修改原始数据
     const plain = JSON.parse(JSON.stringify(normalized));
+    // 合并有效字段
     for (const key of Object.keys(this.settingData)) {
       if (!Object.prototype.hasOwnProperty.call(plain, key)) {
         delete this.settingData[key];
@@ -164,21 +187,24 @@ export class Settings {
     Object.assign(this.settingData, plain);
   }
 
-  // 应用新设置：先规范化，再落地
+  // 把最新设置写入存储
   applySettings(next) {
     this.applyNormalized(normalizeSettings(next, this.scriptSettingData));
+    // 每次写入都刷新 version 为当前时间
+    this.settingData.version = nowText();
     this.storedSettingData = this.settingData;
     return setValue(STORAGE_KEY, this.settingData);
   }
 
-  // 自动保存：把指定字段合并到当前设置后持久化
+  // 自动保存：把指定字段合并到当前设置后持久化。 
+  // 用于设置面板的增量修改，未传入的字段保持原值。
   savePartial(partial) {
     if (!isObject(partial)) return 'memory';
     const next = Object.assign({}, this.settingData, partial);
     return this.applySettings(next);
   }
 
-  // 从存储重新读取设置（用于其他页面保存后的同步）
+  // 从存储重新读取设置
   reload() {
     const stored = getValue(STORAGE_KEY, null);
     if (!isObject(stored)) return false;
@@ -191,6 +217,7 @@ export class Settings {
     return true;
   }
 
+  // 获取当前页面匹配的挂载规则
   getMatchedRule() {
     for (const rule of [...rules]) {
       if (rule.url.test(location.href)) return rule;
@@ -199,15 +226,12 @@ export class Settings {
   }
 }
 
-let instance = null;
 
+// 创建设置管理器实例
+let instance = null;
 export function useSettings() {
   if (!instance) {
     instance = reactive(new Settings());
   }
   return instance;
-}
-
-export function getMatchedRule() {
-  return useSettings().getMatchedRule();
 }

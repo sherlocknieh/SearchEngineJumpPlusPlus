@@ -39,25 +39,28 @@ function exportFile() {
     parsed = JSON.parse(text.value);
   } catch (e) {
     alert('JSON 解析失败，无法导出');
-    return;
+    return false;
   }
-  const now = new Date();
-  const pad = (n) => String(n).padStart(2, '0');
-  const stamp =
-    `${now.getFullYear()}${pad(now.getMonth() + 1)}${pad(now.getDate())}` +
-    `-${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+
   const blob = new Blob([JSON.stringify(parsed, null, 4)], {
     type: 'application/json;charset=utf-8',
   });
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `SearchEngineJump-settings-${stamp}.json`;
+  link.download = `SearchEngineJump.json`;
   document.body.appendChild(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   emit('notify', '配置已导出');
+  return true;
+}
+
+// 恢复默认属于破坏性操作，先自动导出当前配置作为备份
+function reset() {
+  if (!exportFile()) return;
+  emit('reset');
 }
 </script>
 
@@ -71,7 +74,7 @@ function exportFile() {
     <textarea v-model="text" wrap="off" cols="45" rows="20"></textarea>
     <input ref="fileInput" class="sej-file-input" type="file" accept="application/json,.json" @change="importFile" />
     <div class="sej-dialog-actions">
-      <button @click="$emit('reset')">恢复默认</button>
+      <button @click="reset">恢复默认</button>
       <button @click="pickFile">导入</button>
       <button @click="exportFile">导出</button>
       <button @click="copy">复制</button>
