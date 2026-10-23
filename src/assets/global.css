@@ -168,7 +168,7 @@
   cursor: grabbing;
 }
 #settingLayer .sej-engine {
-  padding: 0 56px 0 8px;
+  padding: 0 36px 0 8px;
   width: 100%;
   height: 30px;
   box-sizing: border-box;
@@ -190,8 +190,8 @@
 }
 .sejtitle {
   text-align: center;
-  /* 左右留出等宽空间，让标题相对卡片居中，同时避开右侧的眼睛/设置按钮 */
-  padding: 5px 56px;
+  /* 左右留出等宽空间，让标题相对卡片居中，同时避开右侧的显隐按钮 */
+  padding: 5px 36px;
   margin-bottom: 2px;
   overflow: hidden;
   white-space: nowrap;
@@ -207,12 +207,6 @@
 #settingLayerMask [data-xin] {
   margin: 1px 0;
   border-radius: 8px;
-}
-#settingLayerMask .iqxin-set-edit,
-#settingLayerMask .iqxin-title-edit {
-  border-radius: 6px;
-  line-height: 1em;
-  margin-right: 2px;
 }
 .sejcon [data-xin] {
   cursor: pointer;
@@ -433,8 +427,6 @@
 .drop-over {
   opacity: 0.6;
 }
-.iqxin-title-edit,
-.iqxin-set-edit,
 .iqxin-set-toggle {
   visibility: visible;
   opacity: 0.6;
@@ -447,13 +439,7 @@
   cursor: pointer;
   transition: opacity 0.12s ease-out, background-color 0.12s ease-out,
     color 0.12s ease-out;
-}
-.iqxin-title-edit,
-.iqxin-set-edit {
-  right: 2px;
-}
-.iqxin-set-toggle {
-  right: 30px;
+  right: 8px;
   display: inline-flex;
   align-items: center;
   color: var(--font-color-qxin);
@@ -464,8 +450,6 @@
 .iqxin-set-toggle.iqxin-set-hidden {
   opacity: 0.35;
 }
-.iqxin-title-edit:hover,
-.iqxin-set-edit:hover,
 .iqxin-set-toggle:hover {
   opacity: 1;
   background: var(--sej-surface-hover);

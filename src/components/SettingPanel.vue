@@ -13,7 +13,7 @@ import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
-import { COPY, EDIT, EYE, EYE_OFF } from '../data/icons.js';
+import { COPY, EYE, EYE_OFF } from '../data/icons.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
@@ -74,8 +74,6 @@ const online = ref(false);
 
 const UNDO_DURATION = 5000;
 const undoStack = [];
-
-const editIcon = EDIT;
 
 const configText = computed(() => {
     const clean = JSON.parse(JSON.stringify(source.value));
@@ -1029,15 +1027,13 @@ onBeforeUnmount(() => {
                     <div class="sejtitle drag" draggable="true" :data-xin="category.enabled ? 1 : -1"
                         :data-iqxintitle="category.key"
                         :class="{ 'sej-dragging': dragCtx?.type === 'category' && dragCtx.ci === ci }"
+                        :title="`编辑分类：${category.name}`"
                         @dragstart="onDragStart($event, 'category', ci)" @dragend="onDragEnd"
-                        @click.stop="toggleCategory(ci)">
+                        @click.stop="openCategoryDialog(ci)">
                         <span class="iqxin-pointer-events">{{ category.name }}</span>
                         <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': !category.enabled }"
                             :title="category.enabled ? '隐藏' : '显示'" @click.stop="toggleCategory(ci)"
                             v-html="category.enabled ? EYE : EYE_OFF"></span>
-                        <span class="iqxin-title-edit" title="设置 Settings" @click.stop="openCategoryDialog(ci)">
-                            <img class="sej-engine-icon" :src="editIcon" alt="" />
-                        </span>
                     </div>
 
                     <!-- 具体条目 -->
@@ -1046,8 +1042,9 @@ onBeforeUnmount(() => {
                         <span v-for="(engine, ei) in category.engines" :key="engine._id" class="drag" draggable="true"
                             :data-sej-drag-el="'engine-' + engine._id"
                             :class="{ 'sej-dragging': dragCtx?.type === 'engine' && dragCtx.key === engine._id }"
+                            :title="`编辑：${engine.name}`"
                             @dragstart="onDragStart($event, 'engine', ci, ei)" @dragend="onDragEnd"
-                            @click.stop="toggleEngine(ci, ei)">
+                            @click.stop="editEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
                                 :data-iqxinlink="engine.url" :data-iqxintarget="engine.blank ? '_blank' : null"
                                 :data-iqxindisabled="engine.disable ? 'true' : null"
@@ -1058,9 +1055,6 @@ onBeforeUnmount(() => {
                             <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': engine.disable }"
                                 :title="engine.disable ? '显示' : '隐藏'" @click.stop="toggleEngine(ci, ei)"
                                 v-html="engine.disable ? EYE_OFF : EYE"></span>
-                            <span class="iqxin-set-edit" title="设置 Settings" @click.stop="editEngine(ci, ei)">
-                                <img class="sej-engine-icon" :src="editIcon" alt="" />
-                            </span>
                         </span>
                         <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
                         <span class="iqxin-additem" :class="{ 'sej-copy-target': copyTargetCi === ci }"
