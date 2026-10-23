@@ -159,6 +159,14 @@
   display: block;
   position: relative;
 }
+/* 拖动排序：源元素淡出，被挤开的元素由 FLIP 动画平滑过渡 */
+#settingLayer .drag.sej-dragging {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+#settingLayer .drag[draggable="true"]:active {
+  cursor: grabbing;
+}
 #settingLayer .sej-engine {
   padding: 0 56px 0 8px;
   width: 100%;

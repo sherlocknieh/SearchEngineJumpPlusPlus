@@ -348,40 +348,286 @@ function deleteCategoryFromDialog() {
 }
 
 const dragCtx = ref(null);
+const dragAnimations = new WeakMap();
+const DRAG_ANIMATION_MS = 160;
+let dragSnapshot = null;
+let dragDropped = false;
 
-function moveArray(arr, from, to) {
-    const [item] = arr.splice(from, 1);
-    arr.splice(to, 0, item);
+function dragElements() {
+    const root = layerEl.value;
+    return root
+        ? Array.from(root.querySelectorAll('[data-sej-drag-el]'))
+        : [];
 }
 
-function onDragStart(e, type, ci, ei) {
-    dragCtx.value = { type, ci, ei };
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/html', '');
-}
-
-function onDrop(e, type, ci, ei) {
-    e.preventDefault();
-    const ctx = dragCtx.value;
-    dragCtx.value = null;
-    if (!ctx || ctx.type !== type) return;
-
-    if (type === 'category') {
-        if (ctx.ci === ci) return;
-        moveArray(draft.categories, ctx.ci, ci);
-    } else {
-        const sourceList = draft.categories[ctx.ci].engines;
-        const targetList = draft.categories[ci].engines;
-        if (ctx.ci === ci && (ei == null || ctx.ei === ei)) return;
-
-        const [engine] = sourceList.splice(ctx.ei, 1);
-        const targetIndex = ei == null
-            ? targetList.length
-            : ctx.ci === ci && ctx.ei < ei
-                ? ei - 1
-                : ei;
-        targetList.splice(targetIndex, 0, engine);
+function snapshotRects() {
+    const rects = new Map();
+    for (const el of dragElements()) {
+        rects.set(el.dataset.sejDragEl, el.getBoundingClientRect());
     }
+    return rects;
+}
+
+function cancelDragAnimations() {
+    for (const el of dragElements()) {
+        const animation = dragAnimations.get(el);
+        if (animation) {
+            animation.cancel();
+            dragAnimations.delete(el);
+        }
+    }
+}
+
+// FLIP：记录改动前后的位置，让被挤开的元素平滑移动到新位置
+async function animateReorder(mutate) {
+    const reduceMotion =
+        !draft.transtion ||
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const before = reduceMotion ? null : snapshotRects();
+    mutate();
+    if (reduceMotion) return;
+    await nextTick();
+    cancelDragAnimations();
+    const after = snapshotRects();
+
+    for (const el of dragElements()) {
+        const key = el.dataset.sejDragEl;
+        const prev = before.get(key);
+        const next = after.get(key);
+        if (!prev || !next) continue;
+
+        let dx = prev.left - next.left;
+        let dy = prev.top - next.top;
+        if (!dx && !dy) continue;
+
+        // 嵌套元素（分类内的搜索引擎）需减去父级位移，避免重复偏移
+        const parent = el.parentElement?.closest('[data-sej-drag-el]');
+        if (parent) {
+            const parentPrev = before.get(parent.dataset.sejDragEl);
+            const parentNext = after.get(parent.dataset.sejDragEl);
+            if (parentPrev && parentNext) {
+                dx -= parentPrev.left - parentNext.left;
+                dy -= parentPrev.top - parentNext.top;
+            }
+        }
+
+        const animation = el.animate(
+            [
+                { transform: `translate(${dx}px, ${dy}px)` },
+                { transform: 'translate(0, 0)' },
+            ],
+            {
+                duration: DRAG_ANIMATION_MS,
+                easing: 'cubic-bezier(0.2, 0, 0, 1)',
+            },
+        );
+        dragAnimations.set(el, animation);
+        animation.addEventListener('finish', () => {
+            if (dragAnimations.get(el) === animation) {
+                dragAnimations.delete(el);
+            }
+        });
+    }
+}
+
+function captureOrder() {
+    return {
+        categories: draft.categories.map((category) => category._id),
+        engines: Object.fromEntries(
+            draft.categories.map((category) => [
+                category._id,
+                category.engines.map((engine) => engine._id),
+            ]),
+        ),
+    };
+}
+
+function restoreOrder(snapshot) {
+    const categories = new Map(
+        draft.categories.map((category) => [category._id, category]),
+    );
+    const engines = new Map();
+    for (const category of draft.categories) {
+        for (const engine of category.engines) engines.set(engine._id, engine);
+    }
+
+    animateReorder(() => {
+        for (const category of draft.categories) {
+            const ids = snapshot.engines[category._id] || [];
+            category.engines.splice(
+                0,
+                category.engines.length,
+                ...ids.map((id) => engines.get(id)).filter(Boolean),
+            );
+        }
+        const ordered = snapshot.categories
+            .map((id) => categories.get(id))
+            .filter(Boolean);
+        draft.categories.splice(0, draft.categories.length, ...ordered);
+    });
+    dragCtx.value = null;
+}
+
+function onDragStart(e, type, ci, ei = null) {
+    const category = draft.categories[ci];
+    if (!category) return;
+    const item = type === 'category' ? category : category.engines[ei];
+    if (!item) return;
+
+    dragSnapshot = captureOrder();
+    dragDropped = false;
+    dragCtx.value = {
+        type,
+        ci,
+        ei: type === 'engine' ? ei : null,
+        key: type === 'category' ? category.key : item._id,
+    };
+
+    e.dataTransfer.effectAllowed = 'move';
+    // Firefox 需要写入数据才会真正开始拖动
+    e.dataTransfer.setData('text/plain', '');
+}
+
+function onDragEnd() {
+    const snapshot = dragSnapshot;
+    dragSnapshot = null;
+    if (!dragDropped && snapshot) {
+        // 未落在可排序区域：恢复拖动前的顺序
+        restoreOrder(snapshot);
+    }
+    dragDropped = false;
+    dragCtx.value = null;
+}
+
+function onDrop(e) {
+    if (!dragCtx.value) return;
+    e.preventDefault();
+    e.stopPropagation();
+    dragDropped = true;
+    dragCtx.value = null;
+}
+
+function moveCategoryTo(index) {
+    const ctx = dragCtx.value;
+    if (!ctx || ctx.type !== 'category' || ctx.ci === index) return;
+    const category = draft.categories[ctx.ci];
+    if (!category) return;
+
+    animateReorder(() => {
+        draft.categories.splice(ctx.ci, 1);
+        draft.categories.splice(index, 0, category);
+        ctx.ci = index;
+    });
+}
+
+function settingsBody() {
+    return layerEl.value?.querySelector('#sej-settings-body') || null;
+}
+
+function categoryCards() {
+    const body = settingsBody();
+    return body
+        ? Array.from(
+              body.querySelectorAll('.iqxin-items[data-sej-drag-el^="category-"]'),
+          )
+        : [];
+}
+
+function layoutOffset(el) {
+    let x = 0;
+    let y = 0;
+    let node = el;
+    while (node) {
+        x += node.offsetLeft;
+        y += node.offsetTop;
+        node = node.offsetParent;
+    }
+    return { x, y };
+}
+
+// 用布局位置（不含 FLIP transform）计算矩形：
+// 动画进行中命中测试会落在过渡中的位置，导致来回抖动
+function layoutRect(el) {
+    const body = settingsBody();
+    if (!body || !body.contains(el)) return el.getBoundingClientRect();
+    const base = body.getBoundingClientRect();
+    const bodyPos = layoutOffset(body);
+    const elPos = layoutOffset(el);
+    const width = el.offsetWidth;
+    const height = el.offsetHeight;
+    const left = base.left + elPos.x - bodyPos.x - body.scrollLeft;
+    const top = base.top + elPos.y - bodyPos.y - body.scrollTop;
+    return {
+        left,
+        top,
+        width,
+        height,
+        right: left + width,
+        bottom: top + height,
+    };
+}
+
+function categoryIndexAt(x, y) {
+    const cards = categoryCards();
+    for (let i = 0; i < cards.length; i++) {
+        const rect = layoutRect(cards[i]);
+        if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function engineInsertIndex(card, y) {
+    const items = Array.from(card.querySelectorAll(':scope > .sejcon > .drag'));
+    for (let i = 0; i < items.length; i++) {
+        const rect = layoutRect(items[i]);
+        if (y < rect.top + rect.height / 2) return i;
+    }
+    return items.length;
+}
+
+function moveEngineTo(ci, insertBefore) {
+    const ctx = dragCtx.value;
+    if (!ctx || ctx.type !== 'engine') return;
+    const source = draft.categories[ctx.ci];
+    const target = draft.categories[ci];
+    const engine = source?.engines?.[ctx.ei];
+    if (!engine || !target) return;
+
+    const from = ctx.ei;
+    let insert = Math.max(0, Math.min(insertBefore, target.engines.length));
+    if (source === target) {
+        // 落在自身原位或紧随其后时无需移动
+        if (insert === from || insert === from + 1) return;
+        if (from < insert) insert -= 1;
+    }
+
+    animateReorder(() => {
+        source.engines.splice(from, 1);
+        target.engines.splice(insert, 0, engine);
+        ctx.ci = ci;
+        ctx.ei = insert;
+    });
+}
+
+// 统一按指针坐标 + 布局矩形判断目标位置，避免动画期间元素命中测试抖动
+function onSettingsDragOver(e) {
+    const ctx = dragCtx.value;
+    if (!ctx) return;
+    e.preventDefault();
+
+    const ci = categoryIndexAt(e.clientX, e.clientY);
+    if (ci < 0) return;
+
+    if (ctx.type === 'category') {
+        moveCategoryTo(ci);
+        return;
+    }
+
+    const card = categoryCards()[ci];
+    if (!card) return;
+    moveEngineTo(ci, engineInsertIndex(card, e.clientY));
 }
 
 function addEngine(ci) {
@@ -586,14 +832,17 @@ onBeforeUnmount(() => {
                     @click.stop="close" @mousedown.stop>✕</button>
             </div>
             <!-- 引擎列表管理区域 -->
-            <div id="sej-settings-body">
+            <div id="sej-settings-body" @dragover="onSettingsDragOver" @drop="onDrop">
                 <!-- 分类列表 -->
                 <div v-for="(category, ci) in draft.categories" :id="category.key" :key="category._id"
-                    class="iqxin-items" :class="{ 'sej-category-hidden': !category.enabled }">
+                    class="iqxin-items" :class="{ 'sej-category-hidden': !category.enabled }"
+                    :data-sej-drag-el="'category-' + category._id">
                     <!-- 类别标题 -->
                     <div class="sejtitle drag" draggable="true" :data-xin="category.enabled ? 1 : -1"
-                        :data-iqxintitle="category.key" @dragstart="onDragStart($event, 'category', ci)"
-                        @dragover.prevent @drop="onDrop($event, 'category', ci)" @click.stop="toggleCategory(ci)">
+                        :data-iqxintitle="category.key"
+                        :class="{ 'sej-dragging': dragCtx?.type === 'category' && dragCtx.ci === ci }"
+                        @dragstart="onDragStart($event, 'category', ci)" @dragend="onDragEnd"
+                        @click.stop="toggleCategory(ci)">
                         <span class="iqxin-pointer-events">{{ category.name }}</span>
                         <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': !category.enabled }"
                             :title="category.enabled ? '隐藏' : '显示'" @click.stop="toggleCategory(ci)"
@@ -604,11 +853,13 @@ onBeforeUnmount(() => {
                     </div>
 
                     <!-- 具体条目 -->
-                    <div class="sejcon" @dragover.prevent @drop="onDrop($event, 'engine', ci)">
+                    <div class="sejcon" :data-sej-drag-el="'list-' + category._id">
                         <!-- 每个搜索引擎 -->
                         <span v-for="(engine, ei) in category.engines" :key="engine._id" class="drag" draggable="true"
-                            @dragstart="onDragStart($event, 'engine', ci, ei)" @dragover.prevent
-                            @drop="onDrop($event, 'engine', ci, ei)" @click.stop="toggleEngine(ci, ei)">
+                            :data-sej-drag-el="'engine-' + engine._id"
+                            :class="{ 'sej-dragging': dragCtx?.type === 'engine' && dragCtx.key === engine._id }"
+                            @dragstart="onDragStart($event, 'engine', ci, ei)" @dragend="onDragEnd"
+                            @click.stop="toggleEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
                                 :data-iqxinlink="engine.url" :data-iqxintarget="engine.blank ? '_blank' : null"
                                 :data-iqxindisabled="engine.disable ? 'true' : null"
