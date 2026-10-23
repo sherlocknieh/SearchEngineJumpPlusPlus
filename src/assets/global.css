@@ -321,8 +321,7 @@
   gap: 6px;
   color: inherit;
 }
-#btnEle #xin-centerDisplay,
-#btnEle #xin-newtab {
+#btnEle #xin-centerDisplay {
   gap: 2px;
   padding-right: 4px;
 }
@@ -711,8 +710,7 @@ span.iqxin-additem.sej-copy-target {
   border-color: var(--sej-danger);
   color: var(--sej-danger);
 }
-#xin-centerDisplay select,
-#xin-newtab select {
+#xin-centerDisplay select {
   height: 24px;
   margin: -1px 0;
   border: 1px solid transparent;
@@ -727,17 +725,14 @@ span.iqxin-additem.sej-copy-target {
   background: transparent;
   transition: border-color 0.12s ease-out, background-color 0.12s ease-out;
 }
-#xin-centerDisplay select:hover,
-#xin-newtab select:hover {
+#xin-centerDisplay select:hover {
   background: var(--sej-surface-hover);
 }
-#xin-centerDisplay select:focus,
-#xin-newtab select:focus {
+#xin-centerDisplay select:focus {
   border-color: var(--sej-accent);
   background: var(--sej-input-bg);
 }
-#xin-centerDisplay select option,
-#xin-newtab select option {
+#xin-centerDisplay select option {
   background: var(--sej-input-bg);
   color: var(--font-color-qxin);
 }

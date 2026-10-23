@@ -13,7 +13,7 @@ import EngineItem from './EngineItem.vue';
 const props = defineProps({
   name: { type: String, required: true },
   engines: { type: Array, required: true },
-  iconMode: { type: Number, default: 1 },
+  showIcon: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['jump', 'jumpAll']);
@@ -230,7 +230,7 @@ onBeforeUnmount(() => {
         </svg>
       </span>
       <img
-        v-else-if="iconMode && getFaviconSrc(engines[0])"
+        v-else-if="showIcon && getFaviconSrc(engines[0])"
         class="sej-engine-icon"
         :src="getFaviconSrc(engines[0])"
         alt=""

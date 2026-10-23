@@ -2,26 +2,15 @@ import { reactive } from 'vue';
 import defaultEngines from '../data/engineList.js';
 import rules from '../data/rules.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
-import { XIAOHONGSHU, X_ICON, TIEBA } from '../data/favicons.js';
 
 export const STORAGE_KEY = 'searchEngineJumpData';
-export const SCRIPT_VERSION = '5.32.7';
 
 function createDefaultSettings() {
   return {
-    status: 1,
-    version: SCRIPT_VERSION,
-    addSearchItems: true,
-    modifySearchItems: true,
-    newtab: 0,
-    debug: false,
     fixedTop: true,
     fixedTopUpward: false,
-    baiduOffset: -120,
-    getIcon: 0,
     HideTheSameLink: true,
-    center: 2,
-    icon: 1,
+    center: 0,
     transtion: true,
     selectSearch: true,
     engineCategories: [
@@ -42,68 +31,99 @@ function createDefaultSettings() {
   };
 }
 
-// 旧版本使用 engineDetails，读取时迁移为 engineCategories
-function migrateLegacyKeys(data) {
-  if (!data || typeof data !== 'object') return false;
-  const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
-  let changed = false;
-  if (!has('engineCategories') && has('engineDetails')) {
-    data.engineCategories = data.engineDetails;
-    changed = true;
-  }
-  if (has('engineDetails')) {
-    delete data.engineDetails;
-    changed = true;
-  }
-  // 旧版本会把分类派生数据写进 engineList，导致每次读取都和内存中的
-  // 设置不一致，引起无休止的“跨页面同步”重启。这里顺手清理掉。
-  if (
-    data.engineList &&
-    Object.prototype.hasOwnProperty.call(data.engineList, 'engineCategories')
-  ) {
-    delete data.engineList.engineCategories;
-    changed = true;
-  }
-  return changed;
+const OPTION_FLAGS = [
+  'fixedTop',
+  'fixedTopUpward',
+  'HideTheSameLink',
+  'transtion',
+  'selectSearch',
+];
+const ENGINE_STRINGS = ['name', 'url', 'favicon', 'faviconData'];
+
+// 兼容性白名单：当前字段 ← 旧版本字段名；读取时回退，写出时只用当前字段。
+// engineDetails 是 engineCategories 的旧名字，仍需兼容历史配置。
+const COMPAT_FIELDS = {
+  engineCategories: ['engineDetails'],
+};
+
+function isObject(value) {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-function pruneUnknownKeys(data, defaults) {
-  let changed = false;
-  for (const key of Object.keys(data)) {
-    if (!Object.prototype.hasOwnProperty.call(defaults, key)) {
-      delete data[key];
-      changed = true;
-    }
+// 只拷贝白名单字段，其余字段（blank、_id 等）在读入时即被丢弃
+function normalizeEngine(raw) {
+  if (!isObject(raw)) return null;
+  const engine = {};
+  for (const key of ENGINE_STRINGS) {
+    if (typeof raw[key] === 'string') engine[key] = raw[key];
   }
-  return changed;
+  if (!engine.url) return null;
+  if (raw.target === '_self') engine.target = '_self';
+  if (raw.disable === true) engine.disable = true;
+  if (raw.gbk === true) engine.gbk = true;
+  return engine;
 }
 
-function isVersionOutdated(storedVersion, currentVersion) {
-  const arr1 = storedVersion.toString().split('.');
-  const arr2 = currentVersion.toString().split('.');
-  const minlength = Math.min(arr1.length, arr2.length);
-  let i = 0;
+// 新字段优先，缺失时按兼容性白名单回退到旧字段
+function readCompat(data, key) {
+  if (Array.isArray(data[key])) return data[key];
+  for (const legacy of COMPAT_FIELDS[key] || []) {
+    if (Array.isArray(data[legacy])) return data[legacy];
+  }
+  return null;
+}
 
-  for (; i < minlength; i++) {
-    const a = parseInt(arr1[i]);
-    const b = parseInt(arr2[i]);
-    if (a > b) return false;
-    if (a < b) return true;
+// 返回 null 表示数据不可用，需要回退到默认分类
+function normalizeCategories(data) {
+  const raw = readCompat(data, 'engineCategories');
+  if (!raw) return null;
+  const seen = new Set();
+  const categories = [];
+  for (const entry of raw) {
+    if (!Array.isArray(entry)) continue;
+    const [name, key, enabled] = entry;
+    if (typeof key !== 'string' || !key || seen.has(key)) continue;
+    seen.add(key);
+    categories.push([
+      typeof name === 'string' ? name : key,
+      key,
+      typeof enabled === 'boolean' ? enabled : true,
+    ]);
+  }
+  return categories;
+}
+
+/**
+ * 按白名单重建配置：不认识或已废弃的字段不会进入内存与存储。
+ */
+function normalizeSettings(raw, defaults) {
+  const data = isObject(raw) ? raw : {};
+  const settings = {};
+
+  for (const key of OPTION_FLAGS) {
+    settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
+  }
+  // center 只有两种模式：1 = 强制居中，其余一律按默认布局处理
+  settings.center = data.center === 1 || data.center === '1' ? 1 : 0;
+
+  const categories =
+    normalizeCategories(data) ||
+    defaults.engineCategories.map((entry) => entry.slice());
+
+  const rawList = isObject(data.engineList) ? data.engineList : null;
+  const engineList = {};
+  for (const [, key] of categories) {
+    const engines = rawList
+      ? Array.isArray(rawList[key])
+        ? rawList[key]
+        : []
+      : defaults.engineList[key] || [];
+    engineList[key] = engines.map(normalizeEngine).filter(Boolean);
   }
 
-  if (arr1.length > arr2.length) {
-    for (let j = i; j < arr1.length; j++) {
-      if (parseInt(arr1[j]) != 0) return false;
-    }
-    return false;
-  } else if (arr1.length < arr2.length) {
-    for (let j = i; j < arr2.length; j++) {
-      if (parseInt(arr2[j]) != 0) return true;
-    }
-    return false;
-  }
-
-  return false;
+  settings.engineCategories = categories;
+  settings.engineList = engineList;
+  return settings;
 }
 
 export class Settings {
@@ -114,125 +134,47 @@ export class Settings {
     this.initSettings();
   }
 
-  checkSettingDataIntegrity() {
-    let changed = migrateLegacyKeys(this.settingData);
-    changed =
-      pruneUnknownKeys(this.settingData, this.scriptSettingData) || changed;
-    for (const value in this.scriptSettingData) {
-      if (!Object.prototype.hasOwnProperty.call(this.settingData, value)) {
-        console.warn(`[SEJ] 属性不存在：${value}`);
-        this.settingData[value] = this.scriptSettingData[value];
-        changed = true;
-      }
-    }
-    if (changed) setValue(STORAGE_KEY, this.settingData);
-  }
-
-  checkUpdate() {
-    if (
-      !isVersionOutdated(
-        this.storedSettingData.version,
-        this.scriptSettingData.version,
-      )
-    ) {
-      return;
-    }
-
-    this.settingData.version = this.scriptSettingData.version;
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.30.2')) {
-      this.deleteOutdatedSearchItems(['https://so.letv.com/s?wd=%s']);
-      this.modifyOutdatedSearchItems(
-        'https://s.weibo.com/weibo/%s',
-        'https://s.weibo.com/weibo/?q=%s',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.30.4')) {
-      this.modifyOutdatedSearchItems(
-        'https://www.startpage.com/do/asearch$post$query',
-        'https://www.startpage.com/sp/search$post$query',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.31.1')) {
-      this.modifyOutdatedSearchItemsTarget('https://zh.moegirl.org/%s');
-      this.modifyOutdatedSearchItemsTarget(
-        'https://tieba.baidu.com/f?kw=%s&ie=utf-8',
-      );
-      this.modifyOutdatedSearchItemsTarget(
-        'https://github.com/search?utf8=✓&q=%s',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.31.8')) {
-      this.modifyOutdatedSearchItems(
-        'https://cn.bing.com/search?q=%s',
-        'https://www.bing.com/search?q=%s',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.31.11')) {
-      this.addSearchItem(
-        {
-          name: '小红书',
-          url: 'https://www.xiaohongshu.com/search_result/?keyword=%s',
-          favicon: XIAOHONGSHU,
-        },
-        'sociality',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.31.16')) {
-      this.deleteOutdatedSearchItems(['https://twitter.com/search/%s']);
-      this.addSearchItem(
-        {
-          name: 'X',
-          url: 'https://x.com/search?q=%s',
-          favicon: X_ICON,
-        },
-        'sociality',
-      );
-    }
-
-    if (isVersionOutdated(this.storedSettingData.version, '5.31.17')) {
-      this.modifyOutdatedSearchItemsIcon(
-        'https://tieba.baidu.com/f?kw=%s&ie=utf-8',
-        TIEBA,
-      );
-    }
-
-    setValue(STORAGE_KEY, this.settingData);
-  }
-
   initSettings() {
     if (this.storedSettingData) {
-      this.settingData = Object.assign({}, this.storedSettingData);
-      this.checkSettingDataIntegrity();
-      this.checkUpdate();
+      this.settingData = normalizeSettings(
+        this.storedSettingData,
+        this.scriptSettingData,
+      );
+      // 旧配置读取后立即回写为规范形式，避免每次启动重复规范化
+      if (!isSameValue(this.settingData, this.storedSettingData)) {
+        setValue(STORAGE_KEY, this.settingData);
+      }
     } else {
-      this.settingData = this.scriptSettingData;
       // 不主动写入默认值：存储探测/读取失败时也返回空值，
       // 此时写回会把默认配置覆盖到已有配置上（部分站点曾出现该问题）。
+      this.settingData = normalizeSettings(
+        this.scriptSettingData,
+        this.scriptSettingData,
+      );
     }
   }
 
-  // 原地应用新设置：保持 settingData 引用不变，供已挂载的组件响应
-  applySettings(next) {
-    const source = Object.assign({}, next);
-    migrateLegacyKeys(source);
-    const merged = Object.assign({}, this.scriptSettingData, source);
-    pruneUnknownKeys(merged, this.scriptSettingData);
-    const plain = JSON.parse(JSON.stringify(merged));
-    pruneUnknownKeys(this.settingData, this.scriptSettingData);
+  // 原地应用设置：保持 settingData 引用不变，供已挂载的组件响应
+  applyNormalized(normalized) {
+    const plain = JSON.parse(JSON.stringify(normalized));
+    for (const key of Object.keys(this.settingData)) {
+      if (!Object.prototype.hasOwnProperty.call(plain, key)) {
+        delete this.settingData[key];
+      }
+    }
     Object.assign(this.settingData, plain);
+  }
+
+  // 应用新设置：先规范化，再落地
+  applySettings(next) {
+    this.applyNormalized(normalizeSettings(next, this.scriptSettingData));
     this.storedSettingData = this.settingData;
     return setValue(STORAGE_KEY, this.settingData);
   }
 
   // 自动保存：把指定字段合并到当前设置后持久化
   savePartial(partial) {
-    if (!partial || typeof partial !== 'object') return 'memory';
+    if (!isObject(partial)) return 'memory';
     const next = Object.assign({}, this.settingData, partial);
     return this.applySettings(next);
   }
@@ -240,14 +182,13 @@ export class Settings {
   // 从存储重新读取设置（用于其他页面保存后的同步）
   reload() {
     const stored = getValue(STORAGE_KEY, null);
-    if (!stored || typeof stored !== 'object') return false;
-    migrateLegacyKeys(stored);
-    if (this.settingData && isSameValue(stored, this.settingData)) {
+    if (!isObject(stored)) return false;
+    const normalized = normalizeSettings(stored, this.scriptSettingData);
+    if (this.settingData && isSameValue(normalized, this.settingData)) {
       return false;
     }
-    this.storedSettingData = stored;
-    this.settingData = Object.assign({}, stored);
-    this.checkSettingDataIntegrity();
+    this.applyNormalized(normalized);
+    this.storedSettingData = this.settingData;
     return true;
   }
 
@@ -256,56 +197,6 @@ export class Settings {
       if (rule.url.test(location.href)) return rule;
     }
     return null;
-  }
-
-  addSearchItem(newItem, category) {
-    this.settingData.engineList[category].push(newItem);
-  }
-
-  modifyOutdatedSearchItems(oldURL, newURL) {
-    for (const value in this.settingData.engineList) {
-      const item = this.settingData.engineList[value];
-      for (let i = 0; i < item.length; i++) {
-        if (item[i].url === oldURL) item[i].url = newURL;
-      }
-    }
-  }
-
-  modifyOutdatedSearchItemsTarget(url) {
-    for (const value in this.settingData.engineList) {
-      const item = this.settingData.engineList[value];
-      for (let i = 0; i < item.length; i++) {
-        if (item[i].url === url) delete item[i].blank;
-      }
-    }
-  }
-
-  deleteOutdatedSearchItems(urlList) {
-    for (const value in this.settingData.engineList) {
-      const item = this.settingData.engineList[value];
-      for (let i = 0; i < item.length; i++) {
-        if (urlList.includes(item[i].url)) {
-          console.warn('[SEJ] 删除搜索引擎：' + item[i].name);
-          item.splice(i, 1);
-        }
-      }
-    }
-  }
-
-  modifyOutdatedSearchItemsIcon(url, newIcon) {
-    for (const value in this.settingData.engineList) {
-      const item = this.settingData.engineList[value];
-      for (let i = 0; i < item.length; i++) {
-        if (item[i].url === url) item[i].favicon = newIcon;
-      }
-    }
-  }
-
-  modifyOutdatedSearchItemsRule(name, value) {
-    const oldRule = this.settingData.rules;
-    for (const item in oldRule) {
-      if (oldRule[item].name == name) oldRule[item] = value;
-    }
   }
 }
 

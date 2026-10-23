@@ -1,6 +1,11 @@
 import { reactive } from 'vue';
 
 export const ui = reactive({
+  // 分类标签是否显示首个引擎的图标；纯运行时状态，不写入配置也不导出
+  categoryIcon: true,
+  // 添加/编辑引擎时默认 favicon 的来源：0 自动、1 站点 /favicon.ico、
+  // 2 Google s2、3 DNSPod，其他字符串作为 %s 模板；同样不持久化
+  iconSource: 0,
   settingPanelOpen: false,
   // 其他页面写入设置时递增，供已打开的设置面板尝试同步
   settingsRevision: 0,

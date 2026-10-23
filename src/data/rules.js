@@ -8,8 +8,7 @@
   class: 字符串，添加一个class, 用来使用目标网站的样式
   fixedTop: 数字，可选，固定在顶部的高度，单位 px
   style: CSS样式，可选，自定义样式
-  style_ACBaidu: CSS样式，可选，自定义样式，在强制居中模式下启用，兼容 AC_Baidu 脚本
-  style_ZhihuChenglinzhi: CSS样式，可选，自定义样式，在强制居中模式下启用，兼容知乎排版优化脚本
+  style_ZhihuChenglinzhi: CSS样式，可选，自定义样式，兼容知乎排版优化脚本
   insertIntoDoc: 对象，插入文档相关
     target: 字符串，选中插入到原网页时所用的定位元素
       可以使用 xpath 匹配，如: '//*[@id="subform_ctrl"]'
@@ -38,13 +37,9 @@ const webRules = [
     fixedTop: 56,
     style: `
       z-index: 100;
-      margin: 1px auto;
+      margin-top:15px;
+      margin-bottom:5px;
       grid-column: 2 / -2;
-    `,
-    style_ACBaidu: `
-      text-align: center;
-      z-index: 100;
-      margin: 1px auto;
     `,
     insertIntoDoc: {
       target: "css;#appbar",
@@ -62,12 +57,7 @@ const webRules = [
     style: `
       left: 142px;
       z-index: 100;
-      margin: 1px auto;
-    `,
-    style_ACBaidu: `
-      text-align: center;
-      z-index: 100;
-      margin:5px auto 0;
+      margin-top:5px;
     `,
     insertIntoDoc: {
       target: "css;#appbar",
@@ -93,14 +83,6 @@ const webRules = [
       z-index: 101;
       margin: 0 var(--container-left-gap);
     `,
-    style_ACBaidu: `
-      margin: 8px auto -5px;
-      z-index: 99;
-      text-align: center;
-      padding-left:0px !important;
-      background: rgba(248,248,248,0.4);
-      backdrop-filter: blur(10px);
-    `,
     insertIntoDoc: {
       keyword: "css;input#kw",
       target: "css;#wrapper_wrapper",
@@ -121,12 +103,8 @@ const webRules = [
     fixedTop: 60,
     engineList: "web",
     style: `
-      margin: 1px auto;
-    `,
-    style_ACBaidu: `
-      text-align: center;
-      margin: 0 auto -10px;
-      position: sticky;
+      margin-top: 1em;
+      left: 160px;
       top: 0.5em;
     `,
     insertIntoDoc: {
@@ -237,12 +215,6 @@ const webRules = [
       z-index:99;
       left:-5px;
     `,
-    style_ACBaidu: `
-      top:-46px;
-      z-index:99;
-      margin: auto;
-      padding-left: 0px !important;
-    `,
     insertIntoDoc: {
       keyword: "css;#upquery",
       target: "css;#wrapper",
@@ -341,11 +313,6 @@ const webRules = [
       left: 50px;
       z-index: -99999;
       margin-top:5px;
-    `,
-    style_ACBaidu: `
-      text-align: center;
-      z-index: -99999;
-      margin:5px auto 0;
     `,
     insertIntoDoc: {
       target: "css;.input-with-suggestion",

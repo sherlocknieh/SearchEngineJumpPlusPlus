@@ -55,9 +55,9 @@
 	var isFunction = (val) => typeof val === "function";
 	var isString = (val) => typeof val === "string";
 	var isSymbol = (val) => typeof val === "symbol";
-	var isObject = (val) => val !== null && typeof val === "object";
+	var isObject$1 = (val) => val !== null && typeof val === "object";
 	var isPromise = (val) => {
-		return (isObject(val) || isFunction(val)) && isFunction(val.then) && isFunction(val.catch);
+		return (isObject$1(val) || isFunction(val)) && isFunction(val.then) && isFunction(val.catch);
 	};
 	var objectToString = Object.prototype.toString;
 	var toTypeString = (value) => objectToString.call(value);
@@ -114,7 +114,7 @@
 				if (normalized) for (const key in normalized) res[key] = normalized[key];
 			}
 			return res;
-		} else if (isString(value) || isObject(value)) return value;
+		} else if (isString(value) || isObject$1(value)) return value;
 	}
 	var listDelimiterRE = /;(?![^(]*\))/g;
 	var propertyDelimiterRE = /:([^]+)/;
@@ -136,7 +136,7 @@
 			const normalized = normalizeClass(value[i]);
 			if (normalized) res += normalized + " ";
 		}
-		else if (isObject(value)) {
+		else if (isObject$1(value)) {
 			for (const name in value) if (value[name]) res += name + " ";
 		}
 		return res.trim();
@@ -203,8 +203,8 @@
 		aValidType = isArray(a);
 		bValidType = isArray(b);
 		if (aValidType || bValidType) return aValidType && bValidType ? looseCompareNested(a, b, seen, looseCompareArrays) : false;
-		aValidType = isObject(a);
-		bValidType = isObject(b);
+		aValidType = isObject$1(a);
+		bValidType = isObject$1(b);
 		if (aValidType || bValidType) {
 			if (!aValidType || !bValidType) return false;
 			return looseCompareNested(a, b, seen, looseCompareObjects);
@@ -218,7 +218,7 @@
 		return !!(val && val["__v_isRef"] === true);
 	};
 	var toDisplayString = (val) => {
-		return isString(val) ? val : val == null ? "" : isArray(val) || isObject(val) && (val.toString === objectToString || !isFunction(val.toString)) ? isRef$1(val) ? toDisplayString(val.value) : JSON.stringify(val, replacer, 2) : String(val);
+		return isString(val) ? val : val == null ? "" : isArray(val) || isObject$1(val) && (val.toString === objectToString || !isFunction(val.toString)) ? isRef$1(val) ? toDisplayString(val.value) : JSON.stringify(val, replacer, 2) : String(val);
 	};
 	var replacer = (_key, val) => {
 		if (isRef$1(val)) return replacer(_key, val.value);
@@ -228,7 +228,7 @@
 		}, {}) };
 		else if (isSet(val)) return { [`Set(${val.size})`]: [...val.values()].map((v) => stringifySymbol(v)) };
 		else if (isSymbol(val)) return stringifySymbol(val);
-		else if (isObject(val) && !isArray(val) && !isPlainObject(val)) return String(val);
+		else if (isObject$1(val) && !isArray(val) && !isPlainObject(val)) return String(val);
 		return val;
 	};
 	var stringifySymbol = (v, i = "") => {
@@ -937,9 +937,9 @@
 			if (isShallow2) return res;
 			if (isRef(res)) {
 				const value = targetIsArray && isIntegerKey(key) ? res : res.value;
-				return isReadonly2 && isObject(value) ? readonly(value) : value;
+				return isReadonly2 && isObject$1(value) ? readonly(value) : value;
 			}
-			if (isObject(res)) return isReadonly2 ? readonly(res) : reactive(res);
+			if (isObject$1(res)) return isReadonly2 ? readonly(res) : reactive(res);
 			return res;
 		}
 	};
@@ -1177,7 +1177,7 @@
 		return createReactiveObject(target, true, readonlyHandlers, readonlyCollectionHandlers, readonlyMap);
 	}
 	function createReactiveObject(target, isReadonly2, baseHandlers, collectionHandlers, proxyMap) {
-		if (!isObject(target)) return target;
+		if (!isObject$1(target)) return target;
 		if (target["__v_raw"] && !(isReadonly2 && target["__v_isReactive"])) return target;
 		if (target["__v_skip"] || !Object.isExtensible(target)) return target;
 		const existingProxy = proxyMap.get(target);
@@ -1209,8 +1209,8 @@
 		if (!hasOwn(value, "__v_skip") && Object.isExtensible(value)) def(value, "__v_skip", true);
 		return value;
 	}
-	var toReactive = (value) => isObject(value) ? reactive(value) : value;
-	var toReadonly = (value) => isObject(value) ? readonly(value) : value;
+	var toReactive = (value) => isObject$1(value) ? reactive(value) : value;
+	var toReadonly = (value) => isObject$1(value) ? readonly(value) : value;
 	function isRef(r) {
 		return r ? r["__v_isRef"] === true : false;
 	}
@@ -1429,7 +1429,7 @@
 		return watchHandle;
 	}
 	function traverse(value, depth = Infinity, seen) {
-		if (depth <= 0 || !isObject(value) || value["__v_skip"]) return value;
+		if (depth <= 0 || !isObject$1(value) || value["__v_skip"]) return value;
 		seen = seen || new Map();
 		if ((seen.get(value) || 0) >= depth) return value;
 		seen.set(value, depth);
@@ -2234,7 +2234,7 @@
 				ret = new Array(source);
 				for (let i = 0; i < source; i++) ret[i] = renderItem(i + 1, i, void 0, cached && cached[i]);
 			}
-		} else if (isObject(source)) {
+		} else if (isObject$1(source)) {
 			if (source[Symbol.iterator]) ret = Array.from(source, (item, i) => renderItem(item, i, void 0, cached && cached[i]));
 			else {
 				const keys = Object.keys(source);
@@ -2352,7 +2352,7 @@
 		}
 		if (dataOptions) {
 			const data = dataOptions.call(publicThis, publicThis);
-			if (!isObject(data)) {} else instance.data = reactive(data);
+			if (!isObject$1(data)) {} else instance.data = reactive(data);
 		}
 		shouldCacheAccess = true;
 		if (computedOptions) for (const key in computedOptions) {
@@ -2415,7 +2415,7 @@
 		for (const key in injectOptions) {
 			const opt = injectOptions[key];
 			let injected;
-			if (isObject(opt)) {
+			if (isObject$1(opt)) {
 				if ("default" in opt) injected = inject(opt.from || key, opt.default, true);
 				else injected = inject(opt.from || key);
 			} else injected = inject(opt);
@@ -2437,7 +2437,7 @@
 			const handler = ctx[raw];
 			if (isFunction(handler)) watch(getter, handler);
 		} else if (isFunction(raw)) watch(getter, raw.bind(publicThis));
-		else if (isObject(raw)) {
+		else if (isObject$1(raw)) {
 			if (isArray(raw)) raw.forEach((r) => createWatcher(r, ctx, publicThis, key));
 			else {
 				const handler = isFunction(raw.handler) ? raw.handler.bind(publicThis) : ctx[raw.handler];
@@ -2458,7 +2458,7 @@
 			if (globalMixins.length) globalMixins.forEach((m) => mergeOptions(resolved, m, optionMergeStrategies, true));
 			mergeOptions(resolved, base, optionMergeStrategies);
 		}
-		if (isObject(base)) cache.set(base, resolved);
+		if (isObject$1(base)) cache.set(base, resolved);
 		return resolved;
 	}
 	function mergeOptions(to, from, strats, asMixin = false) {
@@ -2559,7 +2559,7 @@
 	function createAppAPI(render, hydrate) {
 		return function createApp(rootComponent, rootProps = null) {
 			if (!isFunction(rootComponent)) rootComponent = extend({}, rootComponent);
-			if (rootProps != null && !isObject(rootProps)) rootProps = null;
+			if (rootProps != null && !isObject$1(rootProps)) rootProps = null;
 			const context = createAppContext();
 			const installedPlugins = new WeakSet();
 			const pluginCleanupFns = [];
@@ -2688,12 +2688,12 @@
 			if (comp.mixins) comp.mixins.forEach(extendEmits);
 		}
 		if (!raw && !hasExtends) {
-			if (isObject(comp)) cache.set(comp, null);
+			if (isObject$1(comp)) cache.set(comp, null);
 			return null;
 		}
 		if (isArray(raw)) raw.forEach((key) => normalized[key] = null);
 		else extend(normalized, raw);
-		if (isObject(comp)) cache.set(comp, normalized);
+		if (isObject$1(comp)) cache.set(comp, normalized);
 		return normalized;
 	}
 	function isEmitListener(options, key) {
@@ -2810,7 +2810,7 @@
 	function hasPropValueChanged(nextProps, prevProps, key) {
 		const nextProp = nextProps[key];
 		const prevProp = prevProps[key];
-		if (key === "style" && isObject(nextProp) && isObject(prevProp)) return !looseEqual(nextProp, prevProp);
+		if (key === "style" && isObject$1(nextProp) && isObject$1(prevProp)) return !looseEqual(nextProp, prevProp);
 		return nextProp !== prevProp;
 	}
 	function updateHOCHostEl({ vnode, parent, suspense }, el) {
@@ -2959,7 +2959,7 @@
 			if (comp.mixins) comp.mixins.forEach(extendProps);
 		}
 		if (!raw && !hasExtends) {
-			if (isObject(comp)) cache.set(comp, EMPTY_ARR);
+			if (isObject$1(comp)) cache.set(comp, EMPTY_ARR);
 			return EMPTY_ARR;
 		}
 		if (isArray(raw)) for (let i = 0; i < raw.length; i++) {
@@ -2989,7 +2989,7 @@
 			}
 		}
 		const res = [normalized, needCastKeys];
-		if (isObject(comp)) cache.set(comp, res);
+		if (isObject$1(comp)) cache.set(comp, res);
 		return res;
 	}
 	function validatePropName(key) {
@@ -3900,12 +3900,12 @@
 			props = guardReactiveProps(props);
 			let { class: klass, style } = props;
 			if (klass && !isString(klass)) props.class = normalizeClass(klass);
-			if (isObject(style)) {
+			if (isObject$1(style)) {
 				if (isProxy(style) && !isArray(style)) style = extend({}, style);
 				props.style = normalizeStyle(style);
 			}
 		}
-		const shapeFlag = isString(type) ? 1 : isSuspense(type) ? 128 : isTeleport(type) ? 64 : isObject(type) ? 4 : isFunction(type) ? 2 : 0;
+		const shapeFlag = isString(type) ? 1 : isSuspense(type) ? 128 : isTeleport(type) ? 64 : isObject$1(type) ? 4 : isFunction(type) ? 2 : 0;
 		return createBaseVNode(type, props, children, patchFlag, dynamicProps, shapeFlag, isBlockNode, true);
 	}
 	function guardReactiveProps(props) {
@@ -4192,7 +4192,7 @@
 		if (isFunction(setupResult)) {
 			if (instance.type.__ssrInlineRender) instance.ssrRender = setupResult;
 			else instance.render = setupResult;
-		} else if (isObject(setupResult)) instance.setupState = proxyRefs(setupResult);
+		} else if (isObject$1(setupResult)) instance.setupState = proxyRefs(setupResult);
 		finishComponentSetup(instance, isSSR);
 	}
 	function finishComponentSetup(instance, isSSR, skipOptions) {
@@ -4814,6 +4814,8 @@
 	var _GM_setValue = (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
 	var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
 	var ui = reactive({
+		categoryIcon: true,
+		iconSource: 0,
 		settingPanelOpen: false,
 		settingsRevision: 0,
 		toastText: "",
@@ -4932,8 +4934,7 @@
 			{
 				name: "搜狐",
 				url: "https://so.tv.sohu.com/mts?wd=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACk0lEQVQ4jW2SXUhTYRjHf2furH1vns0tc+p01YbSaRRGFGmElRWhRVR0VzeBCUkRKRQUURFBUYtMsAsvwqSLboqKii76oOjLLsKwLBLOjsM+iBEiEk8XOtCDD7zwwvv//57/+7wvWEpX1WUXqud33U1XPn+2cuHgm4bk9xeNqc+Xl1f0eiFi1c8s+wHNd6gzWpxZ7XXtrHBQMx/itR413RYPdbysXzQ80qxPnFkay8zp3jXP1V7ncPS74BbQD6ywavbGQm25lrTcXJN4OOtgS5G6L4oyDogNRYDfpdCUBN0KaYp4t+da0nJcX3AeAB+EU9gmAFGnzH8B2xlcmTElJBk8N6yQW8vjT7Lblv7zQZj1FHUVzNOAdoBruHsNRRMzlJCPkUVja7E3FQBxB6nRzbqc0MsuosKwfdpcBJOAE+Aq7l4DTQybJmY0KWagUnpw3wb8AN8aUuMvG2uGscFPUMSOIgrkC10yBQCaGASksL+Cqw/gQ13C/LKhJo8Xfi7DLo6p+JOAfVaCGesxvo/VsBhgKJ3IDzWk/rAV9XMvPtmPUw7gEmC3FfCV4EQrjo5CuhgsNPWEPK2rHqQFNWOiyQBBGUOTbjw5gIu4rxtocg//W+sPvBMKvzKXJKSzouQsXoiMEJzMKSEx0OQXmjzA/zoJej32DdYnvGLz9GVLy2SktmoSCALQifOsYQtL1rlg+r5B+UQwfw53dzOOPZso2nEC16UBAjljXolkY+VysCR4bBa5B/dtMxCX0Qpdst6YGPinp188a5BZX1S6wlq/NRkAR3Ce+l6amvixrlnGVm2U0bIayXrLxVAjYqDJsFI83urwdMxpnlH+o3bv6UclVR8GwlXmO2fUvE/g/WGcJwG3VfwfeW39pYdUeeAAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACk0lEQVQ4jW2SXUhTYRjHf2furH1vns0tc+p01YbSaRRGFGmElRWhRVR0VzeBCUkRKRQUURFBUYtMsAsvwqSLboqKii76oOjLLsKwLBLOjsM+iBEiEk8XOtCDD7zwwvv//57/+7wvWEpX1WUXqud33U1XPn+2cuHgm4bk9xeNqc+Xl1f0eiFi1c8s+wHNd6gzWpxZ7XXtrHBQMx/itR413RYPdbysXzQ80qxPnFkay8zp3jXP1V7ncPS74BbQD6ywavbGQm25lrTcXJN4OOtgS5G6L4oyDogNRYDfpdCUBN0KaYp4t+da0nJcX3AeAB+EU9gmAFGnzH8B2xlcmTElJBk8N6yQW8vjT7Lblv7zQZj1FHUVzNOAdoBruHsNRRMzlJCPkUVja7E3FQBxB6nRzbqc0MsuosKwfdpcBJOAE+Aq7l4DTQybJmY0KWagUnpw3wb8AN8aUuMvG2uGscFPUMSOIgrkC10yBQCaGASksL+Cqw/gQ13C/LKhJo8Xfi7DLo6p+JOAfVaCGesxvo/VsBhgKJ3IDzWk/rAV9XMvPtmPUw7gEmC3FfCV4EQrjo5CuhgsNPWEPK2rHqQFNWOiyQBBGUOTbjw5gIu4rxtocg//W+sPvBMKvzKXJKSzouQsXoiMEJzMKSEx0OQXmjzA/zoJej32DdYnvGLz9GVLy2SktmoSCALQifOsYQtL1rlg+r5B+UQwfw53dzOOPZso2nEC16UBAjljXolkY+VysCR4bBa5B/dtMxCX0Qpdst6YGPinp188a5BZX1S6wlq/NRkAR3Ce+l6amvixrlnGVm2U0bIayXrLxVAjYqDJsFI83urwdMxpnlH+o3bv6UclVR8GwlXmO2fUvE/g/WGcJwG3VfwfeW39pYdUeeAAAAAASUVORK5CYII="
 			},
 			{
 				name: "niconico",
@@ -4972,14 +4973,12 @@
 			{
 				name: "酷我音乐",
 				url: "https://sou.kuwo.cn/ws/NSearch?type=all&key=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC+klEQVR4nIWTX2hbZRiHn++ck3OapMu2oG3WCm2XUJm4zihK/TN0rQ6ZcxsIq0w6hG0XE/FC2BgqInhR6o0yN8U/IBYVp2PMC91VsReheFFdt27FaknDTE66Lmt7mpwkPfnO+byoE4SpD7zwXvze5+blB7fHiIRI73iw5dt3j6VVsi06BMRvFxS3FguSsfbkwY6e3hMnDwVmulOCUiA0KtLk/E8uJ89dreSn7ONLS5XPgSqACMGRF0798LEZshBizahpgtL8NOXJT7lu6Ow48DC6JlBK8fuSjVSSX94fr9gTpVbx/ScDas4J8dFsN4mOu0ktXGAwUuCeWAiEABTvTBYYv78ZLR7FX3SIZRyG97Wz642f3zKK+TyHn01xcKdL11NH2PV4C6m4jywBmgaGzqHWEOZUmWq1yNCJJ2FwMyISJf/iKEbY0nNApykX6dqzjYmnU5z5epL9hkvLepOzWZ/hvRt4rfcBRDRG/dI4ZGeIPDNAADnt1zknACDwUIDrChK772PE02lrD3Hm9UfZ5DvUM6P4dhb5h00jW8DPfQEgtc/OZ69lphbXXqEU0pfkl4uUPAcME2FZEAQoT1IbG0cWlolslyjnKgIKxvbWcD294LHz5QzFVsFN2wPF2ug6wrLwb7oE5TrBimTd/m6EkUcYHehctjXpB/PeDZcvewRqxiC4VEYFCsVfAl3SmHNpXLHw7WacD4vI5W0IazMCPO3OqJlrVMuslivITX2Et5ymacyiMl2G1d9QCyMEhSj4ArP7DpSrWDk1hQgnWYWc8cGEPXRvk/tqX3s45q9cp27PQ/Io4doIhjmLaEoAywBsONyDMjeCFuWr72ZXAAzAeynjrO9vq42qhOpTgYQgIGhK4AcFhNVFaKuNqjYQVhcT06Xgkd1vvyLh9C0BAKO216/b556LpB47q4XXrfVAb0ZYncSPprk2X2NLeuibG05t4F8K+DfN8YeeX2p5YlCNvdevnItvqt6td80A5v8d/gMdhg340YLUf+X+BAnLRacR4gVKAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC+klEQVR4nIWTX2hbZRiHn++ck3OapMu2oG3WCm2XUJm4zihK/TN0rQ6ZcxsIq0w6hG0XE/FC2BgqInhR6o0yN8U/IBYVp2PMC91VsReheFFdt27FaknDTE66Lmt7mpwkPfnO+byoE4SpD7zwXvze5+blB7fHiIRI73iw5dt3j6VVsi06BMRvFxS3FguSsfbkwY6e3hMnDwVmulOCUiA0KtLk/E8uJ89dreSn7ONLS5XPgSqACMGRF0798LEZshBizahpgtL8NOXJT7lu6Ow48DC6JlBK8fuSjVSSX94fr9gTpVbx/ScDas4J8dFsN4mOu0ktXGAwUuCeWAiEABTvTBYYv78ZLR7FX3SIZRyG97Wz642f3zKK+TyHn01xcKdL11NH2PV4C6m4jywBmgaGzqHWEOZUmWq1yNCJJ2FwMyISJf/iKEbY0nNApykX6dqzjYmnU5z5epL9hkvLepOzWZ/hvRt4rfcBRDRG/dI4ZGeIPDNAADnt1zknACDwUIDrChK772PE02lrD3Hm9UfZ5DvUM6P4dhb5h00jW8DPfQEgtc/OZ69lphbXXqEU0pfkl4uUPAcME2FZEAQoT1IbG0cWlolslyjnKgIKxvbWcD294LHz5QzFVsFN2wPF2ug6wrLwb7oE5TrBimTd/m6EkUcYHehctjXpB/PeDZcvewRqxiC4VEYFCsVfAl3SmHNpXLHw7WacD4vI5W0IazMCPO3OqJlrVMuslivITX2Et5ymacyiMl2G1d9QCyMEhSj4ArP7DpSrWDk1hQgnWYWc8cGEPXRvk/tqX3s45q9cp27PQ/Io4doIhjmLaEoAywBsONyDMjeCFuWr72ZXAAzAeynjrO9vq42qhOpTgYQgIGhK4AcFhNVFaKuNqjYQVhcT06Xgkd1vvyLh9C0BAKO216/b556LpB47q4XXrfVAb0ZYncSPprk2X2NLeuibG05t4F8K+DfN8YeeX2p5YlCNvdevnItvqt6td80A5v8d/gMdhg340YLUf+X+BAnLRacR4gVKAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "5sing",
 				url: "https://search.5sing.kugou.com/?keyword=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAByAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAjlJREFUeJytkz9oU1EUxn8v7zW5xNekhSL+QxoUmmBxUozRxcUOgg2pgkJxrWBBqh0cdROqg5BBBaeKgkIIIkLawUFsaoUsUtLaDKUNVklKQhrb25j3rkNfYqx2EDxwl3PP9333fPccjW0RTZhngT4gAoScdBaYAlLJWHWitV5rAXYDw8CQEMI0dB2XSwfAti3qloWUsgo8AuLJWHWxVbU7mjDHL73pUlcm96lsKa1sZau6XWsey64rW9lq5utrFU2Y444ghsMxLIQY9Lg97NkVoMd/AltZfC7PUJR5iht5ANatCvOlaYQQg1LKb8Co4fQ85G5zA3B893k0TWMsc5m5Unq7RQC429xIKYeiCXPCBfQJIUxN27Kju72XwsbyjmAATdMQQphAnwFEDF1vXgY7IqzXK/QHRpq5oswzX0pTlPlmzsFEDCDUcBvAa/jwGj6igRt/KM+XP3A3cwGg8UMhY3vRs9xtVjfyFGWepbVZvIaPYOdJ+gMjBDvDnNp7kfcrL3+9BMjathXW9S2uyaUnvxGu1ytkCimW1mYZi6TpEgeArdkAsi5gqm5ZOxrWiKu9caeNaQAczJQLSEkpq0qpvwIHDt3i8Zkch/3HeLX4gLlSGqVUYypTGkA0Yd4TQtz0uD0cbD9CT0eY/sB1vIYfl6bz5XuO5wt3+LT6FoDN2iZSyvvJWHW0YWL82tGH507vHwg2lJercyyUP/Ju5QWZQgoApRS1HzWklE+BOPyHZWoStBD90zr/BDWFAshUlB4uAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAByAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAjlJREFUeJytkz9oU1EUxn8v7zW5xNekhSL+QxoUmmBxUozRxcUOgg2pgkJxrWBBqh0cdROqg5BBBaeKgkIIIkLawUFsaoUsUtLaDKUNVklKQhrb25j3rkNfYqx2EDxwl3PP9333fPccjW0RTZhngT4gAoScdBaYAlLJWHWitV5rAXYDw8CQEMI0dB2XSwfAti3qloWUsgo8AuLJWHWxVbU7mjDHL73pUlcm96lsKa1sZau6XWsey64rW9lq5utrFU2Y444ghsMxLIQY9Lg97NkVoMd/AltZfC7PUJR5iht5ANatCvOlaYQQg1LKb8Co4fQ85G5zA3B893k0TWMsc5m5Unq7RQC429xIKYeiCXPCBfQJIUxN27Kju72XwsbyjmAATdMQQphAnwFEDF1vXgY7IqzXK/QHRpq5oswzX0pTlPlmzsFEDCDUcBvAa/jwGj6igRt/KM+XP3A3cwGg8UMhY3vRs9xtVjfyFGWepbVZvIaPYOdJ+gMjBDvDnNp7kfcrL3+9BMjathXW9S2uyaUnvxGu1ytkCimW1mYZi6TpEgeArdkAsi5gqm5ZOxrWiKu9caeNaQAczJQLSEkpq0qpvwIHDt3i8Zkch/3HeLX4gLlSGqVUYypTGkA0Yd4TQtz0uD0cbD9CT0eY/sB1vIYfl6bz5XuO5wt3+LT6FoDN2iZSyvvJWHW0YWL82tGH507vHwg2lJercyyUP/Ju5QWZQgoApRS1HzWklE+BOPyHZWoStBD90zr/BDWFAshUlB4uAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "一听",
@@ -5006,32 +5005,27 @@
 			{
 				name: "pixiv",
 				url: "https://www.pixiv.net/search.php?word=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACaElEQVQ4jY2TS0iUYRSGjwupXYsIAqFdDl13tclNd6WgZVQULZrB6ddsbhA1FwkyNQOjCMz805nxMiM6ajq/OkjZxQElLS0sK6NQI7QkCCrTnhbfmBMatXj54PDxfO97zvlERERM245IlqbLXut/StNlj7VM0kzbRdZlHBVfJ+LtQDzGgtwGci6KuKN/1ueVH0Nc9bMi+3KD4u1AnGHEHkK0IHIyiNhDLD/TQIozrGpaEHGE1D1nGHGGEF8nIpnZt8QdRaxBUh0hDvl70HtHaR4ao/XZBLHn72kcHONwoAc5XYucqkFcCYjHQGSHRRdXC8eCcQbHp3kwOsnxQBxTQRurPBHSL7Ria3jE568zdL/6wGp3REHmASv3a3rkxRTfZ+cAWHsxipyoVK/Z69RpriK9oI0fcz/pH/vEMkdIxfUYSHlFhd40Mo29aQCATZc6kNyapKxhZdlchaPlMQCW+j7EGkg0s+SqnlZ8F0u4D4DNJUsAnGEkt4b1RQYAxvAEolWrCaVmaXqKsxlngv5XQF4taedvA9D39iOSV6sAssuiiy2C618ArZqtpTEA6p+8U2N1RxHZa9XF3vQbsKG4fTHAFkLMVfj73gCQVd6tIniMxYAtpTE1BWtAKduP5FTjbR8C4Nr9l0hOddIeJAD2ZjWFh6OTlPe8xmcMYWse4HLXMIPj00x9+YYt0q/c2euSAJnZlckOdl6/w4GybrztT7lyb4TCrmEO+uOsONuoHCWvswJoleJsxZFwYCoyEHPVQgRrQOW11S1ubH4MkTUbd4tWM1MYnwAg42Yv4mpZ+gcmyxdDrDcmfgF4QGAxnLBCrgAAAABJRU5ErkJggg==",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACaElEQVQ4jY2TS0iUYRSGjwupXYsIAqFdDl13tclNd6WgZVQULZrB6ddsbhA1FwkyNQOjCMz805nxMiM6ajq/OkjZxQElLS0sK6NQI7QkCCrTnhbfmBMatXj54PDxfO97zvlERERM245IlqbLXut/StNlj7VM0kzbRdZlHBVfJ+LtQDzGgtwGci6KuKN/1ueVH0Nc9bMi+3KD4u1AnGHEHkK0IHIyiNhDLD/TQIozrGpaEHGE1D1nGHGGEF8nIpnZt8QdRaxBUh0hDvl70HtHaR4ao/XZBLHn72kcHONwoAc5XYucqkFcCYjHQGSHRRdXC8eCcQbHp3kwOsnxQBxTQRurPBHSL7Ria3jE568zdL/6wGp3REHmASv3a3rkxRTfZ+cAWHsxipyoVK/Z69RpriK9oI0fcz/pH/vEMkdIxfUYSHlFhd40Mo29aQCATZc6kNyapKxhZdlchaPlMQCW+j7EGkg0s+SqnlZ8F0u4D4DNJUsAnGEkt4b1RQYAxvAEolWrCaVmaXqKsxlngv5XQF4taedvA9D39iOSV6sAssuiiy2C618ArZqtpTEA6p+8U2N1RxHZa9XF3vQbsKG4fTHAFkLMVfj73gCQVd6tIniMxYAtpTE1BWtAKduP5FTjbR8C4Nr9l0hOddIeJAD2ZjWFh6OTlPe8xmcMYWse4HLXMIPj00x9+YYt0q/c2euSAJnZlckOdl6/w4GybrztT7lyb4TCrmEO+uOsONuoHCWvswJoleJsxZFwYCoyEHPVQgRrQOW11S1ubH4MkTUbd4tWM1MYnwAg42Yv4mpZ+gcmyxdDrDcmfgF4QGAxnLBCrgAAAABJRU5ErkJggg=="
 			},
 			{
 				name: "flickr",
 				url: "https://www.flickr.com/search/?q=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+klEQVQ4jWNgGAUIIKBqwKCfUMSgGZXJwCklhy6twSCoW8BpUZTFaZIjz8CviCprXtbFkHX3PxynXPrGoBIQC5Ou57Fv/C/Z+B+Gf4jV/szgMs6EyMq7BqJoRjaEQ1zRmUXRFVkzsiEaDIK6DAwuE1ZgNSDr7n8Gvbj8Wfy+c7AZ8F+y8X8tl30dA4PrlNU4DdBPKFrCH7QUlwGNPE4tDAzqoclYNaff+MMgoGoQwaYdhcsAGxY5G0g4eExZh2GAUVY1LBCX8wevQNfcyevShRoTim4hDHZNMxls6yczSJjao0ejP5ta4Axe35mT+DwnO7MoupKfXoYfAABPvsL2GuU3QwAAAABJRU5ErkJggg==",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAA+klEQVQ4jWNgGAUIIKBqwKCfUMSgGZXJwCklhy6twSCoW8BpUZTFaZIjz8CviCprXtbFkHX3PxynXPrGoBIQC5Ou57Fv/C/Z+B+Gf4jV/szgMs6EyMq7BqJoRjaEQ1zRmUXRFVkzsiEaDIK6DAwuE1ZgNSDr7n8Gvbj8Wfy+c7AZ8F+y8X8tl30dA4PrlNU4DdBPKFrCH7QUlwGNPE4tDAzqoclYNaff+MMgoGoQwaYdhcsAGxY5G0g4eExZh2GAUVY1LBCX8wevQNfcyevShRoTim4hDHZNMxls6yczSJjao0ejP5ta4Axe35mT+DwnO7MoupKfXoYfAABPvsL2GuU3QwAAAABJRU5ErkJggg=="
 			},
 			{
 				name: "花瓣",
 				url: "https://huaban.com/search/?q=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC1klEQVQ4jYXOyU+TeQDG8Z//gIkxXogxXky8TTIeRhMzcSEdoKW0SIFibYuJLFbZVGyxlLbQFoqoBEhEBSlbA4xxNwq9zMXMeTLO0b4vWOhGoSKBUfHrAZdEEZ/kOT6fPMJtNLVPelpD92yNobv1ttCd2vNTI5aqhx0lxpv6/ftNO3fs2LN7+/a95Qd/r75VZBgPGsyTE0ZzaMJ4MvTQXBYSU772v/nrOdx/zIeJe6wF/+Td4CjvAqOsdl/n3xNlqf+Kjellh4dVfycrrVdY8XWw2noFOnoQD5yuEE8mWQyOsxAYJdU3SKovQMJ/lZmSUiK5OiI5Bcg5BUQqqom7fcScXuJOL288lzcAAsMkr/UwXVyKpMxHyitEUuqQFBrCmbnMmMqIubzEXb4NgMEgqdtDRMqr10d5RV+BrHwkhYaXh3OYKa0g0dxG2uNHjDU0PvoCjIwT93Uga/TIGv33wB9awpkqXh5Rkqi5iORoeSM6LZbedWCCheExIpZzSOpiZE3JxoBCTfhwNvPHDIwbzCGhP3TItPb4GYtjd0jdHGDGVI6k0W8OZOaSVORxYd9vzSJj27Zd8sDwwsrdB8z33GBaX4qsPf7zBwUGBtX5j4QQQnRVWvp5OkWy6zrTRSbk/E2AI0qkbC3Js+d5cbomKYQQYndGxt7ZoZH0cm8/8o8AhYbwURWyupDZs+eIXbATr7UiPqcsW3Xmfd8QEZ0RSV2EpCokrDy23iwtsqqQV+YK5i46mLM6iNbZWKyzfQWEEMKr03WtNraQqKonUlnDq/IqIqdrma21ErO7ibl8RC+5mau3E62zkf4WEEJsadLrfcuBEd4ODJPq7iVxtZuE/xrxFj8xRwvRBuemgBBCiKxfftU+t7v++b+3n7c9N0i3dzLf3Ea8yUOswUm03k6szsbrHwGfsrX4wMGTwVOVT144XHPznnaWmttYcnp5bXezZG1izdrER/CEaFr9QFrRAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC1klEQVQ4jYXOyU+TeQDG8Z//gIkxXogxXky8TTIeRhMzcSEdoKW0SIFibYuJLFbZVGyxlLbQFoqoBEhEBSlbA4xxNwq9zMXMeTLO0b4vWOhGoSKBUfHrAZdEEZ/kOT6fPMJtNLVPelpD92yNobv1ttCd2vNTI5aqhx0lxpv6/ftNO3fs2LN7+/a95Qd/r75VZBgPGsyTE0ZzaMJ4MvTQXBYSU772v/nrOdx/zIeJe6wF/+Td4CjvAqOsdl/n3xNlqf+Kjellh4dVfycrrVdY8XWw2noFOnoQD5yuEE8mWQyOsxAYJdU3SKovQMJ/lZmSUiK5OiI5Bcg5BUQqqom7fcScXuJOL288lzcAAsMkr/UwXVyKpMxHyitEUuqQFBrCmbnMmMqIubzEXb4NgMEgqdtDRMqr10d5RV+BrHwkhYaXh3OYKa0g0dxG2uNHjDU0PvoCjIwT93Uga/TIGv33wB9awpkqXh5Rkqi5iORoeSM6LZbedWCCheExIpZzSOpiZE3JxoBCTfhwNvPHDIwbzCGhP3TItPb4GYtjd0jdHGDGVI6k0W8OZOaSVORxYd9vzSJj27Zd8sDwwsrdB8z33GBaX4qsPf7zBwUGBtX5j4QQQnRVWvp5OkWy6zrTRSbk/E2AI0qkbC3Js+d5cbomKYQQYndGxt7ZoZH0cm8/8o8AhYbwURWyupDZs+eIXbATr7UiPqcsW3Xmfd8QEZ0RSV2EpCokrDy23iwtsqqQV+YK5i46mLM6iNbZWKyzfQWEEMKr03WtNraQqKonUlnDq/IqIqdrma21ErO7ibl8RC+5mau3E62zkf4WEEJsadLrfcuBEd4ODJPq7iVxtZuE/xrxFj8xRwvRBuemgBBCiKxfftU+t7v++b+3n7c9N0i3dzLf3Ea8yUOswUm03k6szsbrHwGfsrX4wMGTwVOVT144XHPznnaWmttYcnp5bXezZG1izdrER/CEaFr9QFrRAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "Pinterest",
 				url: "https://www.pinterest.com/search/pins/?q=%s&rs=typed&term_meta",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACD0lEQVR4nO1WsW4UMRB9sxsECAmlpbrbRKwpKE4nk0i0/AQSogGlSInID/ABKegoEimioCC/kJYiySKCkE7aC8rtUdKgSClQyHlSBN95N/batyQVN5U9nnnvzazXNjCz/92oSVKWiPcAnlfcR3KQL16rgCwRHBKn1Ki7NPz+5coEhBJXTQ5yL350XeShubUKnQDMZ7Lo3zBdH4F4IRFntvC6TjgXsnb6B0Rz04CNcy3CXXluARWQW7fjmw97vVPXesSq0y0OvzpFUNySR70fVR7rHthPxK+qT5NnbbFhq1BRdGD6L1XMo6GNyyqAgHlzrsE+L6RPQHhpy9GWJWL8+7HCal2sU0DJmD9MhrRzMcCxHOTk+K4dPXg0zN+VxLXFrldAlqRb5lwW/WcAkLXSBxNfPj8OUPzKV8PYCEteAcz01Joc4a0dlN4EC7DCVvGA39ZIxje7ANy9UgEAts3Jbut+BwBk0V/7F6JgAbLIV8x5HEWTXQ1+7QM0N+Z+kp6UFhl7XgE20/83gdZNv+6Oywh0pySuyJeDBDDjp0vESMX3tG95eHgwyeFTs/rQSyz4KNYWchfsLYrHkcKnMtMURzFwUVEdietIzhLBl8gB2MiBBtex7sA074S6rtVuwmqiryvTknsFWADWnYENyIMEaCA5yIn+/h2+9is16oaQA02f5e10E0QvKu5Gz/KZzewcjEjYbJKZwQoAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAACD0lEQVR4nO1WsW4UMRB9sxsECAmlpbrbRKwpKE4nk0i0/AQSogGlSInID/ABKegoEimioCC/kJYiySKCkE7aC8rtUdKgSClQyHlSBN95N/batyQVN5U9nnnvzazXNjCz/92oSVKWiPcAnlfcR3KQL16rgCwRHBKn1Ki7NPz+5coEhBJXTQ5yL350XeShubUKnQDMZ7Lo3zBdH4F4IRFntvC6TjgXsnb6B0Rz04CNcy3CXXluARWQW7fjmw97vVPXesSq0y0OvzpFUNySR70fVR7rHthPxK+qT5NnbbFhq1BRdGD6L1XMo6GNyyqAgHlzrsE+L6RPQHhpy9GWJWL8+7HCal2sU0DJmD9MhrRzMcCxHOTk+K4dPXg0zN+VxLXFrldAlqRb5lwW/WcAkLXSBxNfPj8OUPzKV8PYCEteAcz01Joc4a0dlN4EC7DCVvGA39ZIxje7ANy9UgEAts3Jbut+BwBk0V/7F6JgAbLIV8x5HEWTXQ1+7QM0N+Z+kp6UFhl7XgE20/83gdZNv+6Oywh0pySuyJeDBDDjp0vESMX3tG95eHgwyeFTs/rQSyz4KNYWchfsLYrHkcKnMtMURzFwUVEdietIzhLBl8gB2MiBBtex7sA074S6rtVuwmqiryvTknsFWADWnYENyIMEaCA5yIn+/h2+9is16oaQA02f5e10E0QvKu5Gz/KZzewcjEjYbJKZwQoAAAAASUVORK5CYII="
 			},
 			{
 				name: "Yandex",
 				url: "https://yandex.com/images/search?from=tabbar&text=%s",
-				favicon: "data:image/svg+xml,%3Csvg t='1666872628734' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='10516' width='200' height='200'%3E%3Cpath d='M451 1024V691.8L229 96h111.6l163.6 459.4L692.4 0h102.6L553.6 695.6V1024h-102.6z' p-id='10517' fill='%23FC401D'%3E%3C/path%3E%3C/svg%3E",
-				blank: true
+				favicon: "data:image/svg+xml,%3Csvg t='1666872628734' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='10516' width='200' height='200'%3E%3Cpath d='M451 1024V691.8L229 96h111.6l163.6 459.4L692.4 0h102.6L553.6 695.6V1024h-102.6z' p-id='10517' fill='%23FC401D'%3E%3C/path%3E%3C/svg%3E"
 			}
 		],
 		download: [
@@ -5042,7 +5036,6 @@
 			},
 			{
 				name: "谷歌搜索",
-				blank: true,
 				url: "https://cse.google.com/?q=%s&newwindow=1&cx=006100883259189159113%3Atwgohm0sz8q",
 				favicon: "data:image/svg+xml,%3C%3Fxml version='1.0' encoding='utf-8'%3F%3E%3C!-- Generator: Adobe Illustrator 15.0.0, SVG Export Plug-In . SVG Version: 6.00 Build 0) --%3E%3C!DOCTYPE svg PUBLIC '-//W3C//DTD SVG 1.1//EN' 'http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd'%3E%3Csvg version='1.1' xmlns='http://www.w3.org/2000/svg' xmlns:xlink='http://www.w3.org/1999/xlink' x='0px' y='0px' width='48px' height='48px' viewBox='0 0 48 48' enable-background='new 0 0 48 48' xml:space='preserve'%3E%3Cpath fill='%23FFC107' d='M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12 c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24 c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z'/%3E%3Cpath fill='%23FF3D00' d='M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657 C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z'/%3E%3Cpath fill='%234CAF50' d='M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36 c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z'/%3E%3Cpath fill='%231976D2' d='M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571 c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z'/%3E%3C/svg%3E%0A"
 			},
@@ -5081,20 +5074,17 @@
 			{
 				name: "值得买",
 				url: "https://search.smzdm.com/?c=home&s=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACQElEQVR4nG2ST0iUURTFf+d9g2V/NKSgRYSriLCZ0jLie+Gi3LWqoKCFEYG0tHBTREgQSLWQCIRoWVCbKKKC/oD0fVGG5Iy2KDCiRQTBUBJh+vluC2dkHDurxzvvnnvuuU/U4H1X17ooy16Y2QAAUgfwEedWyawH6MknyefaGlc9FON4CFiH1C7nHkjaXEjTi5Juy+wm4Amhpej9rWUCRe+v5NO0L8qyu4uMdB3AYHZtFDVKinHunaBY8v7ZUgdmW8e7uppcLre/ShgMAwh2T2fZDzNLK9RQMBsoen8EwI3v3dsm6eDOkZGfYX7+PmZfgIvAyep0SI8Nphe7Sq8E3QDORdFEzUgHkFqBAUEGQAinsxD6CknSXDs7Zm8n4vhQNcQ/1CGfJKtL3hvSnpw0Vs8bDJnU7xbyUnfJ+zMG56sPJuN4s8FVpBOSNtYLSFpj0OkW3Nh34FqUZcOYXV45O9scYFAhTLlyeYXB14rtl0tEwDmgAEwBtL15U0Y6t2V0dBrp2Bw8DC0tf4EblZrbdUYm3fYkmay3V/T+iEGIzDKDe4LBUhzPVbJRPkkEFAL0C6DkvVVquw0OyyyYtB44YHB8R5I8Le7bd4oQLlXzMLOZQpo2OgBXLq+oJNvuzO4ibSokyVGg18GTkvcms5s1YfZGudyGSg4L+NTZ2TTT0PArnySqcbR0dWa/JZ2dC+FRx+vX35YIVFHyfgJoq7u+Y/ABswuFNG2s28T/UfL+gZm1CrYBz2dnZg7vGhtb9uH+Affd7MpRvsLpAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACQElEQVR4nG2ST0iUURTFf+d9g2V/NKSgRYSriLCZ0jLie+Gi3LWqoKCFEYG0tHBTREgQSLWQCIRoWVCbKKKC/oD0fVGG5Iy2KDCiRQTBUBJh+vluC2dkHDurxzvvnnvuuU/U4H1X17ooy16Y2QAAUgfwEedWyawH6MknyefaGlc9FON4CFiH1C7nHkjaXEjTi5Juy+wm4Amhpej9rWUCRe+v5NO0L8qyu4uMdB3AYHZtFDVKinHunaBY8v7ZUgdmW8e7uppcLre/ShgMAwh2T2fZDzNLK9RQMBsoen8EwI3v3dsm6eDOkZGfYX7+PmZfgIvAyep0SI8Nphe7Sq8E3QDORdFEzUgHkFqBAUEGQAinsxD6CknSXDs7Zm8n4vhQNcQ/1CGfJKtL3hvSnpw0Vs8bDJnU7xbyUnfJ+zMG56sPJuN4s8FVpBOSNtYLSFpj0OkW3Nh34FqUZcOYXV45O9scYFAhTLlyeYXB14rtl0tEwDmgAEwBtL15U0Y6t2V0dBrp2Bw8DC0tf4EblZrbdUYm3fYkmay3V/T+iEGIzDKDe4LBUhzPVbJRPkkEFAL0C6DkvVVquw0OyyyYtB44YHB8R5I8Le7bd4oQLlXzMLOZQpo2OgBXLq+oJNvuzO4ibSokyVGg18GTkvcms5s1YfZGudyGSg4L+NTZ2TTT0PArnySqcbR0dWa/JZ2dC+FRx+vX35YIVFHyfgJoq7u+Y/ABswuFNG2s28T/UfL+gZm1CrYBz2dnZg7vGhtb9uH+Affd7MpRvsLpAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "当当网",
 				url: "https://search.dangdang.com/?key=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIADzAQAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAbpJREFUeJylk0ssXGEUx39zZ+a2g1QX7DxjMwzKJF2IR0iEWIxlV6KZeGQaEhZWbHRTsVCPJq5IG48IiYiFErZNmngUCYmgqGBFMljWq2Nx6l7XXAvxT76c73z/c/7fOd/DBhDyuqcAH0/Dd9vqVrmiJ794CZ29Bp2TB/NrYgHiEqBLA5frLsIX8rqnFH3nji9QUATdfULn5oOqQkys+K2fIL/Q4P+LKPq0vgaWF6EhIL7TKVZVxVZXwMoS1L439WELed0h3XM64eoKJqYhOcWI2tyAto/we0v4e1BMXm0drGxK8p89aGmCo0NI9cDwuLTwAEYFJWXQ9hnOzyDgh51tI8qTCdo3iIyCdz7Y27UQcDjg+jpsBx2JSTA5C1oPfNUsBHLy5OQf4uYfHOzD5DjM/YCICCh4q9MOfdalSRVWmJsRgZNj8GSYKCOj8QNkZllUcAOnQVDsEBcPZ6ePCMz/lPEY0tIh+jV0tpuWjWssLoVfG7CwLmXePSCXC95kw8AYXF7CyKBJwDhEd5qM5law2+HiLwSD8pRVVZIDflhbDRMI/4mVVeCvgVfR0v9AP4wOWzU2ZIPnfedbccyGGmWXmM8AAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIADzAQAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAbpJREFUeJylk0ssXGEUx39zZ+a2g1QX7DxjMwzKJF2IR0iEWIxlV6KZeGQaEhZWbHRTsVCPJq5IG48IiYiFErZNmngUCYmgqGBFMljWq2Nx6l7XXAvxT76c73z/c/7fOd/DBhDyuqcAH0/Dd9vqVrmiJ794CZ29Bp2TB/NrYgHiEqBLA5frLsIX8rqnFH3nji9QUATdfULn5oOqQkys+K2fIL/Q4P+LKPq0vgaWF6EhIL7TKVZVxVZXwMoS1L439WELed0h3XM64eoKJqYhOcWI2tyAto/we0v4e1BMXm0drGxK8p89aGmCo0NI9cDwuLTwAEYFJWXQ9hnOzyDgh51tI8qTCdo3iIyCdz7Y27UQcDjg+jpsBx2JSTA5C1oPfNUsBHLy5OQf4uYfHOzD5DjM/YCICCh4q9MOfdalSRVWmJsRgZNj8GSYKCOj8QNkZllUcAOnQVDsEBcPZ6ePCMz/lPEY0tIh+jV0tpuWjWssLoVfG7CwLmXePSCXC95kw8AYXF7CyKBJwDhEd5qM5law2+HiLwSD8pRVVZIDflhbDRMI/4mVVeCvgVfR0v9AP4wOWzU2ZIPnfedbccyGGmWXmM8AAAAASUVORK5CYII="
 			},
 			{
 				name: "1688",
 				url: "https://s.1688.com/selloffer/offer_search.htm?keywords=%s",
 				favicon: "data:image/ico;base64,AAABAAEAEBAAAAEACABoBQAAFgAAACgAAAAQAAAAIAAAAAEACAAAAAAAQAEAAAAAAAAAAAAAAAEAAAAAAAAICBAAAIiMAABwiAAATEwABIz4AAx0+AAAyMwAGChIADBQiAAAnKwALEh4ACBYWAAAwMgANGjMACAwQAAwYKgABHyAAAwsLAAEzPgABKz4ADh47AAE7OwAMEBYABgwMAAYIDAAHIz4AACwsAAAkJgABFxcAASc+AAcfPgABNTcAAQ8RAA8XJwARGCQADhIWAAsbNwANDxQAEBwwAAA3OwABLz4ABis+AAU7PgAGJz4ABRYWAAYPEAAPHTcABTc+AAUvPgACBgYAACAiAAQjPgACID4AACouAAAqLAAKDhQAEBosAAAMDgAEMz4ACx0+AAE7PgAMEBoABgwOAAoKCgAALjAABCYoAAQnPgABNz4ABT4+AAQNDgAMID4AAT4+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAD///8AQUREREQqQxIoKDApKysZGT5HR0dHRzw8QxIoExMdBBkUIEdHR0dHPDxDEigTEx0rOzsYBkdHR0dHPEMSEhMTKTs7HjgnR0dHR0c8QxISKCk7OzsNFUdHR0dHRzxDQxIwOzs7DTEAESA5MQM8PENDEjs7Ozs7RUdHR0dHIBwcPBIoOzs7OztFR0dHR0cDRzxDEyg7Ozs7DkdHR0dHR0dHPB0TKDs7Oz8BR0dHR0dHR0QdHRMoGTs7OyERG0dHR0dEBAQdEygTOzs7OzshGBwfRDQEBB0TKBIdOzs7OzseLggFNAQEHRMoKBITOzs7Ozs7BQU0BAQdExMoEkNDKTs7OwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
-				blank: true,
 				gbk: true
 			}
 		],
@@ -5122,8 +5112,7 @@
 			{
 				name: "Forvo发音",
 				url: "https://zh.forvo.com/search/%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAAAAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAcdJREFUeJyFkk9rE1EUxX/3pZMJxtCRuim01k03IkKJCI0E9Bu4VgxxpZaKurf+ofEDqHUhFCKKuuwHUCiKBgRL24WloVZd1KIVTFprMQ2d6yKZzEsZ07u6575zzpw7XCGi+gula6AjIIMAKNO+7lz/djM7v5srNugbL10R4X6UaVB/67XUzzunNwNsgubog7k3oB3FAMmk99sbmRxoMxguLp7vTu3LHvCSqGrjRXVKIA3+GaAMEHMSVL7MQCz+tW2FTLGswaC6scXC1aG21QDSjz44S7Oz28ZxQRVFN9cn8imTKZbzNjFKDDBz8Xhd3K4hmgkF2Q9gVBkNafqi0/7r9y7M2dgbfZwzIqRbct8872TQZH1qdTBsVHUnGBjRw3vrORS0AltGkJeW4+09DUTiITBPjHFrZ8NHerJPF3r/p+2+PPnextWJ3Lx5e+5YJRjE410sf/612l8o5XaL+8ZLrxJe7wlVv5lW7zbXaNSpZ8u6uLRK3IkR3hI1EVwrP9t/KtQ21qg+zAtYp7z2/UePLW6sa4sb33VTB1vitgRh1HcfReRI1D9Q1bGVsZMFexZ5dQO3phO+415CGVShDrxeuZGZiuL+A2DYnV2Yre6zAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAAAAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAcdJREFUeJyFkk9rE1EUxX/3pZMJxtCRuim01k03IkKJCI0E9Bu4VgxxpZaKurf+ofEDqHUhFCKKuuwHUCiKBgRL24WloVZd1KIVTFprMQ2d6yKZzEsZ07u6575zzpw7XCGi+gula6AjIIMAKNO+7lz/djM7v5srNugbL10R4X6UaVB/67XUzzunNwNsgubog7k3oB3FAMmk99sbmRxoMxguLp7vTu3LHvCSqGrjRXVKIA3+GaAMEHMSVL7MQCz+tW2FTLGswaC6scXC1aG21QDSjz44S7Oz28ZxQRVFN9cn8imTKZbzNjFKDDBz8Xhd3K4hmgkF2Q9gVBkNafqi0/7r9y7M2dgbfZwzIqRbct8872TQZH1qdTBsVHUnGBjRw3vrORS0AltGkJeW4+09DUTiITBPjHFrZ8NHerJPF3r/p+2+PPnextWJ3Lx5e+5YJRjE410sf/612l8o5XaL+8ZLrxJe7wlVv5lW7zbXaNSpZ8u6uLRK3IkR3hI1EVwrP9t/KtQ21qg+zAtYp7z2/UePLW6sa4sb33VTB1vitgRh1HcfReRI1D9Q1bGVsZMFexZ5dQO3phO+415CGVShDrxeuZGZiuL+A2DYnV2Yre6zAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "CNKI翻译",
@@ -5151,8 +5140,7 @@
 			{
 				name: "金山词霸",
 				url: "https://www.iciba.com/word?w=%s",
-				favicon: "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACGElEQVQ4y6WTzUuUURTGf+e87+v3BwxYToupoYVYgViLFiPtIrBNELZsIUIUFEXQqk1I/0JU24oWZRFFiyD7WhhBDWYfq4zCsRETdfwYHL33tHhtdLSF0IEH7r1cnnOe55wjPP1u/EeEYrLuaogpoJi4LREoBhiIQa3Btbb3DLZdQbwQIdSJIC7+8y+IPP5pAKnqEgMdz+lYusGvwm/uVo3Qu7OeOoXsbIkzw9OMLDiQDRLi7CED/gJ7x94R1o2RTF7naFBFz9AEuZLnVKqewcw2Ol/kyS0b601T84AJNbnPMD+BD3ZgzSc5/naKN7OOb4vGpS8FsjMlTqcbMGeYp4wQDyCUabWVeRcwWjS8xc9iytc5T7I6Qpxguq4C8UJMsuqKG6U5WOJgY4B4JTAlckImETAyvYQhiF+DmlfWKA21GdzkVR52tXAuXcuxlognXQn2J2oYmiwhpphfg+IVvJYlGDA+dZvzH4p0p5q43NnCx3ml/9MCDw4laK9VlAi8gFdCMQMzRFb7I5AYVnpeXWTWe+aAtEAARJkDDJ7o497NO5xt7QZzcRsBzMAESq+TRI+2c1iHN0/d/SzLE+Ps3nMEKXhMIMQLSOxs8VkT+rIBdIZNCyKCNTQx3Z6ht5Be9VwIzeIW/pAUxVwEDsz9dWMDQeMu+hb3kfflwhFu5S0+RIiyaVQrwhtmKxXUsQTAWMH8VvavMsMfIrbvQBU3VlgAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAACGElEQVQ4y6WTzUuUURTGf+e87+v3BwxYToupoYVYgViLFiPtIrBNELZsIUIUFEXQqk1I/0JU24oWZRFFiyD7WhhBDWYfq4zCsRETdfwYHL33tHhtdLSF0IEH7r1cnnOe55wjPP1u/EeEYrLuaogpoJi4LREoBhiIQa3Btbb3DLZdQbwQIdSJIC7+8y+IPP5pAKnqEgMdz+lYusGvwm/uVo3Qu7OeOoXsbIkzw9OMLDiQDRLi7CED/gJ7x94R1o2RTF7naFBFz9AEuZLnVKqewcw2Ol/kyS0b601T84AJNbnPMD+BD3ZgzSc5/naKN7OOb4vGpS8FsjMlTqcbMGeYp4wQDyCUabWVeRcwWjS8xc9iytc5T7I6Qpxguq4C8UJMsuqKG6U5WOJgY4B4JTAlckImETAyvYQhiF+DmlfWKA21GdzkVR52tXAuXcuxlognXQn2J2oYmiwhpphfg+IVvJYlGDA+dZvzH4p0p5q43NnCx3ml/9MCDw4laK9VlAi8gFdCMQMzRFb7I5AYVnpeXWTWe+aAtEAARJkDDJ7o497NO5xt7QZzcRsBzMAESq+TRI+2c1iHN0/d/SzLE+Ps3nMEKXhMIMQLSOxs8VkT+rIBdIZNCyKCNTQx3Z6ht5Be9VwIzeIW/pAUxVwEDsz9dWMDQeMu+hb3kfflwhFu5S0+RIiyaVQrwhtmKxXUsQTAWMH8VvavMsMfIrbvQBU3VlgAAAAASUVORK5CYII="
 			}
 		],
 		knowledge: [
@@ -5299,62 +5287,52 @@
 			{
 				name: "谷歌中文",
 				url: "https://news.google.com/search?q=%s&hl=zh-CN&gl=CN&ceid=CN:zh-Hans",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAERElEQVR4nO2WTWhcVRTHf/e++crko/kyX201jQitIOnGhcWqUBWLSGgRVNCVFqouXFQFa0XQXRRcWBpBURRBo9JWcZGWghhqbVOK1I8uLEksmKS2yTRt5iszc+9x8Wbmzbx5mca1OfB4vHvOPf//+bjnPliT/7uoesq7v9k3o6JOn1gBBAFE3HfpG+C6FZqR8krJRhSQK8z+8eSh9SthhOoRWLTZPklaRDxIEWFagIxlZF2KRzov09/4A/suPc3ocqSCZJGOVn31MOoS8Ms8ihsGDug0j982z2DLONgomFaeWfc3o1cG/ou7mxMoiDBt4VYD77Utsrt7HEwWpAEQsC24YQpbW39h7KtOpjbGGFrvgAY0dOu6Va5PYNpqRlqW2Nt7EgoLUGgE4lCufkkEbIT471e5f0a41tzCdE+M4YE4X0bzdQnU0JOLjw2xcG6U8GyUXN29NTwWTvejvu+CmHF1YsFaQloRijeTibf/5LS2j7cd/GR/IAGZGJwnfK3j6o3nQMxN0GsJ5JcUS0ciqGil3jWyOPRcOoLWYfJNzbO6oWGs/dPDzyoAObNRMDlAg55j18+p4PMpHqb4vyVoTco6C4weayIf2YYCxJortxw/060BMOnzKO2F5C/xKsBXmSRA0IBY+ytuyKC2LWzF2LwXRjGiygfvqQSvQvBFX0m4nFFRCNB14uxDZQKu5E+txFoAI7BcAGurwQVIG0gZ9502kCoIaQNWqEmqIFhjpkouysdQ3Zt4QE51SSn6kiwsw+ieGH2dHtc9IxlmkkJIw+UsTLweJ0iOTeR443iejoiXSRB0InGgZKOrdjgeWwESOXjqLqcKHODN3Q5zy6XuriMV5VRAQUCh6Dh38YuaDABQyP9FiP5SBj54IsKdm0K8+tF1TvwTptGBRB56ItARUYhAbxQ2v5UGwIigcMuFQJMDMe1xSRpoU9Xnq5qAXR5Ds7dksqXfVR+dDbO5EXYMaArWS93YpCVn4cOhMMbW9rtSiqWMcHDcnYY5Acd3vqsIqO3p5+VH7rHCoOvAXe9wwFh4aVesavPHb6cIA9sHwzXgJRER3h/Pg0DaQiHvNXttBgDyfA0ugflFQ2erw+m0sDOiUK8kQMAMt6G1IqagKwrq5UQRzY8OhBQPt0fKRzGZyZysCjqI9aPvpATg+HXL1IthNvREsRYmZwy3b3DQCs7/meW1bw2JHHz3QgMmYHIfPZXj898MjcXmfvdw09zgWar+D3TttuIQEeHBFsV9h5ZdQw13bHTBL0xm2PGZe1NlDXS1aXo7a5+BHk2m4PkNpznvxwrMwM7hZFUys8bt/qRxO7uveNmUjC6kBFsxBU1RuSmqaAp50/PE/qYavOD/AV8tY7oa1F/qLXHPb8UFGDyuV0Ogjr2r9xn4gfyXVD1/qyewghf/vbCi+Qr7AwkowogED1kJ+JCKhaASiIBSgf2+JmvCvyV4A+6kXQlFAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAERElEQVR4nO2WTWhcVRTHf/e++crko/kyX201jQitIOnGhcWqUBWLSGgRVNCVFqouXFQFa0XQXRRcWBpBURRBo9JWcZGWghhqbVOK1I8uLEksmKS2yTRt5iszc+9x8Wbmzbx5mca1OfB4vHvOPf//+bjnPliT/7uoesq7v9k3o6JOn1gBBAFE3HfpG+C6FZqR8krJRhSQK8z+8eSh9SthhOoRWLTZPklaRDxIEWFagIxlZF2KRzov09/4A/suPc3ocqSCZJGOVn31MOoS8Ms8ihsGDug0j982z2DLONgomFaeWfc3o1cG/ou7mxMoiDBt4VYD77Utsrt7HEwWpAEQsC24YQpbW39h7KtOpjbGGFrvgAY0dOu6Va5PYNpqRlqW2Nt7EgoLUGgE4lCufkkEbIT471e5f0a41tzCdE+M4YE4X0bzdQnU0JOLjw2xcG6U8GyUXN29NTwWTvejvu+CmHF1YsFaQloRijeTibf/5LS2j7cd/GR/IAGZGJwnfK3j6o3nQMxN0GsJ5JcUS0ciqGil3jWyOPRcOoLWYfJNzbO6oWGs/dPDzyoAObNRMDlAg55j18+p4PMpHqb4vyVoTco6C4weayIf2YYCxJortxw/060BMOnzKO2F5C/xKsBXmSRA0IBY+ytuyKC2LWzF2LwXRjGiygfvqQSvQvBFX0m4nFFRCNB14uxDZQKu5E+txFoAI7BcAGurwQVIG0gZ9502kCoIaQNWqEmqIFhjpkouysdQ3Zt4QE51SSn6kiwsw+ieGH2dHtc9IxlmkkJIw+UsTLweJ0iOTeR443iejoiXSRB0InGgZKOrdjgeWwESOXjqLqcKHODN3Q5zy6XuriMV5VRAQUCh6Dh38YuaDABQyP9FiP5SBj54IsKdm0K8+tF1TvwTptGBRB56ItARUYhAbxQ2v5UGwIigcMuFQJMDMe1xSRpoU9Xnq5qAXR5Ds7dksqXfVR+dDbO5EXYMaArWS93YpCVn4cOhMMbW9rtSiqWMcHDcnYY5Acd3vqsIqO3p5+VH7rHCoOvAXe9wwFh4aVesavPHb6cIA9sHwzXgJRER3h/Pg0DaQiHvNXttBgDyfA0ugflFQ2erw+m0sDOiUK8kQMAMt6G1IqagKwrq5UQRzY8OhBQPt0fKRzGZyZysCjqI9aPvpATg+HXL1IthNvREsRYmZwy3b3DQCs7/meW1bw2JHHz3QgMmYHIfPZXj898MjcXmfvdw09zgWar+D3TttuIQEeHBFsV9h5ZdQw13bHTBL0xm2PGZe1NlDXS1aXo7a5+BHk2m4PkNpznvxwrMwM7hZFUys8bt/qRxO7uveNmUjC6kBFsxBU1RuSmqaAp50/PE/qYavOD/AV8tY7oa1F/qLXHPb8UFGDyuV0Ogjr2r9xn4gfyXVD1/qyewghf/vbCi+Qr7AwkowogED1kJ+JCKhaASiIBSgf2+JmvCvyV4A+6kXQlFAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "百度新闻",
 				url: "https://news.baidu.com/ns?word=%s&tn=news&from=news&cl=2&rn=20&ct=1",
-				favicon: "data:image/svg+xml,%3Csvg t='1666880462710' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='36406' width='32' height='32'%3E%3Cpath d='M226.522 536.053c96.993-20.839 83.792-136.761 80.878-162.089-4.758-39.065-50.691-107.346-113.075-101.952-78.499 7.036-89.957 120.445-89.957 120.445C93.748 444.857 129.764 556.857 226.522 536.053zM329.512 737.61c-2.848 8.175-9.18 29.014-3.686 47.173 10.822 40.707 46.168 42.55 46.168 42.55l50.792 0L422.786 703.169 368.41 703.169C343.952 710.473 332.159 729.468 329.512 737.61zM406.537 341.666c53.572 0 96.859-61.646 96.859-137.9 0-76.12-43.287-137.767-96.859-137.767-53.472 0-96.892 61.646-96.892 137.767C309.645 280.019 353.065 341.666 406.537 341.666zM637.241 350.779c71.598 9.281 117.632-67.141 126.777-125.035 9.349-57.827-36.854-125.036-87.544-136.561-50.791-11.659-114.213 69.688-119.976 122.757C549.597 276.803 565.779 341.566 637.241 350.779zM812.666 691.174c0 0-110.761-85.701-175.425-178.305-87.645-136.593-212.177-81.011-253.822-11.558-41.478 69.452-106.106 113.375-115.286 125-9.314 11.458-133.813 78.666-106.173 201.423 27.64 122.69 124.7 120.345 124.7 120.345s71.53 7.036 154.519-11.524c83.021-18.428 154.484 4.59 154.484 4.59s193.919 64.929 246.988-60.072C895.655 756.037 812.666 691.174 812.666 691.174zM480.881 877.253 354.807 877.253c-54.443-10.855-76.12-48.044-78.867-54.343-2.68-6.433-18.125-36.317-9.951-87.109 23.52-76.12 90.627-81.614 90.627-81.614l67.107 0 0-82.485 57.157 0.871L480.88 877.253zM715.674 876.382l-145.07 0c-56.219-14.508-58.866-54.444-58.866-54.444L511.738 661.49l58.866-0.938 0 144.199c3.586 15.345 22.682 18.159 22.682 18.159l59.771 0L653.057 661.49l62.618 0L715.675 876.382zM921.051 448.006c0-27.708-23.018-111.13-108.385-111.13-85.501 0-96.925 78.732-96.925 134.382 0 53.136 4.489 127.313 110.695 124.935C932.677 593.846 921.051 475.881 921.051 448.006z' p-id='36407' fill='%23008bdd'%3E%3C/path%3E%3C/svg%3E",
-				blank: true
+				favicon: "data:image/svg+xml,%3Csvg t='1666880462710' class='icon' viewBox='0 0 1024 1024' version='1.1' xmlns='http://www.w3.org/2000/svg' p-id='36406' width='32' height='32'%3E%3Cpath d='M226.522 536.053c96.993-20.839 83.792-136.761 80.878-162.089-4.758-39.065-50.691-107.346-113.075-101.952-78.499 7.036-89.957 120.445-89.957 120.445C93.748 444.857 129.764 556.857 226.522 536.053zM329.512 737.61c-2.848 8.175-9.18 29.014-3.686 47.173 10.822 40.707 46.168 42.55 46.168 42.55l50.792 0L422.786 703.169 368.41 703.169C343.952 710.473 332.159 729.468 329.512 737.61zM406.537 341.666c53.572 0 96.859-61.646 96.859-137.9 0-76.12-43.287-137.767-96.859-137.767-53.472 0-96.892 61.646-96.892 137.767C309.645 280.019 353.065 341.666 406.537 341.666zM637.241 350.779c71.598 9.281 117.632-67.141 126.777-125.035 9.349-57.827-36.854-125.036-87.544-136.561-50.791-11.659-114.213 69.688-119.976 122.757C549.597 276.803 565.779 341.566 637.241 350.779zM812.666 691.174c0 0-110.761-85.701-175.425-178.305-87.645-136.593-212.177-81.011-253.822-11.558-41.478 69.452-106.106 113.375-115.286 125-9.314 11.458-133.813 78.666-106.173 201.423 27.64 122.69 124.7 120.345 124.7 120.345s71.53 7.036 154.519-11.524c83.021-18.428 154.484 4.59 154.484 4.59s193.919 64.929 246.988-60.072C895.655 756.037 812.666 691.174 812.666 691.174zM480.881 877.253 354.807 877.253c-54.443-10.855-76.12-48.044-78.867-54.343-2.68-6.433-18.125-36.317-9.951-87.109 23.52-76.12 90.627-81.614 90.627-81.614l67.107 0 0-82.485 57.157 0.871L480.88 877.253zM715.674 876.382l-145.07 0c-56.219-14.508-58.866-54.444-58.866-54.444L511.738 661.49l58.866-0.938 0 144.199c3.586 15.345 22.682 18.159 22.682 18.159l59.771 0L653.057 661.49l62.618 0L715.675 876.382zM921.051 448.006c0-27.708-23.018-111.13-108.385-111.13-85.501 0-96.925 78.732-96.925 134.382 0 53.136 4.489 127.313 110.695 124.935C932.677 593.846 921.051 475.881 921.051 448.006z' p-id='36407' fill='%23008bdd'%3E%3C/path%3E%3C/svg%3E"
 			},
 			{
 				name: "网易-百度",
 				url: "https://www.baidu.com/s?wd=%s%20site%3Anews.163.com",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACtAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAHRJREFUeJytUUEOwDAIokv//2V3cnFUaJONUyWIaIGPGB0ZQAjxor9c8wBGbeqMXwbcHEAEEM5kdlFdZIY1ULc4MthFTywRd1N5reUXqqC7AQ9oI2Zjclwrczup1vU9lUilYDwGndBx2/gp5OjyiGoFx/+CG9j1PAn7jkYoAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACtAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAHRJREFUeJytUUEOwDAIokv//2V3cnFUaJONUyWIaIGPGB0ZQAjxor9c8wBGbeqMXwbcHEAEEM5kdlFdZIY1ULc4MthFTywRd1N5reUXqqC7AQ9oI2Zjclwrczup1vU9lUilYDwGndBx2/gp5OjyiGoFx/+CG9j1PAn7jkYoAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "网易-谷歌",
 				url: "https://www.google.com.hk/search?q=site:news.163.com+%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACtAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAHRJREFUeJytUUEOwDAIokv//2V3cnFUaJONUyWIaIGPGB0ZQAjxor9c8wBGbeqMXwbcHEAEEM5kdlFdZIY1ULc4MthFTywRd1N5reUXqqC7AQ9oI2Zjclwrczup1vU9lUilYDwGndBx2/gp5OjyiGoFx/+CG9j1PAn7jkYoAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACtAAAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAHRJREFUeJytUUEOwDAIokv//2V3cnFUaJONUyWIaIGPGB0ZQAjxor9c8wBGbeqMXwbcHEAEEM5kdlFdZIY1ULc4MthFTywRd1N5reUXqqC7AQ9oI2Zjclwrczup1vU9lUilYDwGndBx2/gp5OjyiGoFx/+CG9j1PAn7jkYoAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "腾讯新闻",
 				url: "https://www.sogou.com/sogou?site=news.qq.com&query=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC50lEQVR4nG2TS2hcdRTGf/87c+/NHTOZR2ybtEoz7SILWyRqCmKCKeJrI2gJFRc2G4siRF0qglpRcaFFAoqgFkWxtkLdFNGWToSmEGo19EFN2hKSdGaatCb3ZmbuzH0eF7HoVA/84Cw+Pj4O31HcMtG0Nqu09p7otr2sJJ7noYnnsBA2mHnOuqWdc8OT4//WazcXmWZESsOipXf3OOkfqKVeJ6nnMRGuhy6mROzrfbb48I+7V/5jINOM0P35AcIZnMReku07MAwDy7L4dGA/XdY6phqLnKqcYnTrruye8VFpiS2NoyKLL0q0PCau64rn+xKGoURRJFEUyfTSZfli5pBs+35AXi2+ICfnf5HCd/1FAC26lJ0ldsE7TV2G0HUdPZnk3LzDiTmb7e8c4/ycwZ6tu/ig720aCYOJ0k8cHPx4CECJ85HgX4NgDr/zALquM7Wwyj1fnWlJufzyA2RSOldvlBn74316Owq8O3PwLQ2zF5q/QupBEokEAIcv2GCmWth/fBalFN25Ddzf/RgT1ybZnOp6Q8P9Hfwp0LeglALgy6UGtLW1MHZlFQClFI9u2slg4XF0CdFonoHIBu8sAEfOLVH2ANNqwU53rB0cQIS+7L3MezYazUlEAjD7iEV4cvt69nVpYJhgtP2NzvIzhTWDOCYW4Wp1AT8Ox7W6egRQuMsniKJorY2WSW/g8fRGg34zZlscsmB7BEFAve4SxzFeUCVWvEKF/MjipcuyYttSq9fF8zyJokjiOG7hz/GT0vz5uFSs9VK+8y554ujwP2Wq3L5xZfHrb8R2HKnVatJoNsX3fQmCQFZXq1L95DMpk18j0SnlZKdsPnJ3FkDdNCmTl/R7r8GmLrwLVzAG+uH0JI1jh5CwicqYqIyFMky8by/23YEz1WIAUNLzReOpLUMq047WkUbLZNGyObRsJ1p2He6Hh6kWf8sVcOxbv7hlSuTevH7foDijL8mNHUNSIleskOn5P+1fu3twDSB3ukoAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAC50lEQVR4nG2TS2hcdRTGf/87c+/NHTOZR2ybtEoz7SILWyRqCmKCKeJrI2gJFRc2G4siRF0qglpRcaFFAoqgFkWxtkLdFNGWToSmEGo19EFN2hKSdGaatCb3ZmbuzH0eF7HoVA/84Cw+Pj4O31HcMtG0Nqu09p7otr2sJJ7noYnnsBA2mHnOuqWdc8OT4//WazcXmWZESsOipXf3OOkfqKVeJ6nnMRGuhy6mROzrfbb48I+7V/5jINOM0P35AcIZnMReku07MAwDy7L4dGA/XdY6phqLnKqcYnTrruye8VFpiS2NoyKLL0q0PCau64rn+xKGoURRJFEUyfTSZfli5pBs+35AXi2+ICfnf5HCd/1FAC26lJ0ldsE7TV2G0HUdPZnk3LzDiTmb7e8c4/ycwZ6tu/ig720aCYOJ0k8cHPx4CECJ85HgX4NgDr/zALquM7Wwyj1fnWlJufzyA2RSOldvlBn74316Owq8O3PwLQ2zF5q/QupBEokEAIcv2GCmWth/fBalFN25Ddzf/RgT1ybZnOp6Q8P9Hfwp0LeglALgy6UGtLW1MHZlFQClFI9u2slg4XF0CdFonoHIBu8sAEfOLVH2ANNqwU53rB0cQIS+7L3MezYazUlEAjD7iEV4cvt69nVpYJhgtP2NzvIzhTWDOCYW4Wp1AT8Ox7W6egRQuMsniKJorY2WSW/g8fRGg34zZlscsmB7BEFAve4SxzFeUCVWvEKF/MjipcuyYttSq9fF8zyJokjiOG7hz/GT0vz5uFSs9VK+8y554ujwP2Wq3L5xZfHrb8R2HKnVatJoNsX3fQmCQFZXq1L95DMpk18j0SnlZKdsPnJ3FkDdNCmTl/R7r8GmLrwLVzAG+uH0JI1jh5CwicqYqIyFMky8by/23YEz1WIAUNLzReOpLUMq047WkUbLZNGyObRsJ1p2He6Hh6kWf8sVcOxbv7hlSuTevH7foDijL8mNHUNSIleskOn5P+1fu3twDSB3ukoAAAAASUVORK5CYII="
 			},
 			{
 				name: "凤凰新闻",
 				url: "https://search.ifeng.com/sofeng/search.action?q=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACBAwAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAA0hJREFUeJxNk11MW3UAxX/39t/ellLAAgUyEBFwIAsOAkNkakxMNjcJ0S1u0ZGZGT+S+WD0wcQn49P0ZZJo0LkYI5i56RwjIzoS2ISEIAzHpxLsYBIKLR+Fln7cllv+PiDVk5zH80tOco7S5kACKOwos6qGrNrHWZ8aZysYIH3vo2hZ2cRWV1i98xuh+7P8X0r7vwCA0jNv4qyqYebCZxQ3n6Hw2EmC7hnWRoYwIhGEzUbYs8DspW+Jr/tRALEbzj/aREHTcQbeaObpy51YXTn0nTpOZHGB7PqD2HLz0FeXMcJhXPUH8f7aixEOQbsDecmVIr3Dg7KroUrOXb8qg54FeflBp+x5qVFu+rwyFoslHV5bldNffyl/KMmVbQ6kEA4HeYeOEl1ZQbFacT17mP4XD2PJzKLuq3YUITAM47/SVhsFJ04hTYKht19DZDxWTUZ1LRszf5J7pInArBvfQD/Vn36BISVS10noOsJuTzKi3iVyG18gr6sD1V5aBlYb24ZB6t5yVocGAcg4UI9/fJRbzz/DzSermDz3EYZhYGxtkUgkmO/4kYKXT6PaCovY2gyi5RciLRrxcAhtTwHbUnL/ynfkHGrEmrcHX18vK8ODBOfusa2qBOfuYcTjqNaCQvTlZVL3VaLabKSWV2DJzOLuu2cRaelszrrZ33IBQ9fx3x1hKxJh7c4Qluwcgn/NoMqEgf3hErZjMVKKikmrqCSz4SmCUxMsdl4l/9gJTCkpbM5MY9I0EnqU0KwbYbcTnv8b4fm+jf2t36B7lxBmMwBl731A8etnMWlWVE3D19O9s9KaOgKTYyhIZDxGZH4OdaW3G9+NDhyFDyGESNrmzMRityOEwN3aQnp5Bc59lSx2XSejtIzAxBjBiTFUgOlzH7J07QqqYWA2m5NWEwaj779D4I9JGi62ExgdIepZIL24BE/nT8Q31nemnIhEWPrlBv7fhxGONIQjjeiyD2//bUxmC8/1DGDSNG6/9Sq1n7TgvthKfGMdBVB23ygecFJ0shlbTi7xUAjFbCarupbs6hoWun9m6vPzlLxymqjPx+T5j9l9cBKwDUjA8UgZrgNPYHXloPvXWBsfRVEUXLV1+Kcm8PbdSoZR4B+hMGuvciFlvwAAAABJRU5ErkJggg==",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACBAwAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAA0hJREFUeJxNk11MW3UAxX/39t/ellLAAgUyEBFwIAsOAkNkakxMNjcJ0S1u0ZGZGT+S+WD0wcQn49P0ZZJo0LkYI5i56RwjIzoS2ISEIAzHpxLsYBIKLR+Fln7cllv+PiDVk5zH80tOco7S5kACKOwos6qGrNrHWZ8aZysYIH3vo2hZ2cRWV1i98xuh+7P8X0r7vwCA0jNv4qyqYebCZxQ3n6Hw2EmC7hnWRoYwIhGEzUbYs8DspW+Jr/tRALEbzj/aREHTcQbeaObpy51YXTn0nTpOZHGB7PqD2HLz0FeXMcJhXPUH8f7aixEOQbsDecmVIr3Dg7KroUrOXb8qg54FeflBp+x5qVFu+rwyFoslHV5bldNffyl/KMmVbQ6kEA4HeYeOEl1ZQbFacT17mP4XD2PJzKLuq3YUITAM47/SVhsFJ04hTYKht19DZDxWTUZ1LRszf5J7pInArBvfQD/Vn36BISVS10noOsJuTzKi3iVyG18gr6sD1V5aBlYb24ZB6t5yVocGAcg4UI9/fJRbzz/DzSermDz3EYZhYGxtkUgkmO/4kYKXT6PaCovY2gyi5RciLRrxcAhtTwHbUnL/ynfkHGrEmrcHX18vK8ODBOfusa2qBOfuYcTjqNaCQvTlZVL3VaLabKSWV2DJzOLuu2cRaelszrrZ33IBQ9fx3x1hKxJh7c4Qluwcgn/NoMqEgf3hErZjMVKKikmrqCSz4SmCUxMsdl4l/9gJTCkpbM5MY9I0EnqU0KwbYbcTnv8b4fm+jf2t36B7lxBmMwBl731A8etnMWlWVE3D19O9s9KaOgKTYyhIZDxGZH4OdaW3G9+NDhyFDyGESNrmzMRityOEwN3aQnp5Bc59lSx2XSejtIzAxBjBiTFUgOlzH7J07QqqYWA2m5NWEwaj779D4I9JGi62ExgdIepZIL24BE/nT8Q31nemnIhEWPrlBv7fhxGONIQjjeiyD2//bUxmC8/1DGDSNG6/9Sq1n7TgvthKfGMdBVB23ygecFJ0shlbTi7xUAjFbCarupbs6hoWun9m6vPzlLxymqjPx+T5j9l9cBKwDUjA8UgZrgNPYHXloPvXWBsfRVEUXLV1+Kcm8PbdSoZR4B+hMGuvciFlvwAAAABJRU5ErkJggg=="
 			},
 			{
 				name: "CNN",
 				url: "https://edition.cnn.com/search/?q=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAF/ElEQVR4nI2XXWxURRTHf3Pv3W2loC2flggFET8KSRURo2h8MFFj+AokoAYffIIHHwwESRRfxAcxkVoSTMQnQsAYJaAPopbU2qqhCAJaTW1pawWjtNqy61J7d/fe48Pe2T17WdBJJmfuzNwz5/zPmZn/mPdBDOAAbiQ99W0iSdQ2qi1K6hpGMojJfDRmxx3Aswr1Arpao2y18+LFLky0kO63Y/b/UPV7ttOpUF3KkXCUjC+uFVfqM6pPO+Jp5YmonaA8FFbGDdBKoRzykBLkJuqzBqG+PavQKtde63YcCVt0DujixDzXxtp1QouAVW49TypENDIe5aGwxSq2nlvlJoaANsT2e9eLeyUEKiWjKOXxBa1RUA5/cRfoxdzIy4RCRCOjcyFuABRibrdbQOV8MWos0AhU2nLaMGvA9UJgvdRoWI9dhYaj/vvfCNgxbXA8BEHMOwuz9hwlhWgX2Kq9D1yXsQce4JIIbk0N9Pdzf38/f86aRV9TE9POn2fxwECZ171PPMGwMdzd2oqbzxMAeWPoe+wxvD/+YLy+Huerr5iZyZQOrjaQTpBvQE6DfOt58s/YmIiIDH39tZx9913pOXBAPluxQn565x0REbnY0SEiIicefVQmQDIg327fLn4mI0Pt7SIi8sX69XIBpMfzRETk+5YWERE5sHixdIK0g7SCOPpsDx2H7PPPU11bS8/hw/z28cekLl4k/ddf5EZGmLl8OUE2y+9vv83gkSMsbGnh99pafGOYtHQpQ4cOcXHfPgDu3b27PGFNKWv0mo6O6Yy2Nh5sbqZz2zbmP/44TS+8wPTZs0kPDmJ8n6obbuDv4WEa33wT47pMXbSIm/v7uUmkYNiZM9yzezentm6luq6O3jvvpCoI0CUebk8PNDzyCJcvXGDx5s1UTZ5M5y23sCCVot4mYjJJYAz58XHmrVrFL0ePMm/NGkaMIZtKYYBcOo1TU0PvwYM0vP46oxs2MBeuMsKW4qmaTyYB+GH/fuoWLOD4unUsTKWKO8AA6XS6kL1BgIgwPjTE9zt3Yk6eZO5DDxUSMgxZ8uqrOK7L/NWruW1wEBEpC4EupWPdKTTHR0cBqB4ZuWqyMQaMQYIAI8KCjc8SXrrE9KVLmdHYSGQBhCG3rl3L4LFPmFxfT5jLFfqvZ4Dj+wA0LFsGQN2WLVeTjMhzz/W4fP48E2OjNLW00LtvH4hAEOC6Lu3rNzDc3c3Y2XOcbW6GiQlQuaAPLqd4jotAkGf2svsY6+lh0Zo19E2bxpVEgpzjEBiDl0xiRDAI7qRJ9Lz2GsZ1yZw+zVh3d8HLIEC+bOfHl16m8bnnyPT24iYSSGSASPm96VmKFAIfNi5i3ZmznHnrLX76dYj7z52jauasEmsYv8LwwAAmDJlUV8c9+/fT2dfHg0c/onvnTggF8X3yNTUs6eygesoUlr+xi+6DB0lWVxcNCCmdmp5mMPN7ezn2zNM8eeg9fv7wA77b9QZVN07B9ycwGBzXJZ9KseyVV5BcnhBYeOIE7vRpzH3qKbr37KG6thZclxA419xM07YXGe7oBMfhdgRct5w7tIK0gXSAdIGcAvm0vl6Ob9okksmIXLkiks0Vai4v4vsy2nVC2hsaJA2SBml7+GHJDQ+L+FmRrC+DIBdABkCO3nWXiO+L+Fnp3LFDWo2RdpDjIJ+BmM9BPApbLUnhYEgWAGdgzhyq6meTqK4q3pZeIkGiq4uFmUzxig2AnjlzyK5ciZw6xR0nTxIAuWhscONGmDoVs3cvU4IAP+rPA+YYiL0JqygxImuIZkbX4wNx+q0NyF5DFnNA0yciaS20XEAzWn0daz4YqH91O4xVvb29QCnIUTr14vTpvzihdUQvmlPSOmSrnePZhTRh0BDHmfB/kVIbAs0HtdSGCrFz4FrKAirTck21tWJb80oGFSTWAE2VteJKsY4bAOUhiL8J4zmh5wng5WNKbcI5lAikRSDOBW1bo6ehzleQofoWol0Qhz0OLcqYa72M7Jx4KCqFRr8hi4QkfvM5sYn60RF/nMZ1xJ/lcei18f8CXzwtfnAJiVYAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAF/ElEQVR4nI2XXWxURRTHf3Pv3W2loC2flggFET8KSRURo2h8MFFj+AokoAYffIIHHwwESRRfxAcxkVoSTMQnQsAYJaAPopbU2qqhCAJaTW1pawWjtNqy61J7d/fe48Pe2T17WdBJJmfuzNwz5/zPmZn/mPdBDOAAbiQ99W0iSdQ2qi1K6hpGMojJfDRmxx3Aswr1Arpao2y18+LFLky0kO63Y/b/UPV7ttOpUF3KkXCUjC+uFVfqM6pPO+Jp5YmonaA8FFbGDdBKoRzykBLkJuqzBqG+PavQKtde63YcCVt0DujixDzXxtp1QouAVW49TypENDIe5aGwxSq2nlvlJoaANsT2e9eLeyUEKiWjKOXxBa1RUA5/cRfoxdzIy4RCRCOjcyFuABRibrdbQOV8MWos0AhU2nLaMGvA9UJgvdRoWI9dhYaj/vvfCNgxbXA8BEHMOwuz9hwlhWgX2Kq9D1yXsQce4JIIbk0N9Pdzf38/f86aRV9TE9POn2fxwECZ171PPMGwMdzd2oqbzxMAeWPoe+wxvD/+YLy+Huerr5iZyZQOrjaQTpBvQE6DfOt58s/YmIiIDH39tZx9913pOXBAPluxQn565x0REbnY0SEiIicefVQmQDIg327fLn4mI0Pt7SIi8sX69XIBpMfzRETk+5YWERE5sHixdIK0g7SCOPpsDx2H7PPPU11bS8/hw/z28cekLl4k/ddf5EZGmLl8OUE2y+9vv83gkSMsbGnh99pafGOYtHQpQ4cOcXHfPgDu3b27PGFNKWv0mo6O6Yy2Nh5sbqZz2zbmP/44TS+8wPTZs0kPDmJ8n6obbuDv4WEa33wT47pMXbSIm/v7uUmkYNiZM9yzezentm6luq6O3jvvpCoI0CUebk8PNDzyCJcvXGDx5s1UTZ5M5y23sCCVot4mYjJJYAz58XHmrVrFL0ePMm/NGkaMIZtKYYBcOo1TU0PvwYM0vP46oxs2MBeuMsKW4qmaTyYB+GH/fuoWLOD4unUsTKWKO8AA6XS6kL1BgIgwPjTE9zt3Yk6eZO5DDxUSMgxZ8uqrOK7L/NWruW1wEBEpC4EupWPdKTTHR0cBqB4ZuWqyMQaMQYIAI8KCjc8SXrrE9KVLmdHYSGQBhCG3rl3L4LFPmFxfT5jLFfqvZ4Dj+wA0LFsGQN2WLVeTjMhzz/W4fP48E2OjNLW00LtvH4hAEOC6Lu3rNzDc3c3Y2XOcbW6GiQlQuaAPLqd4jotAkGf2svsY6+lh0Zo19E2bxpVEgpzjEBiDl0xiRDAI7qRJ9Lz2GsZ1yZw+zVh3d8HLIEC+bOfHl16m8bnnyPT24iYSSGSASPm96VmKFAIfNi5i3ZmznHnrLX76dYj7z52jauasEmsYv8LwwAAmDJlUV8c9+/fT2dfHg0c/onvnTggF8X3yNTUs6eygesoUlr+xi+6DB0lWVxcNCCmdmp5mMPN7ezn2zNM8eeg9fv7wA77b9QZVN07B9ycwGBzXJZ9KseyVV5BcnhBYeOIE7vRpzH3qKbr37KG6thZclxA419xM07YXGe7oBMfhdgRct5w7tIK0gXSAdIGcAvm0vl6Ob9okksmIXLkiks0Vai4v4vsy2nVC2hsaJA2SBml7+GHJDQ+L+FmRrC+DIBdABkCO3nWXiO+L+Fnp3LFDWo2RdpDjIJ+BmM9BPApbLUnhYEgWAGdgzhyq6meTqK4q3pZeIkGiq4uFmUzxig2AnjlzyK5ciZw6xR0nTxIAuWhscONGmDoVs3cvU4IAP+rPA+YYiL0JqygxImuIZkbX4wNx+q0NyF5DFnNA0yciaS20XEAzWn0daz4YqH91O4xVvb29QCnIUTr14vTpvzihdUQvmlPSOmSrnePZhTRh0BDHmfB/kVIbAs0HtdSGCrFz4FrKAirTck21tWJb80oGFSTWAE2VteJKsY4bAOUhiL8J4zmh5wng5WNKbcI5lAikRSDOBW1bo6ehzleQofoWol0Qhz0OLcqYa72M7Jx4KCqFRr8hi4QkfvM5sYn60RF/nMZ1xJ/lcei18f8CXzwtfnAJiVYAAAAASUVORK5CYII="
 			},
 			{
 				name: "BBC",
 				url: "https://www.bbc.co.uk/search?q=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAq0lEQVR4nO2USwrDMAwFn0vvZR1NvtnzydRN06iNf4FAoGg2NmIUy4oSIAiCILiZ5Pa26F/qPX4jJEESqjrMXPUAQFW7/qEDZoZSCkQEAD6r8095JOFXEfFuahaQ3mG/bxUw8/yhHdKzFd0Sa629xCUv54xSyvAZhxkA9jZt763HzJtdoFvAVZCEiHwN3mhoDYB5SNoWx/5ZnfJU1Uj23Pv/AwtOEARB8Oe8AEX8nWWaRvY7AAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAq0lEQVR4nO2USwrDMAwFn0vvZR1NvtnzydRN06iNf4FAoGg2NmIUy4oSIAiCILiZ5Pa26F/qPX4jJEESqjrMXPUAQFW7/qEDZoZSCkQEAD6r8095JOFXEfFuahaQ3mG/bxUw8/yhHdKzFd0Sa629xCUv54xSyvAZhxkA9jZt763HzJtdoFvAVZCEiHwN3mhoDYB5SNoWx/5ZnfJU1Uj23Pv/AwtOEARB8Oe8AEX8nWWaRvY7AAAAAElFTkSuQmCC"
 			},
 			{
 				name: "Economis",
 				url: "https://www.google.com/search?q=site:www.economist.com%20%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAQAAAAAAAAAAAAAAAAAAAAAAAALEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//w==",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIABoBAAAFgAAACgAAAAQAAAAIAAAAAEAIAAAAAAAQAQAAAAAAAAAAAAAAAAAAAAAAAALEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/CxLj/wsS4/8LEuP/AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//wAA//8AAP//AAD//w=="
 			},
 			{
 				name: "今日头条",
 				url: "https://www.toutiao.com/search/?keyword=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFN0lEQVR4nMWXTYhTVxTHf+/lJTHJzCTRDE61jiLFhWBBhJbSdiEoVHBTqFoFXVgoiNBNu9GN9mNTLbSF0lpKC1JcVK0iLkQobVEKghWsX6jggFO1MyVOzEsmMy8m79/FmZjJJFH7feBw3/2fc885755zv2CKJA1K+kzSTUl1/fNUl/SrpM8lLWI6SVolqfgvOO1GRUmrABxJg8BFoA/A933i8ThhGBKGIY7j4LoujuMA4HkelUqFyclJOlFfXx+Tk5NUq9U2WSqVIplMNro+sMwDdjScA7iuSxAERCIRwjDEdV1qtRqu6yIJ13WJxWK4rtsxgEgkQjwex/O8Nlk0Gm2JFdjhAWuno6VSiVqtBvDgr6fShOM45HI5KpUKlUqlYwC5XI5yudxxhtLp9MwgXvKAedORarVKNpulVqtRKBQeBJLNZhkbG0MSqVSKeDzeMYBoNEpPTw+JRKJNFovFQIJqFYpFuHfvSQ9om8tSqUQYhsRiMYIgIJPJkMlkKI+PQxBQGR1lYmQEfB98H9f3cUsl3FKJmEQ9n6deKDzAGhwpl21Mc3Y8R4cPi2KRBvu3b0OxiFsuk6pWqebzRMfHcX0fFYsQBDgzI/4b5Aj0D9rrTIkEDAzA8DDU6y2i9lLtRp4H/f2QTMKNG62ylSvhiy/g2DHL8RNPGA8MWJtOg+PAnDkwNtY6VjaklZ9/Xlq3Tlq5som99ZZtIT/91Krb3y/dvm2yUkm6elX67jtp/37po4+ku3dNNjQkJRJtvjoHsH27DQoC6YUXDNu507Dvv2/VfeMN6auvpN27pYULpWjU8Geeka5dszH790t9fe1+ugYA0r590vXr0pEjUiwmvfuuGTtxolXPcaQNG6TLl00+Oip9841Urdrfr1/f2f5DA0gkpAULpHS6ie3ZYw6OHetsLBKRDhxo3fF//93SsGJF1wDa91PPg2+/tYo9fdoKCGDWLGuDoL1AX3wRzpyBTZvgyhXYsgXefhtGRmDtWvjkE9izBwYH2921IbUarF8Pp07B009bdW/YAI2db+Yhs2yZ8d69MDpqq+Sdd2BoCDZvhlyuyUuX2o89chWAFVNPj6Vi+XLLvSSdOSPt2mUpcRzpvfdMdvasVfr4ePdDePXqNj+tM9DTAz/+2Iw4mbT1O52efdb4wAEz8dRTttEMD8P58zB/PqxZAxcuwJdfwnPP2fa7cyfcvduevpaIZs+WLl2SfvhBOnRI+vRT6ejR5h8EgbVvvimlUs1x778vFQrSq69Kr71mOidPms7Nm9bfuvVPLkOQBgak4WEz8PXX0rZt9v3bb1IuZzrz5kkTE9KdO5a2Dz4wnb17Tf7yy9bP523TemgA8+dL585ZLsfGpFrNBp89K82aJbmu9PPPhh0+bGM+/ND6u3dLmYx06pR0/Lg0d27T7saN0iuvWD3NCKD1MFq8GA4ehHv3jAsFaz/+GG7dMp3BQVi0yPJ68SJkMjAxAV0uKI+i/+Y0fAg9/mn4uOQ4hIkEYTKJGu3UdzSdxuvrg1TKVlgyGXosWWLAdE4m27FpeAnMSSKBkklrp5xl5s6lMjlJ0OFO2Nvbi5dKTYdCj2vXWpR83+94pX7kjwMRwHFdIq7b8Vbc6SbtASHT7oXRaLTrlftxyHXdrjYikchMKPSAO8CTDaRcLjMxMfGXA+jv7+9qI5vN2s24SSOOpM+B1xvI/fv3CcPwLwcQjUap1+sdbXieN3MW9jmyh+IvTL2O8vn8vzYDmUyG3t7eRtcHlgH/7+P0AUlaJHs6/6r/8Hn+B0w7zXRC+ZfTAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAFN0lEQVR4nMWXTYhTVxTHf+/lJTHJzCTRDE61jiLFhWBBhJbSdiEoVHBTqFoFXVgoiNBNu9GN9mNTLbSF0lpKC1JcVK0iLkQobVEKghWsX6jggFO1MyVOzEsmMy8m79/FmZjJJFH7feBw3/2fc885755zv2CKJA1K+kzSTUl1/fNUl/SrpM8lLWI6SVolqfgvOO1GRUmrABxJg8BFoA/A933i8ThhGBKGIY7j4LoujuMA4HkelUqFyclJOlFfXx+Tk5NUq9U2WSqVIplMNro+sMwDdjScA7iuSxAERCIRwjDEdV1qtRqu6yIJ13WJxWK4rtsxgEgkQjwex/O8Nlk0Gm2JFdjhAWuno6VSiVqtBvDgr6fShOM45HI5KpUKlUqlYwC5XI5yudxxhtLp9MwgXvKAedORarVKNpulVqtRKBQeBJLNZhkbG0MSqVSKeDzeMYBoNEpPTw+JRKJNFovFQIJqFYpFuHfvSQ9om8tSqUQYhsRiMYIgIJPJkMlkKI+PQxBQGR1lYmQEfB98H9f3cUsl3FKJmEQ9n6deKDzAGhwpl21Mc3Y8R4cPi2KRBvu3b0OxiFsuk6pWqebzRMfHcX0fFYsQBDgzI/4b5Aj0D9rrTIkEDAzA8DDU6y2i9lLtRp4H/f2QTMKNG62ylSvhiy/g2DHL8RNPGA8MWJtOg+PAnDkwNtY6VjaklZ9/Xlq3Tlq5som99ZZtIT/91Krb3y/dvm2yUkm6elX67jtp/37po4+ku3dNNjQkJRJtvjoHsH27DQoC6YUXDNu507Dvv2/VfeMN6auvpN27pYULpWjU8Geeka5dszH790t9fe1+ugYA0r590vXr0pEjUiwmvfuuGTtxolXPcaQNG6TLl00+Oip9841Urdrfr1/f2f5DA0gkpAULpHS6ie3ZYw6OHetsLBKRDhxo3fF//93SsGJF1wDa91PPg2+/tYo9fdoKCGDWLGuDoL1AX3wRzpyBTZvgyhXYsgXefhtGRmDtWvjkE9izBwYH2921IbUarF8Pp07B009bdW/YAI2db+Yhs2yZ8d69MDpqq+Sdd2BoCDZvhlyuyUuX2o89chWAFVNPj6Vi+XLLvSSdOSPt2mUpcRzpvfdMdvasVfr4ePdDePXqNj+tM9DTAz/+2Iw4mbT1O52efdb4wAEz8dRTttEMD8P58zB/PqxZAxcuwJdfwnPP2fa7cyfcvduevpaIZs+WLl2SfvhBOnRI+vRT6ejR5h8EgbVvvimlUs1x778vFQrSq69Kr71mOidPms7Nm9bfuvVPLkOQBgak4WEz8PXX0rZt9v3bb1IuZzrz5kkTE9KdO5a2Dz4wnb17Tf7yy9bP523TemgA8+dL585ZLsfGpFrNBp89K82aJbmu9PPPhh0+bGM+/ND6u3dLmYx06pR0/Lg0d27T7saN0iuvWD3NCKD1MFq8GA4ehHv3jAsFaz/+GG7dMp3BQVi0yPJ68SJkMjAxAV0uKI+i/+Y0fAg9/mn4uOQ4hIkEYTKJGu3UdzSdxuvrg1TKVlgyGXosWWLAdE4m27FpeAnMSSKBkklrp5xl5s6lMjlJ0OFO2Nvbi5dKTYdCj2vXWpR83+94pX7kjwMRwHFdIq7b8Vbc6SbtASHT7oXRaLTrlftxyHXdrjYikchMKPSAO8CTDaRcLjMxMfGXA+jv7+9qI5vN2s24SSOOpM+B1xvI/fv3CcPwLwcQjUap1+sdbXieN3MW9jmyh+IvTL2O8vn8vzYDmUyG3t7eRtcHlgH/7+P0AUlaJHs6/6r/8Hn+B0w7zXRC+ZfTAAAAAElFTkSuQmCC"
 			}
 		],
 		mine: [
@@ -5366,7 +5344,6 @@
 			{
 				name: "Can I Use",
 				url: "https://caniuse.com/#search=%s",
-				blank: true,
 				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAADAFBMVEXRa1hIvVUBriaErG7//vzQx7e116nq4M2Dy4FmYktwx3Tt48/y6NQXsTH+7uK2fGBhwmhoxW7Wg3HEMxe8EAD78Nqn0plRvluZ0ZLKQizNs6qupZZ0zX/9/+3669vM5cUxt0QlszpQqV6HhoPP3L1YwWKYooEQujB9ynxWUTgly0Tp38yhlIhAkEAldSRdOC706tbw5dL/8ezInXD169iK1JO7u6n+9ODAJQSY2J+Wrc+z4bLluKpnkcWbyYz/++CMzYcAqQz25dd90Yn90/ll020qwEPk28j5/OjhueEstkDfoo7k2NP+68n/5+CmSj3i2MX85dI6ukzx+ufhqp7+8/r39er29uP77NU0kjgvvEQ4LBc8nEFOzVqQvY0evzvN+f/m+drt8uHpxbnb5s7s7dpwomfb0cA3p0Ti7tfB473n3bzc7dDe3szr//9SZH0Avij37tng1ssttT7dk4Xf4t6U4ZOm3Kh81ntaelrv6Os/WC6I3Ik+iDvuzr/z2M6AgICBgYGCgoKDg4OEhISFhYWGhoaHh4eIiIiJiYmKioqLi4uMjIyNjY2Ojo6Pj4+QkJCRkZGSkpKTk5OUlJSVlZWWlpaXl5eYmJiZmZmampqbm5ucnJydnZ2enp6fn5+goKChoaGioqKjo6OkpKSlpaWmpqanp6eoqKipqamqqqqrq6usrKytra2urq6vr6+wsLCxsbGysrKzs7O0tLS1tbW2tra3t7e4uLi5ubm6urq7u7u8vLy9vb2+vr6/v7/AwMDBwcHCwsLDw8PExMTFxcXGxsbHx8fIyMjJycnKysrLy8vMzMzNzc3Ozs7Pz8/Q0NDR0dHS0tLT09PU1NTV1dXW1tbX19fY2NjZ2dna2trb29vc3Nzd3d3e3t7f39/g4ODh4eHi4uLj4+Pk5OTl5eXm5ubn5+fo6Ojp6enq6urr6+vs7Ozt7e3u7u7v7+/w8PDx8fHy8vLz8/P09PT19fX29vb39/f4+Pj5+fn6+vr7+/v8/Pz9/f3+/v7////XnzsNAAAAmklEQVR4nF3KQQuCMADF8U2EQT1hklJCQSIhbIdCCtepRodgpxB26eKxj+ChL99mhOm7/OHHI8AdD+AFeZzXRXEhTLKKSuZyYD49xFM4T+E0hpttprAeQ2x5YAZYJEsb6KgHHweN3f6DSnL/iLTa/B5lWOq21SpMdZum5Cn4nguTi+ydCWMEAVZVR/mOAqAd8AWgBz8H12qGYR9XXh8E2WsxgQAAAABJRU5ErkJggg=="
 			},
 			{
@@ -5382,32 +5359,27 @@
 			{
 				name: "GreasyFork",
 				url: "https://greasyfork.org/scripts?q=%s&utf8=✓",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3ggEBCQHM3fXsAAAAVdJREFUOMudkz2qwkAUhc/goBaGJBgUtBCZyj0ILkpwAW7Bws4yO3AHLiCtEFD8KVREkoiFxZzX5A2KGfN4F04zMN+ce+5c4LMUgDmANYBnrnV+plBSi+FwyHq9TgA2LQpvCiEiABwMBtzv95RSfoNEHy8DYBzHrNVqVEr9BWKcqNFoxF6vx3a7zc1mYyC73a4MogBg7vs+z+czO50OW60Wt9stK5UKp9Mpj8cjq9WqDTBHnjAdxzGQZrPJw+HA31oulzbAWgLoA0CWZVBKIY5jzGYzdLtdE9DlcrFNrY98zobqOA6TJKHW2jg4nU5sNBpFDp6mhVe5rsvVasUwDHm9Xqm15u12o+/7Hy0gD8KatOd5vN/v1FozTVN6nkchxFuI6hsAAIMg4OPxMJCXdtTbR7JJCMEgCJhlGUlyPB4XfumozInrupxMJpRSRtZlKoNYl+m/6/wDuWAjtPfsQuwAAAAASUVORK5CYII=",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QA/wD/AP+gvaeTAAAACXBIWXMAAAsTAAALEwEAmpwYAAAAB3RJTUUH3ggEBCQHM3fXsAAAAVdJREFUOMudkz2qwkAUhc/goBaGJBgUtBCZyj0ILkpwAW7Bws4yO3AHLiCtEFD8KVREkoiFxZzX5A2KGfN4F04zMN+ce+5c4LMUgDmANYBnrnV+plBSi+FwyHq9TgA2LQpvCiEiABwMBtzv95RSfoNEHy8DYBzHrNVqVEr9BWKcqNFoxF6vx3a7zc1mYyC73a4MogBg7vs+z+czO50OW60Wt9stK5UKp9Mpj8cjq9WqDTBHnjAdxzGQZrPJw+HA31oulzbAWgLoA0CWZVBKIY5jzGYzdLtdE9DlcrFNrY98zobqOA6TJKHW2jg4nU5sNBpFDp6mhVe5rsvVasUwDHm9Xqm15u12o+/7Hy0gD8KatOd5vN/v1FozTVN6nkchxFuI6hsAAIMg4OPxMJCXdtTbR7JJCMEgCJhlGUlyPB4XfumozInrupxMJpRSRtZlKoNYl+m/6/wDuWAjtPfsQuwAAAAASUVORK5CYII="
 			},
 			{
 				name: "人生05电影",
 				url: "https://www.rs05.com/search.php?s=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACBAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAkhJREFUeJytk19IU2EYxp9z5s40ZzSRkWOQJIog0dzmH2aECFEIhiSCoN2oECJYYUI3QjqlQdqdF6bYRcwLUQhRxBBkXgQqKaKRjWFYMmnmyMN2FMzv6SI9FnXRvwe+m4f3+/G+L88rCSGIf1ACAEiS9NcA+VfmdjiMT1tbv0cQQpAkhRD8sL7OOxUVdAB0JyXx3doajxVaWWG1w8Eal4s1Lhdr3W7OTU9TB7ycmmKJ1UonwFKrlbfLy+ltbCRJxlWVFTk5zAPoPHqXLRZGIxEmAMBGMIj2hgbg8BCdfj8uejzY0zT0d3VhX9Nwt6oKqenpuNfTA0mWQQDnsrNxJi0NeLO4yCs2GwtMJr4KBPSWnw8O0tvUxIVAgBcMBo729fFxayuf+nyMqapeh/b6ejolif2dnbqpRqMssdk47vdzZmyMTlnWW88D2FJZeQK4npnJktRURiMR3ez3+VhgNvN9KMTPOzt82NzMF8PD/Li5ydDqKmuKini8O+QbjXzW3a1/nh0fZ57RyJ6WFr3oWEII9ra1sbaw8ARwKSWFb5eW+OXggKMDAyw2m3nT4+GepnF2YoJPOjoYU1W+np/n/epquo1G9nm9OlS6VVrKpORkaLEYFmZmcDYjA72Tk1ASE3EjNxfns7KgxePYDIUgGQwoLivDo5ERKIryLUjB5WVes9vpkmU+qKvjdjhMktwIBpmvKPryrtrtnBwa4r6m/TCWdDQL9jUNp8zm7xOKlbk5xHd3cdpiQbbDAcVk+inJkhCC//2Y/kRfASoRrtb2v2kbAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIACBAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAkhJREFUeJytk19IU2EYxp9z5s40ZzSRkWOQJIog0dzmH2aECFEIhiSCoN2oECJYYUI3QjqlQdqdF6bYRcwLUQhRxBBkXgQqKaKRjWFYMmnmyMN2FMzv6SI9FnXRvwe+m4f3+/G+L88rCSGIf1ACAEiS9NcA+VfmdjiMT1tbv0cQQpAkhRD8sL7OOxUVdAB0JyXx3doajxVaWWG1w8Eal4s1Lhdr3W7OTU9TB7ycmmKJ1UonwFKrlbfLy+ltbCRJxlWVFTk5zAPoPHqXLRZGIxEmAMBGMIj2hgbg8BCdfj8uejzY0zT0d3VhX9Nwt6oKqenpuNfTA0mWQQDnsrNxJi0NeLO4yCs2GwtMJr4KBPSWnw8O0tvUxIVAgBcMBo729fFxayuf+nyMqapeh/b6ejolif2dnbqpRqMssdk47vdzZmyMTlnWW88D2FJZeQK4npnJktRURiMR3ez3+VhgNvN9KMTPOzt82NzMF8PD/Li5ydDqKmuKini8O+QbjXzW3a1/nh0fZ57RyJ6WFr3oWEII9ra1sbaw8ARwKSWFb5eW+OXggKMDAyw2m3nT4+GepnF2YoJPOjoYU1W+np/n/epquo1G9nm9OlS6VVrKpORkaLEYFmZmcDYjA72Tk1ASE3EjNxfns7KgxePYDIUgGQwoLivDo5ERKIryLUjB5WVes9vpkmU+qKvjdjhMktwIBpmvKPryrtrtnBwa4r6m/TCWdDQL9jUNp8zm7xOKlbk5xHd3cdpiQbbDAcVk+inJkhCC//2Y/kRfASoRrtb2v2kbAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "射手网(伪)",
 				url: "https://assrt.net/sub/?searchword=%s",
-				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAADfElEQVR4nF2TQUxTdxzHv7//e319pH3QEi3MAYMpqWZj1c1lESIz0WwLXmZl7CAXjCYzuyCJJPVgPAy8zZglEuRA5sLJiIlm4ExmQtDilmVgQrDCsq2WuRRKoX20tO+9//vtglni9/z5fk7fLzEzXs+T8+f3rTx6VItSSV2fn4/qVVVjX25szACQ3xLt72Oee8XS64LfYrHe9bm5Do/P50mOjxvEHJZESx8MDKzv6O5mZ3bWHz9z5s8t0/wOzDPqq+JPx49/nJqY+CIYDkcPj46+wa6L5N27YNuGZD5gmyZ21dcjnUxCWtZHKJU+8er6VQEAP9TUtIZ7esbbR0a+lqZZLUslu6atzYlcvCgl4BLgCE2zXdd1lm7edMxcziKgOhCJfKMCQGFlJZpfWqp+LxYrldfXPc9u3IC+cyf9Oz0tBOBKQAURCyEgVBXBhgbFSqcdaVlCAAAB+7Nzcy67rvJWZyftO3eOVuNxpB4+ZAmQBFitqCAA3NLfT9GFBT4wOEiObbvqtmCjnMkQiLA0PMyKYUDVdaH7fNTU2cl1HR1Ue/Qou8xkNDZybnGRVuNx8vr9qjpFFCDAkYUC2ZubqNq7l6x8nkPt7fjs0CGEWlsZAJVzOSKAnw0N0e+XLrnlTEbUHjy4JjKVlbUuUOEyO7JUonI2i2AkQm6xiF/6+vDjkSN0a88e/DE6CiJCenqazUzGNUIhrj12bEj8VSjU6Iax693+flfRNKpsbqZQa6v458EDyHIZgXCYpGWBpQQAaJWVEIAiNG3r/StXBgRL+XbTiRM+f1OT/WtvL3kMg8vZLDd2deHT+/fRNjzMkQsXgO3BqYbBBJAsFh1zcdFW5xXlxZuTkykzkZAfXrv2TiGV4uWJCTR2dWFhbIzTjx9TLpFAJBYDtjUMsDcUyq/OzEB87zg/b62urjWfPbubhHCmTp8mUhTKJRLs5PMkPB6spdNgAMxMiqa5BEAJBmdnL1+WKgDYwJ2ng4OfF1MpKR2HG6JRpfjyJf6+d889PDJCu0+domBLC4iINb9fAlB9qhooAxAA8BXzLW8gcMeoq9MVXdde3L6tFJJJJZ9MiumeHlJ9PgQjEUjLEuVs1uvRdeuppl3VAoH/37g8OVllZbP9ievXA8l43OvXtJDrOHV6MLiDdL2+8eRJ2KYZ31xeTnoDgalCd/dw3fPn4j+2Ya+YXX1PBgAAAABJRU5ErkJggg==",
-				blank: true
+				favicon: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAADfElEQVR4nF2TQUxTdxzHv7//e319pH3QEi3MAYMpqWZj1c1lESIz0WwLXmZl7CAXjCYzuyCJJPVgPAy8zZglEuRA5sLJiIlm4ExmQtDilmVgQrDCsq2WuRRKoX20tO+9//vtglni9/z5fk7fLzEzXs+T8+f3rTx6VItSSV2fn4/qVVVjX25szACQ3xLt72Oee8XS64LfYrHe9bm5Do/P50mOjxvEHJZESx8MDKzv6O5mZ3bWHz9z5s8t0/wOzDPqq+JPx49/nJqY+CIYDkcPj46+wa6L5N27YNuGZD5gmyZ21dcjnUxCWtZHKJU+8er6VQEAP9TUtIZ7esbbR0a+lqZZLUslu6atzYlcvCgl4BLgCE2zXdd1lm7edMxcziKgOhCJfKMCQGFlJZpfWqp+LxYrldfXPc9u3IC+cyf9Oz0tBOBKQAURCyEgVBXBhgbFSqcdaVlCAAAB+7Nzcy67rvJWZyftO3eOVuNxpB4+ZAmQBFitqCAA3NLfT9GFBT4wOEiObbvqtmCjnMkQiLA0PMyKYUDVdaH7fNTU2cl1HR1Ue/Qou8xkNDZybnGRVuNx8vr9qjpFFCDAkYUC2ZubqNq7l6x8nkPt7fjs0CGEWlsZAJVzOSKAnw0N0e+XLrnlTEbUHjy4JjKVlbUuUOEyO7JUonI2i2AkQm6xiF/6+vDjkSN0a88e/DE6CiJCenqazUzGNUIhrj12bEj8VSjU6Iax693+flfRNKpsbqZQa6v458EDyHIZgXCYpGWBpQQAaJWVEIAiNG3r/StXBgRL+XbTiRM+f1OT/WtvL3kMg8vZLDd2deHT+/fRNjzMkQsXgO3BqYbBBJAsFh1zcdFW5xXlxZuTkykzkZAfXrv2TiGV4uWJCTR2dWFhbIzTjx9TLpFAJBYDtjUMsDcUyq/OzEB87zg/b62urjWfPbubhHCmTp8mUhTKJRLs5PMkPB6spdNgAMxMiqa5BEAJBmdnL1+WKgDYwJ2ng4OfF1MpKR2HG6JRpfjyJf6+d889PDJCu0+domBLC4iINb9fAlB9qhooAxAA8BXzLW8gcMeoq9MVXdde3L6tFJJJJZ9MiumeHlJ9PgQjEUjLEuVs1uvRdeuppl3VAoH/37g8OVllZbP9ievXA8l43OvXtJDrOHV6MLiDdL2+8eRJ2KYZ31xeTnoDgalCd/dw3fPn4j+2Ya+YXX1PBgAAAABJRU5ErkJggg=="
 			},
 			{
 				name: "游戏-3dm",
 				url: "https//so.3dmgame.com/?type=4&keyword=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAALAwAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAtJJREFUeJydU0tIVGEU/v57r3dmdJzG0a6T6UyaM6GZYkJhBRZE9EJcCEVpVIuIyGhRi6hNBC5bBBJRqxgiopoWlVZoVvQgUsuaIZPyNabzuukd5zre199CMaMk6IPDgXP4vvNxDgdYBKET/GKt30D+Vrx8alu5JCn5Jl4Mfg9zwpoyy7j2JjV8qLXr3wLnfV4UBB2bSyqXt7gKM0vtdjMkSUU0nOzu7Qqfbjj3tGNRgRgFHl3YsnPL7iK/IJh4EIBQAkoMEINC/KFrT+8N7Nmf77yrHvb9KXC7qdxaVlfe7/EucRJQTM9oYBiCkYEEXEWZmJY1RKOK+OROYFVZrTDR91At4n7zn2evdzgtzgedI1BUQJI0yLKKowe8aO2IYGhEQoaVOIrLlx1LDbPipu2OSvK5dS9vzx5XfIEhVGulfq+k14VjMzDVuBAKxUAjERjTMsCxYCzpyF2aA9PzyLh130p71MB1LqkzXSSRb1ufln0rN8+01ZyYgduVicl0DY6cJdCyV0FTOBAiw2KKw11iQzzP6szyZmGsW4xwUJRXxZXOI6mUcsq92g4GAAWFyVyBZenrAMLO75tSBUbyLXjpLQwdCA2IPczHz+GW4cGplKdklgwQUL4YbMYGEMKBAQEDgAEFQ9LAWjdCT3Ojv18KMkZOGxPrSxpiVJbkpA5Np0ilVMCyBoQuPBEBQEDmMjWvfRVIjFUNVbfJJD4R53wndzmFwoymAo/tIM9DqNpxBoQxzRF+wQCgGxSBZ88bK3c2+QCAybJlofHivXFLw46zr9vHaghLBg2qzk4C5sMAoGoaPrx8eTN4tfnGvDdKKQcAycQM7sff4X3zJVt1he3KikJPvUVwgbAsdINO/fgaYEY7/Wb7asG99Xh7aKEAAwC6rmM0JqJv8hp6H6s297cXtZMOjyhDmKAZrGymiplXk+kjSfZLz6evMb/fL//xWf+Dnxs2M3yo2q6nAAAAAElFTkSuQmCC",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIAALAwAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAtJJREFUeJydU0tIVGEU/v57r3dmdJzG0a6T6UyaM6GZYkJhBRZE9EJcCEVpVIuIyGhRi6hNBC5bBBJRqxgiopoWlVZoVvQgUsuaIZPyNabzuukd5zre199CMaMk6IPDgXP4vvNxDgdYBKET/GKt30D+Vrx8alu5JCn5Jl4Mfg9zwpoyy7j2JjV8qLXr3wLnfV4UBB2bSyqXt7gKM0vtdjMkSUU0nOzu7Qqfbjj3tGNRgRgFHl3YsnPL7iK/IJh4EIBQAkoMEINC/KFrT+8N7Nmf77yrHvb9KXC7qdxaVlfe7/EucRJQTM9oYBiCkYEEXEWZmJY1RKOK+OROYFVZrTDR91At4n7zn2evdzgtzgedI1BUQJI0yLKKowe8aO2IYGhEQoaVOIrLlx1LDbPipu2OSvK5dS9vzx5XfIEhVGulfq+k14VjMzDVuBAKxUAjERjTMsCxYCzpyF2aA9PzyLh130p71MB1LqkzXSSRb1ufln0rN8+01ZyYgduVicl0DY6cJdCyV0FTOBAiw2KKw11iQzzP6szyZmGsW4xwUJRXxZXOI6mUcsq92g4GAAWFyVyBZenrAMLO75tSBUbyLXjpLQwdCA2IPczHz+GW4cGplKdklgwQUL4YbMYGEMKBAQEDgAEFQ9LAWjdCT3Ojv18KMkZOGxPrSxpiVJbkpA5Np0ilVMCyBoQuPBEBQEDmMjWvfRVIjFUNVbfJJD4R53wndzmFwoymAo/tIM9DqNpxBoQxzRF+wQCgGxSBZ88bK3c2+QCAybJlofHivXFLw46zr9vHaghLBg2qzk4C5sMAoGoaPrx8eTN4tfnGvDdKKQcAycQM7sff4X3zJVt1he3KikJPvUVwgbAsdINO/fgaYEY7/Wb7asG99Xh7aKEAAwC6rmM0JqJv8hp6H6s297cXtZMOjyhDmKAZrGymiplXk+kjSfZLz6evMb/fL//xWf+Dnxs2M3yo2q6nAAAAAElFTkSuQmCC"
 			},
 			{
 				name: "搜狗表情",
 				url: "https://pic.sogou.com/pic/emo/searchList.jsp?statref=home_form&keyword=%s",
-				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIADiAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAqlJREFUeJxtk0+IVXUUxz/n/O67772rjdH1NVpRoeVo1sZavnI0S0vFhaOBpC4S/0AuCqE0aNGi3IS4kEkEF+EiyoVhxIyKNsxYGxERFEVI5w/WKE/GAe/YvHfPadEdkaGzPH8+fM/he4RpkdXTOvARwjKgvUiP4pwDjiYDjf7H++WxwVlAN0on0A2cBAaL8gvAWmAXRh+wMxlo3H8EyOrpk8BZlOsIO5K+xvh0ZQDZ0rQN5zBGB7A8GWiMTQF+RGkhbCbIAlHZRJBXUUkEHrj7EMZFz+00ud/BOIYRkoHGRsnqaSfKMYRXUFktQb6npJFECkEeAkbuVVom3jTz3L/C/ADOVYwPFdgGfJf0NcZFZQcljSQOSCX0SFmfkVjnEOsiIt1OpKckyMxixW5gmyJ0FgeDSP6USJFYkUp4W2fEB7UtfkOfiG9WTv51pNoz+h6Rflac5BeETgVqOMMABN1DkOMS1KSkJamGzVIOZyXIrclNz3/zz/pna9WeUSsAw0BNAQcUoPrr3/cqJ25vcPx14BDOMA64z8X43HO/NvF++/ICoIArMITQATDxTm3rxKr22eUfhi+Vjt782LLmfHvQXOmTdt1zg9yfouX7C8BCYDDC6UXYAJz33D+RwKGHa+YcJ2ivjU/eEJExYMRb1uFNg9ynVujCOSVZPV2M0I+wBGWdBN1NSedLJKCFUc3xlkPTRt28C/MRnIsYb04Z6WuUFQjvJn2NsWxFbbEEWYLIc0Ab7uOYX8E5XT1zdyJbmu7HsKS/sS8q5HyJMQ/lt+ytdEty5u5l4Mr/2RlA4jDkLfvj0S8UKhT4FGEvwu/Azzg3/pvgZeAlKYdvw9OVL7xpH9j9ybXV3jsXZDo9q6c1YCOwDOHFIn0LOIfyms6KUymHPeWfRgYB/gUGFwYmsuO+WAAAAABJRU5ErkJggg==",
-				blank: true
+				favicon: "data:image/x-icon;base64,AAABAAEAEBAAAAAAIADiAgAAFgAAAIlQTkcNChoKAAAADUlIRFIAAAAQAAAAEAgGAAAAH/P/YQAAAqlJREFUeJxtk0+IVXUUxz/n/O67772rjdH1NVpRoeVo1sZavnI0S0vFhaOBpC4S/0AuCqE0aNGi3IS4kEkEF+EiyoVhxIyKNsxYGxERFEVI5w/WKE/GAe/YvHfPadEdkaGzPH8+fM/he4RpkdXTOvARwjKgvUiP4pwDjiYDjf7H++WxwVlAN0on0A2cBAaL8gvAWmAXRh+wMxlo3H8EyOrpk8BZlOsIO5K+xvh0ZQDZ0rQN5zBGB7A8GWiMTQF+RGkhbCbIAlHZRJBXUUkEHrj7EMZFz+00ud/BOIYRkoHGRsnqaSfKMYRXUFktQb6npJFECkEeAkbuVVom3jTz3L/C/ADOVYwPFdgGfJf0NcZFZQcljSQOSCX0SFmfkVjnEOsiIt1OpKckyMxixW5gmyJ0FgeDSP6USJFYkUp4W2fEB7UtfkOfiG9WTv51pNoz+h6Rflac5BeETgVqOMMABN1DkOMS1KSkJamGzVIOZyXIrclNz3/zz/pna9WeUSsAw0BNAQcUoPrr3/cqJ25vcPx14BDOMA64z8X43HO/NvF++/ICoIArMITQATDxTm3rxKr22eUfhi+Vjt782LLmfHvQXOmTdt1zg9yfouX7C8BCYDDC6UXYAJz33D+RwKGHa+YcJ2ivjU/eEJExYMRb1uFNg9ynVujCOSVZPV2M0I+wBGWdBN1NSedLJKCFUc3xlkPTRt28C/MRnIsYb04Z6WuUFQjvJn2NsWxFbbEEWYLIc0Ab7uOYX8E5XT1zdyJbmu7HsKS/sS8q5HyJMQ/lt+ytdEty5u5l4Mr/2RlA4jDkLfvj0S8UKhT4FGEvwu/Azzg3/pvgZeAlKYdvw9OVL7xpH9j9ybXV3jsXZDo9q6c1YCOwDOHFIn0LOIfyms6KUymHPeWfRgYB/gUGFwYmsuO+WAAAAABJRU5ErkJggg=="
 			}
 		]
 	};
@@ -5422,13 +5394,9 @@
 			fixedTop: 56,
 			style: `
       z-index: 100;
-      margin: 1px auto;
+      margin-top:15px;
+      margin-bottom:5px;
       grid-column: 2 / -2;
-    `,
-			style_ACBaidu: `
-      text-align: center;
-      z-index: 100;
-      margin: 1px auto;
     `,
 			insertIntoDoc: {
 				target: "css;#appbar",
@@ -5445,12 +5413,7 @@
 			style: `
       left: 142px;
       z-index: 100;
-      margin: 1px auto;
-    `,
-			style_ACBaidu: `
-      text-align: center;
-      z-index: 100;
-      margin:5px auto 0;
+      margin-top:5px;
     `,
 			insertIntoDoc: {
 				target: "css;#appbar",
@@ -5476,14 +5439,6 @@
       z-index: 101;
       margin: 0 var(--container-left-gap);
     `,
-			style_ACBaidu: `
-      margin: 8px auto -5px;
-      z-index: 99;
-      text-align: center;
-      padding-left:0px !important;
-      background: rgba(248,248,248,0.4);
-      backdrop-filter: blur(10px);
-    `,
 			insertIntoDoc: {
 				keyword: "css;input#kw",
 				target: "css;#wrapper_wrapper",
@@ -5504,12 +5459,8 @@
 			fixedTop: 60,
 			engineList: "web",
 			style: `
-      margin: 1px auto;
-    `,
-			style_ACBaidu: `
-      text-align: center;
-      margin: 0 auto -10px;
-      position: sticky;
+      margin-top: 1em;
+      left: 160px;
       top: 0.5em;
     `,
 			insertIntoDoc: {
@@ -5620,12 +5571,6 @@
       z-index:99;
       left:-5px;
     `,
-			style_ACBaidu: `
-      top:-46px;
-      z-index:99;
-      margin: auto;
-      padding-left: 0px !important;
-    `,
 			insertIntoDoc: {
 				keyword: "css;#upquery",
 				target: "css;#wrapper",
@@ -5724,11 +5669,6 @@
       left: 50px;
       z-index: -99999;
       margin-top:5px;
-    `,
-			style_ACBaidu: `
-      text-align: center;
-      z-index: -99999;
-      margin:5px auto 0;
     `,
 			insertIntoDoc: {
 				target: "css;.input-with-suggestion",
@@ -7474,26 +7414,13 @@
 		}
 		return null;
 	}
-	var XIAOHONGSHU = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAXSSURBVGhD7ZprbBRVFMf/O1ta+qDQUh5CKS+hVQMVFBAiNjUBixJRUT4YE8UPPj5VjSlEjaIJiFWgpUaBgOURsFIVtNFQo5IoUouNBYq2gKVvoZXtA0rpdndbz+m5Q6ez27JEozvJ/pLp3HvuzOw99zzumUltMJAUGpH0YuyEl+6LHJkWHxIWbwf6jf/feICeerezvvCK49Cm5rqNFV0dFWqob6LpMfHp60dOyRxqt4cqUUDT6fF0rXacy8huqc/mPi26KJE1elpWiKb19q0AzzWNPKe1291a3Hmp2MbuVJpw5wmrWMIMW2ZWbUmyfe2oKevmhQ+fq+SWgy0TqmlhtuqpC2onhoRNUHJLUuN21tnciandgZadbhTOZhzdllaCYR001bY8QUUCjaAigUZQkUAjqEigYetJTO1R7YEJo8L4ptGkNuntaAHaLqsBH4wdBdx+q7QrKoHqemlfDzs9O3W+tBsdQNm1dya/8E+RGUlA/gfSztoBbNkrbV+sywAeSaPqhx679GmgsobuTwRiR9BCUDGhUUXkdsu1tX8CVXXA3GQZz3pD5CfKgW37gNZLwKnTgLNL5DwPpxM4UyV9A/4pMus24OMcaQ+mSFwM8H0eEDoEOHwUeP41kW99G0iZJ20jW+k5m+h5hbuBifFKaKK5FXjhTaCbprkni87dwMPPkDLn1AWCfzFi87OufPwhUYLZ/bmc/ylsqcxXgMQpNA/qs3uzq5uwr4mbvEa1+3jqMeDBRcD82cCREomP5Utk7OdSoKSMJr2MVoZcKOUu4Mdj9PAw4L1XgfChch27z4I7gI5Oca+T5C4L1ftb40UgJxcoPg5c+Au40kExQS7Ev8ecptVm14oeJjEXFQns+wIoPQXszAd+pbMJ3xZhH+eJLklVAh/MniHX8ME/+MC9QMxwNUg8ej+wYqkE+3c/Abs+UwNEC7kL90t/k/6BQrKgYZzjhvtHflECouGCKMML6QPfiugTaqNgG4jWNtUgRtD1Xa6+INYp+Ba42Kw6A5AwHrjlZjl0oqOkPyZOCYjJ9BIbEa463vhWZES0nJsNkzXTYhiLoet50jPJkrxqDGetnZ9KezDWvkwW2Ub3bVYCgl2SZWxVnRwK+KIDwMoVStAfb0WiIoAhIdI2rroZTo06bBGG7122WNrsAme906QXHLz+wkGe8SxZcZwS9OH9FH1STMsgrsVpUYctwiynFYxU5ucf27a+z7oDwZbc8QmlVkOWq6G4+mi/yPnIpQBvaJQxzqDTKYOZ8FZkkiGf19GGNRD151WD0PeARXfLmRk/lv6Qexkt54u8AuDdrcDG7UpAlFNFkLlF5Hy88yEpRgrp+NgOvBVpotSob5HHf5ezr22EU+RVSq0Mp1MmZ6fExd6DknU2U//fwkXJRIfjz4S3Irz9H6W943xTnyL63mCEsxSnVa67Dh4Cpk0C5syUsuMP2jc47fLum0x1l56mddh9ddn0yUo4AByvfMRS1aBj9/6yq6LaRC755zhyDdb8a1pVTn06RlfhEqOmQTa9556QvUSHN7u8L4H1q/rfz/Am93q6tN/K9lk79cKFZOEemssYJVCw15jwtgjDu3n+V6II+7Duk7wLF/4gbeZsNfD+LomHtBQlVHCQpi7wVuJG8FBdxW5q5Bv6fd1TDFy/aIwgt7qHCr5OqkBLTgLtV9SAAd7AuLAcRmf2ZRdtjIeLgKSppKRpNc1UkPtx4mB30ZMFL5g+2UhK6QvnyKLy7n7qjMhN+Ff9WgDfrmVBgooEGkFFAo2gIoFGUJFAQ3P3fiiyNqyDVuPqoprb2rAOGv+DiupbFtbBlhgakXgiYW5ZmN2mPhFaC6enx5Vce2yG3eFxOa7C07E4MlZ9/rAWqx2VqwraHQW974xFVy8Vtfd42lOGxqSGaDbv98gAhC3BSmxortvA/WuTZmXy25v2azabPdYeGhdt14Zrfn+9/m/g7FTlclbnXW7MW9lY/iRbQkaAvwEWveocTKmI8QAAAABJRU5ErkJggg==";
-	var X_ICON = "data:image/x-icon;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB7ElEQVR4Ae1XMZLCMAwUdw0ldJQ8ATpKnkBJByUd8ALyA/gBdJTQUtHS8QT4AaRM5ctmThmfogQ75CYNmhGTbGJr45Vk0yAiQzXaF9VsHwIZAofDgYwxqo9GI/K16/X6cqyxvdVqmdvtZh6PhwmCIHXcw7vdrpFj8ny9XhsYxhe8lwWHw2EycLFYpNh0Ok2w8/nsFHy1WrkE1wnAN5tNMkGv10ux3W6XIab5fD5P3ovldCGrP2Ap4LiW8uRJAcIwe1wpArYU0FJimhQgxaQ9cqX4BZYCgSVmS8HBfRP1JQEsY1xKGSmAcTC+l0QrIWDraicVMBBA4O1265ScpQnAMbkMwphjub1HAI7EkxoDK7n0/gQQGATsCmDMo+z++Hf8E5CjPZ9PiqKIZrMZhWFIl8slxcbjMTWbTTqdTuRrXoz5i2WXRIL+WxWw2+Uml13rnJUT4K9E9nMFaF3SxiojoO1u2rJzl4z3/+oIcHBMLiUp2rDe3ozg+BIYtNee87KjGzLGndPx7JD/0K7xog2Gl30ymaSY1jm9CPhsrXnnBK1zOhHgCWWtF7l2TtA6p3S1E+73exoMBrRcLul4PJKL3e93arfbSUeMA1O/36eYPHU6nWQu7pyaqRlfZnezV05anhSN34va7PPXrHYCP+VaTG3LBV1KAAAAAElFTkSuQmCC";
-	var TIEBA = "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIGNsYXNzPSJpY29uIiB2aWV3Qm94PSIwIDAgMTAyNCAxMDI0IiB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHBhdGggZD0iTTc1MC4zNTEgNTQxLjA1Nkg2MDAuODI3djIxNC40NjdoMTE1LjUyMmMzNS40NTYgMCAzNC4wMDItNDEuMTI0IDM0LjAwMi00MS4xMjRWNTQxLjA1NnoiIGZpbGw9IiMyNDgyRkQiLz48cGF0aCBkPSJNODQ5LjkyIDUxLjJIMTc0LjA4Yy02Ny44NjYgMC0xMjIuODggNTUuMDE0LTEyMi44OCAxMjIuODh2Njc1Ljg0YzAgNjcuODY2IDU1LjAxNCAxMjIuODggMTIyLjg4IDEyMi44OGg2NzUuODRjNjcuODY2IDAgMTIyLjg4LTU1LjAxNCAxMjIuODgtMTIyLjg4VjE3NC4wOGMwLTY3Ljg2Ni01NS4wMTQtMTIyLjg4LTEyMi44OC0xMjIuODh6bS0zNTguNzA3IDc2OGMtOTcuNTk4IDAtMTQxLjU5OS03My4yNTItMTQxLjU5OS03My4yNTItNTEuODUgODAuNDQtMTQxLjU5NCA3My4wNzMtMTQxLjU5NCA3My4wNzN2LTYzLjUwNGMxMDguNzI5IDAgMTA4Ljc4LTEwNy4yMjggMTA4Ljc4LTEwNy4yMjhWMzE3LjQ2Nmg2NS42MjN2MzMwLjgyM2MwIDEwMi45MDcgMTA4Ljc4NSAxMDcuMjI4IDEwOC43ODUgMTA3LjIyOFY4MTkuMnptMC02MDguNTg0VjY1OC4zNUg0MjUuNTlWMjczLjM4OEgzMTQuNDM1Yy00MS41MjkgMC00MC43ODEgMzMuMTM2LTQwLjc4MSAzMy4xMzZWNjU4LjM0aC02NS42MjhWMzA2LjUzYzAtOTguMDg1IDEwNi40MDMtOTYuNjQgMTA2LjQwMy05Ni42NGgxNzYuNzg0di43MjZ6bTMyNC43NjEgNTAzLjc3OGMwIDEwMy45MTUtOTkuNjI1IDEwNC42MzItOTkuNjI1IDEwNC42MzJINTM1LjIwNFY0NzcuNTU4aDYwLjUxOFYyMDQuOGg2NS42MjN2NjcuODU1aDE1NC41MzJ2NjcuNzM4SDY2MS4zNDV2MTM3LjE2aDE1NC42M3YyMzYuODR6IiBmaWxsPSIjMjQ4MkZEIi8+PC9zdmc+";
 	var STORAGE_KEY = "searchEngineJumpData";
-	var SCRIPT_VERSION = "5.32.7";
 	function createDefaultSettings() {
 		return {
-			status: 1,
-			version: SCRIPT_VERSION,
-			addSearchItems: true,
-			modifySearchItems: true,
-			newtab: 0,
-			debug: false,
 			fixedTop: true,
 			fixedTopUpward: false,
-			baiduOffset: -120,
-			getIcon: 0,
 			HideTheSameLink: true,
-			center: 2,
-			icon: 1,
+			center: 0,
 			transtion: true,
 			selectSearch: true,
 			engineCategories: [
@@ -7561,51 +7488,68 @@
 			engineList: searchEngineJumpPlusEngines
 		};
 	}
-	function migrateLegacyKeys(data) {
-		if (!data || typeof data !== "object") return false;
-		const has = (key) => Object.prototype.hasOwnProperty.call(data, key);
-		let changed = false;
-		if (!has("engineCategories") && has("engineDetails")) {
-			data.engineCategories = data.engineDetails;
-			changed = true;
-		}
-		if (has("engineDetails")) {
-			delete data.engineDetails;
-			changed = true;
-		}
-		if (data.engineList && Object.prototype.hasOwnProperty.call(data.engineList, "engineCategories")) {
-			delete data.engineList.engineCategories;
-			changed = true;
-		}
-		return changed;
+	var OPTION_FLAGS = [
+		"fixedTop",
+		"fixedTopUpward",
+		"HideTheSameLink",
+		"transtion",
+		"selectSearch"
+	];
+	var ENGINE_STRINGS = [
+		"name",
+		"url",
+		"favicon",
+		"faviconData"
+	];
+	var COMPAT_FIELDS = { engineCategories: ["engineDetails"] };
+	function isObject(value) {
+		return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 	}
-	function pruneUnknownKeys(data, defaults) {
-		let changed = false;
-		for (const key of Object.keys(data)) if (!Object.prototype.hasOwnProperty.call(defaults, key)) {
-			delete data[key];
-			changed = true;
-		}
-		return changed;
+	function normalizeEngine(raw) {
+		if (!isObject(raw)) return null;
+		const engine = {};
+		for (const key of ENGINE_STRINGS) if (typeof raw[key] === "string") engine[key] = raw[key];
+		if (!engine.url) return null;
+		if (raw.target === "_self") engine.target = "_self";
+		if (raw.disable === true) engine.disable = true;
+		if (raw.gbk === true) engine.gbk = true;
+		return engine;
 	}
-	function isVersionOutdated(storedVersion, currentVersion) {
-		const arr1 = storedVersion.toString().split(".");
-		const arr2 = currentVersion.toString().split(".");
-		const minlength = Math.min(arr1.length, arr2.length);
-		let i = 0;
-		for (; i < minlength; i++) {
-			const a = parseInt(arr1[i]);
-			const b = parseInt(arr2[i]);
-			if (a > b) return false;
-			if (a < b) return true;
+	function readCompat(data, key) {
+		if (Array.isArray(data[key])) return data[key];
+		for (const legacy of COMPAT_FIELDS[key] || []) if (Array.isArray(data[legacy])) return data[legacy];
+		return null;
+	}
+	function normalizeCategories(data) {
+		const raw = readCompat(data, "engineCategories");
+		if (!raw) return null;
+		const seen = new Set();
+		const categories = [];
+		for (const entry of raw) {
+			if (!Array.isArray(entry)) continue;
+			const [name, key, enabled] = entry;
+			if (typeof key !== "string" || !key || seen.has(key)) continue;
+			seen.add(key);
+			categories.push([
+				typeof name === "string" ? name : key,
+				key,
+				typeof enabled === "boolean" ? enabled : true
+			]);
 		}
-		if (arr1.length > arr2.length) {
-			for (let j = i; j < arr1.length; j++) if (parseInt(arr1[j]) != 0) return false;
-			return false;
-		} else if (arr1.length < arr2.length) {
-			for (let j = i; j < arr2.length; j++) if (parseInt(arr2[j]) != 0) return true;
-			return false;
-		}
-		return false;
+		return categories;
+	}
+	function normalizeSettings(raw, defaults) {
+		const data = isObject(raw) ? raw : {};
+		const settings = {};
+		for (const key of OPTION_FLAGS) settings[key] = typeof data[key] === "boolean" ? data[key] : defaults[key];
+		settings.center = data.center === 1 || data.center === "1" ? 1 : 0;
+		const categories = normalizeCategories(data) || defaults.engineCategories.map((entry) => entry.slice());
+		const rawList = isObject(data.engineList) ? data.engineList : null;
+		const engineList = {};
+		for (const [, key] of categories) engineList[key] = (rawList ? Array.isArray(rawList[key]) ? rawList[key] : [] : defaults.engineList[key] || []).map(normalizeEngine).filter(Boolean);
+		settings.engineCategories = categories;
+		settings.engineList = engineList;
+		return settings;
 	}
 	var Settings = class {
 		constructor() {
@@ -7614,116 +7558,39 @@
 			this.settingData = null;
 			this.initSettings();
 		}
-		checkSettingDataIntegrity() {
-			let changed = migrateLegacyKeys(this.settingData);
-			changed = pruneUnknownKeys(this.settingData, this.scriptSettingData) || changed;
-			for (const value in this.scriptSettingData) if (!Object.prototype.hasOwnProperty.call(this.settingData, value)) {
-				console.warn(`[SEJ] 属性不存在：${value}`);
-				this.settingData[value] = this.scriptSettingData[value];
-				changed = true;
-			}
-			if (changed) setValue(STORAGE_KEY, this.settingData);
-		}
-		checkUpdate() {
-			if (!isVersionOutdated(this.storedSettingData.version, this.scriptSettingData.version)) return;
-			this.settingData.version = this.scriptSettingData.version;
-			if (isVersionOutdated(this.storedSettingData.version, "5.30.2")) {
-				this.deleteOutdatedSearchItems(["https://so.letv.com/s?wd=%s"]);
-				this.modifyOutdatedSearchItems("https://s.weibo.com/weibo/%s", "https://s.weibo.com/weibo/?q=%s");
-			}
-			if (isVersionOutdated(this.storedSettingData.version, "5.30.4")) this.modifyOutdatedSearchItems("https://www.startpage.com/do/asearch$post$query", "https://www.startpage.com/sp/search$post$query");
-			if (isVersionOutdated(this.storedSettingData.version, "5.31.1")) {
-				this.modifyOutdatedSearchItemsTarget("https://zh.moegirl.org/%s");
-				this.modifyOutdatedSearchItemsTarget("https://tieba.baidu.com/f?kw=%s&ie=utf-8");
-				this.modifyOutdatedSearchItemsTarget("https://github.com/search?utf8=✓&q=%s");
-			}
-			if (isVersionOutdated(this.storedSettingData.version, "5.31.8")) this.modifyOutdatedSearchItems("https://cn.bing.com/search?q=%s", "https://www.bing.com/search?q=%s");
-			if (isVersionOutdated(this.storedSettingData.version, "5.31.11")) this.addSearchItem({
-				name: "小红书",
-				url: "https://www.xiaohongshu.com/search_result/?keyword=%s",
-				favicon: XIAOHONGSHU
-			}, "sociality");
-			if (isVersionOutdated(this.storedSettingData.version, "5.31.16")) {
-				this.deleteOutdatedSearchItems(["https://twitter.com/search/%s"]);
-				this.addSearchItem({
-					name: "X",
-					url: "https://x.com/search?q=%s",
-					favicon: X_ICON
-				}, "sociality");
-			}
-			if (isVersionOutdated(this.storedSettingData.version, "5.31.17")) this.modifyOutdatedSearchItemsIcon("https://tieba.baidu.com/f?kw=%s&ie=utf-8", TIEBA);
-			setValue(STORAGE_KEY, this.settingData);
-		}
 		initSettings() {
 			if (this.storedSettingData) {
-				this.settingData = Object.assign({}, this.storedSettingData);
-				this.checkSettingDataIntegrity();
-				this.checkUpdate();
-			} else this.settingData = this.scriptSettingData;
+				this.settingData = normalizeSettings(this.storedSettingData, this.scriptSettingData);
+				if (!isSameValue(this.settingData, this.storedSettingData)) setValue(STORAGE_KEY, this.settingData);
+			} else this.settingData = normalizeSettings(this.scriptSettingData, this.scriptSettingData);
+		}
+		applyNormalized(normalized) {
+			const plain = JSON.parse(JSON.stringify(normalized));
+			for (const key of Object.keys(this.settingData)) if (!Object.prototype.hasOwnProperty.call(plain, key)) delete this.settingData[key];
+			Object.assign(this.settingData, plain);
 		}
 		applySettings(next) {
-			const source = Object.assign({}, next);
-			migrateLegacyKeys(source);
-			const merged = Object.assign({}, this.scriptSettingData, source);
-			pruneUnknownKeys(merged, this.scriptSettingData);
-			const plain = JSON.parse(JSON.stringify(merged));
-			pruneUnknownKeys(this.settingData, this.scriptSettingData);
-			Object.assign(this.settingData, plain);
+			this.applyNormalized(normalizeSettings(next, this.scriptSettingData));
 			this.storedSettingData = this.settingData;
 			return setValue(STORAGE_KEY, this.settingData);
 		}
 		savePartial(partial) {
-			if (!partial || typeof partial !== "object") return "memory";
+			if (!isObject(partial)) return "memory";
 			const next = Object.assign({}, this.settingData, partial);
 			return this.applySettings(next);
 		}
 		reload() {
 			const stored = getValue(STORAGE_KEY, null);
-			if (!stored || typeof stored !== "object") return false;
-			migrateLegacyKeys(stored);
-			if (this.settingData && isSameValue(stored, this.settingData)) return false;
-			this.storedSettingData = stored;
-			this.settingData = Object.assign({}, stored);
-			this.checkSettingDataIntegrity();
+			if (!isObject(stored)) return false;
+			const normalized = normalizeSettings(stored, this.scriptSettingData);
+			if (this.settingData && isSameValue(normalized, this.settingData)) return false;
+			this.applyNormalized(normalized);
+			this.storedSettingData = this.settingData;
 			return true;
 		}
 		getMatchedRule() {
 			for (const rule of [...searchEngineJumpPlusRules]) if (rule.url.test(location.href)) return rule;
 			return null;
-		}
-		addSearchItem(newItem, category) {
-			this.settingData.engineList[category].push(newItem);
-		}
-		modifyOutdatedSearchItems(oldURL, newURL) {
-			for (const value in this.settingData.engineList) {
-				const item = this.settingData.engineList[value];
-				for (let i = 0; i < item.length; i++) if (item[i].url === oldURL) item[i].url = newURL;
-			}
-		}
-		modifyOutdatedSearchItemsTarget(url) {
-			for (const value in this.settingData.engineList) {
-				const item = this.settingData.engineList[value];
-				for (let i = 0; i < item.length; i++) if (item[i].url === url) delete item[i].blank;
-			}
-		}
-		deleteOutdatedSearchItems(urlList) {
-			for (const value in this.settingData.engineList) {
-				const item = this.settingData.engineList[value];
-				for (let i = 0; i < item.length; i++) if (urlList.includes(item[i].url)) {
-					console.warn("[SEJ] 删除搜索引擎：" + item[i].name);
-					item.splice(i, 1);
-				}
-			}
-		}
-		modifyOutdatedSearchItemsIcon(url, newIcon) {
-			for (const value in this.settingData.engineList) {
-				const item = this.settingData.engineList[value];
-				for (let i = 0; i < item.length; i++) if (item[i].url === url) item[i].favicon = newIcon;
-			}
-		}
-		modifyOutdatedSearchItemsRule(name, value) {
-			const oldRule = this.settingData.rules;
-			for (const item in oldRule) if (oldRule[item].name == name) oldRule[item] = value;
 		}
 	};
 	var instance = null;
@@ -7926,14 +7793,21 @@
 	function getInsertPositionLabel(rule) {
 		return rule?.insertIntoDoc?.where?.toLowerCase();
 	}
+	var FORCE_CENTER_STYLE = `
+  grid-column: 1 / -1;
+  justify-self: center;
+  left: auto;
+  right: auto;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+`;
 	function resolveRuleStyle(rule, settingData) {
 		if (!rule?.style) return "";
 		let style = rule.style;
-		if (settingData.center == 2) {
-			if (document.querySelector(".AC-style-logo") && rule.style_ACBaidu) style = rule.style_ACBaidu;
-		} else if (settingData.center == 1) style = rule.style_ACBaidu ? rule.style_ACBaidu : rule.style;
 		const searchMain = document.getElementById("SearchMain");
-		if (searchMain && searchMain.style.marginLeft == "150px") style = rule.style_ZhihuChenglinz;
+		if (searchMain && searchMain.style.marginLeft == "150px") style = rule.style_ZhihuChenglinz || style;
+		if (settingData.center == 1) style += FORCE_CENTER_STYLE;
 		addStyle(`#sej-container { ${style} }`);
 		return style;
 	}
@@ -15469,8 +15343,8 @@
 			url: targetURL ? targetURL.replaceAll("%s", encoded) : targetURL
 		};
 	}
-	function shouldOpenInNewTab(engine, settingData, isSelectSearch) {
-		return Boolean(isSelectSearch || settingData.newtab || engine.blank);
+	function shouldOpenInNewTab(engine, isSelectSearch) {
+		return Boolean(isSelectSearch || engine.target !== "_self");
 	}
 	function openInNewTab(url) {
 		if (!url) return false;
@@ -15503,7 +15377,7 @@
 	}
 	function performJump(engine, keyword, settingData, isSelectSearch) {
 		const result = prepareJump(engine, keyword, { hideTheSameLink: settingData.HideTheSameLink });
-		const newTab = shouldOpenInNewTab(engine, settingData, isSelectSearch);
+		const newTab = shouldOpenInNewTab(engine, isSelectSearch);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
 			return true;
@@ -15652,9 +15526,9 @@
 				type: Array,
 				required: true
 			},
-			iconMode: {
-				type: Number,
-				default: 1
+			showIcon: {
+				type: Boolean,
+				default: true
 			}
 		},
 		emits: ["jump", "jumpAll"],
@@ -15821,7 +15695,7 @@
 					createBaseVNode("path", { d: "M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" }),
 					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
 					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
-				], -1)])], 40, _hoisted_2$5)) : __props.iconMode && unref(getFaviconSrc)(__props.engines[0]) ? (openBlock(), createElementBlock("img", {
+				], -1)])], 40, _hoisted_2$5)) : __props.showIcon && unref(getFaviconSrc)(__props.engines[0]) ? (openBlock(), createElementBlock("img", {
 					key: 1,
 					class: "sej-engine-icon",
 					src: unref(getFaviconSrc)(__props.engines[0]),
@@ -16152,13 +16026,13 @@
 						key: 1,
 						name: category.name,
 						engines: category.engines,
-						"icon-mode": unref(data).icon,
+						"show-icon": unref(ui).categoryIcon,
 						onJump,
 						onJumpAll: ($event) => onJumpAll(category.engines)
 					}, null, 8, [
 						"name",
 						"engines",
-						"icon-mode",
+						"show-icon",
 						"onJumpAll"
 					]))], 64);
 				}), 128)), createVNode(_sfc_main$7)], 10, _hoisted_1$4)) : createCommentVNode("", true);
@@ -16237,7 +16111,7 @@
 				name: props.initial.name || "",
 				url: props.initial.url || "",
 				favicon: props.initial.favicon || "",
-				blank: Boolean(props.initial.blank),
+				target: props.initial.target === "_self" ? "_self" : "_blank",
 				gbk: Boolean(props.initial.gbk)
 			});
 			const urlInput = ref(null);
@@ -16375,7 +16249,7 @@
 					url: form.url.indexOf("://") === -1 ? "https://" + form.url : form.url,
 					favicon: form.favicon || props.resolveIcon(form.url),
 					faviconData: previewLoading.value ? "" : previewData.value.trim(),
-					blank: form.blank,
+					target: form.target,
 					gbk: form.gbk
 				});
 			}
@@ -16424,9 +16298,9 @@
 					]),
 					createBaseVNode("label", _hoisted_17$1, [_cache[13] || (_cache[13] = createBaseVNode("span", null, "打开方式", -1)), withDirectives(createBaseVNode("select", {
 						id: "iqxin-newTarget",
-						"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => form.blank = $event),
+						"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => form.target = $event),
 						disabled: __props.busy
-					}, [..._cache[12] || (_cache[12] = [createBaseVNode("option", { value: true }, "新标签页打开", -1), createBaseVNode("option", { value: false }, "当前页打开", -1)])], 8, _hoisted_18$1), [[vModelSelect, form.blank]])]),
+					}, [..._cache[12] || (_cache[12] = [createBaseVNode("option", { value: "_blank" }, "新标签页打开", -1), createBaseVNode("option", { value: "_self" }, "当前页打开", -1)])], 8, _hoisted_18$1), [[vModelSelect, form.target]])]),
 					__props.mode === "edit" ? (openBlock(), createElementBlock("label", _hoisted_19$1, [withDirectives(createBaseVNode("input", {
 						"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => form.gbk = $event),
 						type: "checkbox",
@@ -16703,11 +16577,7 @@
 		id: "xin-centerDisplay",
 		title: "居中显示"
 	};
-	var _hoisted_25 = {
-		id: "xin-newtab",
-		title: "是否采用新标签页打开"
-	};
-	var _hoisted_26 = { class: "sej-footer-actions" };
+	var _hoisted_25 = { class: "sej-footer-actions" };
 	var UNDO_DURATION = 5e3;
 	var AUTOSAVE_DELAY = 500;
 	var DRAG_ANIMATION_MS = 160;
@@ -16719,19 +16589,10 @@
 			const settings = useSettings();
 			const source = computed(() => settings.settingData);
 			const OPTION_KEYS = [
-				"status",
-				"version",
-				"addSearchItems",
-				"modifySearchItems",
-				"newtab",
-				"debug",
 				"fixedTop",
 				"fixedTopUpward",
-				"baiduOffset",
-				"getIcon",
 				"HideTheSameLink",
 				"center",
-				"icon",
 				"transtion",
 				"selectSearch"
 			];
@@ -16781,11 +16642,11 @@
 				for (const cat of draft.categories) engineList[cat.key] = cat.engines.map((engine) => {
 					const item = {
 						name: engine.name,
-						url: engine.url,
-						favicon: engine.favicon
+						url: engine.url
 					};
+					if (engine.favicon) item.favicon = engine.favicon;
 					if (engine.faviconData) item.faviconData = engine.faviconData;
-					if (engine.blank) item.blank = "_blank";
+					if (engine.target === "_self") item.target = "_self";
 					if (engine.disable) item.disable = true;
 					if (engine.gbk) item.gbk = true;
 					return item;
@@ -17598,7 +17459,7 @@
 					host = link.split("/")[0];
 				}
 				const siteURL = protocol + "://" + host;
-				const iconSetting = settings.settingData.getIcon;
+				const iconSetting = ui.iconSource;
 				let ourl;
 				if (isNaN(iconSetting)) ourl = iconSetting;
 				else {
@@ -17701,12 +17562,12 @@
 					ref_key: "layerEl",
 					ref: layerEl,
 					style: normalizeStyle(layerStyle.value),
-					onClick: _cache[11] || (_cache[11] = withModifiers(() => {}, ["stop"]))
+					onClick: _cache[10] || (_cache[10] = withModifiers(() => {}, ["stop"]))
 				}, [
 					createBaseVNode("div", {
 						class: "sej-panel-header",
 						onMousedown: startDrag
-					}, [_cache[12] || (_cache[12] = createBaseVNode("span", { class: "sej-panel-title" }, "搜索跳转设置", -1)), createBaseVNode("button", {
+					}, [_cache[11] || (_cache[11] = createBaseVNode("span", { class: "sej-panel-title" }, "搜索跳转设置", -1)), createBaseVNode("button", {
 						type: "button",
 						class: "sej-panel-close",
 						title: "关闭",
@@ -17754,7 +17615,7 @@
 								"data-iqxintitle": engine.name,
 								"data-iqxinimg": engine.favicon,
 								"data-iqxinlink": engine.url,
-								"data-iqxintarget": engine.blank ? "_blank" : null,
+								"data-iqxintarget": engine.target === "_self" ? "_self" : null,
 								"data-iqxindisabled": engine.disable ? "true" : null,
 								"data-iqxingbk": engine.gbk ? "true" : null
 							}, [createBaseVNode("img", {
@@ -17784,60 +17645,47 @@
 						"aria-label": "添加列表",
 						onClick: addCategory,
 						onKeydown: [withKeys(addCategory, ["enter"]), withKeys(withModifiers(addCategory, ["prevent"]), ["space"])]
-					}, [..._cache[13] || (_cache[13] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_13)], 32),
+					}, [..._cache[12] || (_cache[12] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_13)], 32),
 					createBaseVNode("div", _hoisted_14, [createBaseVNode("div", _hoisted_15, [createBaseVNode("div", _hoisted_16, [
 						createBaseVNode("span", {
 							id: "xin-modification",
 							title: "配置文件",
 							onClick: openConfig
 						}, "配置文件"),
-						createBaseVNode("span", _hoisted_17, [createBaseVNode("label", null, [_cache[14] || (_cache[14] = createTextVNode("划词搜索", -1)), withDirectives(createBaseVNode("input", {
+						createBaseVNode("span", _hoisted_17, [createBaseVNode("label", null, [_cache[13] || (_cache[13] = createTextVNode("划词搜索", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => draft.selectSearch = $event)
 						}, null, 512), [[vModelCheckbox, draft.selectSearch]])])]),
-						createBaseVNode("span", _hoisted_18, [createBaseVNode("label", null, [_cache[15] || (_cache[15] = createTextVNode("动画", -1)), withDirectives(createBaseVNode("input", {
+						createBaseVNode("span", _hoisted_18, [createBaseVNode("label", null, [_cache[14] || (_cache[14] = createTextVNode("动画", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[3] || (_cache[3] = ($event) => draft.transtion = $event)
 						}, null, 512), [[vModelCheckbox, draft.transtion]])])]),
-						createBaseVNode("span", _hoisted_19, [createBaseVNode("label", null, [_cache[16] || (_cache[16] = createTextVNode("固定到顶端", -1)), withDirectives(createBaseVNode("input", {
+						createBaseVNode("span", _hoisted_19, [createBaseVNode("label", null, [_cache[15] || (_cache[15] = createTextVNode("固定到顶端", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => draft.fixedTop = $event)
 						}, null, 512), [[vModelCheckbox, draft.fixedTop]])])]),
-						withDirectives(createBaseVNode("span", _hoisted_20, [createBaseVNode("label", null, [_cache[17] || (_cache[17] = createTextVNode("仅上拉显示", -1)), withDirectives(createBaseVNode("input", {
+						withDirectives(createBaseVNode("span", _hoisted_20, [createBaseVNode("label", null, [_cache[16] || (_cache[16] = createTextVNode("仅上拉显示", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => draft.fixedTopUpward = $event)
 						}, null, 512), [[vModelCheckbox, draft.fixedTopUpward]])])], 512), [[vShow, draft.fixedTop]]),
-						createBaseVNode("span", _hoisted_21, [createBaseVNode("label", null, [_cache[18] || (_cache[18] = createTextVNode("隐藏同站链接", -1)), withDirectives(createBaseVNode("input", {
+						createBaseVNode("span", _hoisted_21, [createBaseVNode("label", null, [_cache[17] || (_cache[17] = createTextVNode("隐藏同站链接", -1)), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[6] || (_cache[6] = ($event) => draft.HideTheSameLink = $event)
 						}, null, 512), [[vModelCheckbox, draft.HideTheSameLink]])])])
 					]), createBaseVNode("div", _hoisted_22, [
-						createBaseVNode("div", _hoisted_23, [
-							createBaseVNode("span", _hoisted_24, [_cache[20] || (_cache[20] = createTextVNode(" 居中： ", -1)), withDirectives(createBaseVNode("select", { "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => draft.center = $event) }, [..._cache[19] || (_cache[19] = [
-								createBaseVNode("option", { value: 0 }, "默认", -1),
-								createBaseVNode("option", { value: 1 }, "强制", -1),
-								createBaseVNode("option", { value: 2 }, "自动", -1)
-							])], 512), [[
-								vModelSelect,
-								draft.center,
-								void 0,
-								{ number: true }
-							]])]),
-							createBaseVNode("span", _hoisted_25, [_cache[22] || (_cache[22] = createTextVNode(" 打开方式： ", -1)), withDirectives(createBaseVNode("select", { "onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => draft.newtab = $event) }, [..._cache[21] || (_cache[21] = [createBaseVNode("option", { value: 0 }, "默认页面", -1), createBaseVNode("option", { value: 1 }, "新标签页", -1)])], 512), [[
-								vModelSelect,
-								draft.newtab,
-								void 0,
-								{ number: true }
-							]])]),
-							createBaseVNode("span", {
-								id: "xin-loadIcons",
-								title: "把所有远程图标内嵌为 data 链接",
-								class: normalizeClass({ "sej-loading": loadingIcons.value }),
-								onClick: loadAllIcons
-							}, toDisplayString(loadingIcons.value ? "加载中…" : "加载所有图标缓存"), 3)
-						]),
-						_cache[23] || (_cache[23] = createStaticVNode("<div class=\"sej-footer-links\"><span class=\"feedback\" title=\"在 GreasyFork 进行反馈\"><a target=\"_blank\" href=\"https://greasyfork.org/zh-CN/users/1238054\">Greasy Fork</a></span><span class=\"feedback\" title=\"在 Github 进行反馈\"><a target=\"_blank\" href=\"https://github.com/sherlocknieh/Monkey-Scripts\">GitHub</a></span></div>", 1)),
-						createBaseVNode("div", _hoisted_26, [createBaseVNode("span", {
+						createBaseVNode("div", _hoisted_23, [createBaseVNode("span", _hoisted_24, [_cache[19] || (_cache[19] = createTextVNode(" 居中： ", -1)), withDirectives(createBaseVNode("select", { "onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => draft.center = $event) }, [..._cache[18] || (_cache[18] = [createBaseVNode("option", { value: 0 }, "默认", -1), createBaseVNode("option", { value: 1 }, "强制居中", -1)])], 512), [[
+							vModelSelect,
+							draft.center,
+							void 0,
+							{ number: true }
+						]])]), createBaseVNode("span", {
+							id: "xin-loadIcons",
+							title: "把所有远程图标内嵌为 data 链接",
+							class: normalizeClass({ "sej-loading": loadingIcons.value }),
+							onClick: loadAllIcons
+						}, toDisplayString(loadingIcons.value ? "加载中…" : "加载所有图标缓存"), 3)]),
+						_cache[20] || (_cache[20] = createStaticVNode("<div class=\"sej-footer-links\"><span class=\"feedback\" title=\"在 GreasyFork 进行反馈\"><a target=\"_blank\" href=\"https://greasyfork.org/zh-CN/users/1238054\">Greasy Fork</a></span><span class=\"feedback\" title=\"在 Github 进行反馈\"><a target=\"_blank\" href=\"https://github.com/sherlocknieh/Monkey-Scripts\">GitHub</a></span></div>", 1)),
+						createBaseVNode("div", _hoisted_25, [createBaseVNode("span", {
 							id: "xin-save",
 							title: "关闭",
 							class: normalizeClass({ "sej-saving": saving.value }),
@@ -17870,8 +17718,8 @@
 						"initial-text": configText.value,
 						onSave: saveConfig,
 						onReset: reset,
-						onClose: _cache[9] || (_cache[9] = ($event) => configOpen.value = false),
-						onCopy: _cache[10] || (_cache[10] = ($event) => unref(showToast)("复制成功")),
+						onClose: _cache[8] || (_cache[8] = ($event) => configOpen.value = false),
+						onCopy: _cache[9] || (_cache[9] = ($event) => unref(showToast)("复制成功")),
 						onNotify: unref(showToast)
 					}, null, 8, ["initial-text", "onNotify"])) : createCommentVNode("", true)
 				], 4)], 36);
@@ -17907,7 +17755,7 @@
 			};
 		}
 	};
-	var global_default = "/* ==UserStyle==\n@name           SearchEngineJumpPlusGlobalStyle\n@description    Global style for SearchEngineJumpPlus\n@version        5.32.0\n@namespace      https://greasyfork.org/en/scripts/454280-searchenginejumpplus\n@license        MIT\n@author         MUTED64\n==/UserStyle== */\n\n#settingLayerMask {\n  display: none;\n  justify-content: center;\n  align-items: center;\n  position: fixed;\n  inset: 0;\n  background-color: rgba(16, 18, 22, 0.42);\n  backdrop-filter: blur(12px);\n  z-index: 200000000;\n  overflow: auto;\n  font-family: var(--sej-font-family);\n  min-height: 100%;\n  font-size: 14px;\n  transition: opacity 0.15s ease-out;\n  opacity: 0;\n  animation: sej-setting-mask-in 0.15s ease;\n  user-select: none;\n  -moz-user-select: none;\n  padding-bottom: 80px;\n  box-sizing: border-box;\n  color: var(--font-color-qxin);\n}\n#settingLayer {\n  display: flex;\n  flex-direction: column;\n  box-sizing: border-box;\n  --sej-panel-pad-x: 20px;\n  --sej-panel-pad-top: 16px;\n  padding: var(--sej-panel-pad-top) var(--sej-panel-pad-x) 16px;\n  background-color: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 16px;\n  box-shadow: var(--sej-panel-shadow);\n  position: absolute;\n  width: auto;\n  min-width: min(720px, calc(100vw - 32px));\n  max-width: min(960px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  margin: 0;\n  overflow: visible;\n  animation: sej-panel-in 0.16s ease-out;\n}\n@keyframes sej-panel-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px) scale(0.99);\n  }\n}\n.sej-panel-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  flex: 0 0 auto;\n  padding: 0 2px 12px;\n  cursor: move;\n}\n.sej-panel-title {\n  font-size: 15px;\n  font-weight: 600;\n  letter-spacing: 0.01em;\n}\n.sej-panel-close {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: none;\n  border-radius: 50%;\n  background: var(--sej-surface-hover);\n  color: transparent;\n  font-size: 0;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 1;\n  transition: background-color 0.12s ease-out, opacity 0.12s ease-out;\n}\n.sej-panel-close::before,\n.sej-panel-close::after {\n  content: \"\";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 12px;\n  height: 1.5px;\n  border-radius: 2px;\n  background: var(--font-color-qxin);\n  transform: translate(-50%, -50%) rotate(45deg);\n}\n.sej-panel-close::after {\n  transform: translate(-50%, -50%) rotate(-45deg);\n}\n.iqxin-items {\n  display: flex;\n  flex-direction: column;\n  flex: 0 0 220px;\n  width: 220px;\n  min-width: 0;\n  max-width: 220px;\n  box-sizing: border-box;\n  margin: 0;\n  padding: 6px;\n  border-radius: 12px;\n  border: 1px solid var(--border-color-sej);\n  background: var(--sej-surface-2);\n}\n.sej-add-category-card {\n  align-items: center;\n  justify-content: center;\n  min-height: 140px;\n  background: transparent;\n  border: 1px dashed var(--sej-checkbox-border);\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n.sej-add-category-card:hover {\n  background: var(--sej-surface-hover);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n.sej-add-category-card:focus-visible {\n  background: var(--sej-surface-hover);\n  outline: 2px solid var(--sej-accent);\n  outline-offset: 2px;\n}\n.sej-add-category-plus {\n  font-size: 42px;\n  font-weight: 300;\n  line-height: 1;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n}\n.sej-add-category-card:hover .sej-add-category-plus {\n  opacity: 1;\n}\n.sejcon {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n}\n.sejcon > .drag {\n  flex: 0 0 auto;\n}\n#settingLayer .drag {\n  display: block;\n  position: relative;\n}\n/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */\n#settingLayer .sej-drag-placeholder,\n#settingLayer .sej-drag-placeholder * {\n  visibility: hidden !important;\n}\n#settingLayer .sejtitle:active,\n#settingLayer .sejcon > .drag:active {\n  cursor: grabbing;\n}\n.sej-drag-ghost {\n  position: fixed !important;\n  left: 0 !important;\n  top: 0 !important;\n  margin: 0 !important;\n  z-index: 200000200;\n  opacity: 1 !important;\n  pointer-events: none;\n  box-sizing: border-box;\n  overflow: hidden;\n  will-change: transform;\n}\n.sej-drag-ghost * {\n  pointer-events: none !important;\n}\n.sej-drag-ghost-engine {\n  border-radius: 8px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);\n}\n.sej-drag-ghost-category {\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);\n}\n#settingLayer .sej-engine {\n  padding: 0 36px 0 8px;\n  width: 100%;\n  height: 30px;\n  box-sizing: border-box;\n  border-radius: 8px;\n  font-size: 13px;\n  cursor: pointer;\n}\n#settingLayer .sej-engine > span {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.iqxin-pointer-events,\n.sej-engine-icon,\n#settingLayer .sej-engine * {\n  pointer-events: none;\n}\n.sejtitle {\n  text-align: left;\n  /* 左侧与引擎条目对齐，右侧避开显隐按钮 */\n  padding: 5px 36px 5px 8px;\n  margin-bottom: 2px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  cursor: pointer;\n  position: relative;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.5;\n  border-radius: 8px;\n}\n/* 标题下方的细分隔线，用于和引擎条目区分 */\n.sejtitle::after {\n  content: \"\";\n  position: absolute;\n  left: 8px;\n  right: 8px;\n  bottom: 0;\n  height: 1px;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n#settingLayerMask [data-xin] {\n  margin: 1px 0;\n  border-radius: 8px;\n}\n.sejcon [data-xin] {\n  cursor: pointer;\n}\n/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */\n#settingLayerMask [data-iqxindisabled=\"true\"],\n[data-xin^=\"-\"] {\n  background-color: transparent;\n  color: var(--font-color-qxin);\n  transition: background-color 0.12s ease-out;\n}\n#settingLayerMask [data-iqxindisabled=\"true\"] > span,\n#settingLayerMask [data-iqxindisabled=\"true\"] .sej-engine-icon,\n[data-xin^=\"-\"] > .iqxin-pointer-events {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */\n.sej-category-hidden .sej-engine > span,\n.sej-category-hidden .sej-engine .sej-engine-icon,\n.sej-category-hidden .iqxin-additem {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n#settingLayerMask .sej-engine:hover {\n  background-color: var(--sej-surface-hover);\n}\n#settingLayerMask [data-iqxindisabled=\"true\"]:hover,\n[data-xin^=\"-\"]:hover {\n  background-color: transparent;\n}\n.sej-category-hidden .sej-engine:hover {\n  background-color: transparent;\n}\n#settingLayerMask label {\n  cursor: pointer;\n}\n#settingLayerMask .sej-engine-icon {\n  vertical-align: middle;\n}\n#btnEle {\n  position: relative;\n  width: 100%;\n  background: transparent;\n  border-radius: 0;\n  flex: 0 0 auto;\n}\n#btnEle {\n  margin-top: 10px;\n}\n#btnEle span {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  box-sizing: border-box;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  margin: 0;\n  color: var(--font-color-qxin);\n  padding: 4px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out, opacity 0.12s ease-out;\n}\n#btnEle label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  color: inherit;\n}\n#btnEle #xin-centerDisplay,\n#btnEle #xin-newtab {\n  gap: 2px;\n  padding-right: 4px;\n}\n#btnEle span:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n#btnEle a {\n  color: var(--font-color-qxin);\n  opacity: 0.7;\n  text-decoration: none;\n  font-family: inherit;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out;\n}\n#btnEle a:hover {\n  opacity: 1;\n  color: var(--sej-accent);\n}\n#btnEle .feedback {\n  background: transparent;\n  border-color: transparent;\n  padding: 4px 6px;\n}\n#btnEle .feedback:hover {\n  background: transparent;\n  border-color: transparent;\n  color: var(--sej-accent);\n}\n#btnEle > div {\n  width: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 8px;\n  box-sizing: border-box;\n}\n#btnEle > div.btnEleLayer {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  align-items: stretch;\n  background: transparent;\n  border-radius: 0;\n  border-top: 1px solid var(--border-color-sej);\n  padding-top: 12px;\n  gap: 8px;\n}\n.sej-footer-options,\n.sej-footer-bar,\n.sej-footer-selects,\n.sej-footer-links,\n.sej-footer-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  min-width: 0;\n}\n.sej-footer-options {\n  gap: 8px;\n}\n.sej-footer-bar {\n  gap: 8px 12px;\n}\n.sej-footer-selects {\n  gap: 8px;\n}\n.sej-footer-links {\n  gap: 0;\n  margin-left: auto;\n}\n.sej-footer-actions {\n  margin-left: 4px;\n}\n#btnEle #xin-save {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n#btnEle #xin-save:hover {\n  background: var(--sej-accent);\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n#btnEle #xin-save.sej-saving {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n#btnEle span.sej-loading {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n#btnEle span.iqxin-btn-active {\n  background: var(--sej-accent-weak);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n#settingLayerMask input[type=\"checkbox\"] {\n  appearance: none;\n  -webkit-appearance: none;\n  width: 16px;\n  height: 16px;\n  display: inline-block;\n  box-sizing: border-box;\n  vertical-align: -3px;\n  margin: 0 !important;\n  padding: 0;\n  position: relative;\n  border: 1.5px solid var(--sej-checkbox-border);\n  border-radius: 5px;\n  background: var(--sej-input-bg);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out;\n}\n#settingLayerMask input[type=\"checkbox\"]:before {\n  content: none;\n}\n#settingLayerMask input[type=\"checkbox\"]:checked {\n  background: var(--sej-accent);\n  border-color: var(--sej-accent);\n}\n#settingLayerMask input[type=\"checkbox\"]:checked:after {\n  content: \"\";\n  position: absolute;\n  left: 4px;\n  top: 1px;\n  width: 4px;\n  height: 8px;\n  border: solid var(--sej-accent-contrast);\n  border-width: 0 2px 2px 0;\n  background: none;\n  transform: rotate(45deg);\n}\n.drop-over {\n  opacity: 0.6;\n}\n.iqxin-set-toggle {\n  opacity: 0.6;\n  position: absolute;\n  background: transparent;\n  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */\n  top: 0;\n  bottom: 0;\n  height: fit-content;\n  margin-top: auto;\n  margin-bottom: auto;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n  right: 8px;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n}\n.iqxin-set-toggle svg {\n  display: block;\n}\n.iqxin-set-toggle.iqxin-set-hidden {\n  opacity: 0.35;\n}\n.iqxin-set-toggle:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\nspan.iqxin-additem {\n  display: inline-block;\n  position: relative;\n  text-align: center;\n  width: 100%;\n  box-sizing: border-box;\n  margin: auto 0 2px;\n  padding: 5px 0;\n  border: 1px dashed var(--sej-checkbox-border);\n  border-radius: 8px;\n  color: var(--font-color-qxin);\n  opacity: 0.55;\n  cursor: pointer;\n  visibility: visible;\n  transition: opacity 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\nspan.iqxin-additem:hover {\n  opacity: 1;\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\nspan.iqxin-additem.sej-copy-target {\n  opacity: 1;\n  border-style: solid;\n  border-color: var(--sej-accent);\n  background: var(--sej-accent-weak);\n  color: var(--sej-accent);\n}\n.sej-copy-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  vertical-align: middle;\n  line-height: 1;\n}\n.sej-copy-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n}\n.sej-copy-hint {\n  position: absolute;\n  left: 50%;\n  bottom: calc(100% + 6px);\n  transform: translateX(-50%);\n  z-index: 5;\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: rgba(20, 22, 26, 0.82);\n  color: #fff;\n  font-size: 12px;\n  line-height: 1.5;\n  white-space: nowrap;\n  pointer-events: none;\n}\n#newSearchListBox,\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition: opacity 0.14s ease-out, transform 0.14s ease-out;\n}\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n.sej-field > span {\n  opacity: 0.65;\n}\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n.sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition: border-color 0.12s ease-out, color 0.12s ease-out;\n}\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  border-radius: 4px;\n  background: var(--sej-surface-hover);\n}\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n.sej-field-value {\n  color: var(--font-color-qxin);\n  opacity: 0.5;\n  font-size: 12px;\n}\n.sej-field-inline {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  cursor: pointer;\n}\n.sej-dialog-actions {\n  display: flex;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n#newSearchListBox input,\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n.iqxin-help-link {\n  color: var(--font-color-qxin);\n  opacity: 0.6;\n}\n#newSearchListBox input:focus,\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#xin-centerDisplay select,\n#xin-newtab select {\n  height: 24px;\n  margin: -1px 0;\n  border: 1px solid transparent;\n  outline: none;\n  color: var(--font-color-qxin);\n  font-size: 13px;\n  font-family: inherit;\n  padding: 0 4px;\n  border-radius: 5px;\n  cursor: pointer;\n  text-decoration: none;\n  background: transparent;\n  transition: border-color 0.12s ease-out, background-color 0.12s ease-out;\n}\n#xin-centerDisplay select:hover,\n#xin-newtab select:hover {\n  background: var(--sej-surface-hover);\n}\n#xin-centerDisplay select:focus,\n#xin-newtab select:focus {\n  border-color: var(--sej-accent);\n  background: var(--sej-input-bg);\n}\n#xin-centerDisplay select option,\n#xin-newtab select option {\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n}\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#iqxin-editCodeBox {\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  z-index: 200000100;\n  width: min(560px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n}\n#iqxin-editCodeBox p {\n  margin: 0;\n}\n#iqxin-editCodeBox button {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n#iqxin-editCodeBox button:hover {\n  background: var(--sej-surface-hover);\n}\n#iqxin-editCodeBox .iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n}\n#iqxin-editCodeBox .iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#iqxin-editCodeBox textarea {\n  width: 100%;\n  box-sizing: border-box;\n  flex: 1 1 auto;\n  min-height: 240px;\n  padding: 10px;\n  overflow: auto;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 10px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.5;\n  resize: vertical;\n  outline: none;\n}\n#iqxin-editCodeBox textarea:focus {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n#iqxin-editCodeBox .sej-file-input {\n  display: none;\n}\n.iqxin-warning {\n  color: var(--sej-danger);\n  font-size: 14px;\n  font-weight: 600;\n}\n#importingBox {\n  position: fixed;\n  width: min(350px, calc(100vw - 32px));\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  padding: 16px 24px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  color: var(--font-color-qxin);\n}\n#importingBox li {\n  margin: 5px;\n  border-bottom: 1px solid var(--border-color-sej);\n}\n#importingBox li p {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  margin-top: 0;\n  margin-bottom: 0;\n}\n.xin-importing-item {\n  cursor: pointer;\n}\n#setBtn {\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  width: 30px;\n  height: 30px;\n  flex: 0 0 auto;\n  padding: 0;\n  border-radius: 8px;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  display: flex;\n  opacity: 0.65;\n}\nspan#setBtn:hover {\n  opacity: 1;\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\nspan#setBtn:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n#setBtn svg {\n  width: 16px;\n  height: 16px;\n  display: block;\n}\n#setBtn:focus-visible {\n  opacity: 1;\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  gap: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: 100%;\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: auto;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: wrap;\n  justify-content: center;\n  user-select: none;\n}\n/* 给用户的提示 */\n#iqixn-global-tip {\n  box-sizing: content-box !important;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  opacity: 0;\n  height: 25px;\n  line-height: 25px;\n  letter-spacing: 1px;\n  font-size: 14px;\n  color: #fff;\n  padding: 5px 20px;\n  border-radius: 8px;\n  background-color: #666;\n  position: fixed;\n  z-index: 200000001;\n  left: 50%;\n  bottom: 5%;\n  transform: translate(-50%);\n  pointer-events: none;\n  transition: opacity 0.15s ease-out;\n}\n#iqixn-global-tip.sej-toast-visible {\n  pointer-events: auto;\n}\n#iqixn-global-tip .sej-toast-action {\n  pointer-events: auto;\n  border: none;\n  border-radius: 6px;\n  padding: 2px 10px;\n  background: rgba(255, 255, 255, 0.2);\n  color: #fff;\n  font: inherit;\n  letter-spacing: inherit;\n  line-height: 20px;\n  cursor: pointer;\n  transition: background-color 0.12s ease-out;\n}\n#iqixn-global-tip .sej-toast-action:hover {\n  background: rgba(255, 255, 255, 0.34);\n}\n/* 夜间模式 - 默认主题变量 */\n:root,\n:host,\nbody {\n  --font-color-qxin: #333;\n  --background-color-qxin: #fffffff0;\n  --background-avtive-color-qxin: #ccc;\n  --background-active-enable-qxin: #cff9ff;\n  --background-active-disable-qxin: #ffa2a2;\n  --background-hover-color-qxin: #eaeaea;\n  --trigger-shown-qxin: #f1f3f4 !important;\n  --background-btn-qxin: #eff4f8;\n  --background-setting-qxin: #fff;\n  --box-shadow-color-sej: hsla(0, 0%, 0%, 7%);\n  --border-color-sej: #e1e6ea;\n\n  /* 跳转条现代化外观 */\n  --sej-font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n    \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif;\n  --sej-bar-bg: rgba(255, 255, 255, 0.88);\n  --sej-hover-bg: rgba(0, 0, 0, 0.055);\n  --sej-active-bg: rgba(0, 0, 0, 0.1);\n  --sej-accent: #4285f4;\n  --sej-accent-weak: rgba(66, 133, 244, 0.12);\n  --sej-radius-bar: 12px;\n  --sej-radius-item: 8px;\n  --sej-radius-menu: 12px;\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3);\n\n  /* 设置面板 */\n  --sej-surface-2: rgba(0, 0, 0, 0.025);\n  --sej-surface-hover: rgba(0, 0, 0, 0.06);\n  --sej-input-bg: #fff;\n  --sej-btn-bg: #fff;\n  --sej-checkbox-border: #cfd5dd;\n  --sej-focus-ring: rgba(66, 133, 244, 0.22);\n  --sej-accent-contrast: #fff;\n  --sej-danger: #d93025;\n  --sej-danger-weak: rgba(217, 48, 37, 0.1);\n  --sej-panel-shadow: 0 24px 64px -24px hsla(0, 0%, 0%, 0.45),\n    0 2px 8px hsla(0, 0%, 0%, 0.06);\n}\n/* 暗黑模式变量 - 当主文档是暗黑模式时 */\n:root[qxintheme=\"dark\"],\n:host[qxintheme=\"dark\"],\nbody[qxintheme=\"dark\"] {\n  --font-color-qxin: #bdc1bc;\n  --background-color-qxin: #202124f0;\n  --background-avtive-color-qxin: #424242;\n  --background-active-enable-qxin: #274144;\n  --background-active-disable-qxin: #583535;\n  --background-hover-color-qxin: #424242;\n  --trigger-shown-qxin: #3c4043 !important;\n  --background-btn-qxin: #292f36;\n  --background-setting-qxin: #202124;\n  --box-shadow-color-sej: hsla(0, 0%, 70%, 10%);\n  --border-color-sej: #3b4547;\n\n  --sej-bar-bg: rgba(32, 33, 36, 0.9);\n  --sej-hover-bg: rgba(255, 255, 255, 0.09);\n  --sej-active-bg: rgba(255, 255, 255, 0.14);\n  --sej-accent: #8ab4f8;\n  --sej-accent-weak: rgba(138, 180, 248, 0.18);\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.5),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.8);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.5),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.85);\n\n  --sej-surface-2: rgba(255, 255, 255, 0.045);\n  --sej-surface-hover: rgba(255, 255, 255, 0.09);\n  --sej-input-bg: #17181a;\n  --sej-btn-bg: rgba(255, 255, 255, 0.04);\n  --sej-checkbox-border: #4a5459;\n  --sej-focus-ring: rgba(138, 180, 248, 0.3);\n  --sej-accent-contrast: #202124;\n  --sej-danger: #f28b82;\n  --sej-danger-weak: rgba(242, 139, 130, 0.14);\n  --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),\n    0 2px 8px hsla(0, 0%, 0%, 0.5);\n}\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform 0.3s, visibility 0s linear 0.3s;\n}\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition: transform 0.3s, visibility 0s linear 0s;\n}\n#sej-expanded-category {\n  font-weight: bold;\n}\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n.sej-category-search-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.08s ease-out, color 0.08s ease-out;\n}\n.sej-category-search-icon svg {\n  width: 14px;\n  height: 14px;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n.sej-category-search-icon:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n  color: var(--sej-accent, #4285f4);\n}\n.sej-category-search-icon:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n.sej-category-search-icon:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n.sej-engine {\n  padding: 0 13px;\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 500;\n}\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n}\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n.sej-drop-list {\n  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 6px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n@keyframes sej-setting-mask-in {\n  from {\n    opacity: 0;\n  }\n}\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n@keyframes iqxinsejopen {\n  0% {\n    transform: scale(0.01, 0.01);\n    opacity: 0;\n  }\n  100% {\n    transform: scale(1, 1);\n    opacity: 1;\n  }\n}\n\n/* ---------- Vue 重构版设置面板布局优化 ---------- */\n#settingLayerMask {\n  padding: 20px;\n  box-sizing: border-box;\n}\n\n#sej-settings-body {\n  display: flex;\n  flex: 1 1 auto;\n  flex-wrap: wrap;\n  align-content: flex-start;\n  gap: 10px;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */\n  margin-top: 0;\n  margin-right: calc(var(--sej-panel-pad-x) * -1);\n  padding-top: 2px;\n  padding-right: var(--sej-panel-pad-x);\n  padding-bottom: 4px;\n}\n#sej-settings-body::-webkit-scrollbar {\n  width: 8px;\n}\n#sej-settings-body::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover);\n  border-radius: 4px;\n}\n#settingLayer #btnEle {\n  flex: 0 0 auto;\n}\n\n@media (max-width: 780px) {\n  #btnEle span {\n    font-size: 12px;\n    padding: 5px 8px;\n  }\n  #settingLayer {\n    --sej-panel-pad-x: 12px;\n    min-width: calc(100vw - 16px);\n    max-width: calc(100vw - 16px);\n    max-height: calc(100vh - 16px);\n  }\n}\n\n@media (max-width: 560px) {\n  .iqxin-items {\n    flex: 1 1 160px;\n    width: auto;\n    max-width: none;\n  }\n}\n";
+	var global_default = "/* ==UserStyle==\n@name           SearchEngineJumpPlusGlobalStyle\n@description    Global style for SearchEngineJumpPlus\n@version        5.32.0\n@namespace      https://greasyfork.org/en/scripts/454280-searchenginejumpplus\n@license        MIT\n@author         MUTED64\n==/UserStyle== */\n\n#settingLayerMask {\n  display: none;\n  justify-content: center;\n  align-items: center;\n  position: fixed;\n  inset: 0;\n  background-color: rgba(16, 18, 22, 0.42);\n  backdrop-filter: blur(12px);\n  z-index: 200000000;\n  overflow: auto;\n  font-family: var(--sej-font-family);\n  min-height: 100%;\n  font-size: 14px;\n  transition: opacity 0.15s ease-out;\n  opacity: 0;\n  animation: sej-setting-mask-in 0.15s ease;\n  user-select: none;\n  -moz-user-select: none;\n  padding-bottom: 80px;\n  box-sizing: border-box;\n  color: var(--font-color-qxin);\n}\n#settingLayer {\n  display: flex;\n  flex-direction: column;\n  box-sizing: border-box;\n  --sej-panel-pad-x: 20px;\n  --sej-panel-pad-top: 16px;\n  padding: var(--sej-panel-pad-top) var(--sej-panel-pad-x) 16px;\n  background-color: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 16px;\n  box-shadow: var(--sej-panel-shadow);\n  position: absolute;\n  width: auto;\n  min-width: min(720px, calc(100vw - 32px));\n  max-width: min(960px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  margin: 0;\n  overflow: visible;\n  animation: sej-panel-in 0.16s ease-out;\n}\n@keyframes sej-panel-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px) scale(0.99);\n  }\n}\n.sej-panel-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  flex: 0 0 auto;\n  padding: 0 2px 12px;\n  cursor: move;\n}\n.sej-panel-title {\n  font-size: 15px;\n  font-weight: 600;\n  letter-spacing: 0.01em;\n}\n.sej-panel-close {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: none;\n  border-radius: 50%;\n  background: var(--sej-surface-hover);\n  color: transparent;\n  font-size: 0;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 1;\n  transition: background-color 0.12s ease-out, opacity 0.12s ease-out;\n}\n.sej-panel-close::before,\n.sej-panel-close::after {\n  content: \"\";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 12px;\n  height: 1.5px;\n  border-radius: 2px;\n  background: var(--font-color-qxin);\n  transform: translate(-50%, -50%) rotate(45deg);\n}\n.sej-panel-close::after {\n  transform: translate(-50%, -50%) rotate(-45deg);\n}\n.iqxin-items {\n  display: flex;\n  flex-direction: column;\n  flex: 0 0 220px;\n  width: 220px;\n  min-width: 0;\n  max-width: 220px;\n  box-sizing: border-box;\n  margin: 0;\n  padding: 6px;\n  border-radius: 12px;\n  border: 1px solid var(--border-color-sej);\n  background: var(--sej-surface-2);\n}\n.sej-add-category-card {\n  align-items: center;\n  justify-content: center;\n  min-height: 140px;\n  background: transparent;\n  border: 1px dashed var(--sej-checkbox-border);\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n.sej-add-category-card:hover {\n  background: var(--sej-surface-hover);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n.sej-add-category-card:focus-visible {\n  background: var(--sej-surface-hover);\n  outline: 2px solid var(--sej-accent);\n  outline-offset: 2px;\n}\n.sej-add-category-plus {\n  font-size: 42px;\n  font-weight: 300;\n  line-height: 1;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n}\n.sej-add-category-card:hover .sej-add-category-plus {\n  opacity: 1;\n}\n.sejcon {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n}\n.sejcon > .drag {\n  flex: 0 0 auto;\n}\n#settingLayer .drag {\n  display: block;\n  position: relative;\n}\n/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */\n#settingLayer .sej-drag-placeholder,\n#settingLayer .sej-drag-placeholder * {\n  visibility: hidden !important;\n}\n#settingLayer .sejtitle:active,\n#settingLayer .sejcon > .drag:active {\n  cursor: grabbing;\n}\n.sej-drag-ghost {\n  position: fixed !important;\n  left: 0 !important;\n  top: 0 !important;\n  margin: 0 !important;\n  z-index: 200000200;\n  opacity: 1 !important;\n  pointer-events: none;\n  box-sizing: border-box;\n  overflow: hidden;\n  will-change: transform;\n}\n.sej-drag-ghost * {\n  pointer-events: none !important;\n}\n.sej-drag-ghost-engine {\n  border-radius: 8px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);\n}\n.sej-drag-ghost-category {\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);\n}\n#settingLayer .sej-engine {\n  padding: 0 36px 0 8px;\n  width: 100%;\n  height: 30px;\n  box-sizing: border-box;\n  border-radius: 8px;\n  font-size: 13px;\n  cursor: pointer;\n}\n#settingLayer .sej-engine > span {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n.iqxin-pointer-events,\n.sej-engine-icon,\n#settingLayer .sej-engine * {\n  pointer-events: none;\n}\n.sejtitle {\n  text-align: left;\n  /* 左侧与引擎条目对齐，右侧避开显隐按钮 */\n  padding: 5px 36px 5px 8px;\n  margin-bottom: 2px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  cursor: pointer;\n  position: relative;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.5;\n  border-radius: 8px;\n}\n/* 标题下方的细分隔线，用于和引擎条目区分 */\n.sejtitle::after {\n  content: \"\";\n  position: absolute;\n  left: 8px;\n  right: 8px;\n  bottom: 0;\n  height: 1px;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n#settingLayerMask [data-xin] {\n  margin: 1px 0;\n  border-radius: 8px;\n}\n.sejcon [data-xin] {\n  cursor: pointer;\n}\n/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */\n#settingLayerMask [data-iqxindisabled=\"true\"],\n[data-xin^=\"-\"] {\n  background-color: transparent;\n  color: var(--font-color-qxin);\n  transition: background-color 0.12s ease-out;\n}\n#settingLayerMask [data-iqxindisabled=\"true\"] > span,\n#settingLayerMask [data-iqxindisabled=\"true\"] .sej-engine-icon,\n[data-xin^=\"-\"] > .iqxin-pointer-events {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */\n.sej-category-hidden .sej-engine > span,\n.sej-category-hidden .sej-engine .sej-engine-icon,\n.sej-category-hidden .iqxin-additem {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n#settingLayerMask .sej-engine:hover {\n  background-color: var(--sej-surface-hover);\n}\n#settingLayerMask [data-iqxindisabled=\"true\"]:hover,\n[data-xin^=\"-\"]:hover {\n  background-color: transparent;\n}\n.sej-category-hidden .sej-engine:hover {\n  background-color: transparent;\n}\n#settingLayerMask label {\n  cursor: pointer;\n}\n#settingLayerMask .sej-engine-icon {\n  vertical-align: middle;\n}\n#btnEle {\n  position: relative;\n  width: 100%;\n  background: transparent;\n  border-radius: 0;\n  flex: 0 0 auto;\n}\n#btnEle {\n  margin-top: 10px;\n}\n#btnEle span {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  box-sizing: border-box;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  margin: 0;\n  color: var(--font-color-qxin);\n  padding: 4px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out, opacity 0.12s ease-out;\n}\n#btnEle label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  color: inherit;\n}\n#btnEle #xin-centerDisplay {\n  gap: 2px;\n  padding-right: 4px;\n}\n#btnEle span:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n#btnEle a {\n  color: var(--font-color-qxin);\n  opacity: 0.7;\n  text-decoration: none;\n  font-family: inherit;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out;\n}\n#btnEle a:hover {\n  opacity: 1;\n  color: var(--sej-accent);\n}\n#btnEle .feedback {\n  background: transparent;\n  border-color: transparent;\n  padding: 4px 6px;\n}\n#btnEle .feedback:hover {\n  background: transparent;\n  border-color: transparent;\n  color: var(--sej-accent);\n}\n#btnEle > div {\n  width: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 8px;\n  box-sizing: border-box;\n}\n#btnEle > div.btnEleLayer {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  align-items: stretch;\n  background: transparent;\n  border-radius: 0;\n  border-top: 1px solid var(--border-color-sej);\n  padding-top: 12px;\n  gap: 8px;\n}\n.sej-footer-options,\n.sej-footer-bar,\n.sej-footer-selects,\n.sej-footer-links,\n.sej-footer-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  min-width: 0;\n}\n.sej-footer-options {\n  gap: 8px;\n}\n.sej-footer-bar {\n  gap: 8px 12px;\n}\n.sej-footer-selects {\n  gap: 8px;\n}\n.sej-footer-links {\n  gap: 0;\n  margin-left: auto;\n}\n.sej-footer-actions {\n  margin-left: 4px;\n}\n#btnEle #xin-save {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n#btnEle #xin-save:hover {\n  background: var(--sej-accent);\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n#btnEle #xin-save.sej-saving {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n#btnEle span.sej-loading {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n#btnEle span.iqxin-btn-active {\n  background: var(--sej-accent-weak);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n#settingLayerMask input[type=\"checkbox\"] {\n  appearance: none;\n  -webkit-appearance: none;\n  width: 16px;\n  height: 16px;\n  display: inline-block;\n  box-sizing: border-box;\n  vertical-align: -3px;\n  margin: 0 !important;\n  padding: 0;\n  position: relative;\n  border: 1.5px solid var(--sej-checkbox-border);\n  border-radius: 5px;\n  background: var(--sej-input-bg);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out;\n}\n#settingLayerMask input[type=\"checkbox\"]:before {\n  content: none;\n}\n#settingLayerMask input[type=\"checkbox\"]:checked {\n  background: var(--sej-accent);\n  border-color: var(--sej-accent);\n}\n#settingLayerMask input[type=\"checkbox\"]:checked:after {\n  content: \"\";\n  position: absolute;\n  left: 4px;\n  top: 1px;\n  width: 4px;\n  height: 8px;\n  border: solid var(--sej-accent-contrast);\n  border-width: 0 2px 2px 0;\n  background: none;\n  transform: rotate(45deg);\n}\n.drop-over {\n  opacity: 0.6;\n}\n.iqxin-set-toggle {\n  opacity: 0.6;\n  position: absolute;\n  background: transparent;\n  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */\n  top: 0;\n  bottom: 0;\n  height: fit-content;\n  margin-top: auto;\n  margin-bottom: auto;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n  right: 8px;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n}\n.iqxin-set-toggle svg {\n  display: block;\n}\n.iqxin-set-toggle.iqxin-set-hidden {\n  opacity: 0.35;\n}\n.iqxin-set-toggle:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\nspan.iqxin-additem {\n  display: inline-block;\n  position: relative;\n  text-align: center;\n  width: 100%;\n  box-sizing: border-box;\n  margin: auto 0 2px;\n  padding: 5px 0;\n  border: 1px dashed var(--sej-checkbox-border);\n  border-radius: 8px;\n  color: var(--font-color-qxin);\n  opacity: 0.55;\n  cursor: pointer;\n  visibility: visible;\n  transition: opacity 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\nspan.iqxin-additem:hover {\n  opacity: 1;\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\nspan.iqxin-additem.sej-copy-target {\n  opacity: 1;\n  border-style: solid;\n  border-color: var(--sej-accent);\n  background: var(--sej-accent-weak);\n  color: var(--sej-accent);\n}\n.sej-copy-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  vertical-align: middle;\n  line-height: 1;\n}\n.sej-copy-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n}\n.sej-copy-hint {\n  position: absolute;\n  left: 50%;\n  bottom: calc(100% + 6px);\n  transform: translateX(-50%);\n  z-index: 5;\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: rgba(20, 22, 26, 0.82);\n  color: #fff;\n  font-size: 12px;\n  line-height: 1.5;\n  white-space: nowrap;\n  pointer-events: none;\n}\n#newSearchListBox,\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition: opacity 0.14s ease-out, transform 0.14s ease-out;\n}\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n.sej-field > span {\n  opacity: 0.65;\n}\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n.sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition: border-color 0.12s ease-out, color 0.12s ease-out;\n}\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  border-radius: 4px;\n  background: var(--sej-surface-hover);\n}\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n.sej-field-value {\n  color: var(--font-color-qxin);\n  opacity: 0.5;\n  font-size: 12px;\n}\n.sej-field-inline {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  cursor: pointer;\n}\n.sej-dialog-actions {\n  display: flex;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n#newSearchListBox input,\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n.iqxin-help-link {\n  color: var(--font-color-qxin);\n  opacity: 0.6;\n}\n#newSearchListBox input:focus,\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#xin-centerDisplay select {\n  height: 24px;\n  margin: -1px 0;\n  border: 1px solid transparent;\n  outline: none;\n  color: var(--font-color-qxin);\n  font-size: 13px;\n  font-family: inherit;\n  padding: 0 4px;\n  border-radius: 5px;\n  cursor: pointer;\n  text-decoration: none;\n  background: transparent;\n  transition: border-color 0.12s ease-out, background-color 0.12s ease-out;\n}\n#xin-centerDisplay select:hover {\n  background: var(--sej-surface-hover);\n}\n#xin-centerDisplay select:focus {\n  border-color: var(--sej-accent);\n  background: var(--sej-input-bg);\n}\n#xin-centerDisplay select option {\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n}\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#iqxin-editCodeBox {\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  z-index: 200000100;\n  width: min(560px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n}\n#iqxin-editCodeBox p {\n  margin: 0;\n}\n#iqxin-editCodeBox button {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n#iqxin-editCodeBox button:hover {\n  background: var(--sej-surface-hover);\n}\n#iqxin-editCodeBox .iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n}\n#iqxin-editCodeBox .iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n#iqxin-editCodeBox textarea {\n  width: 100%;\n  box-sizing: border-box;\n  flex: 1 1 auto;\n  min-height: 240px;\n  padding: 10px;\n  overflow: auto;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 10px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.5;\n  resize: vertical;\n  outline: none;\n}\n#iqxin-editCodeBox textarea:focus {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n#iqxin-editCodeBox .sej-file-input {\n  display: none;\n}\n.iqxin-warning {\n  color: var(--sej-danger);\n  font-size: 14px;\n  font-weight: 600;\n}\n#importingBox {\n  position: fixed;\n  width: min(350px, calc(100vw - 32px));\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  padding: 16px 24px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  color: var(--font-color-qxin);\n}\n#importingBox li {\n  margin: 5px;\n  border-bottom: 1px solid var(--border-color-sej);\n}\n#importingBox li p {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  margin-top: 0;\n  margin-bottom: 0;\n}\n.xin-importing-item {\n  cursor: pointer;\n}\n#setBtn {\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  width: 30px;\n  height: 30px;\n  flex: 0 0 auto;\n  padding: 0;\n  border-radius: 8px;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  display: flex;\n  opacity: 0.65;\n}\nspan#setBtn:hover {\n  opacity: 1;\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\nspan#setBtn:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n#setBtn svg {\n  width: 16px;\n  height: 16px;\n  display: block;\n}\n#setBtn:focus-visible {\n  opacity: 1;\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  gap: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: 100%;\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: auto;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: wrap;\n  justify-content: center;\n  user-select: none;\n}\n/* 给用户的提示 */\n#iqixn-global-tip {\n  box-sizing: content-box !important;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  opacity: 0;\n  height: 25px;\n  line-height: 25px;\n  letter-spacing: 1px;\n  font-size: 14px;\n  color: #fff;\n  padding: 5px 20px;\n  border-radius: 8px;\n  background-color: #666;\n  position: fixed;\n  z-index: 200000001;\n  left: 50%;\n  bottom: 5%;\n  transform: translate(-50%);\n  pointer-events: none;\n  transition: opacity 0.15s ease-out;\n}\n#iqixn-global-tip.sej-toast-visible {\n  pointer-events: auto;\n}\n#iqixn-global-tip .sej-toast-action {\n  pointer-events: auto;\n  border: none;\n  border-radius: 6px;\n  padding: 2px 10px;\n  background: rgba(255, 255, 255, 0.2);\n  color: #fff;\n  font: inherit;\n  letter-spacing: inherit;\n  line-height: 20px;\n  cursor: pointer;\n  transition: background-color 0.12s ease-out;\n}\n#iqixn-global-tip .sej-toast-action:hover {\n  background: rgba(255, 255, 255, 0.34);\n}\n/* 夜间模式 - 默认主题变量 */\n:root,\n:host,\nbody {\n  --font-color-qxin: #333;\n  --background-color-qxin: #fffffff0;\n  --background-avtive-color-qxin: #ccc;\n  --background-active-enable-qxin: #cff9ff;\n  --background-active-disable-qxin: #ffa2a2;\n  --background-hover-color-qxin: #eaeaea;\n  --trigger-shown-qxin: #f1f3f4 !important;\n  --background-btn-qxin: #eff4f8;\n  --background-setting-qxin: #fff;\n  --box-shadow-color-sej: hsla(0, 0%, 0%, 7%);\n  --border-color-sej: #e1e6ea;\n\n  /* 跳转条现代化外观 */\n  --sej-font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n    \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif;\n  --sej-bar-bg: rgba(255, 255, 255, 0.88);\n  --sej-hover-bg: rgba(0, 0, 0, 0.055);\n  --sej-active-bg: rgba(0, 0, 0, 0.1);\n  --sej-accent: #4285f4;\n  --sej-accent-weak: rgba(66, 133, 244, 0.12);\n  --sej-radius-bar: 12px;\n  --sej-radius-item: 8px;\n  --sej-radius-menu: 12px;\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3);\n\n  /* 设置面板 */\n  --sej-surface-2: rgba(0, 0, 0, 0.025);\n  --sej-surface-hover: rgba(0, 0, 0, 0.06);\n  --sej-input-bg: #fff;\n  --sej-btn-bg: #fff;\n  --sej-checkbox-border: #cfd5dd;\n  --sej-focus-ring: rgba(66, 133, 244, 0.22);\n  --sej-accent-contrast: #fff;\n  --sej-danger: #d93025;\n  --sej-danger-weak: rgba(217, 48, 37, 0.1);\n  --sej-panel-shadow: 0 24px 64px -24px hsla(0, 0%, 0%, 0.45),\n    0 2px 8px hsla(0, 0%, 0%, 0.06);\n}\n/* 暗黑模式变量 - 当主文档是暗黑模式时 */\n:root[qxintheme=\"dark\"],\n:host[qxintheme=\"dark\"],\nbody[qxintheme=\"dark\"] {\n  --font-color-qxin: #bdc1bc;\n  --background-color-qxin: #202124f0;\n  --background-avtive-color-qxin: #424242;\n  --background-active-enable-qxin: #274144;\n  --background-active-disable-qxin: #583535;\n  --background-hover-color-qxin: #424242;\n  --trigger-shown-qxin: #3c4043 !important;\n  --background-btn-qxin: #292f36;\n  --background-setting-qxin: #202124;\n  --box-shadow-color-sej: hsla(0, 0%, 70%, 10%);\n  --border-color-sej: #3b4547;\n\n  --sej-bar-bg: rgba(32, 33, 36, 0.9);\n  --sej-hover-bg: rgba(255, 255, 255, 0.09);\n  --sej-active-bg: rgba(255, 255, 255, 0.14);\n  --sej-accent: #8ab4f8;\n  --sej-accent-weak: rgba(138, 180, 248, 0.18);\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.5),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.8);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.5),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.85);\n\n  --sej-surface-2: rgba(255, 255, 255, 0.045);\n  --sej-surface-hover: rgba(255, 255, 255, 0.09);\n  --sej-input-bg: #17181a;\n  --sej-btn-bg: rgba(255, 255, 255, 0.04);\n  --sej-checkbox-border: #4a5459;\n  --sej-focus-ring: rgba(138, 180, 248, 0.3);\n  --sej-accent-contrast: #202124;\n  --sej-danger: #f28b82;\n  --sej-danger-weak: rgba(242, 139, 130, 0.14);\n  --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),\n    0 2px 8px hsla(0, 0%, 0%, 0.5);\n}\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform 0.3s, visibility 0s linear 0.3s;\n}\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition: transform 0.3s, visibility 0s linear 0s;\n}\n#sej-expanded-category {\n  font-weight: bold;\n}\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n.sej-category-search-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.08s ease-out, color 0.08s ease-out;\n}\n.sej-category-search-icon svg {\n  width: 14px;\n  height: 14px;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n.sej-category-search-icon:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n  color: var(--sej-accent, #4285f4);\n}\n.sej-category-search-icon:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n.sej-category-search-icon:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n.sej-engine {\n  padding: 0 13px;\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 500;\n}\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n}\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n.sej-drop-list {\n  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 6px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n@keyframes sej-setting-mask-in {\n  from {\n    opacity: 0;\n  }\n}\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n@keyframes iqxinsejopen {\n  0% {\n    transform: scale(0.01, 0.01);\n    opacity: 0;\n  }\n  100% {\n    transform: scale(1, 1);\n    opacity: 1;\n  }\n}\n\n/* ---------- Vue 重构版设置面板布局优化 ---------- */\n#settingLayerMask {\n  padding: 20px;\n  box-sizing: border-box;\n}\n\n#sej-settings-body {\n  display: flex;\n  flex: 1 1 auto;\n  flex-wrap: wrap;\n  align-content: flex-start;\n  gap: 10px;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */\n  margin-top: 0;\n  margin-right: calc(var(--sej-panel-pad-x) * -1);\n  padding-top: 2px;\n  padding-right: var(--sej-panel-pad-x);\n  padding-bottom: 4px;\n}\n#sej-settings-body::-webkit-scrollbar {\n  width: 8px;\n}\n#sej-settings-body::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover);\n  border-radius: 4px;\n}\n#settingLayer #btnEle {\n  flex: 0 0 auto;\n}\n\n@media (max-width: 780px) {\n  #btnEle span {\n    font-size: 12px;\n    padding: 5px 8px;\n  }\n  #settingLayer {\n    --sej-panel-pad-x: 12px;\n    min-width: calc(100vw - 16px);\n    max-width: calc(100vw - 16px);\n    max-height: calc(100vh - 16px);\n  }\n}\n\n@media (max-width: 560px) {\n  .iqxin-items {\n    flex: 1 1 160px;\n    width: auto;\n    max-width: none;\n  }\n}\n";
 	var DARK_MODE_STYLE = `
   :root,
   :host {

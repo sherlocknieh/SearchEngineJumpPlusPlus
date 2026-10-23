@@ -47,25 +47,32 @@ export function getInsertPositionLabel(rule) {
   return rule?.insertIntoDoc?.where?.toLowerCase();
 }
 
+// 强制居中：抵消站点规则的横向偏移，让跳转条在可用宽度内水平居中
+const FORCE_CENTER_STYLE = `
+  grid-column: 1 / -1;
+  justify-self: center;
+  left: auto;
+  right: auto;
+  text-align: center;
+  margin-left: auto;
+  margin-right: auto;
+`;
+
 /**
- * 处理 AC-baidu / 知乎排版优化 等脚本对 rule 样式的覆盖，并注入到 Shadow DOM。
+ * 解析规则样式：强制居中模式追加居中覆盖，并处理知乎排版优化脚本的宽度覆盖。
  * 返回最终生效的 rule 样式文本。
  */
 export function resolveRuleStyle(rule, settingData) {
   if (!rule?.style) return '';
   let style = rule.style;
 
-  if (settingData.center == 2) {
-    if (document.querySelector('.AC-style-logo') && rule.style_ACBaidu) {
-      style = rule.style_ACBaidu;
-    }
-  } else if (settingData.center == 1) {
-    style = rule.style_ACBaidu ? rule.style_ACBaidu : rule.style;
-  }
-
   const searchMain = document.getElementById('SearchMain');
   if (searchMain && searchMain.style.marginLeft == '150px') {
-    style = rule.style_ZhihuChenglinz;
+    style = rule.style_ZhihuChenglinz || style;
+  }
+
+  if (settingData.center == 1) {
+    style += FORCE_CENTER_STYLE;
   }
 
   addStyle(`#sej-container { ${style} }`);

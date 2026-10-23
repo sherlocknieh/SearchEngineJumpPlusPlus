@@ -22,19 +22,10 @@ const settings = useSettings();
 const source = computed(() => settings.settingData);
 
 const OPTION_KEYS = [
-    'status',
-    'version',
-    'addSearchItems',
-    'modifySearchItems',
-    'newtab',
-    'debug',
     'fixedTop',
     'fixedTopUpward',
-    'baiduOffset',
-    'getIcon',
     'HideTheSameLink',
     'center',
-    'icon',
     'transtion',
     'selectSearch',
 ];
@@ -93,10 +84,10 @@ function buildEngineData() {
             const item = {
                 name: engine.name,
                 url: engine.url,
-                favicon: engine.favicon,
             };
+            if (engine.favicon) item.favicon = engine.favicon;
             if (engine.faviconData) item.faviconData = engine.faviconData;
-            if (engine.blank) item.blank = '_blank';
+            if (engine.target === '_self') item.target = '_self';
             if (engine.disable) item.disable = true;
             if (engine.gbk) item.gbk = true;
             return item;
@@ -1131,7 +1122,7 @@ function getICON(olink) {
         host = link.split('/')[0];
     }
     const siteURL = protocol + '://' + host;
-    const iconSetting = settings.settingData.getIcon;
+    const iconSetting = ui.iconSource;
     let ourl;
 
     if (isNaN(iconSetting)) {
@@ -1268,7 +1259,7 @@ onBeforeUnmount(() => {
                             @pointerdown="onDragPointerDown($event, 'engine', ci, ei)"
                             @click.stop="editEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
-                                :data-iqxinlink="engine.url" :data-iqxintarget="engine.blank ? '_blank' : null"
+                                :data-iqxinlink="engine.url" :data-iqxintarget="engine.target === '_self' ? '_self' : null"
                                 :data-iqxindisabled="engine.disable ? 'true' : null"
                                 :data-iqxingbk="engine.gbk ? 'true' : null">
                                 <img class="sej-engine-icon" :src="getFaviconSrc(engine)" alt="" />
@@ -1322,15 +1313,7 @@ onBeforeUnmount(() => {
                                 居中：
                                 <select v-model.number="draft.center">
                                     <option :value="0">默认</option>
-                                    <option :value="1">强制</option>
-                                    <option :value="2">自动</option>
-                                </select>
-                            </span>
-                            <span id="xin-newtab" title="是否采用新标签页打开">
-                                打开方式：
-                                <select v-model.number="draft.newtab">
-                                    <option :value="0">默认页面</option>
-                                    <option :value="1">新标签页</option>
+                                    <option :value="1">强制居中</option>
                                 </select>
                             </span>
                             <span id="xin-loadIcons" title="把所有远程图标内嵌为 data 链接"

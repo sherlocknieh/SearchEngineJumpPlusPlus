@@ -41,8 +41,8 @@ export function prepareJump(engine, keyword, { hideTheSameLink }) {
   };
 }
 
-export function shouldOpenInNewTab(engine, settingData, isSelectSearch) {
-  return Boolean(isSelectSearch || settingData.newtab || engine.blank);
+export function shouldOpenInNewTab(engine, isSelectSearch) {
+  return Boolean(isSelectSearch || engine.target !== '_self');
 }
 
 export function openInNewTab(url) {
@@ -79,7 +79,7 @@ export function performJump(engine, keyword, settingData, isSelectSearch) {
   const result = prepareJump(engine, keyword, {
     hideTheSameLink: settingData.HideTheSameLink,
   });
-  const newTab = shouldOpenInNewTab(engine, settingData, isSelectSearch);
+  const newTab = shouldOpenInNewTab(engine, isSelectSearch);
 
   if (result.type === 'post') {
     submitPostForm(

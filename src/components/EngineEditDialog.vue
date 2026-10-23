@@ -22,7 +22,7 @@ const form = reactive({
   name: props.initial.name || '',
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
-  blank: Boolean(props.initial.blank),
+  target: props.initial.target === '_self' ? '_self' : '_blank',
   gbk: Boolean(props.initial.gbk),
 });
 
@@ -188,7 +188,7 @@ function submit() {
     favicon: form.favicon || props.resolveIcon(form.url),
     // 转换中的旧结果不能用于新链接，交给保存流程重新抓取
     faviconData: previewLoading.value ? '' : previewData.value.trim(),
-    blank: form.blank,
+    target: form.target,
     gbk: form.gbk,
   });
 }
@@ -232,9 +232,9 @@ function submit() {
     </div>
     <label class="sej-field">
       <span>打开方式</span>
-      <select id="iqxin-newTarget" v-model="form.blank" :disabled="busy">
-        <option :value="true">新标签页打开</option>
-        <option :value="false">当前页打开</option>
+      <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
+        <option value="_blank">新标签页打开</option>
+        <option value="_self">当前页打开</option>
       </select>
     </label>
     <label v-if="mode === 'edit'" class="sej-field-inline">

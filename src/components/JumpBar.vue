@@ -1,6 +1,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSettings } from '../stores/settings.js';
+import { ui } from '../stores/ui.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
 import { addStyle, getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
 import {
@@ -410,7 +411,7 @@ onBeforeUnmount(() => {
         v-else
         :name="category.name"
         :engines="category.engines"
-        :icon-mode="data.icon"
+        :show-icon="ui.categoryIcon"
         @jump="onJump"
         @jump-all="onJumpAll(category.engines)"
       />
