@@ -6,19 +6,20 @@ import {
     onMounted,
     reactive,
     ref,
+    watch,
 } from 'vue';
-import { deleteValue } from '../core/storage.js';
+import { deleteValue, isSameValue } from '../core/storage.js';
 import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc } from '../core/favicon.js';
-import { closeSettingPanel, showToast } from '../stores/ui.js';
+import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
 import { EDIT, EYE, EYE_OFF } from '../data/icons.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
 
 const settings = useSettings();
-const source = settings.settingData;
+const source = computed(() => settings.settingData);
 
 const OPTION_KEYS = [
     'status',
@@ -42,7 +43,7 @@ let uid = 1;
 const nextId = () => uid++;
 
 function makeDraft() {
-    const raw = JSON.parse(JSON.stringify(source));
+    const raw = JSON.parse(JSON.stringify(source.value));
     const d = {};
     for (const key of OPTION_KEYS) d[key] = raw[key];
     d.categories = raw.engineCategories.map(([name, key, enabled]) => ({
@@ -77,22 +78,20 @@ const undoStack = [];
 const editIcon = EDIT;
 
 const configText = computed(() => {
-    const clean = JSON.parse(JSON.stringify(source));
+    const clean = JSON.parse(JSON.stringify(source.value));
     if (clean.engineList) delete clean.engineList.engineCategories;
     return JSON.stringify(clean, null, 4);
 });
 
-function buildResult() {
-    const result = {};
-    for (const key of OPTION_KEYS) result[key] = draft[key];
-    result.engineCategories = draft.categories.map((cat) => [
+function buildEngineData() {
+    const engineCategories = draft.categories.map((cat) => [
         cat.name,
         cat.key,
         cat.enabled,
     ]);
-    result.engineList = {};
+    const engineList = {};
     for (const cat of draft.categories) {
-        result.engineList[cat.key] = cat.engines.map((engine) => {
+        engineList[cat.key] = cat.engines.map((engine) => {
             const item = {
                 name: engine.name,
                 url: engine.url,
@@ -105,6 +104,13 @@ function buildResult() {
             return item;
         });
     }
+    return { engineCategories, engineList };
+}
+
+function buildResult() {
+    const result = {};
+    for (const key of OPTION_KEYS) result[key] = draft[key];
+    Object.assign(result, buildEngineData());
     return result;
 }
 
@@ -148,27 +154,113 @@ async function embedRemoteFavicons() {
     return { converted, failed };
 }
 
+// 重要编辑（增删改搜索引擎、调整排序、启停分类/引擎、开关选项）后自动保存。
+// 文本输入只写入草稿，提交后才触发这里，避免逐字写入存储。
+const AUTOSAVE_DELAY = 500;
+let autosaveTimer = null;
+let autosaveQueued = false;
+let autosaveWarnedLocal = false;
+let settingsChanged = false;
+
+function cancelAutoSave() {
+    autosaveQueued = false;
+    clearTimeout(autosaveTimer);
+    autosaveTimer = null;
+}
+
+function flushAutoSave() {
+    autosaveTimer = null;
+    if (!autosaveQueued || saving.value) return;
+    autosaveQueued = false;
+
+    const next = buildResult();
+    if (isSameValue(next, source.value)) return;
+
+    const backend = settings.savePartial(next);
+    if (backend === 'memory') {
+        showToast('自动保存失败：存储不可用，请用“配置文件”复制备份', 5000);
+        return;
+    }
+    settingsChanged = true;
+    if (backend === 'local' && !autosaveWarnedLocal) {
+        autosaveWarnedLocal = true;
+        showToast('已自动保存（当前仅本网站生效）', 3000);
+    }
+}
+
+function scheduleAutoSave() {
+    if (saving.value) return;
+    autosaveQueued = true;
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(flushAutoSave, AUTOSAVE_DELAY);
+}
+
+// 底部开关、下拉框等离散修改也自动保存；文本输入仍只在提交时写入
+watch(
+    () => OPTION_KEYS.map((key) => draft[key]),
+    () => scheduleAutoSave(),
+);
+
+function refreshDraft() {
+    const next = makeDraft();
+    for (const key of OPTION_KEYS) draft[key] = next[key];
+    draft.categories.splice(0, draft.categories.length, ...next.categories);
+}
+
+// 其他页面保存后尝试同步：无本地修改时直接刷新，有冲突时提供手动同步
+function trySyncFromRemote() {
+    if (saving.value) return;
+    const hasLocalChanges = !isSameValue(buildResult(), source.value);
+    if (engineDialog.value || categoryDialog.value || configOpen.value || hasLocalChanges) {
+        showToast('其他页面已更新设置，当前有未保存修改', 6000, {
+            label: '同步',
+            onClick: forceSyncFromRemote,
+        });
+        return;
+    }
+    if (!settings.reload()) return;
+    refreshDraft();
+    remoteSynced = true;
+    showToast('已同步其他页面保存的设置', 3000);
+}
+
+// 放弃面板内未提交的修改，直接采用存储中的最新设置
+function forceSyncFromRemote() {
+    engineDialog.value = null;
+    categoryDialog.value = null;
+    configOpen.value = false;
+    cancelAutoSave();
+    settings.reload();
+    refreshDraft();
+    remoteSynced = true;
+    showToast('已同步其他页面保存的设置', 3000);
+}
+
+watch(() => ui.settingsRevision, trySyncFromRemote);
+
 async function save() {
     if (saving.value) return;
+    cancelAutoSave();
     saving.value = true;
     try {
-        const backend = settings.applySettings(buildResult());
-        if (backend === 'memory') {
-            showToast('保存失败：存储不可用，请用“配置文件”复制备份', 5000);
-            return;
+        if (!isSameValue(buildResult(), source.value)) {
+            const backend = settings.applySettings(buildResult());
+            if (backend === 'memory') {
+                showToast('保存失败：存储不可用，请用“配置文件”复制备份', 5000);
+                return;
+            }
+            settingsChanged = true;
+            if (backend === 'local') {
+                showToast(
+                    '已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）',
+                    4000,
+                );
+            }
         }
-        if (backend === 'local') {
-            showToast(
-                '已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）',
-                4000,
-            );
-        } else {
-            showToast('保存成功');
-        }
-        setTimeout(requestRestart, 0);
     } finally {
         saving.value = false;
     }
+    close();
 }
 
 async function loadAllIcons() {
@@ -186,7 +278,12 @@ async function loadAllIcons() {
         if (converted) parts.push(`已内嵌 ${converted} 个图标`);
         if (!converted && !failed) parts.push('没有可加载的图标');
         else if (failed) parts.push(`${failed} 个获取失败`);
-        showToast(`${parts.join('，')}，保存后生效`, 4000);
+        if (converted) {
+            scheduleAutoSave();
+            showToast(`${parts.join('，')}，已自动保存`, 4000);
+        } else {
+            showToast(parts.join('，'), 4000);
+        }
     } finally {
         loadingIcons.value = false;
     }
@@ -194,6 +291,8 @@ async function loadAllIcons() {
 
 function reset() {
     if (confirm('将会删除用户设置！')) {
+        cancelAutoSave();
+        remoteSynced = false;
         deleteValue(STORAGE_KEY);
         location.reload();
     }
@@ -201,13 +300,25 @@ function reset() {
 
 let closeTimer = null;
 let closed = false;
+// 面板内合并了其他页面写入的设置后，关闭面板时重建一次以刷新跳转条
+let remoteSynced = false;
 
 function finishClose() {
     if (closed) return;
     closed = true;
     clearTimeout(closeTimer);
     closeTimer = null;
+    // 关闭前落盘尚未触发的自动保存
+    if (autosaveQueued) {
+        clearTimeout(autosaveTimer);
+        flushAutoSave();
+    }
     closeSettingPanel();
+    if (remoteSynced || settingsChanged) {
+        remoteSynced = false;
+        settingsChanged = false;
+        setTimeout(requestRestart, 0);
+    }
 }
 
 function onMaskTransitionEnd(e) {
@@ -225,12 +336,14 @@ function close() {
 function toggleCategory(index) {
     const category = draft.categories[index];
     category.enabled = !category.enabled;
+    scheduleAutoSave();
     showToast(category.enabled ? '启用' : '隐藏');
 }
 
 function toggleEngine(ci, ei) {
     const engine = draft.categories[ci].engines[ei];
     engine.disable = !engine.disable;
+    scheduleAutoSave();
     showToast(engine.disable ? '隐藏' : '启用');
 }
 
@@ -264,6 +377,7 @@ function undoDelete() {
     }
 
     categoryDialog.value = null;
+    scheduleAutoSave();
     showToast(`已撤销删除${entry.label}`);
 }
 
@@ -287,6 +401,7 @@ function deleteCategory(index) {
         `分类「${category.name}」`,
     );
     draft.categories.splice(index, 1);
+    scheduleAutoSave();
 }
 
 function deleteEngine(ci, ei) {
@@ -303,6 +418,7 @@ function deleteEngine(ci, ei) {
         `「${engine.name}」`,
     );
     category.engines.splice(ei, 1);
+    scheduleAutoSave();
 }
 
 function onKeydown(e) {
@@ -332,7 +448,13 @@ function submitCategory(name) {
     const ctx = categoryDialog.value;
     if (!ctx) return;
     const category = draft.categories[ctx.index];
-    if (category) category.name = name || '空';
+    if (category) {
+        const nextName = name || '空';
+        if (category.name !== nextName) {
+            category.name = nextName;
+            scheduleAutoSave();
+        }
+    }
     categoryDialog.value = null;
 }
 
@@ -494,6 +616,8 @@ function onDragEnd() {
     if (!dragDropped && snapshot) {
         // 未落在可排序区域：恢复拖动前的顺序
         restoreOrder(snapshot);
+    } else if (dragDropped) {
+        scheduleAutoSave();
     }
     dragDropped = false;
     dragCtx.value = null;
@@ -689,6 +813,7 @@ async function submitEngine(engine) {
             list[ctx.ei] = next;
         }
         engineDialog.value = null;
+        scheduleAutoSave();
     } finally {
         engineSaving.value = false;
     }
@@ -712,6 +837,7 @@ async function addCategory() {
         enabled: true,
         engines: [],
     });
+    scheduleAutoSave();
     await nextTick();
     const body = layerEl.value?.querySelector('#sej-settings-body');
     if (body) body.scrollTop = body.scrollHeight;
@@ -773,6 +899,8 @@ function saveConfig(text) {
             alert('JSON 解析失败');
             return;
         }
+        cancelAutoSave();
+        remoteSynced = false;
         settings.applySettings(parsed);
         setTimeout(requestRestart, 0);
     } else {
@@ -815,6 +943,11 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    // 关闭面板时立即落盘尚未触发的自动保存，避免刚完成的编辑丢失
+    if (autosaveQueued) {
+        clearTimeout(autosaveTimer);
+        flushAutoSave();
+    }
     document.body.style.overflow = 'auto';
     document.removeEventListener('keydown', onKeydown);
     clearTimeout(closeTimer);
@@ -938,8 +1071,8 @@ onBeforeUnmount(() => {
                             </span>
                         </div>
                         <div class="sej-footer-actions">
-                            <span id="xin-save" title="save & close" :class="{ 'sej-saving': saving }" @click="save">
-                                {{ saving ? '保存中…' : '保存并关闭' }}
+                            <span id="xin-save" title="关闭" :class="{ 'sej-saving': saving }" @click="save">
+                                {{ saving ? '关闭中…' : '关闭' }}
                             </span>
                         </div>
                     </div>

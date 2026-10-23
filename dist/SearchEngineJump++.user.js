@@ -4815,6 +4815,7 @@
 	var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
 	var ui = reactive({
 		settingPanelOpen: false,
+		settingsRevision: 0,
 		toastText: "",
 		toastVisible: false,
 		toastActionLabel: ""
@@ -7670,6 +7671,11 @@
 			Object.assign(this.settingData, plain);
 			this.storedSettingData = this.settingData;
 			return setValue(STORAGE_KEY, this.settingData);
+		}
+		savePartial(partial) {
+			if (!partial || typeof partial !== "object") return "memory";
+			const next = Object.assign({}, this.settingData, partial);
+			return this.applySettings(next);
 		}
 		reload() {
 			const stored = getValue(STORAGE_KEY, null);
@@ -16656,12 +16662,13 @@
 	};
 	var _hoisted_28 = { class: "sej-footer-actions" };
 	var UNDO_DURATION = 5e3;
+	var AUTOSAVE_DELAY = 500;
 	var DRAG_ANIMATION_MS = 160;
 	var _sfc_main$2 = {
 		__name: "SettingPanel",
 		setup(__props) {
 			const settings = useSettings();
-			const source = settings.settingData;
+			const source = computed(() => settings.settingData);
 			const OPTION_KEYS = [
 				"status",
 				"version",
@@ -16682,7 +16689,7 @@
 			let uid = 1;
 			const nextId = () => uid++;
 			function makeDraft() {
-				const raw = JSON.parse(JSON.stringify(source));
+				const raw = JSON.parse(JSON.stringify(source.value));
 				const d = {};
 				for (const key of OPTION_KEYS) d[key] = raw[key];
 				d.categories = raw.engineCategories.map(([name, key, enabled]) => ({
@@ -16712,20 +16719,18 @@
 			const undoStack = [];
 			const editIcon = EDIT;
 			const configText = computed(() => {
-				const clean = JSON.parse(JSON.stringify(source));
+				const clean = JSON.parse(JSON.stringify(source.value));
 				if (clean.engineList) delete clean.engineList.engineCategories;
 				return JSON.stringify(clean, null, 4);
 			});
-			function buildResult() {
-				const result = {};
-				for (const key of OPTION_KEYS) result[key] = draft[key];
-				result.engineCategories = draft.categories.map((cat) => [
+			function buildEngineData() {
+				const engineCategories = draft.categories.map((cat) => [
 					cat.name,
 					cat.key,
 					cat.enabled
 				]);
-				result.engineList = {};
-				for (const cat of draft.categories) result.engineList[cat.key] = cat.engines.map((engine) => {
+				const engineList = {};
+				for (const cat of draft.categories) engineList[cat.key] = cat.engines.map((engine) => {
 					const item = {
 						name: engine.name,
 						url: engine.url,
@@ -16737,6 +16742,15 @@
 					if (engine.gbk) item.gbk = true;
 					return item;
 				});
+				return {
+					engineCategories,
+					engineList
+				};
+			}
+			function buildResult() {
+				const result = {};
+				for (const key of OPTION_KEYS) result[key] = draft[key];
+				Object.assign(result, buildEngineData());
 				return result;
 			}
 			function remoteFaviconEngines() {
@@ -16766,21 +16780,88 @@
 					failed
 				};
 			}
+			let autosaveTimer = null;
+			let autosaveQueued = false;
+			let autosaveWarnedLocal = false;
+			let settingsChanged = false;
+			function cancelAutoSave() {
+				autosaveQueued = false;
+				clearTimeout(autosaveTimer);
+				autosaveTimer = null;
+			}
+			function flushAutoSave() {
+				autosaveTimer = null;
+				if (!autosaveQueued || saving.value) return;
+				autosaveQueued = false;
+				const next = buildResult();
+				if (isSameValue(next, source.value)) return;
+				const backend = settings.savePartial(next);
+				if (backend === "memory") {
+					showToast("自动保存失败：存储不可用，请用“配置文件”复制备份", 5e3);
+					return;
+				}
+				settingsChanged = true;
+				if (backend === "local" && !autosaveWarnedLocal) {
+					autosaveWarnedLocal = true;
+					showToast("已自动保存（当前仅本网站生效）", 3e3);
+				}
+			}
+			function scheduleAutoSave() {
+				if (saving.value) return;
+				autosaveQueued = true;
+				clearTimeout(autosaveTimer);
+				autosaveTimer = setTimeout(flushAutoSave, AUTOSAVE_DELAY);
+			}
+			watch(() => OPTION_KEYS.map((key) => draft[key]), () => scheduleAutoSave());
+			function refreshDraft() {
+				const next = makeDraft();
+				for (const key of OPTION_KEYS) draft[key] = next[key];
+				draft.categories.splice(0, draft.categories.length, ...next.categories);
+			}
+			function trySyncFromRemote() {
+				if (saving.value) return;
+				const hasLocalChanges = !isSameValue(buildResult(), source.value);
+				if (engineDialog.value || categoryDialog.value || configOpen.value || hasLocalChanges) {
+					showToast("其他页面已更新设置，当前有未保存修改", 6e3, {
+						label: "同步",
+						onClick: forceSyncFromRemote
+					});
+					return;
+				}
+				if (!settings.reload()) return;
+				refreshDraft();
+				remoteSynced = true;
+				showToast("已同步其他页面保存的设置", 3e3);
+			}
+			function forceSyncFromRemote() {
+				engineDialog.value = null;
+				categoryDialog.value = null;
+				configOpen.value = false;
+				cancelAutoSave();
+				settings.reload();
+				refreshDraft();
+				remoteSynced = true;
+				showToast("已同步其他页面保存的设置", 3e3);
+			}
+			watch(() => ui.settingsRevision, trySyncFromRemote);
 			async function save() {
 				if (saving.value) return;
+				cancelAutoSave();
 				saving.value = true;
 				try {
-					const backend = settings.applySettings(buildResult());
-					if (backend === "memory") {
-						showToast("保存失败：存储不可用，请用“配置文件”复制备份", 5e3);
-						return;
+					if (!isSameValue(buildResult(), source.value)) {
+						const backend = settings.applySettings(buildResult());
+						if (backend === "memory") {
+							showToast("保存失败：存储不可用，请用“配置文件”复制备份", 5e3);
+							return;
+						}
+						settingsChanged = true;
+						if (backend === "local") showToast("已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）", 4e3);
 					}
-					if (backend === "local") showToast("已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）", 4e3);
-					else showToast("保存成功");
-					setTimeout(requestRestart, 0);
 				} finally {
 					saving.value = false;
 				}
+				close();
 			}
 			async function loadAllIcons() {
 				if (loadingIcons.value || saving.value) return;
@@ -16797,25 +16878,40 @@
 					if (converted) parts.push(`已内嵌 ${converted} 个图标`);
 					if (!converted && !failed) parts.push("没有可加载的图标");
 					else if (failed) parts.push(`${failed} 个获取失败`);
-					showToast(`${parts.join("，")}，保存后生效`, 4e3);
+					if (converted) {
+						scheduleAutoSave();
+						showToast(`${parts.join("，")}，已自动保存`, 4e3);
+					} else showToast(parts.join("，"), 4e3);
 				} finally {
 					loadingIcons.value = false;
 				}
 			}
 			function reset() {
 				if (confirm("将会删除用户设置！")) {
+					cancelAutoSave();
+					remoteSynced = false;
 					deleteValue(STORAGE_KEY);
 					location.reload();
 				}
 			}
 			let closeTimer = null;
 			let closed = false;
+			let remoteSynced = false;
 			function finishClose() {
 				if (closed) return;
 				closed = true;
 				clearTimeout(closeTimer);
 				closeTimer = null;
+				if (autosaveQueued) {
+					clearTimeout(autosaveTimer);
+					flushAutoSave();
+				}
 				closeSettingPanel();
+				if (remoteSynced || settingsChanged) {
+					remoteSynced = false;
+					settingsChanged = false;
+					setTimeout(requestRestart, 0);
+				}
 			}
 			function onMaskTransitionEnd(e) {
 				if (e.target !== maskEl.value || e.propertyName !== "opacity") return;
@@ -16830,11 +16926,13 @@
 			function toggleCategory(index) {
 				const category = draft.categories[index];
 				category.enabled = !category.enabled;
+				scheduleAutoSave();
 				showToast(category.enabled ? "启用" : "隐藏");
 			}
 			function toggleEngine(ci, ei) {
 				const engine = draft.categories[ci].engines[ei];
 				engine.disable = !engine.disable;
+				scheduleAutoSave();
 				showToast(engine.disable ? "隐藏" : "启用");
 			}
 			function pushUndo(entry) {
@@ -16862,6 +16960,7 @@
 					category.engines.splice(index, 0, entry.item);
 				}
 				categoryDialog.value = null;
+				scheduleAutoSave();
 				showToast(`已撤销删除${entry.label}`);
 			}
 			function notifyDeleted(entry, label) {
@@ -16883,6 +16982,7 @@
 					item: JSON.parse(JSON.stringify(category))
 				}, `分类「${category.name}」`);
 				draft.categories.splice(index, 1);
+				scheduleAutoSave();
 			}
 			function deleteEngine(ci, ei) {
 				const category = draft.categories[ci];
@@ -16895,6 +16995,7 @@
 					item: JSON.parse(JSON.stringify(engine))
 				}, `「${engine.name}」`);
 				category.engines.splice(ei, 1);
+				scheduleAutoSave();
 			}
 			function onKeydown(e) {
 				if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
@@ -16912,7 +17013,13 @@
 				const ctx = categoryDialog.value;
 				if (!ctx) return;
 				const category = draft.categories[ctx.index];
-				if (category) category.name = name || "空";
+				if (category) {
+					const nextName = name || "空";
+					if (category.name !== nextName) {
+						category.name = nextName;
+						scheduleAutoSave();
+					}
+				}
 				categoryDialog.value = null;
 			}
 			function cancelCategoryDialog() {
@@ -17021,6 +17128,7 @@
 				const snapshot = dragSnapshot;
 				dragSnapshot = null;
 				if (!dragDropped && snapshot) restoreOrder(snapshot);
+				else if (dragDropped) scheduleAutoSave();
 				dragDropped = false;
 				dragCtx.value = null;
 			}
@@ -17182,6 +17290,7 @@
 					if (ctx.mode === "add") list.push(next);
 					else list[ctx.ei] = next;
 					engineDialog.value = null;
+					scheduleAutoSave();
 				} finally {
 					engineSaving.value = false;
 				}
@@ -17201,6 +17310,7 @@
 					enabled: true,
 					engines: []
 				});
+				scheduleAutoSave();
 				await nextTick();
 				const body = layerEl.value?.querySelector("#sej-settings-body");
 				if (body) body.scrollTop = body.scrollHeight;
@@ -17251,6 +17361,8 @@
 						alert("JSON 解析失败");
 						return;
 					}
+					cancelAutoSave();
+					remoteSynced = false;
 					settings.applySettings(parsed);
 					setTimeout(requestRestart, 0);
 				} else reset();
@@ -17291,6 +17403,10 @@
 				});
 			});
 			onBeforeUnmount(() => {
+				if (autosaveQueued) {
+					clearTimeout(autosaveTimer);
+					flushAutoSave();
+				}
 				document.body.style.overflow = "auto";
 				document.removeEventListener("keydown", onKeydown);
 				clearTimeout(closeTimer);
@@ -17470,10 +17586,10 @@
 						_cache[22] || (_cache[22] = createStaticVNode("<div class=\"sej-footer-links\"><span class=\"feedback\" title=\"在 GreasyFork 进行反馈\"><a target=\"_blank\" href=\"https://greasyfork.org/zh-CN/users/1238054\">Greasy Fork</a></span><span class=\"feedback\" title=\"在 Github 进行反馈\"><a target=\"_blank\" href=\"https://github.com/sherlocknieh/Monkey-Scripts\">GitHub</a></span></div>", 1)),
 						createBaseVNode("div", _hoisted_28, [createBaseVNode("span", {
 							id: "xin-save",
-							title: "save & close",
+							title: "关闭",
 							class: normalizeClass({ "sej-saving": saving.value }),
 							onClick: save
-						}, toDisplayString(saving.value ? "保存中…" : "保存并关闭"), 3)])
+						}, toDisplayString(saving.value ? "关闭中…" : "关闭"), 3)])
 					])])]),
 					engineDialog.value ? (openBlock(), createBlock(_sfc_main$5, {
 						key: 0,
@@ -17780,7 +17896,7 @@
 	var pollTimer = null;
 	function applyRemoteSettings() {
 		if (ui.settingPanelOpen) {
-			showToast("SearchEngineJump++: 其他页面已更新设置，关闭设置面板后刷新页面生效", 3e3);
+			ui.settingsRevision++;
 			return;
 		}
 		if (!useSettings().reload()) return;

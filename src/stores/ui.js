@@ -2,6 +2,8 @@ import { reactive } from 'vue';
 
 export const ui = reactive({
   settingPanelOpen: false,
+  // 其他页面写入设置时递增，供已打开的设置面板尝试同步
+  settingsRevision: 0,
   toastText: '',
   toastVisible: false,
   toastActionLabel: '',

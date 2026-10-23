@@ -216,7 +216,8 @@ let pollTimer = null;
 
 function applyRemoteSettings() {
   if (ui.settingPanelOpen) {
-    showToast('SearchEngineJump++: 其他页面已更新设置，关闭设置面板后刷新页面生效', 3000);
+    // 设置面板自行判断能否安全地合并外部修改
+    ui.settingsRevision++;
     return;
   }
   if (!useSettings().reload()) return;

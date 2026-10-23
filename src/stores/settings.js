@@ -230,6 +230,13 @@ export class Settings {
     return setValue(STORAGE_KEY, this.settingData);
   }
 
+  // 自动保存：把指定字段合并到当前设置后持久化
+  savePartial(partial) {
+    if (!partial || typeof partial !== 'object') return 'memory';
+    const next = Object.assign({}, this.settingData, partial);
+    return this.applySettings(next);
+  }
+
   // 从存储重新读取设置（用于其他页面保存后的同步）
   reload() {
     const stored = getValue(STORAGE_KEY, null);
