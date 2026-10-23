@@ -31,7 +31,7 @@
 
 const webRules = [
   {
-    name: "google网页搜索",
+    name: "Google",
     enabled: true,
     url: /^https?:\/\/www\.google(?:\.[A-z]{2,3}){1,2}\/[^?]+\?(?!tbm=)(?:&?q=|(?:[^#](?!&tbm=))+?&q=)(?:.(?!&tbm=))*$|(^https?:\/\/xn--flw351e\.ml\/search\?q=)/,
     engineList: "web",
@@ -40,8 +40,8 @@ const webRules = [
     fixedTop: 56,
     style: `
       z-index: 100;
-      margin-top:15px;
-      margin-bottom:5px;
+      margin-top:1px;
+      margin-bottom:2px;
       grid-column: 2 / -2;
     `,
     insertIntoDoc: {
@@ -100,15 +100,15 @@ const webRules = [
       `,
   },
   {
-    name: "必应网页搜索",
+    name: "必应",
     url: /^https?:\/\/[^.]*\.bing\.com\/search/,
     enabled: true,
     fixedTop: 60,
     engineList: "web",
     style: `
-      margin-top: 1em;
+      margin-top:1px;
+      margin-bottom:2px;
       left: 160px;
-      top: 0.5em;
     `,
     insertIntoDoc: {
       keyword: "css;#sb_form_q",

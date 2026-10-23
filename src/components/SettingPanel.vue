@@ -478,9 +478,13 @@ const dragAnimations = new WeakMap();
 const DRAG_ANIMATION_MS = 160;
 const DRAG_THRESHOLD = 4;
 const DRAG_EDGE = 40;
+// 触屏：长按启动拖动，轻微移动仍视为点击/滚动
+const TOUCH_LONG_PRESS_MS = 280;
+const TOUCH_MOVE_SLOP = 10;
 let dragSnapshot = null;
 let dragDropped = false;
 let pressCtx = null;
+let pressTimer = 0;
 let ghostEl = null;
 let ghostOffset = { x: 0, y: 0 };
 let suppressClick = false;
@@ -609,11 +613,14 @@ function sourceElement(type, ci, ei) {
 }
 
 // 拖动开始前先记录按下的位置，移动超过阈值才真正进入拖动，避免影响点击编辑
+// 触屏则改为长按启动，避免与页面/列表滚动冲突
 function onDragPointerDown(e, type, ci, ei = null) {
     // 上一次拖动可能因窗口失焦等原因没有正常结束，先清理残留状态
     resetStaleDrag();
     suppressClick = false;
-    if (e.button !== 0) return;
+    const touch = e.pointerType === 'touch';
+    if (touch && e.isPrimary === false) return;
+    if (!touch && e.button !== 0) return;
     if (e.target?.closest?.('.iqxin-set-toggle, .sej-hover-delete')) return;
     const sourceEl = sourceElement(type, ci, ei);
     if (!sourceEl) return;
@@ -628,11 +635,47 @@ function onDragPointerDown(e, type, ci, ei = null) {
         startY: e.clientY,
         x: e.clientX,
         y: e.clientY,
+        touch,
+        activated: !touch,
         started: false,
     };
     document.addEventListener('pointermove', onDragPointerMove);
     document.addEventListener('pointerup', onDragPointerUp);
     document.addEventListener('pointercancel', onDragPointerCancel);
+
+    if (touch) {
+        pressTimer = setTimeout(() => {
+            pressTimer = 0;
+            const p = pressCtx;
+            if (!p || p.started) return;
+            p.activated = true;
+            if (beginDrag()) {
+                blockTouchScroll(true);
+            } else {
+                finishPress();
+            }
+        }, TOUCH_LONG_PRESS_MS);
+    }
+}
+
+function clearPressTimer() {
+    if (!pressTimer) return;
+    clearTimeout(pressTimer);
+    pressTimer = 0;
+}
+
+// 触屏开始拖动后拦截 touchmove，阻止浏览器接管手势（滚动/缩放）导致拖动中断
+function onBlockTouchMove(e) {
+    if (dragCtx.value) e.preventDefault();
+}
+
+function blockTouchScroll(block) {
+    document.removeEventListener('touchmove', onBlockTouchMove);
+    if (block) {
+        document.addEventListener('touchmove', onBlockTouchMove, {
+            passive: false,
+        });
+    }
 }
 
 function resetStaleDrag() {
@@ -660,6 +703,7 @@ function detachDragListeners() {
     document.removeEventListener('pointermove', onDragPointerMove);
     document.removeEventListener('pointerup', onDragPointerUp);
     document.removeEventListener('pointercancel', onDragPointerCancel);
+    blockTouchScroll(false);
 }
 
 function beginDrag() {
@@ -699,6 +743,14 @@ function beginDrag() {
     };
     p.started = true;
     positionGhost(p.x, p.y);
+    // 触屏：轻微震动提示已进入拖动（不支持的浏览器会忽略）
+    if (p.touch) {
+        try {
+            navigator.vibrate?.(12);
+        } catch (e) {
+            // ignore
+        }
+    }
     startAutoScroll();
     return true;
 }
@@ -717,14 +769,20 @@ function onDragPointerMove(e) {
     p.y = e.clientY;
 
     if (!p.started) {
-        if (Math.hypot(p.x - p.startX, p.y - p.startY) < DRAG_THRESHOLD) return;
+        const distance = Math.hypot(p.x - p.startX, p.y - p.startY);
+        if (p.touch) {
+            // 长按开始前移动超出容差：交给页面滚动，取消拖动准备
+            if (!p.activated && distance > TOUCH_MOVE_SLOP) finishPress();
+            return;
+        }
+        if (distance < DRAG_THRESHOLD) return;
         if (!beginDrag()) {
             finishPress();
             return;
         }
     }
 
-    e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     positionGhost(p.x, p.y);
     updateDragTarget(p.x, p.y);
 }
@@ -844,6 +902,7 @@ function cleanupDrag() {
 }
 
 function finishPress() {
+    clearPressTimer();
     detachDragListeners();
     pressCtx = null;
 }
@@ -1188,27 +1247,57 @@ function saveConfig(text) {
 
 const dragging = ref(false);
 let dragOffset = { x: 0, y: 0 };
+let dragPointerId = null;
 
 function onDragMove(e) {
+    if (dragPointerId != null && e.pointerId !== dragPointerId) return;
+    const el = layerEl.value;
+    if (!el) return;
+    // 面板绝对定位在遮罩内，需补偿遮罩自身的滚动偏移
+    const mask = maskEl.value;
+    const scrollLeft = mask ? mask.scrollLeft : 0;
+    const scrollTop = mask ? mask.scrollTop : 0;
+    // 限制面板始终留在可视区域内，避免触屏拖出屏幕后无法找回
+    const maxLeft = scrollLeft + Math.max(0, window.innerWidth - el.offsetWidth);
+    const maxTop = scrollTop + Math.max(0, window.innerHeight - el.offsetHeight);
     layerStyle.value = {
-        left: e.clientX - dragOffset.x + 'px',
-        top: e.clientY - dragOffset.y + 'px',
+        left:
+            Math.min(
+                Math.max(e.clientX - dragOffset.x + scrollLeft, scrollLeft),
+                maxLeft,
+            ) + 'px',
+        top:
+            Math.min(
+                Math.max(e.clientY - dragOffset.y + scrollTop, scrollTop),
+                maxTop,
+            ) + 'px',
         margin: 0,
     };
+    if (e.cancelable) e.preventDefault();
 }
 
-function stopDrag() {
+function stopDrag(e) {
+    if (dragPointerId != null && e?.pointerId !== dragPointerId) return;
     dragging.value = false;
-    document.removeEventListener('mousemove', onDragMove);
-    document.removeEventListener('mouseup', stopDrag);
+    dragPointerId = null;
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', stopDrag);
+    document.removeEventListener('pointercancel', stopDrag);
 }
 
 function startDrag(e) {
+    if (e.pointerType !== 'touch' && e.button !== 0) return;
+    if (e.pointerType === 'touch' && e.isPrimary === false) return;
+    if (e.target?.closest?.('.sej-panel-close')) return;
     const el = layerEl.value;
-    dragOffset = { x: e.clientX - el.offsetLeft, y: e.clientY - el.offsetTop };
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    dragPointerId = e.pointerId;
     dragging.value = true;
-    document.addEventListener('mousemove', onDragMove);
-    document.addEventListener('mouseup', stopDrag);
+    document.addEventListener('pointermove', onDragMove);
+    document.addEventListener('pointerup', stopDrag);
+    document.addEventListener('pointercancel', stopDrag);
 }
 
 onMounted(() => {
@@ -1227,6 +1316,7 @@ onBeforeUnmount(() => {
         flushAutoSave();
     }
     detachDragListeners();
+    clearPressTimer();
     stopAutoScroll();
     if (ghostEl) {
         ghostEl.remove();
@@ -1238,21 +1328,22 @@ onBeforeUnmount(() => {
     document.removeEventListener('keydown', onKeydown);
     window.removeEventListener('blur', onWindowBlur);
     clearTimeout(closeTimer);
-    document.removeEventListener('mousemove', onDragMove);
-    document.removeEventListener('mouseup', stopDrag);
+    document.removeEventListener('pointermove', onDragMove);
+    document.removeEventListener('pointerup', stopDrag);
+    document.removeEventListener('pointercancel', stopDrag);
 });
 </script>
 
 <template>
     <div id="settingLayerMask" ref="maskEl" :style="{ display: 'flex', opacity: maskVisible ? 1 : 0 }" @click.self="close" @transitionend="onMaskTransitionEnd">
         <div id="settingLayer" ref="layerEl" :style="layerStyle" @click.stop>
-            <div class="sej-panel-header" @mousedown="startDrag">
+            <div class="sej-panel-header" @pointerdown="startDrag" @contextmenu.prevent>
                 <span class="sej-panel-title">搜索跳转设置</span>
                 <button type="button" class="sej-panel-close" title="关闭" aria-label="关闭"
-                    @click.stop="close" @mousedown.stop>✕</button>
+                    @click.stop="close" @pointerdown.stop>✕</button>
             </div>
-            <!-- 引擎列表管理区域 -->
-            <div id="sej-settings-body" @dragstart.prevent>
+            <!-- 引擎列表管理区域；长按条目在触屏上进入拖动，禁止原生长按菜单 -->
+            <div id="sej-settings-body" @dragstart.prevent @contextmenu.prevent>
                 <!-- 分类列表 -->
                 <div v-for="(category, ci) in draft.categories" :id="category.key" :key="category._id"
                     class="iqxin-items"

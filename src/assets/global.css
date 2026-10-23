@@ -25,6 +25,7 @@
   animation: sej-setting-mask-in 0.15s ease;
   user-select: none;
   -moz-user-select: none;
+  touch-action: manipulation;
   padding-bottom: 80px;
   box-sizing: border-box;
   color: var(--font-color-qxin);
@@ -63,6 +64,11 @@
   flex: 0 0 auto;
   padding: 0 2px 12px;
   cursor: move;
+  /* 触屏拖动标题栏时不要触发页面滚动/长按菜单 */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 .sej-panel-title {
   font-size: 15px;
@@ -166,6 +172,11 @@
 #settingLayer .drag {
   display: block;
   position: relative;
+  /* 触屏：tap 立即响应；长按由脚本接管拖动，禁用原生长按菜单 */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 /* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */
 #settingLayer .sej-drag-placeholder,
