@@ -889,10 +889,6 @@ span#setBtn:active {
   height: 16px;
   display: block;
 }
-/* 跳转条换行时，把设置按钮推到最右侧，避免停在行中间 */
-#sej-container > #setBtn {
-  margin-left: auto;
-}
 #setBtn:focus-visible {
   opacity: 1;
   outline: 2px solid var(--sej-accent, #4285f4);

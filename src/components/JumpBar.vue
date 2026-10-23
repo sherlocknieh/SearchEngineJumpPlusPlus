@@ -129,6 +129,32 @@ function injectHost() {
 }
 
 const FIXED_GAP = 8;
+const VIEWPORT_GAP = 8;
+
+// 部分站点（如 Bing）的内容容器比视口更宽，跳转条按宿主居中时会偏出屏幕。
+// 溢出时按视口限制宽度并水平移入可见区域，保证右侧设置按钮可点击。
+function constrainBarToViewport() {
+  const el = containerEl.value;
+  if (!el || isSelectSearch.value) return;
+  if (getHost().style.position === 'fixed') return;
+
+  el.style.maxWidth = '';
+  el.style.marginLeft = '';
+  let rect = el.getBoundingClientRect();
+  const vw = document.documentElement.clientWidth;
+  if (rect.left >= VIEWPORT_GAP && rect.right <= vw - VIEWPORT_GAP) return;
+
+  const available = Math.max(80, vw - VIEWPORT_GAP * 2);
+  if (rect.width > available) {
+    el.style.maxWidth = `${available}px`;
+  }
+  // 取消站点规则的居中，先与宿主左边缘对齐，再整体移入视口
+  el.style.marginLeft = '0px';
+  rect = el.getBoundingClientRect();
+  const maxLeft = vw - VIEWPORT_GAP - rect.width;
+  const desiredLeft = Math.max(VIEWPORT_GAP, Math.min(rect.left, maxLeft));
+  el.style.marginLeft = `${desiredLeft - rect.left}px`;
+}
 
 // 查找视口顶部是否存在吸顶/固定头部，返回其底边高度
 function getFixedHeaderBottom(barLeft, barWidth) {
@@ -221,6 +247,7 @@ function fixedToTop(fixedTopValue, color) {
     container.style.margin = '0';
     container.style.backgroundColor = color;
   } else {
+    const wasFixed = host.style.position === 'fixed';
     host.style.position = '';
     host.style.top = '';
     host.style.left = '';
@@ -237,6 +264,7 @@ function fixedToTop(fixedTopValue, color) {
     container.style.gridColumn = '';
     container.style.margin = '';
     container.style.backgroundColor = '';
+    if (wasFixed) constrainBarToViewport();
   }
 }
 
@@ -315,6 +343,8 @@ onMounted(async () => {
   await nextTick();
   injectHost();
   startStackSync();
+  constrainBarToViewport();
+  window.addEventListener('resize', constrainBarToViewport);
 
   if (isSelectSearch.value) {
     document.addEventListener('selectionchange', onSelectionChange);
@@ -346,6 +376,7 @@ onBeforeUnmount(() => {
   document.removeEventListener('keyup', onSelectionChange);
   window.removeEventListener('scroll', onScroll);
   window.removeEventListener('wheel', onWheel);
+  window.removeEventListener('resize', constrainBarToViewport);
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
   fixedTopTimers.forEach(clearTimeout);
   stopStackSync();

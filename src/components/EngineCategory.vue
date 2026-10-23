@@ -1,6 +1,7 @@
 <script>
-// 模块级共享，确保所有类别实例共用同一固定状态
+// 模块级共享，确保所有类别实例共用同一固定/展开状态
 let pinnedCategory = null;
+let openCategory = null;
 </script>
 
 <script setup>
@@ -63,13 +64,24 @@ function isPointerInside() {
   return hitTest(triggerEl.value) || hitTest(listEl.value) || hitTestBridge();
 }
 
+// 触发项可能被其他已展开的面板遮住，几何命中不算数
+function isTriggerOnTop() {
+  const trigger = triggerEl.value;
+  if (!trigger || pointer.x < 0 || pointer.y < 0) return false;
+  const root = trigger.getRootNode?.();
+  const top = root?.elementFromPoint?.(pointer.x, pointer.y);
+  if (!top) return true;
+  return top === trigger || trigger.contains(top);
+}
+
 function measureAndPosition() {
   if (!triggerEl.value || !listEl.value) return;
   const rect = triggerEl.value.getBoundingClientRect();
   const listRect = listEl.value.getBoundingClientRect();
   const listWidth = listRect.width;
   const listHeight = listRect.height;
-  const GAP = 6;
+  // 面板紧贴分类标题，避免多行布局下鼠标下移时从缝隙掠过其他分类
+  const GAP = 2;
 
   let posLeft = rect.left - (listWidth - rect.width) / 2;
   posLeft = Math.max(8, Math.min(posLeft, window.innerWidth - listWidth - 8));
@@ -92,6 +104,9 @@ async function show() {
     return;
   }
   if (!triggerEl.value) return;
+  // 同一时间只保留一个悬停展开的面板，避免多行布局下叠加
+  if (openCategory && openCategory !== hide) openCategory();
+  openCategory = hide;
   shown.value = true;
   await nextTick();
   if (!shown.value) return;
@@ -101,11 +116,11 @@ async function show() {
 
 function scheduleHide() {
   if (pinned.value || isPointerInside()) return;
-  active.value = false;
-  shown.value = false;
+  hide();
 }
 
 function hide() {
+  if (openCategory === hide) openCategory = null;
   active.value = false;
   shown.value = false;
 }
@@ -132,8 +147,13 @@ function onTriggerClick() {
   pin();
 }
 
-function onHoverShow() {
+function onHoverShow(e) {
   if (pinnedCategory && pinnedCategory !== unpin) return;
+  if (e) {
+    pointer.x = e.clientX;
+    pointer.y = e.clientY;
+  }
+  if (!isTriggerOnTop()) return;
   show();
 }
 
@@ -175,6 +195,7 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+  if (openCategory === hide) openCategory = null;
   document.removeEventListener('mousemove', onDocMouseMove);
   document.removeEventListener('pointerdown', onDocPointerDown);
   if (pinnedCategory === unpin) pinnedCategory = null;
@@ -227,7 +248,8 @@ onBeforeUnmount(() => {
           left,
           opacity: active ? 1 : 0.2,
           pointerEvents: shown ? 'auto' : 'none',
-          transition: 'opacity 0.06s ease-out',
+          transition: 'opacity 0s',
+          animation: 'none',
           zIndex: 100000000,
         }"
         @mouseenter="show"
