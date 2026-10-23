@@ -159,13 +159,40 @@
   display: block;
   position: relative;
 }
-/* 拖动排序：源元素淡出，被挤开的元素由 FLIP 动画平滑过渡 */
-#settingLayer .drag.sej-dragging {
-  opacity: 0.45;
+/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */
+#settingLayer .sej-drag-placeholder,
+#settingLayer .sej-drag-placeholder * {
+  visibility: hidden !important;
+}
+#settingLayer .sejtitle:active,
+#settingLayer .sejcon > .drag:active {
   cursor: grabbing;
 }
-#settingLayer .drag[draggable="true"]:active {
-  cursor: grabbing;
+.sej-drag-ghost {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
+  z-index: 200000200;
+  opacity: 1 !important;
+  pointer-events: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  will-change: transform;
+}
+.sej-drag-ghost * {
+  pointer-events: none !important;
+}
+.sej-drag-ghost-engine {
+  border-radius: 8px;
+  background: var(--background-setting-qxin);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+.sej-drag-ghost-category {
+  border: 1px solid var(--border-color-sej);
+  border-radius: 12px;
+  background: var(--background-setting-qxin);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
 }
 #settingLayer .sej-engine {
   padding: 0 36px 0 8px;
@@ -189,9 +216,9 @@
   pointer-events: none;
 }
 .sejtitle {
-  text-align: center;
-  /* 左右留出等宽空间，让标题相对卡片居中，同时避开右侧的显隐按钮 */
-  padding: 5px 36px;
+  text-align: left;
+  /* 左侧与引擎条目对齐，右侧避开显隐按钮 */
+  padding: 5px 36px 5px 8px;
   margin-bottom: 2px;
   overflow: hidden;
   white-space: nowrap;
@@ -202,7 +229,17 @@
   font-weight: 600;
   line-height: 1.5;
   border-radius: 8px;
-  transition: background-color 0.12s ease-out;
+}
+/* 标题下方的细分隔线，用于和引擎条目区分 */
+.sejtitle::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 1px;
+  background: var(--border-color-sej);
+  pointer-events: none;
 }
 #settingLayerMask [data-xin] {
   margin: 1px 0;
@@ -230,9 +267,6 @@
 .sej-category-hidden .iqxin-additem {
   opacity: 0.4;
   filter: grayscale(1);
-}
-.sejtitle:not([data-xin^="-"]):hover {
-  background: var(--sej-surface-hover);
 }
 #settingLayerMask .sej-engine:hover {
   background-color: var(--sej-surface-hover);
@@ -428,12 +462,15 @@
   opacity: 0.6;
 }
 .iqxin-set-toggle {
-  visibility: visible;
   opacity: 0.6;
   position: absolute;
   background: transparent;
-  top: 50%;
-  transform: translate(0, -50%);
+  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */
+  top: 0;
+  bottom: 0;
+  height: fit-content;
+  margin-top: auto;
+  margin-bottom: auto;
   padding: 3px;
   border-radius: 6px;
   cursor: pointer;

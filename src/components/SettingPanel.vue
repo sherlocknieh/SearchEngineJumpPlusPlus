@@ -439,6 +439,7 @@ function onKeydown(e) {
 }
 
 function openCategoryDialog(index) {
+    if (consumeClickSuppression()) return;
     categoryDialog.value = { index };
 }
 
@@ -472,8 +473,15 @@ const dragCtx = ref(null);
 const copyTargetCi = ref(null);
 const dragAnimations = new WeakMap();
 const DRAG_ANIMATION_MS = 160;
+const DRAG_THRESHOLD = 4;
+const DRAG_EDGE = 40;
 let dragSnapshot = null;
 let dragDropped = false;
+let pressCtx = null;
+let ghostEl = null;
+let ghostOffset = { x: 0, y: 0 };
+let suppressClick = false;
+let scrollFrame = 0;
 
 function dragElements() {
     const root = layerEl.value;
@@ -590,77 +598,320 @@ function restoreOrder(snapshot) {
     dragCtx.value = null;
 }
 
-function onDragStart(e, type, ci, ei = null) {
-    const category = draft.categories[ci];
-    if (!category) return;
-    const item = type === 'category' ? category : category.engines[ei];
-    if (!item) return;
+function sourceElement(type, ci, ei) {
+    if (type === 'category') return categoryCards()[ci] || null;
+    const card = categoryCards()[ci];
+    if (!card) return null;
+    return card.querySelectorAll(':scope > .sejcon > .drag')[ei] || null;
+}
+
+// 拖动开始前先记录按下的位置，移动超过阈值才真正进入拖动，避免影响点击编辑
+function onDragPointerDown(e, type, ci, ei = null) {
+    // 上一次拖动可能因窗口失焦等原因没有正常结束，先清理残留状态
+    resetStaleDrag();
+    suppressClick = false;
+    if (e.button !== 0) return;
+    if (e.target?.closest?.('.iqxin-set-toggle')) return;
+    const sourceEl = sourceElement(type, ci, ei);
+    if (!sourceEl) return;
+
+    pressCtx = {
+        type,
+        ci,
+        ei: type === 'engine' ? ei : null,
+        sourceEl,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        x: e.clientX,
+        y: e.clientY,
+        started: false,
+    };
+    document.addEventListener('pointermove', onDragPointerMove);
+    document.addEventListener('pointerup', onDragPointerUp);
+    document.addEventListener('pointercancel', onDragPointerCancel);
+}
+
+function resetStaleDrag() {
+    if (!pressCtx && !ghostEl) return;
+    if (dragSnapshot) {
+        restoreOrder(dragSnapshot);
+        dragSnapshot = null;
+    }
+    dragDropped = false;
+    cleanupDrag();
+    finishPress();
+}
+
+function onWindowBlur() {
+    if (!pressCtx) return;
+    if (pressCtx.started) {
+        resetStaleDrag();
+        suppressClick = true;
+    } else {
+        finishPress();
+    }
+}
+
+function detachDragListeners() {
+    document.removeEventListener('pointermove', onDragPointerMove);
+    document.removeEventListener('pointerup', onDragPointerUp);
+    document.removeEventListener('pointercancel', onDragPointerCancel);
+}
+
+function beginDrag() {
+    const p = pressCtx;
+    const category = draft.categories[p.ci];
+    if (!category) return false;
+    const item = p.type === 'category' ? category : category.engines[p.ei];
+    if (!item) return false;
+
+    const rect = p.sourceEl.getBoundingClientRect();
+    ghostOffset = { x: p.x - rect.left, y: p.y - rect.top };
 
     dragSnapshot = captureOrder();
     dragDropped = false;
     copyTargetCi.value = null;
+
+    // 用整块元素做跟手副本：拖动类别时整个类别框跟随鼠标，且保持不透明
+    const ghost = p.sourceEl.cloneNode(true);
+    ghost.removeAttribute('id');
+    ghost.removeAttribute('data-sej-drag-el');
+    ghost.querySelectorAll('[data-sej-drag-el]').forEach((el) => {
+        el.removeAttribute('data-sej-drag-el');
+    });
+    ghost.classList.remove('sej-drag-placeholder');
+    ghost.classList.add('sej-drag-ghost', `sej-drag-ghost-${p.type}`);
+    ghost.style.width = `${rect.width}px`;
+    ghost.style.height = `${rect.height}px`;
+    // 挂在设置面板内，保证副本沿用面板与条目的样式
+    (layerEl.value || p.sourceEl.getRootNode()).appendChild(ghost);
+    ghostEl = ghost;
+
     dragCtx.value = {
-        type,
-        ci,
-        ei: type === 'engine' ? ei : null,
-        key: type === 'category' ? category.key : item._id,
+        type: p.type,
+        ci: p.ci,
+        ei: p.ei,
+        key: p.type === 'category' ? category.key : item._id,
     };
-
-    e.dataTransfer.effectAllowed = 'copyMove';
-    // Firefox 需要写入数据才会真正开始拖动
-    e.dataTransfer.setData('text/plain', '');
+    p.started = true;
+    positionGhost(p.x, p.y);
+    startAutoScroll();
+    return true;
 }
 
-function onDragEnd() {
-    const snapshot = dragSnapshot;
-    dragSnapshot = null;
-    if (!dragDropped && snapshot) {
-        // 未落在可排序区域：恢复拖动前的顺序
-        restoreOrder(snapshot);
-    } else if (dragDropped) {
-        scheduleAutoSave();
+function positionGhost(x, y) {
+    if (!ghostEl) return;
+    ghostEl.style.transform = `translate3d(${x - ghostOffset.x}px, ${
+        y - ghostOffset.y
+    }px, 0)`;
+}
+
+function onDragPointerMove(e) {
+    const p = pressCtx;
+    if (!p || e.pointerId !== p.pointerId) return;
+    p.x = e.clientX;
+    p.y = e.clientY;
+
+    if (!p.started) {
+        if (Math.hypot(p.x - p.startX, p.y - p.startY) < DRAG_THRESHOLD) return;
+        if (!beginDrag()) {
+            finishPress();
+            return;
+        }
     }
-    dragDropped = false;
-    dragCtx.value = null;
-    copyTargetCi.value = null;
+
+    e.preventDefault();
+    positionGhost(p.x, p.y);
+    updateDragTarget(p.x, p.y);
 }
 
-function onDrop(e) {
+function addItemIndexAt(x, y) {
+    const cards = categoryCards();
+    for (let i = 0; i < cards.length; i++) {
+        const add = cards[i].querySelector(':scope > .sejcon > .iqxin-additem');
+        if (!add) continue;
+        const rect = layoutRect(add);
+        if (
+            x >= rect.left &&
+            x <= rect.right &&
+            y >= rect.top &&
+            y <= rect.bottom
+        ) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+function updateDragTarget(x, y) {
     const ctx = dragCtx.value;
     if (!ctx) return;
-    e.preventDefault();
-    e.stopPropagation();
-    const targetCi = copyTargetCi.value;
-    copyTargetCi.value = null;
+    const body = settingsBody();
+    if (!body) return;
 
-    if (ctx.type === 'engine' && targetCi != null) {
-        const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
-        const targetKey = draft.categories[targetCi]?.key;
-        const copy = source
-            ? { ...JSON.parse(JSON.stringify(source)), _id: nextId() }
-            : null;
-        // 途中经过其他条目时可能已临时换位，复刻时恢复原有排序
-        if (dragSnapshot) {
-            restoreOrder(dragSnapshot);
-            dragSnapshot = null;
-        }
-        if (copy) {
-            const target = draft.categories.find(
-                (category) => category.key === targetKey,
-            );
-            if (target) {
-                target.engines.push(copy);
-                scheduleAutoSave();
-                showToast(`已复制「${source.name}」`);
-            }
-        }
-        dragDropped = true;
-        dragCtx.value = null;
+    const bodyRect = body.getBoundingClientRect();
+    const inside =
+        x >= bodyRect.left &&
+        x <= bodyRect.right &&
+        y >= bodyRect.top &&
+        y <= bodyRect.bottom;
+    dragDropped = inside;
+    if (!inside) {
+        copyTargetCi.value = null;
         return;
     }
 
-    dragDropped = true;
+    // 搜索引擎拖到加号上：保持原位置不动，改为提示复刻
+    if (ctx.type === 'engine') {
+        const copyCi = addItemIndexAt(x, y);
+        if (copyCi >= 0) {
+            copyTargetCi.value = copyCi;
+            return;
+        }
+    }
+    copyTargetCi.value = null;
+
+    const ci = categoryIndexAt(x, y);
+    if (ci < 0) return;
+
+    if (ctx.type === 'category') {
+        moveCategoryTo(ci);
+        return;
+    }
+
+    const card = categoryCards()[ci];
+    if (card) moveEngineTo(ci, engineInsertIndex(card, y));
+}
+
+function copyEngineToCategory() {
+    const ctx = dragCtx.value;
+    if (!ctx || ctx.type !== 'engine') return;
+    const targetCi = copyTargetCi.value;
+    const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
+    const targetKey = draft.categories[targetCi]?.key;
+    const copy = source
+        ? { ...JSON.parse(JSON.stringify(source)), _id: nextId() }
+        : null;
+    // 途中经过其他条目时可能已临时换位，复刻时恢复原有排序
+    if (dragSnapshot) {
+        restoreOrder(dragSnapshot);
+        dragSnapshot = null;
+    }
+    if (copy) {
+        const target = draft.categories.find(
+            (category) => category.key === targetKey,
+        );
+        if (target) {
+            target.engines.push(copy);
+            scheduleAutoSave();
+            showToast(`已复制「${source.name}」`);
+        }
+    }
+}
+
+function finishDrag() {
+    const snapshot = dragSnapshot;
+    if (dragCtx.value?.type === 'engine' && copyTargetCi.value != null) {
+        copyEngineToCategory();
+    } else if (dragDropped) {
+        scheduleAutoSave();
+    } else if (snapshot) {
+        // 未落在可排序区域：恢复拖动前的顺序
+        restoreOrder(snapshot);
+    }
+    dragSnapshot = null;
+    dragDropped = false;
+    cleanupDrag();
+    suppressClick = true;
+    finishPress();
+}
+
+function cleanupDrag() {
+    stopAutoScroll();
+    if (ghostEl) {
+        ghostEl.remove();
+        ghostEl = null;
+    }
+    if (pressCtx?.sourceEl) {
+        pressCtx.sourceEl.classList.remove('sej-drag-placeholder');
+    }
     dragCtx.value = null;
+    copyTargetCi.value = null;
+}
+
+function finishPress() {
+    detachDragListeners();
+    pressCtx = null;
+}
+
+function onDragPointerUp(e) {
+    const p = pressCtx;
+    if (!p || e.pointerId !== p.pointerId) return;
+    if (!p.started) {
+        finishPress();
+        return;
+    }
+    finishDrag();
+}
+
+function onDragPointerCancel(e) {
+    const p = pressCtx;
+    if (!p || e.pointerId !== p.pointerId) return;
+    if (p.started) {
+        if (dragSnapshot) restoreOrder(dragSnapshot);
+        dragSnapshot = null;
+        dragDropped = false;
+        cleanupDrag();
+        suppressClick = true;
+    }
+    finishPress();
+}
+
+// 拖动结束时浏览器仍会补发 click，忽略这次点击，避免误打开编辑框
+function consumeClickSuppression() {
+    if (!suppressClick) return false;
+    suppressClick = false;
+    return true;
+}
+
+function startAutoScroll() {
+    if (scrollFrame) return;
+    const tick = () => {
+        scrollFrame = 0;
+        if (!dragCtx.value || !pressCtx) return;
+        const body = settingsBody();
+        if (body) {
+            const rect = body.getBoundingClientRect();
+            const { x, y } = pressCtx;
+            let dy = 0;
+            if (x >= rect.left && x <= rect.right) {
+                if (y < rect.top + DRAG_EDGE && y >= rect.top - DRAG_EDGE) {
+                    dy = -Math.ceil(
+                        ((rect.top + DRAG_EDGE - y) / DRAG_EDGE) * 14,
+                    );
+                } else if (
+                    y > rect.bottom - DRAG_EDGE &&
+                    y <= rect.bottom + DRAG_EDGE
+                ) {
+                    dy = Math.ceil(
+                        ((y - rect.bottom + DRAG_EDGE) / DRAG_EDGE) * 14,
+                    );
+                }
+            }
+            if (dy) {
+                body.scrollTop += dy;
+                updateDragTarget(x, y);
+            }
+        }
+        if (dragCtx.value) scrollFrame = requestAnimationFrame(tick);
+    };
+    scrollFrame = requestAnimationFrame(tick);
+}
+
+function stopAutoScroll() {
+    if (scrollFrame) cancelAnimationFrame(scrollFrame);
+    scrollFrame = 0;
 }
 
 function moveCategoryTo(index) {
@@ -767,51 +1018,12 @@ function moveEngineTo(ci, insertBefore) {
     });
 }
 
-// 加号在 Shadow DOM 内，composedPath 才能拿到真实目标
-function addItemFromEvent(e) {
-    const path = e.composedPath ? e.composedPath() : [];
-    for (const el of path) {
-        if (el?.classList?.contains('iqxin-additem')) return el;
-    }
-    return null;
-}
-
-// 统一按指针坐标 + 布局矩形判断目标位置，避免动画期间元素命中测试抖动
-function onSettingsDragOver(e) {
-    const ctx = dragCtx.value;
-    if (!ctx) return;
-    e.preventDefault();
-
-    // 搜索引擎拖到加号上：保持原位置不动，改为提示复刻
-    if (ctx.type === 'engine' && addItemFromEvent(e)) {
-        const copyCi = categoryIndexAt(e.clientX, e.clientY);
-        if (copyCi >= 0) {
-            copyTargetCi.value = copyCi;
-            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
-            return;
-        }
-    }
-    copyTargetCi.value = null;
-    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
-
-    const ci = categoryIndexAt(e.clientX, e.clientY);
-    if (ci < 0) return;
-
-    if (ctx.type === 'category') {
-        moveCategoryTo(ci);
-        return;
-    }
-
-    const card = categoryCards()[ci];
-    if (!card) return;
-    moveEngineTo(ci, engineInsertIndex(card, e.clientY));
-}
-
 function addEngine(ci) {
     engineDialog.value = { mode: 'add', ci, initial: {} };
 }
 
 function editEngine(ci, ei) {
+    if (consumeClickSuppression()) return;
     engineDialog.value = {
         mode: 'edit',
         ci,
@@ -989,6 +1201,7 @@ function startDrag(e) {
 onMounted(() => {
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', onKeydown);
+    window.addEventListener('blur', onWindowBlur);
     isOnline();
     nextTick(() => {
         maskVisible.value = true;
@@ -1001,8 +1214,17 @@ onBeforeUnmount(() => {
         clearTimeout(autosaveTimer);
         flushAutoSave();
     }
+    detachDragListeners();
+    stopAutoScroll();
+    if (ghostEl) {
+        ghostEl.remove();
+        ghostEl = null;
+    }
+    dragCtx.value = null;
+    copyTargetCi.value = null;
     document.body.style.overflow = 'auto';
     document.removeEventListener('keydown', onKeydown);
+    window.removeEventListener('blur', onWindowBlur);
     clearTimeout(closeTimer);
     document.removeEventListener('mousemove', onDragMove);
     document.removeEventListener('mouseup', stopDrag);
@@ -1018,17 +1240,17 @@ onBeforeUnmount(() => {
                     @click.stop="close" @mousedown.stop>✕</button>
             </div>
             <!-- 引擎列表管理区域 -->
-            <div id="sej-settings-body" @dragover="onSettingsDragOver" @drop="onDrop">
+            <div id="sej-settings-body" @dragstart.prevent>
                 <!-- 分类列表 -->
                 <div v-for="(category, ci) in draft.categories" :id="category.key" :key="category._id"
-                    class="iqxin-items" :class="{ 'sej-category-hidden': !category.enabled }"
+                    class="iqxin-items"
+                    :class="{ 'sej-category-hidden': !category.enabled, 'sej-drag-placeholder': dragCtx?.type === 'category' && dragCtx.key === category.key }"
                     :data-sej-drag-el="'category-' + category._id">
                     <!-- 类别标题 -->
-                    <div class="sejtitle drag" draggable="true" :data-xin="category.enabled ? 1 : -1"
+                    <div class="sejtitle drag" :data-xin="category.enabled ? 1 : -1"
                         :data-iqxintitle="category.key"
-                        :class="{ 'sej-dragging': dragCtx?.type === 'category' && dragCtx.ci === ci }"
                         :title="`编辑分类：${category.name}`"
-                        @dragstart="onDragStart($event, 'category', ci)" @dragend="onDragEnd"
+                        @pointerdown="onDragPointerDown($event, 'category', ci)"
                         @click.stop="openCategoryDialog(ci)">
                         <span class="iqxin-pointer-events">{{ category.name }}</span>
                         <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': !category.enabled }"
@@ -1039,11 +1261,11 @@ onBeforeUnmount(() => {
                     <!-- 具体条目 -->
                     <div class="sejcon" :data-sej-drag-el="'list-' + category._id">
                         <!-- 每个搜索引擎 -->
-                        <span v-for="(engine, ei) in category.engines" :key="engine._id" class="drag" draggable="true"
+                        <span v-for="(engine, ei) in category.engines" :key="engine._id" class="drag"
                             :data-sej-drag-el="'engine-' + engine._id"
-                            :class="{ 'sej-dragging': dragCtx?.type === 'engine' && dragCtx.key === engine._id }"
+                            :class="{ 'sej-drag-placeholder': dragCtx?.type === 'engine' && dragCtx.key === engine._id }"
                             :title="`编辑：${engine.name}`"
-                            @dragstart="onDragStart($event, 'engine', ci, ei)" @dragend="onDragEnd"
+                            @pointerdown="onDragPointerDown($event, 'engine', ci, ei)"
                             @click.stop="editEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
                                 :data-iqxinlink="engine.url" :data-iqxintarget="engine.blank ? '_blank' : null"
@@ -1058,11 +1280,11 @@ onBeforeUnmount(() => {
                         </span>
                         <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
                         <span class="iqxin-additem" :class="{ 'sej-copy-target': copyTargetCi === ci }"
-                            :title="copyTargetCi === ci ? '复制到此类别' : '添加搜索引擎'"
+                            :title="copyTargetCi === ci ? '复制一份到此类别' : '添加搜索引擎'"
                             @click.stop="addEngine(ci)">
                             <span v-if="copyTargetCi === ci" class="sej-copy-icon" v-html="COPY"></span>
                             <template v-else>+</template>
-                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制到此类别</span>
+                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制一份到此类别</span>
                         </span>
                     </div>
                 </div>
