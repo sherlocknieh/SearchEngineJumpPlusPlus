@@ -13,7 +13,6 @@ import {
 } from '../core/rule.js';
 import {
   extractKeyword,
-  encodeKeyword,
   performJump,
   openAllEngines,
 } from '../core/jump.js';
@@ -66,8 +65,7 @@ function onJump(engine) {
 }
 
 function onJumpAll(engines) {
-  const encoded = encodeKeyword(getCurrentKeyword(), engines[0]?.gbk);
-  openAllEngines(engines, encoded, matchedRule);
+  openAllEngines(engines, getCurrentKeyword(), data, matchedRule);
 }
 
 function initSelectSearch() {

@@ -89,7 +89,6 @@ function buildEngineData() {
             if (engine.faviconData) item.faviconData = engine.faviconData;
             if (engine.target === '_self') item.target = '_self';
             if (engine.disable) item.disable = true;
-            if (engine.gbk) item.gbk = true;
             return item;
         });
     }
@@ -1260,8 +1259,7 @@ onBeforeUnmount(() => {
                             @click.stop="editEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
                                 :data-iqxinlink="engine.url" :data-iqxintarget="engine.target === '_self' ? '_self' : null"
-                                :data-iqxindisabled="engine.disable ? 'true' : null"
-                                :data-iqxingbk="engine.gbk ? 'true' : null">
+                                :data-iqxindisabled="engine.disable ? 'true' : null">
                                 <img class="sej-engine-icon" :src="getFaviconSrc(engine)" alt="" />
                                 <span>{{ engine.name }}</span>
                             </span>

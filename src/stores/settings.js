@@ -60,7 +60,6 @@ function normalizeEngine(raw) {
   if (!engine.url) return null;
   if (raw.target === '_self') engine.target = '_self';
   if (raw.disable === true) engine.disable = true;
-  if (raw.gbk === true) engine.gbk = true;
   return engine;
 }
 

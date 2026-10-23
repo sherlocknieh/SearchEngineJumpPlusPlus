@@ -23,7 +23,6 @@ const form = reactive({
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
   target: props.initial.target === '_self' ? '_self' : '_blank',
-  gbk: Boolean(props.initial.gbk),
 });
 
 const urlInput = ref(null);
@@ -189,7 +188,6 @@ function submit() {
     // 转换中的旧结果不能用于新链接，交给保存流程重新抓取
     faviconData: previewLoading.value ? '' : previewData.value.trim(),
     target: form.target,
-    gbk: form.gbk,
   });
 }
 </script>
@@ -236,10 +234,6 @@ function submit() {
         <option value="_blank">新标签页打开</option>
         <option value="_self">当前页打开</option>
       </select>
-    </label>
-    <label v-if="mode === 'edit'" class="sej-field-inline">
-      <input v-model="form.gbk" type="checkbox" :disabled="busy" />
-      <span>GBK 编码</span>
     </label>
     <div class="sej-dialog-actions">
       <button v-if="mode === 'edit'" type="button"

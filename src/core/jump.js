@@ -1,5 +1,4 @@
 import { GM_openInTab } from '$';
-import { toGBK } from './toGBK.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -8,8 +7,8 @@ export function extractKeyword(inputTarget) {
   return inputTarget.textContent || '';
 }
 
-export function encodeKeyword(keyword, gbk) {
-  return gbk ? toGBK(keyword) : encodeURIComponent(keyword);
+export function encodeKeyword(keyword) {
+  return encodeURIComponent(keyword);
 }
 
 /**
@@ -22,7 +21,7 @@ export function prepareJump(engine, keyword, { hideTheSameLink }) {
     kw = kw.replace(/site:[^\s]+/, '');
   }
 
-  const encoded = encodeKeyword(kw, engine.gbk);
+  const encoded = encodeKeyword(kw);
   const targetURL = engine.url;
   const postIndex = targetURL ? targetURL.indexOf('$post$') : -1;
 
@@ -101,15 +100,20 @@ export function performJump(engine, keyword, settingData, isSelectSearch) {
   return true;
 }
 
-export function openAllEngines(engines, encodedKeyword, matchedRule) {
+/**
+ * 一键打开分类下的全部引擎。
+ * 复用 performJump，统一编码关键词并支持 $post$ 表单；
+ * GM_openInTab 不可用时 performJump 会回退到 window.open，避免静默失败。
+ */
+export function openAllEngines(engines, keyword, settingData, matchedRule) {
   for (const engine of engines) {
     if (engine.disable) continue;
     if (
-      engine.url.indexOf('site:') < 0 &&
+      settingData?.HideTheSameLink &&
       matchedRule?.url?.test(engine.url)
     ) {
       continue;
     }
-    openInNewTab((engine.url || '').replaceAll('%s', encodedKeyword));
+    performJump(engine, keyword, settingData || {}, true);
   }
 }
