@@ -38,32 +38,45 @@ function arrayBufferToBase64(buffer) {
     return btoa(binary);
 }
 
+/**
+ * 兼容只提供 GM.* 命名空间的管理器（如 Greasemonkey 4）。
+ */
+function getRequestFn() {
+    if (typeof GM_xmlhttpRequest === 'function') return GM_xmlhttpRequest;
+    const gm = typeof globalThis !== 'undefined' ? globalThis.GM : undefined;
+    if (gm && typeof gm['xmlHttpRequest'] === 'function') {
+        return gm['xmlHttpRequest'].bind(gm);
+    }
+    return null;
+}
+
 function requestIcon(url) {
     return new Promise((resolve) => {
-        if (typeof GM_xmlhttpRequest !== 'function') {
-            resolve(null);
+        const request = getRequestFn();
+        if (!request) {
+            resolve({ response: null, reason: '缺少 GM 请求接口' });
             return;
         }
         let settled = false;
-        const finish = (response) => {
+        const finish = (result) => {
             if (settled) return;
             settled = true;
-            resolve(response);
+            resolve(result);
         };
         try {
-            GM_xmlhttpRequest({
+            request({
                 method: 'GET',
                 url,
                 responseType: 'arraybuffer',
                 timeout: ICON_TIMEOUT,
                 headers: { Accept: 'image/*,*/*;q=0.8' },
-                onload: finish,
-                onerror: () => finish(null),
-                ontimeout: () => finish(null),
-                onabort: () => finish(null),
+                onload: (response) => finish({ response }),
+                onerror: () => finish({ response: null, reason: '网络错误' }),
+                ontimeout: () => finish({ response: null, reason: '请求超时' }),
+                onabort: () => finish({ response: null, reason: '请求已取消' }),
             });
         } catch (e) {
-            finish(null);
+            finish({ response: null, reason: '请求异常：' + (e?.message || e) });
         }
     });
 }
@@ -76,21 +89,24 @@ export function getFaviconSrc(engine) {
 }
 
 /**
- * 把外部图标地址转成 data URL，避免被 Wikipedia 等页面的 CSP 拦截。
- * 获取失败或不是图片时原样返回。
+ * 抓取并转换图标，返回 { data, reason }；data 为空表示失败，reason 为失败原因。
  */
-export async function embedFavicon(url) {
+export async function resolveFavicon(url) {
     const source = typeof url === 'string' ? url.trim() : '';
-    if (!/^https?:\/\//i.test(source)) return source;
+    if (!/^https?:\/\//i.test(source)) return { data: '', reason: '' };
 
-    const response = await requestIcon(source);
-    if (!response || response.status < 200 || response.status >= 300) {
-        return source;
+    const { response, reason } = await requestIcon(source);
+    if (!response) return { data: '', reason: reason || '请求失败' };
+    if (response.status < 200 || response.status >= 300) {
+        return { data: '', reason: `HTTP ${response.status || 0}` };
     }
 
     const buffer = response.response;
-    if (!buffer || buffer.byteLength === 0 || buffer.byteLength > MAX_ICON_BYTES) {
-        return source;
+    if (!buffer || buffer.byteLength === 0) {
+        return { data: '', reason: '响应为空' };
+    }
+    if (buffer.byteLength > MAX_ICON_BYTES) {
+        return { data: '', reason: `超过 ${MAX_ICON_BYTES / 1024}KB` };
     }
 
     let mime = getHeader(response.responseHeaders, 'content-type')
@@ -100,12 +116,27 @@ export async function embedFavicon(url) {
     if (!mime || mime === 'application/octet-stream') {
         mime = mimeFromUrl(source);
     }
-    if (!/^image\//.test(mime)) return source;
+    if (!/^image\//.test(mime)) {
+        return { data: '', reason: `不是图片（${mime || '未知类型'}）` };
+    }
 
     try {
-        return `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+        return {
+            data: `data:${mime};base64,${arrayBufferToBase64(buffer)}`,
+            reason: '',
+        };
     } catch (e) {
         console.warn('[SEJ] 图标转换失败:', source, e);
-        return source;
+        return { data: '', reason: '转换失败' };
     }
+}
+
+/**
+ * 把外部图标地址转成 data URL，避免被 Wikipedia 等页面的 CSP 拦截。
+ * 获取失败或不是图片时原样返回。
+ */
+export async function embedFavicon(url) {
+    const source = typeof url === 'string' ? url.trim() : '';
+    const { data } = await resolveFavicon(source);
+    return data || source;
 }

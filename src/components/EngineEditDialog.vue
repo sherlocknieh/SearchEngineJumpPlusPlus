@@ -8,7 +8,7 @@ import {
   ref,
   watch,
 } from 'vue';
-import { embedFavicon } from '../core/favicon.js';
+import { resolveFavicon } from '../core/favicon.js';
 
 const props = defineProps({
   mode: { type: String, default: 'add' },
@@ -115,6 +115,8 @@ watch(
 );
 
 const previewData = ref('');
+// 预览数据对应的图标链接；manual 表示用户手填或本地上传
+const previewUrl = ref('');
 const previewLoading = ref(false);
 const previewFailed = ref(false);
 // 本次获取依次尝试的来源及结果
@@ -155,14 +157,23 @@ const dataEdited = ref(false);
 
 function markDataEdited() {
   dataEdited.value = true;
+  previewUrl.value = previewData.value.trim() ? 'manual' : '';
 }
 
-function setPreviewData(value) {
+function setPreviewData(value, sourceUrl) {
   previewData.value = value;
+  previewUrl.value = value ? sourceUrl || '' : '';
   dataEdited.value = false;
 }
 
-// 输入变化时清空旧预览，避免 data 链接与当前地址不对应
+function setManualPreviewData(value) {
+  previewData.value = value;
+  previewUrl.value = value ? 'manual' : '';
+  dataEdited.value = Boolean(value);
+}
+
+// 图标地址变化时保留已有图标继续显示，能对应上新地址才替换；
+// 新地址的图标留到点击确定后在后台获取
 watch(
   () => form.favicon,
   (value) => {
@@ -172,14 +183,16 @@ watch(
     previewFailed.value = false;
     if (dataEdited.value) return;
     if (/^data:/i.test(url)) {
-      setPreviewData(url);
+      setPreviewData(url, url);
+      return;
+    }
+    if (previewCache.has(url)) {
+      setPreviewData(previewCache.get(url), url);
       return;
     }
     if (url === initialFavicon && props.initial.faviconData) {
-      setPreviewData(props.initial.faviconData);
-      return;
+      setPreviewData(props.initial.faviconData, url);
     }
-    setPreviewData('');
   },
   { immediate: true },
 );
@@ -203,7 +216,7 @@ async function applyPreview(step, data) {
     // 等 favicon 的 watch 清理旧预览后再写入转换结果
     await nextTick();
   }
-  setPreviewData(data);
+  setPreviewData(data, step.url);
 }
 
 async function previewIcon() {
@@ -215,7 +228,7 @@ async function previewIcon() {
 
   const url = form.favicon.trim();
   if (/^data:/i.test(url)) {
-    setPreviewData(url);
+    setPreviewData(url, url);
     previewFailed.value = false;
     previewSteps.value = [];
     return;
@@ -248,12 +261,13 @@ async function previewIcon() {
       return;
     }
     step.status = 'loading';
-    const result = await embedFavicon(step.url);
+    const { data, reason } = await resolveFavicon(step.url);
     if (token !== previewToken) return;
-    if (result !== step.url) {
-      await applyPreview(step, result);
+    if (data) {
+      await applyPreview(step, data);
       return;
     }
+    step.reason = reason;
     step.status = 'failed';
   }
 
@@ -287,8 +301,7 @@ function uploadFavicon(event) {
     previewLoading.value = false;
     previewFailed.value = false;
     previewSteps.value = [];
-    previewData.value = String(reader.result || '');
-    dataEdited.value = true;
+    setManualPreviewData(String(reader.result || ''));
   };
   reader.onerror = () => alert('读取图片失败');
   reader.readAsDataURL(file);
@@ -300,12 +313,20 @@ onBeforeUnmount(() => {
 
 function submit() {
   if (props.busy) return;
+  const url = form.url.indexOf('://') === -1 ? 'https://' + form.url : form.url;
+  const favicon = form.favicon.trim() || props.resolveIcon(form.url);
+  const data = previewData.value.trim();
+  // 只回传与当前图标地址对应的数据，其余交给保存流程在后台获取
+  const matched =
+    Boolean(data) &&
+    (dataEdited.value ||
+      previewUrl.value === favicon ||
+      /^data:/i.test(favicon));
   emit('submit', {
     name: form.name,
-    url: form.url.indexOf('://') === -1 ? 'https://' + form.url : form.url,
-    favicon: form.favicon || props.resolveIcon(form.url),
-    // 转换中的旧结果不能用于新链接，交给保存流程重新抓取
-    faviconData: previewLoading.value ? '' : previewData.value.trim(),
+    url,
+    favicon,
+    faviconData: matched ? data : '',
     target: form.target,
   });
 }
@@ -341,7 +362,11 @@ function submit() {
           class="sej-preview-step" :class="'is-' + step.status">
           <span class="sej-preview-dot"></span>
           <span class="sej-preview-url">{{ step.url }}</span>
-          <span class="sej-preview-state">{{ STEP_STATUS_TEXT[step.status] }}</span>
+          <span class="sej-preview-state">{{
+            step.status === 'failed' && step.reason
+              ? step.reason
+              : STEP_STATUS_TEXT[step.status]
+          }}</span>
         </div>
         <a v-if="extractorUrl" class="sej-preview-extractor"
           :href="extractorUrl" target="_blank" rel="noopener">

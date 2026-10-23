@@ -11,7 +11,7 @@ import {
 import { deleteValue, isSameValue } from '../core/storage.js';
 import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
-import { embedFavicon, getFaviconSrc } from '../core/favicon.js';
+import { embedFavicon, getFaviconSrc, resolveFavicon } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
@@ -70,7 +70,6 @@ const engineSaving = ref(false);
 const saving = ref(false);
 const loadingIcons = ref(false);
 const configOpen = ref(false);
-const online = ref(false);
 
 const UNDO_DURATION = 5000;
 const undoStack = [];
@@ -1064,14 +1063,14 @@ async function submitEngine(engine) {
                 ? engine.faviconData
                 : existing?.faviconData && existing.favicon === original
                   ? existing.faviconData
-                  : await embedFavicon(original);
+                  : '';
         const next =
             ctx.mode === 'add'
                 ? { ...engine, _id: nextId() }
                 : { ...existing, ...engine };
         // 保留用户填写的原始链接，内嵌结果单独存放
         next.favicon = original;
-        if (embedded !== original) {
+        if (embedded && embedded !== original) {
             next.faviconData = embedded;
         } else {
             delete next.faviconData;
@@ -1083,9 +1082,44 @@ async function submitEngine(engine) {
         }
         engineDialog.value = null;
         scheduleAutoSave();
+        // 图标在后台获取，不阻塞保存；拿到后再更新并自动保存
+        const token = bumpIconToken(next._id);
+        if (!next.faviconData) loadFaviconInBackground(next._id, original, token);
     } finally {
         engineSaving.value = false;
     }
+}
+
+function findEngineById(id) {
+    for (const category of draft.categories) {
+        const engine = category.engines.find((item) => item._id === id);
+        if (engine) return engine;
+    }
+    return null;
+}
+
+// 每个条目的图标加载版本号，用于丢弃过期的后台结果
+const iconLoadTokens = new Map();
+
+function bumpIconToken(id) {
+    const token = (iconLoadTokens.get(id) || 0) + 1;
+    iconLoadTokens.set(id, token);
+    return token;
+}
+
+async function loadFaviconInBackground(id, url, token) {
+    if (!/^https?:\/\//i.test(url)) return;
+    const { data, reason } = await resolveFavicon(url);
+    if (iconLoadTokens.get(id) !== token) return;
+    const engine = findEngineById(id);
+    // 图标在此期间被修改或该条目已删除时丢弃结果
+    if (!engine || engine.favicon !== url) return;
+    if (!data) {
+        console.warn('[SEJ] 后台获取图标失败:', url, reason || '未知原因');
+        return;
+    }
+    engine.faviconData = data;
+    scheduleAutoSave();
 }
 
 function createCategoryKey() {
@@ -1112,17 +1146,6 @@ async function addCategory() {
     if (body) body.scrollTop = body.scrollHeight;
 }
 
-function isOnline() {
-    if (online.value) return;
-    const img = new Image();
-    img.src =
-        'https://www.google.com/s2/favicons?domain=www.baidu.com&' + Math.random();
-    setTimeout(() => {
-        if (img.width) online.value = true;
-        else img.src = undefined;
-    }, 2000);
-}
-
 function getICON(olink) {
     const link = olink || '';
     let protocol;
@@ -1136,23 +1159,9 @@ function getICON(olink) {
     }
     const siteURL = protocol + '://' + host;
     const iconSetting = ui.iconSource;
-    let ourl;
-
-    if (isNaN(iconSetting)) {
-        ourl = iconSetting;
-    } else {
-        const mark = parseInt(iconSetting);
-        if (mark === 1) ourl = siteURL + '/favicon.ico';
-        else if (mark === 2) {
-            ourl = 'https://www.google.com/s2/favicons?domain=' + siteURL;
-        } else if (mark === 3) {
-            ourl = 'https://statics.dnspod.cn/proxy_favicon/_/favicon?domain=' + host;
-        }
-    }
-
-    if (ourl) return ourl.replace('%s', siteURL);
-    if (online.value) return 'https://www.google.com/s2/favicons?domain=' + host;
-    return protocol + '://' + host + '/favicon.ico';
+    // 非数字时视为自定义地址模板，%s 会替换为站点地址；否则用站点自带的 /favicon.ico
+    const template = isNaN(iconSetting) ? iconSetting : '';
+    return (template || siteURL + '/favicon.ico').replace('%s', siteURL);
 }
 
 function openConfig() {
@@ -1206,7 +1215,6 @@ onMounted(() => {
     document.body.style.overflow = 'hidden';
     document.addEventListener('keydown', onKeydown);
     window.addEventListener('blur', onWindowBlur);
-    isOnline();
     nextTick(() => {
         maskVisible.value = true;
     });

@@ -1,4 +1,5 @@
-import { addStyle } from './shadow.js';
+import { getRoot } from './shadow.js';
+import { getCSPNonce } from './csp.js';
 
 export const DARK_MODE_STYLE = `
   :root,
@@ -79,6 +80,13 @@ export function isDarkMode() {
     }
   }
 
+  try {
+    const colorScheme = getComputedStyle(html).colorScheme || '';
+    if (colorScheme.split(/\s+/).includes('dark')) return true;
+  } catch (e) {
+    // ignore
+  }
+
   const elementsToCheck = [
     document.body,
     document.documentElement,
@@ -115,29 +123,114 @@ export function isDarkMode() {
   return false;
 }
 
+let darkStyleSheet = null;
+let darkStyleEl = null;
+let darkStyleRoot = null;
+let darkStyleState = null;
+
+// 站点主题可能在脚本注入后才异步生效, 因此暗色样式必须可反复开关, 不能只追加一次
+function ensureStyleNode() {
+  const root = getRoot();
+  if (root === darkStyleRoot && (darkStyleSheet || darkStyleEl)) return;
+
+  darkStyleRoot = root;
+  darkStyleSheet = null;
+  darkStyleEl = null;
+
+  if (
+    typeof CSSStyleSheet !== 'undefined' &&
+    typeof ShadowRoot !== 'undefined' &&
+    'replaceSync' in CSSStyleSheet.prototype &&
+    'adoptedStyleSheets' in ShadowRoot.prototype
+  ) {
+    try {
+      darkStyleSheet = new CSSStyleSheet();
+      darkStyleSheet.replaceSync('');
+      root.adoptedStyleSheets = [...root.adoptedStyleSheets, darkStyleSheet];
+      return;
+    } catch (e) {
+      darkStyleSheet = null;
+    }
+  }
+
+  darkStyleEl = document.createElement('style');
+  darkStyleEl.id = 'sej-dark-mode-style';
+  const nonce = getCSPNonce();
+  if (nonce) darkStyleEl.setAttribute('nonce', nonce);
+  root.appendChild(darkStyleEl);
+}
+
+function setDarkStyle(enabled) {
+  const root = getRoot();
+  const nodeMissing =
+    root !== darkStyleRoot || (!darkStyleSheet && !darkStyleEl);
+  if (!nodeMissing && darkStyleState === enabled) return;
+
+  ensureStyleNode();
+  const cssText = enabled ? DARK_MODE_STYLE : '';
+  if (darkStyleSheet) {
+    darkStyleSheet.replaceSync(cssText);
+  } else if (darkStyleEl) {
+    darkStyleEl.textContent = cssText;
+  }
+  darkStyleState = enabled;
+}
+
 export function applyDarkModeIfNeeded() {
-  if (isDarkMode()) addStyle(DARK_MODE_STYLE);
+  setDarkStyle(isDarkMode());
 }
 
 let darkModeWatched = false;
+let refreshTimer = null;
+
+function scheduleRefresh() {
+  if (refreshTimer) return;
+  refreshTimer = setTimeout(() => {
+    refreshTimer = null;
+    applyDarkModeIfNeeded();
+  }, 50);
+}
 
 export function watchDarkModeChanges() {
-  if (darkModeWatched || !window.matchMedia) return;
+  if (darkModeWatched) return;
   darkModeWatched = true;
 
-  const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
-  let lastDarkModeState = darkModeQuery.matches;
-
-  const handleChange = (e) => {
-    if (e.matches !== lastDarkModeState) {
-      lastDarkModeState = e.matches;
-      if (isDarkMode()) addStyle(DARK_MODE_STYLE);
+  if (window.matchMedia) {
+    const darkModeQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    if (darkModeQuery.addEventListener) {
+      darkModeQuery.addEventListener('change', scheduleRefresh);
+    } else if (darkModeQuery.addListener) {
+      darkModeQuery.addListener(scheduleRefresh);
     }
-  };
-
-  if (darkModeQuery.addEventListener) {
-    darkModeQuery.addEventListener('change', handleChange);
-  } else if (darkModeQuery.addListener) {
-    darkModeQuery.addListener(handleChange);
   }
+
+  if (typeof MutationObserver === 'function') {
+    const observer = new MutationObserver(scheduleRefresh);
+    const observe = (el) => {
+      if (el) {
+        observer.observe(el, {
+          attributes: true,
+          attributeFilter: [
+            'class',
+            'style',
+            'theme',
+            'data-theme',
+            'data-color-scheme',
+            'data-color-mode',
+          ],
+        });
+      }
+    };
+    observe(document.documentElement);
+    observe(document.body);
+    document.addEventListener('DOMContentLoaded', () => {
+      observe(document.body);
+      scheduleRefresh();
+    });
+  }
+
+  // 部分站点在 hydration 之后才写入主题, 补几次延迟检测
+  [200, 800, 2000].forEach((delay) => {
+    setTimeout(applyDarkModeIfNeeded, delay);
+  });
 }

@@ -85,7 +85,8 @@
   line-height: 0;
   cursor: pointer;
   opacity: 1;
-  transition: background-color 0.12s ease-out, opacity 0.12s ease-out;
+  transition: background-color 0.12s ease-out, opacity 0.12s ease-out,
+    transform 0.1s ease-out;
 }
 .sej-panel-close::before,
 .sej-panel-close::after {
@@ -101,6 +102,13 @@
 }
 .sej-panel-close::after {
   transform: translate(-50%, -50%) rotate(-45deg);
+}
+.sej-panel-close:hover {
+  background: var(--sej-active-bg);
+}
+.sej-panel-close:active {
+  transform: scale(0.92);
+  opacity: 0.75;
 }
 .iqxin-items {
   display: flex;
@@ -313,7 +321,7 @@
   cursor: pointer;
   outline: none;
   transition: background-color 0.12s ease-out, border-color 0.12s ease-out,
-    color 0.12s ease-out, opacity 0.12s ease-out;
+    color 0.12s ease-out, opacity 0.12s ease-out, transform 0.1s ease-out;
 }
 #btnEle label {
   display: inline-flex;
@@ -330,11 +338,17 @@
   opacity: 0.7;
   text-decoration: none;
   font-family: inherit;
-  transition: opacity 0.12s ease-out, color 0.12s ease-out;
+  transition: opacity 0.12s ease-out, color 0.12s ease-out,
+    transform 0.1s ease-out;
 }
 #btnEle a:hover {
   opacity: 1;
   color: var(--sej-accent);
+}
+#btnEle span:active,
+#btnEle a:active {
+  transform: scale(0.96);
+  opacity: 0.8;
 }
 #btnEle .feedback {
   background: transparent;
