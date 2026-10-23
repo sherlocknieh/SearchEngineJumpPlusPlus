@@ -13,7 +13,7 @@ import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
-import { EDIT, EYE, EYE_OFF } from '../data/icons.js';
+import { COPY, EDIT, EYE, EYE_OFF } from '../data/icons.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
@@ -470,6 +470,8 @@ function deleteCategoryFromDialog() {
 }
 
 const dragCtx = ref(null);
+// 拖动搜索引擎时指针所在的“加号”分类，用于复刻提示
+const copyTargetCi = ref(null);
 const dragAnimations = new WeakMap();
 const DRAG_ANIMATION_MS = 160;
 let dragSnapshot = null;
@@ -598,6 +600,7 @@ function onDragStart(e, type, ci, ei = null) {
 
     dragSnapshot = captureOrder();
     dragDropped = false;
+    copyTargetCi.value = null;
     dragCtx.value = {
         type,
         ci,
@@ -605,7 +608,7 @@ function onDragStart(e, type, ci, ei = null) {
         key: type === 'category' ? category.key : item._id,
     };
 
-    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.effectAllowed = 'copyMove';
     // Firefox 需要写入数据才会真正开始拖动
     e.dataTransfer.setData('text/plain', '');
 }
@@ -621,12 +624,43 @@ function onDragEnd() {
     }
     dragDropped = false;
     dragCtx.value = null;
+    copyTargetCi.value = null;
 }
 
 function onDrop(e) {
-    if (!dragCtx.value) return;
+    const ctx = dragCtx.value;
+    if (!ctx) return;
     e.preventDefault();
     e.stopPropagation();
+    const targetCi = copyTargetCi.value;
+    copyTargetCi.value = null;
+
+    if (ctx.type === 'engine' && targetCi != null) {
+        const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
+        const targetKey = draft.categories[targetCi]?.key;
+        const copy = source
+            ? { ...JSON.parse(JSON.stringify(source)), _id: nextId() }
+            : null;
+        // 途中经过其他条目时可能已临时换位，复刻时恢复原有排序
+        if (dragSnapshot) {
+            restoreOrder(dragSnapshot);
+            dragSnapshot = null;
+        }
+        if (copy) {
+            const target = draft.categories.find(
+                (category) => category.key === targetKey,
+            );
+            if (target) {
+                target.engines.push(copy);
+                scheduleAutoSave();
+                showToast(`已复制「${source.name}」`);
+            }
+        }
+        dragDropped = true;
+        dragCtx.value = null;
+        return;
+    }
+
     dragDropped = true;
     dragCtx.value = null;
 }
@@ -735,11 +769,32 @@ function moveEngineTo(ci, insertBefore) {
     });
 }
 
+// 加号在 Shadow DOM 内，composedPath 才能拿到真实目标
+function addItemFromEvent(e) {
+    const path = e.composedPath ? e.composedPath() : [];
+    for (const el of path) {
+        if (el?.classList?.contains('iqxin-additem')) return el;
+    }
+    return null;
+}
+
 // 统一按指针坐标 + 布局矩形判断目标位置，避免动画期间元素命中测试抖动
 function onSettingsDragOver(e) {
     const ctx = dragCtx.value;
     if (!ctx) return;
     e.preventDefault();
+
+    // 搜索引擎拖到加号上：保持原位置不动，改为提示复刻
+    if (ctx.type === 'engine' && addItemFromEvent(e)) {
+        const copyCi = categoryIndexAt(e.clientX, e.clientY);
+        if (copyCi >= 0) {
+            copyTargetCi.value = copyCi;
+            if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy';
+            return;
+        }
+    }
+    copyTargetCi.value = null;
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
 
     const ci = categoryIndexAt(e.clientX, e.clientY);
     if (ci < 0) return;
@@ -1007,8 +1062,14 @@ onBeforeUnmount(() => {
                                 <img class="sej-engine-icon" :src="editIcon" alt="" />
                             </span>
                         </span>
-                        <!-- 添加搜索引擎按钮(默认隐藏) -->
-                        <span class="iqxin-additem" @click.stop="addEngine(ci)">+</span>
+                        <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
+                        <span class="iqxin-additem" :class="{ 'sej-copy-target': copyTargetCi === ci }"
+                            :title="copyTargetCi === ci ? '复制到此类别' : '添加搜索引擎'"
+                            @click.stop="addEngine(ci)">
+                            <span v-if="copyTargetCi === ci" class="sej-copy-icon" v-html="COPY"></span>
+                            <template v-else>+</template>
+                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制到此类别</span>
+                        </span>
                     </div>
                 </div>
                 <!-- 新增分类占位卡片 -->

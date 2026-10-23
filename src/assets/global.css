@@ -472,6 +472,7 @@
 }
 span.iqxin-additem {
   display: inline-block;
+  position: relative;
   text-align: center;
   width: 100%;
   box-sizing: border-box;
@@ -490,6 +491,40 @@ span.iqxin-additem:hover {
   opacity: 1;
   border-color: var(--sej-accent);
   color: var(--sej-accent);
+}
+span.iqxin-additem.sej-copy-target {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--sej-accent);
+  background: var(--sej-accent-weak);
+  color: var(--sej-accent);
+}
+.sej-copy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+.sej-copy-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+.sej-copy-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 22, 26, 0.82);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
 }
 #newSearchListBox,
 #newSearchBox,
