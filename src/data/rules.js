@@ -27,9 +27,9 @@
 */
 
 
-// 下面的分类只是为了方便手动查找和编辑，代码实际用到时会全部解包到同一个数组
-
-const webRules = [
+// 以下是所有仍未失效的样式规则
+export default [
+  // Google
   {
     name: "Google",
     enabled: true,
@@ -40,8 +40,7 @@ const webRules = [
     fixedTop: 56,
     style: `
       z-index: 100;
-      margin-top:1px;
-      margin-bottom:2px;
+      margin:2px 0 2px;
       grid-column: 2 / -2;
     `,
     insertIntoDoc: {
@@ -52,7 +51,57 @@ const webRules = [
     stylish:
       "#appbar.hdtb-ab-o{height:0px !important;} #hdtbMenus{position:unset} #sej-container-wrapper{display:grid !important}",
   },
-  
+  // 必应
+  {
+    name: "必应",
+    url: /^https?:\/\/[^.]*\.bing\.com\/search/,
+    enabled: true,
+    fixedTop: 60,
+    engineList: "web",
+    style: `
+      margin:2px 0 2px;
+      left: 160px;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#sb_form_q",
+      target: "css;#b_content",
+      where: "beforeBegin",
+    },
+  },
+  // 必应图片
+  {
+    name: "必应图片",
+    url: /^https?:\/\/.*\.bing\.com\/images\/search/i,
+    enabled: true,
+    fixedTop: 88,
+    engineList: "image",
+    style: `
+      left:160px;
+      margin-top:15px;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#sb_form_q",
+      target: "css;#b_content",
+      where: "afterBegin",
+    },
+  },
+  // 必应词典
+  {
+    name: "必应词典",
+    url: /^https?:\/\/.*\.bing\.com\/dict\/search\?q\=/i,
+    enabled: true,
+    engineList: "translate",
+    style: `
+      margin-top:6px;
+      left: 148px;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#sb_form_q",
+      target: "css;#b_header",
+      where: "beforeEnd",
+    },
+  },
+  // 百度
   {
     name: "百度",
     url: /^https?:\/\/www\.baidu\.com\/(?:s|baidu)/,
@@ -80,25 +129,7 @@ const webRules = [
       }
       `,
   },
-
-  {
-    name: "必应",
-    url: /^https?:\/\/[^.]*\.bing\.com\/search/,
-    enabled: true,
-    fixedTop: 60,
-    engineList: "web",
-    style: `
-      margin-top:1px;
-      margin-bottom:2px;
-      left: 160px;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_content",
-      where: "beforeBegin",
-    },
-  },
-  
+  // 搜狗
   {
     name: "搜狗",
     url: /^https?:\/\/www\.sogou\.com\/(?:web|s)/,
@@ -106,7 +137,7 @@ const webRules = [
     engineList: "web",
     fixedTop: 60,
     style: `
-      top:-46px;
+      top:-40px;
       z-index:99;
       left:-5px;
     `,
@@ -117,90 +148,7 @@ const webRules = [
     },
     stylish: "#float_uphint{display:none;}",
   },
-
-  {
-    name: "yandex",
-    url: /^https?:\/\/yandex\.(?:com|ru)\/search/i,
-    engineList: "web",
-    enabled: true,
-    fixedTop: 96,
-    class: "main__center",
-    style: `
-    margin:1em 0;
-    `,
-    insertIntoDoc: {
-      keyword: "css;.input__control",
-      target: "css;.main__center",
-      where: "afterBegin",
-    },
-    stylish: ".main .main__center{padding-top:0px}",
-  },
-];
-const knowledgeRules = [
-  {
-    name: "萌娘百科",
-    url: /^https?:\/\/.*\.?moegirl\.org\.cn/i,
-    engineList: "knowledge",
-    enabled: true,
-    fixedTop: 52,
-    style: `
-      margin: -0.8em auto 0;
-      z-index: 3;
-      width: 1200px !important;
-      top: 12px;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#firstHeading",
-      target: "css;#moe-topbanner-container",
-      where: "afterEnd",
-    },
-  },
-
-  {
-    name: "知乎",
-    url: /^https?:\/\/www\.zhihu\.com\/search\?/i,
-    engineList: "knowledge",
-    enabled: true,
-    fixedTop: 52,
-    style: `
-      margin: 10px auto 0px;
-      width:1000px !important;
-      z-index:19;
-      background: #fff;
-      box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);  
-    `,
-    style_ZhihuChenglinz: `
-      margin: 10px auto 0px;
-      width:654px;
-      z-index:19;
-      background: #fff;
-      box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);  
-    `,
-    insertIntoDoc: {
-      keyword: "css;.Input",
-      target: "css;.Search-container",
-      where: "beforeBegin",
-    },
-    stylish: ".TopSearch.Card{margin:30px auto;}",
-  },
-  
-  {
-    name: "StackOverflow",
-    url: /^https?:\/\/stackoverflow\.com\/search\?/i,
-    enabled: true,
-    engineList: "knowledge",
-    fixedTop: 50,
-    style:
-      "width: min(100%, 1264px) !important;position: sticky;top: 50px;z-index:1001;margin:auto",
-    insertIntoDoc: {
-      keyword: "css; #search > div > input",
-      target: "css;body > div.container",
-      where: "beforeBegin",
-    },
-  },
-];
-const videoRules = [
-  
+  // 哔哩哔哩
   {
     name: "哔哩哔哩",
     url: /^https?:\/\/search\.bilibili\.com\/*/,
@@ -229,27 +177,53 @@ const videoRules = [
       where: "afterEnd",
     },
   },
-  
-];
-const musicRules = [
+  // 知乎
   {
-    name: "一听音乐",
-    url: /^https?:\/\/so\.1ting\.com\/song/i,
+    name: "知乎",
+    url: /^https?:\/\/www\.zhihu\.com\/search\?/i,
+    engineList: "knowledge",
     enabled: true,
-    engineList: "music",
+    fixedTop: 52,
     style: `
-      text-align: center;
-      border-bottom: 1px solid #13B310;
-      border-top: 1px solid #13B310;
-      margin:auto;
+      margin: 10px auto 0px;
+      width:1000px !important;
+      z-index:19;
+      background: #fff;
+      box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);  
+    `,
+    style_ZhihuChenglinz: `
+      margin: 10px auto 0px;
+      width:654px;
+      z-index:19;
+      background: #fff;
+      box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);  
     `,
     insertIntoDoc: {
-      keyword: "css;#keyword",
-      target: "css;.nav",
+      keyword: "css;.Input",
+      target: "css;.Search-container",
       where: "beforeBegin",
     },
+    stylish: ".TopSearch.Card{margin:30px auto;}",
   },
-  
+  // 豆瓣
+  {
+    name: "豆瓣",
+    url: /^https?:\/\/www\.douban\.com\/search/i,
+    enabled: true,
+    engineList: "sociality",
+    style: `
+      margin: -1em 0 1em 7em;
+      position: sticky;
+      top: 0.1em;
+    `,
+    insertIntoDoc: {
+      keyword:
+        "css;#content > div > div.article > div.mod-search > form > fieldset > div.inp > input",
+      target: "css;#content > div > div.article > div.mod-search",
+      where: "afterEnd",
+    },
+  },
+  // 网易云音乐
   {
     name: "网易云音乐",
     url: /^https?:\/\/music\.163\.com\/.*?#\/search/i,
@@ -268,154 +242,9 @@ const musicRules = [
       where: "afterEnd",
     },
   },
-];
-const imageRules = [
+  // 菜鸟教程
   {
-    name: "必应图片",
-    url: /^https?:\/\/.*\.bing\.com\/images\/search/i,
-    enabled: true,
-    fixedTop: 88,
-    engineList: "image",
-    style: `
-      left:160px;
-      margin-top:15px;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_content",
-      where: "afterBegin",
-    },
-  },
-];
-const downloadRules = [
-  {
-    name: "动漫花园",
-    url: /^https?:\/\/share\.dmhy\.org\/topics\/list\?keyword\=/i,
-    engineList: "download",
-    enabled: true,
-    style: `
-      text-align: center;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#keyword",
-      target: "css;.table.clear",
-      where: "beforeBegin",
-    },
-  },
-];
-const translateRules = [
-  
-  {
-    name: "必应词典",
-    url: /^https?:\/\/.*\.bing\.com\/dict\/search\?q\=/i,
-    enabled: true,
-    engineList: "translate",
-    style: `
-      margin-top:6px;
-      left: 148px;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_header",
-      where: "beforeEnd",
-    },
-  },
-  {
-    name: "有道翻译",
-    url: /^https?:\/\/dict\.youdao\.com\/search/i,
-    enabled: true,
-    engineList: "translate",
-    fixedTop: 94,
-    style: `
-      margin:auto;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#query",
-      target: "css;#container",
-      where: "beforeBegin",
-    },
-  },
-  
-  {
-    name: "海词",
-    url: /^https?:\/\/dict\.cn\/./,
-    enabled: true,
-    engineList: "translate",
-    style: `
-      z-index: 99;
-      text-align: center;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#q",
-      target: "css;.main",
-      where: "afterBegin",
-    },
-  },
-];
-const shoppingRules = [
-  {
-    name: "什么值得买",
-    url: /^https?:\/\/search\.smzdm\.com\/\?/i,
-    enabled: true,
-    engineList: "shopping",
-    fixedTop: 40,
-    style: `
-      width: 100% !important;
-      margin: 0 auto 1em auto;
-      position: sticky;
-      top: 42px;
-      z-index: 100;
-    `,
-    insertIntoDoc: {
-      keyword: "css;#J_search_input",
-      target: "css;#content > div.content-inner",
-      where: "afterBegin",
-    },
-  },
-];
-const socialityRules = [
-  {
-    name: "豆瓣",
-    url: /^https?:\/\/www\.douban\.com\/search/i,
-    enabled: true,
-    engineList: "sociality",
-    style: `
-      margin: -1em 0 1em 7em;
-      position: sticky;
-      top: 0.1em;
-    `,
-    insertIntoDoc: {
-      keyword:
-        "css;#content > div > div.article > div.mod-search > form > fieldset > div.inp > input",
-      target: "css;#content > div > div.article > div.mod-search",
-      where: "afterEnd",
-    },
-  },
-];
-const scholarRules = [
-  {
-    name: "万方",
-    enabled: true,
-    url: /^https?:\/\/s\.wanfangdata\.com\.cn\/Paper/i,
-    engineList: "scholar",
-    style: `
-      z-index:999;
-      width: 1200px !important;
-      margin: 1em auto 1em;
-      position:sticky;
-      top: 0.1em;
-      justify-content: center;
-    `,
-    insertIntoDoc: {
-      keyword: "css;input.search-input",
-      target: "css;.me-container.container-wrapper",
-      where: "beforeBegin",
-    },
-  },
-];
-const codingRules = [
-  {
-    name: "Runoob",
+    name: "菜鸟教程",
     enabled: true,
     url: /^https?:.*?runoob\.com\//i,
     engineList: "mine",
@@ -437,21 +266,85 @@ const codingRules = [
       where: "afterBegin",
     },
   },
+  // 动漫花园
+  {
+    name: "动漫花园",
+    url: /^https?:\/\/share\.dmhy\.org\/topics\/list\?keyword\=/i,
+    engineList: "download",
+    enabled: true,
+    style: `
+      text-align: center;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#keyword",
+      target: "css;.table.clear",
+      where: "beforeBegin",
+    },
+  },
+  // 萌娘百科
+  {
+    name: "萌娘百科",
+    url: /^https?:\/\/.*\.?moegirl\.org\.cn/i,
+    engineList: "knowledge",
+    enabled: true,
+    fixedTop: 52,
+    style: `
+      margin: -0.8em auto 0;
+      z-index: 3;
+      width: 1200px !important;
+      top: 12px;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#firstHeading",
+      target: "css;#moe-topbanner-container",
+      where: "afterEnd",
+    },
+  },
+  // StackOverflow
+  {
+    name: "StackOverflow",
+    url: /^https?:\/\/stackoverflow\.com\/search\?/i,
+    enabled: true,
+    engineList: "knowledge",
+    fixedTop: 50,
+    style:
+      "width: min(100%, 1264px) !important;position: sticky;top: 50px;z-index:1001;margin:auto",
+    insertIntoDoc: {
+      keyword: "css; #search > div > input",
+      target: "css;body > div.container",
+      where: "beforeBegin",
+    },
+  },
+  // 有道翻译
+  {
+    name: "有道翻译",
+    url: /^https?:\/\/dict\.youdao\.com\/search/i,
+    enabled: true,
+    engineList: "translate",
+    fixedTop: 94,
+    style: `
+      margin:auto;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#query",
+      target: "css;#container",
+      where: "beforeBegin",
+    },
+  },
+  // 海词
+  {
+    name: "海词",
+    url: /^https?:\/\/dict\.cn\/./,
+    enabled: true,
+    engineList: "translate",
+    style: `
+      z-index: 99;
+      text-align: center;
+    `,
+    insertIntoDoc: {
+      keyword: "css;#q",
+      target: "css;.main",
+      where: "afterBegin",
+    },
+  },
 ];
-
-// 解包所有规则
-const searchEngineJumpPlusRules = [
-  ...webRules,
-  ...knowledgeRules,
-  ...videoRules,
-  ...musicRules,
-  ...imageRules,
-  ...downloadRules,
-  ...translateRules,
-  ...shoppingRules,
-  ...socialityRules,
-  ...scholarRules,
-  ...codingRules,
-];
-
-export default searchEngineJumpPlusRules;
