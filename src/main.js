@@ -222,7 +222,7 @@ function applyRemoteSettings() {
   }
   if (!useSettings().reload()) return;
   restart();
-  showToast('SearchEngineJump++: 已从其他页面同步配置');
+  showToast('SearchEngineJump: 已从其他页面同步配置');
 }
 
 function setupSettingsSync() {

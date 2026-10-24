@@ -2,7 +2,7 @@
  * useSettings: 设置存储模块: 负责配置文件和挂载规则的加载,整理,写入;
  */
 import { reactive } from 'vue';
-import defaultEngines from '../data/engineList.js';
+import defaultConfig from '../data/engines.json';
 import rules from '../data/rules.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
 
@@ -31,22 +31,9 @@ function createDefaultSettings() {
     selectSearch: true, // 默认开启划词搜索
     center: false,    // 默认跟随各站点规则排版，不强制居中
     // 默认分类及顺序；第三项表示该分类是否在跳转条中显示
-    engineCategories: [
-      ['网页', 'web', true],
-      ['翻译', 'translate', true],
-      ['知识', 'knowledge', true],
-      ['图片', 'image', true],
-      ['视频', 'video', true],
-      ['音乐', 'music', true],
-      ['学术', 'scholar', false],
-      ['社交', 'sociality', true],
-      ['购物', 'shopping', true],
-      ['下载', 'download', false],
-      ['新闻', 'news', false],
-      ['常用', 'mine', false],
-    ],
-    // 默认引擎列表；从 engineList.js 导入
-    engineList: defaultEngines,
+    engineCategories: defaultConfig.engineCategories.map((entry) => entry.slice()),
+    // 默认引擎列表；从 engines.json 导入
+    engineList: defaultConfig.engineList,
   };
 }
 
