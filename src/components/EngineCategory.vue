@@ -28,6 +28,9 @@ const top = ref('-10000px');
 const left = ref('0px');
 
 const pointer = { x: -1, y: -1 };
+// 点击收起（再次点击固定项、点开引擎）后指针通常仍停在触发项上，
+// 标记为抑制状态，等指针离开触发项再恢复悬停展开
+let hoverSuppressed = false;
 
 function hitTest(el) {
   if (!el) return false;
@@ -64,14 +67,16 @@ function isPointerInside() {
   return hitTest(triggerEl.value) || hitTest(listEl.value) || hitTestBridge();
 }
 
-// 触发项可能被其他已展开的面板遮住，几何命中不算数
-function isTriggerOnTop() {
+// 指针是否真正落在触发项上。
+// 只用几何命中会误判：鼠标从边缘进入时坐标恰好落在触发项边界，
+// elementFromPoint 会命中相邻元素；被其他面板遮住时几何上又仍然“命中”。
+// 因此以事件命中路径为准，几何判定只作为廉价的预筛选。
+function isPointerOverTrigger(e) {
   const trigger = triggerEl.value;
-  if (!trigger || pointer.x < 0 || pointer.y < 0) return false;
-  const root = trigger.getRootNode?.();
-  const top = root?.elementFromPoint?.(pointer.x, pointer.y);
-  if (!top) return true;
-  return top === trigger || trigger.contains(top);
+  if (!trigger || !hitTest(trigger)) return false;
+  const path = e?.composedPath?.();
+  if (!path) return true;
+  return path.includes(trigger);
 }
 
 function measureAndPosition() {
@@ -136,6 +141,7 @@ function pin() {
 function unpin() {
   if (pinnedCategory === unpin) pinnedCategory = null;
   pinned.value = false;
+  hoverSuppressed = true;
   hide();
 }
 
@@ -147,14 +153,17 @@ function onTriggerClick() {
   pin();
 }
 
-function onHoverShow(e) {
+// 进入触发项即可展开。这里不再用进入瞬间的坐标做命中检测：
+// 指针从触发项边缘进入时坐标正好落在边界上，命中检测会误判为被遮挡
+function onHoverShow() {
   if (pinnedCategory && pinnedCategory !== unpin) return;
-  if (e) {
-    pointer.x = e.clientX;
-    pointer.y = e.clientY;
-  }
-  if (!isTriggerOnTop()) return;
+  if (hoverSuppressed) return;
   show();
+}
+
+function onHoverLeave() {
+  hoverSuppressed = false;
+  scheduleHide();
 }
 
 // 常驻后标题图标会变成“在新标签打开”图标，点击它执行一键搜索全部分类
@@ -173,7 +182,17 @@ function onEngineJump(engine) {
 function onDocMouseMove(e) {
   pointer.x = e.clientX;
   pointer.y = e.clientY;
-  if (!shown.value) return;
+  const overTrigger = isPointerOverTrigger(e);
+  if (!overTrigger) hoverSuppressed = false;
+
+  if (!shown.value) {
+    // mouseenter 只在进入瞬间触发一次：若那次因边缘命中误差或被面板遮挡而放弃，
+    // 指针再在触发项内移动也不会重新触发，面板就一直不显示。这里用移动事件兜底。
+    if (!overTrigger || hoverSuppressed) return;
+    if (pinnedCategory && pinnedCategory !== unpin) return;
+    show();
+    return;
+  }
 
   if (pinned.value || isPointerInside()) {
     active.value = true;
@@ -203,7 +222,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <span class="sej-category" @mouseenter="onHoverShow" @mouseleave="scheduleHide">
+  <span class="sej-category" @mouseenter="onHoverShow" @mouseleave="onHoverLeave">
     <a
       ref="triggerEl"
       class="sej-engine sej-drop-list-trigger"

@@ -6115,6 +6115,7 @@
 				x: -1,
 				y: -1
 			};
+			let hoverSuppressed = false;
 			function hitTest(el) {
 				if (!el) return false;
 				const rect = el.getBoundingClientRect();
@@ -6134,12 +6135,12 @@
 			function isPointerInside() {
 				return hitTest(triggerEl.value) || hitTest(listEl.value) || hitTestBridge();
 			}
-			function isTriggerOnTop() {
+			function isPointerOverTrigger(e) {
 				const trigger = triggerEl.value;
-				if (!trigger || pointer.x < 0 || pointer.y < 0) return false;
-				const top = (trigger.getRootNode?.())?.elementFromPoint?.(pointer.x, pointer.y);
-				if (!top) return true;
-				return top === trigger || trigger.contains(top);
+				if (!trigger || !hitTest(trigger)) return false;
+				const path = e?.composedPath?.();
+				if (!path) return true;
+				return path.includes(trigger);
 			}
 			function measureAndPosition() {
 				if (!triggerEl.value || !listEl.value) return;
@@ -6187,6 +6188,7 @@
 			function unpin() {
 				if (pinnedCategory === unpin) pinnedCategory = null;
 				pinned.value = false;
+				hoverSuppressed = true;
 				hide();
 			}
 			function onTriggerClick() {
@@ -6196,14 +6198,14 @@
 				}
 				pin();
 			}
-			function onHoverShow(e) {
+			function onHoverShow() {
 				if (pinnedCategory && pinnedCategory !== unpin) return;
-				if (e) {
-					pointer.x = e.clientX;
-					pointer.y = e.clientY;
-				}
-				if (!isTriggerOnTop()) return;
+				if (hoverSuppressed) return;
 				show();
+			}
+			function onHoverLeave() {
+				hoverSuppressed = false;
+				scheduleHide();
 			}
 			function onTriggerAction() {
 				unpin();
@@ -6216,7 +6218,14 @@
 			function onDocMouseMove(e) {
 				pointer.x = e.clientX;
 				pointer.y = e.clientY;
-				if (!shown.value) return;
+				const overTrigger = isPointerOverTrigger(e);
+				if (!overTrigger) hoverSuppressed = false;
+				if (!shown.value) {
+					if (!overTrigger || hoverSuppressed) return;
+					if (pinnedCategory && pinnedCategory !== unpin) return;
+					show();
+					return;
+				}
 				if (pinned.value || isPointerInside()) active.value = true;
 				else scheduleHide();
 			}
@@ -6240,7 +6249,7 @@
 				return openBlock(), createElementBlock("span", {
 					class: "sej-category",
 					onMouseenter: onHoverShow,
-					onMouseleave: scheduleHide
+					onMouseleave: onHoverLeave
 				}, [createBaseVNode("a", {
 					ref_key: "triggerEl",
 					ref: triggerEl,
