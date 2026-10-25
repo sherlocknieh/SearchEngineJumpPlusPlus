@@ -40,8 +40,11 @@ export function prepareJump(engine, keyword, { hideTheSameLink }) {
   };
 }
 
-export function shouldOpenInNewTab(engine, isSelectSearch) {
-  return Boolean(isSelectSearch || engine.target !== '_self');
+/**
+ * @param {boolean} forceNewTab 批量打开多个引擎时必须强制新标签页，否则会互相覆盖
+ */
+export function shouldOpenInNewTab(engine, forceNewTab = false) {
+  return Boolean(forceNewTab || engine.target !== '_self');
 }
 
 export function openInNewTab(url) {
@@ -73,12 +76,13 @@ export function submitPostForm(action, field, value, targetName) {
 
 /**
  * 执行跳转。返回 true 表示已处理，调用方无需再走默认导航。
+ * 是否新标签页由引擎的打开方式决定，forceNewTab 仅用于一键打开全部引擎。
  */
-export function performJump(engine, keyword, settingData, isSelectSearch) {
+export function performJump(engine, keyword, settingData, forceNewTab = false) {
   const result = prepareJump(engine, keyword, {
     hideTheSameLink: settingData.HideTheSameLink,
   });
-  const newTab = shouldOpenInNewTab(engine, isSelectSearch);
+  const newTab = shouldOpenInNewTab(engine, forceNewTab);
 
   if (result.type === 'post') {
     submitPostForm(
@@ -103,6 +107,7 @@ export function performJump(engine, keyword, settingData, isSelectSearch) {
 /**
  * 一键打开分类下的全部引擎。
  * 复用 performJump，统一编码关键词并支持 $post$ 表单；
+ * 批量打开会强制使用新标签页，避免引擎之间互相覆盖页面。
  * GM_openInTab 不可用时 performJump 会回退到 window.open，避免静默失败。
  */
 export function openAllEngines(engines, keyword, settingData, matchedRule) {

@@ -61,7 +61,7 @@ function getCurrentKeyword() {
 }
 
 function onJump(engine) {
-  performJump(engine, getCurrentKeyword(), data, isSelectSearch.value);
+  performJump(engine, getCurrentKeyword(), data);
 }
 
 function onJumpAll(engines) {
