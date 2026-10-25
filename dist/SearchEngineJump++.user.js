@@ -5859,8 +5859,8 @@
 			url: targetURL ? targetURL.replaceAll("%s", encoded) : targetURL
 		};
 	}
-	function shouldOpenInNewTab(engine, isSelectSearch) {
-		return Boolean(isSelectSearch || engine.target !== "_self");
+	function shouldOpenInNewTab(engine, forceNewTab = false) {
+		return Boolean(forceNewTab || engine.target !== "_self");
 	}
 	function openInNewTab(url) {
 		if (!url) return false;
@@ -5891,9 +5891,9 @@
 		document.body.appendChild(form);
 		form.submit();
 	}
-	function performJump(engine, keyword, settingData, isSelectSearch) {
+	function performJump(engine, keyword, settingData, forceNewTab = false) {
 		const result = prepareJump(engine, keyword, { hideTheSameLink: settingData.HideTheSameLink });
-		const newTab = shouldOpenInNewTab(engine, isSelectSearch);
+		const newTab = shouldOpenInNewTab(engine, forceNewTab);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
 			return true;
@@ -6361,7 +6361,7 @@
 				return extractKeyword(inputTarget);
 			}
 			function onJump(engine) {
-				performJump(engine, getCurrentKeyword(), data, isSelectSearch.value);
+				performJump(engine, getCurrentKeyword(), data);
 			}
 			function onJumpAll(engines) {
 				openAllEngines(engines, getCurrentKeyword(), data, matchedRule);
