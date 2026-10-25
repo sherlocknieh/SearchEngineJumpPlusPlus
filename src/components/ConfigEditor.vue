@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import { GM_setClipboard } from '$';
+import { t } from '../i18n/index.js';
 
 const props = defineProps({
   initialText: { type: String, default: '' },
@@ -27,9 +28,9 @@ async function importFile(event) {
   try {
     const parsed = JSON.parse(await file.text());
     text.value = JSON.stringify(parsed, null, 4);
-    emit('notify', `已导入 ${file.name}`);
+    emit('notify', t('config.imported', { name: file.name }));
   } catch (e) {
-    alert('JSON 解析失败');
+    alert(t('config.parseFailed'));
   }
 }
 
@@ -38,7 +39,7 @@ function exportFile() {
   try {
     parsed = JSON.parse(text.value);
   } catch (e) {
-    alert('JSON 解析失败，无法导出');
+    alert(t('config.parseFailedExport'));
     return false;
   }
 
@@ -53,7 +54,7 @@ function exportFile() {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
-  emit('notify', '配置已导出');
+  emit('notify', t('config.exported'));
   return true;
 }
 
@@ -68,18 +69,18 @@ function reset() {
   <div id="iqxin-editCodeBox">
     <p>
       <span class="iqxin-warning">! ! !</span><br />
-      此处有更多的设置选项,自由度更高,<br />
-      但设置错误会导致脚本无法运行
+      {{ t('config.warningLine1') }}<br />
+      {{ t('config.warningLine2') }}
     </p>
     <textarea v-model="text" wrap="off" cols="45" rows="20"></textarea>
     <input ref="fileInput" class="sej-file-input" type="file" accept="application/json,.json" @change="importFile" />
     <div class="sej-dialog-actions">
-      <button @click="reset">恢复默认</button>
-      <button @click="pickFile">导入</button>
-      <button @click="exportFile">导出</button>
-      <button @click="copy">复制</button>
-      <button class="iqxin-closeBtn" @click="$emit('close')">关闭</button>
-      <button class="iqxin-enterBtn" @click="$emit('save', text)">保存</button>
+      <button @click="reset">{{ t('config.reset') }}</button>
+      <button @click="pickFile">{{ t('config.import') }}</button>
+      <button @click="exportFile">{{ t('config.export') }}</button>
+      <button @click="copy">{{ t('common.copy') }}</button>
+      <button class="iqxin-closeBtn" @click="$emit('close')">{{ t('common.close') }}</button>
+      <button class="iqxin-enterBtn" @click="$emit('save', text)">{{ t('common.save') }}</button>
     </div>
   </div>
 </template>

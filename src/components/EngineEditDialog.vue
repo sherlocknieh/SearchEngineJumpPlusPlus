@@ -9,6 +9,7 @@ import {
   watch,
 } from 'vue';
 import { resolveFavicon } from '../core/favicon.js';
+import { t } from '../i18n/index.js';
 
 const props = defineProps({
   mode: { type: String, default: 'add' },
@@ -132,9 +133,9 @@ const canPreview = computed(
     /^(https?:\/\/|data:)/i.test(form.favicon.trim()),
 );
 const previewLabel = computed(() => {
-  if (previewLoading.value) return '取消';
-  if (previewFailed.value || previewImage.value) return '重新获取';
-  return '获取图标';
+  if (previewLoading.value) return t('engine.cancelFetch');
+  if (previewFailed.value || previewImage.value) return t('engine.refetch');
+  return t('engine.fetchIcon');
 });
 const extractorUrl = computed(() => {
   const host = siteHost.value;
@@ -145,11 +146,11 @@ const extractorUrl = computed(() => {
   );
 });
 const STEP_STATUS_TEXT = {
-  pending: '等待',
-  loading: '获取中…',
-  ok: '已获取',
-  failed: '不可用',
-  canceled: '已取消',
+  pending: 'engine.stepPending',
+  loading: 'engine.stepLoading',
+  ok: 'engine.stepOk',
+  failed: 'engine.stepFailed',
+  canceled: 'engine.stepCanceled',
 };
 
 // 用户手动填写 data 链接后，不再被图标转换结果覆盖
@@ -291,7 +292,7 @@ function uploadFavicon(event) {
     file.type.startsWith('image/') ||
     /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name);
   if (!isImage) {
-    alert('请选择图片文件');
+    alert(t('engine.selectImage'));
     return;
   }
   const reader = new FileReader();
@@ -303,7 +304,7 @@ function uploadFavicon(event) {
     previewSteps.value = [];
     setManualPreviewData(String(reader.result || ''));
   };
-  reader.onerror = () => alert('读取图片失败');
+  reader.onerror = () => alert(t('engine.readImageFailed'));
   reader.readAsDataURL(file);
 }
 
@@ -335,21 +336,21 @@ function submit() {
 <template>
   <div id="newSearchBox">
     <div class="sej-dialog-title">
-      {{ mode === 'edit' ? '编辑搜索引擎' : '添加搜索引擎' }}
+      {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
     <label class="sej-field">
-      <span>链接</span>
-      <input ref="urlInput" v-model="form.url" placeholder="必填" :disabled="busy" />
+      <span>{{ t('engine.url') }}</span>
+      <input ref="urlInput" v-model="form.url" :placeholder="t('common.required')" :disabled="busy" />
     </label>
     <label class="sej-field">
-      <span>标题</span>
-      <input v-model="form.name" placeholder="必填" :disabled="busy"
+      <span>{{ t('engine.name') }}</span>
+      <input v-model="form.name" :placeholder="t('common.required')" :disabled="busy"
         @input="markTitleEdited" />
     </label>
     <div class="sej-field">
-      <span>图标</span>
+      <span>{{ t('engine.icon') }}</span>
       <div class="sej-field-row">
-        <input v-model="form.favicon" placeholder="选填" :disabled="busy"
+        <input v-model="form.favicon" :placeholder="t('common.optional')" :disabled="busy"
           @input="markFaviconEdited" />
         <button type="button" class="sej-icon-preview-btn"
           :disabled="busy || (!previewLoading && !canPreview)" @click="previewIcon">
@@ -365,49 +366,49 @@ function submit() {
           <span class="sej-preview-state">{{
             step.status === 'failed' && step.reason
               ? step.reason
-              : STEP_STATUS_TEXT[step.status]
+              : t(STEP_STATUS_TEXT[step.status])
           }}</span>
         </div>
         <a v-if="extractorUrl" class="sej-preview-extractor"
           :href="extractorUrl" target="_blank" rel="noopener">
-          ↗试试在线提取工具
+          {{ t('engine.tryExtractor') }}
         </a>
       </div>
     </div>
     <div class="sej-field">
-      <span>图标数据</span>
+      <span>{{ t('engine.iconData') }}</span>
       <div class="sej-data-line">
         <input v-model="previewData" class="sej-data-input"
-          placeholder="选填，可粘贴 data:image/... 链接" :disabled="busy"
+          :placeholder="t('engine.iconDataPlaceholder')" :disabled="busy"
           @input="markDataEdited" />
         <button type="button" class="sej-icon-preview-btn"
           :class="{ 'sej-has-icon': previewImage }" :disabled="busy"
-          :title="previewImage ? '本地上传（替换当前图标）' : '本地上传'"
+          :title="previewImage ? t('engine.uploadReplace') : t('engine.upload')"
           @click="pickFaviconFile">
           <img v-if="previewImage" class="sej-icon-preview" :src="dataIconLink" alt="" />
-          <template v-else>本地上传</template>
+          <template v-else>{{ t('engine.upload') }}</template>
         </button>
       </div>
       <input ref="faviconFileInput" class="sej-file-input" type="file"
         accept="image/*,.ico" @change="uploadFavicon" />
     </div>
     <label class="sej-field">
-      <span>打开方式</span>
+      <span>{{ t('engine.target') }}</span>
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
-        <option value="_blank">新标签页打开</option>
-        <option value="_self">当前页打开</option>
+        <option value="_blank">{{ t('engine.targetBlank') }}</option>
+        <option value="_self">{{ t('engine.targetSelf') }}</option>
       </select>
     </label>
     <div class="sej-dialog-actions">
       <button v-if="mode === 'edit'" type="button"
         class="addItemBoxBtn sej-dialog-danger" :disabled="busy" @click="$emit('delete')">
-        删除
+        {{ t('common.delete') }}
       </button>
       <button class="addItemBoxBtn iqxin-closeBtn" :disabled="busy" @click="$emit('cancel')">
-        取消
+        {{ t('common.cancel') }}
       </button>
       <button class="addItemBoxBtn iqxin-enterBtn" :disabled="busy" @click="submit">
-        {{ busy ? '获取图标中…' : '确定' }}
+        {{ busy ? t('engine.fetching') : t('common.confirm') }}
       </button>
     </div>
   </div>

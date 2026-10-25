@@ -8,6 +8,7 @@ let openCategory = null;
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { getDropRoot } from '../core/shadow.js';
+import { t } from '../i18n/index.js';
 import EngineItem from './EngineItem.vue';
 
 const props = defineProps({
@@ -236,8 +237,8 @@ onBeforeUnmount(() => {
         class="sej-category-search-icon"
         role="button"
         tabindex="0"
-        :title="`一键搜索全部：${name}`"
-        :aria-label="`一键搜索全部：${name}`"
+        :title="t('jump.searchAll', { name })"
+        :aria-label="t('jump.searchAll', { name })"
         @click.stop.prevent="onTriggerAction"
         @keydown.enter.stop.prevent="onTriggerAction"
         @keydown.space.stop.prevent="onTriggerAction"

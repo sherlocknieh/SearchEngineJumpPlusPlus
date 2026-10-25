@@ -13,6 +13,12 @@ import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc, resolveFavicon } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
+import {
+    localizeCategoryName,
+    localizeEngineName,
+    setLanguagePreference,
+    t,
+} from '../i18n/index.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
@@ -30,6 +36,11 @@ const TRASH =
 const settings = useSettings();
 const source = computed(() => settings.settingData);
 
+function displayCategoryName(category) {
+    if (!category) return '';
+    return localizeCategoryName(category.name, category.key);
+}
+
 const OPTION_KEYS = [
     'fixedTop',
     'fixedTopUpward',
@@ -37,6 +48,7 @@ const OPTION_KEYS = [
     'center',
     'transtion',
     'selectSearch',
+    'language',
 ];
 
 let uid = 1;
@@ -176,13 +188,13 @@ function flushAutoSave() {
 
     const backend = settings.savePartial(next);
     if (backend === 'memory') {
-        showToast('自动保存失败：存储不可用，请用“配置文件”复制备份', 5000);
+        showToast(t('toast.autoSaveFailed'), 5000);
         return;
     }
     settingsChanged = true;
     if (backend === 'local' && !autosaveWarnedLocal) {
         autosaveWarnedLocal = true;
-        showToast('已自动保存（当前仅本网站生效）', 3000);
+        showToast(t('toast.autoSavedLocal'), 3000);
     }
 }
 
@@ -199,6 +211,12 @@ watch(
     () => scheduleAutoSave(),
 );
 
+// 语言切换立即生效（仍需自动保存后才持久化）
+watch(
+    () => draft.language,
+    (value) => setLanguagePreference(value),
+);
+
 function refreshDraft() {
     const next = makeDraft();
     for (const key of OPTION_KEYS) draft[key] = next[key];
@@ -210,8 +228,8 @@ function trySyncFromRemote() {
     if (saving.value) return;
     const hasLocalChanges = !isSameValue(buildResult(), source.value);
     if (engineDialog.value || categoryDialog.value || configOpen.value || hasLocalChanges) {
-        showToast('其他页面已更新设置，当前有未保存修改', 6000, {
-            label: '同步',
+        showToast(t('toast.remoteConflict'), 6000, {
+            label: t('toast.syncAction'),
             onClick: forceSyncFromRemote,
         });
         return;
@@ -219,7 +237,7 @@ function trySyncFromRemote() {
     if (!settings.reload()) return;
     refreshDraft();
     remoteSynced = true;
-    showToast('已同步其他页面保存的设置', 3000);
+    showToast(t('toast.synced'), 3000);
 }
 
 // 放弃面板内未提交的修改，直接采用存储中的最新设置
@@ -231,7 +249,7 @@ function forceSyncFromRemote() {
     settings.reload();
     refreshDraft();
     remoteSynced = true;
-    showToast('已同步其他页面保存的设置', 3000);
+    showToast(t('toast.synced'), 3000);
 }
 
 watch(() => ui.settingsRevision, trySyncFromRemote);
@@ -244,15 +262,12 @@ async function save() {
         if (!isSameValue(buildResult(), source.value)) {
             const backend = settings.applySettings(buildResult());
             if (backend === 'memory') {
-                showToast('保存失败：存储不可用，请用“配置文件”复制备份', 5000);
+                showToast(t('toast.saveFailed'), 5000);
                 return;
             }
             settingsChanged = true;
             if (backend === 'local') {
-                showToast(
-                    '已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）',
-                    4000,
-                );
+                showToast(t('toast.savedLocal'), 4000);
             }
         }
     } finally {
@@ -265,22 +280,26 @@ async function loadAllIcons() {
     if (loadingIcons.value || saving.value) return;
     const pending = remoteFaviconEngines().length;
     if (!pending) {
-        showToast('没有需要加载的图标');
+        showToast(t('toast.noIcons'));
         return;
     }
     loadingIcons.value = true;
     try {
-        showToast(`正在内嵌 ${pending} 个图标…`, 60000);
+        showToast(t('toast.embeddingIcons', { count: pending }), 60000);
         const { converted, failed } = await embedRemoteFavicons();
         const parts = [];
-        if (converted) parts.push(`已内嵌 ${converted} 个图标`);
-        if (!converted && !failed) parts.push('没有可加载的图标');
-        else if (failed) parts.push(`${failed} 个获取失败`);
+        if (converted) parts.push(t('toast.embeddedIcons', { count: converted }));
+        if (!converted && !failed) parts.push(t('toast.noLoadableIcons'));
+        else if (failed) parts.push(t('toast.iconsFailed', { count: failed }));
+        const separator = t('toast.listSeparator');
         if (converted) {
             scheduleAutoSave();
-            showToast(`${parts.join('，')}，已自动保存`, 4000);
+            showToast(
+                `${parts.join(separator)}${t('toast.autoSavedSuffix')}`,
+                4000,
+            );
         } else {
-            showToast(parts.join('，'), 4000);
+            showToast(parts.join(separator), 4000);
         }
     } finally {
         loadingIcons.value = false;
@@ -289,8 +308,8 @@ async function loadAllIcons() {
 
 function reset(exported = false) {
     const message = exported
-        ? '当前配置已导出为备份文件，确定要恢复默认设置吗？'
-        : '将会删除用户设置！';
+        ? t('reset.confirmExported')
+        : t('reset.confirm');
     if (confirm(message)) {
         cancelAutoSave();
         remoteSynced = false;
@@ -338,14 +357,14 @@ function toggleCategory(index) {
     const category = draft.categories[index];
     category.enabled = !category.enabled;
     scheduleAutoSave();
-    showToast(category.enabled ? '启用' : '隐藏');
+    showToast(category.enabled ? t('common.enabled') : t('common.hidden'));
 }
 
 function toggleEngine(ci, ei) {
     const engine = draft.categories[ci].engines[ei];
     engine.disable = !engine.disable;
     scheduleAutoSave();
-    showToast(engine.disable ? '隐藏' : '启用');
+    showToast(engine.disable ? t('common.hidden') : t('common.enabled'));
 }
 
 function pushUndo(entry) {
@@ -355,7 +374,7 @@ function pushUndo(entry) {
 
 function undoDelete() {
     if (engineDialog.value || categoryDialog.value || configOpen.value) {
-        showToast('请先关闭当前对话框');
+        showToast(t('toast.dialogOpen'));
         return;
     }
     const entry = undoStack.pop();
@@ -370,7 +389,7 @@ function undoDelete() {
         );
         if (!category) {
             undoStack.push(entry);
-            showToast('无法撤销：分类已不存在');
+            showToast(t('toast.categoryMissing'));
             return;
         }
         const index = Math.min(entry.index, category.engines.length);
@@ -379,13 +398,13 @@ function undoDelete() {
 
     categoryDialog.value = null;
     scheduleAutoSave();
-    showToast(`已撤销删除${entry.label}`);
+    showToast(t('toast.undoDelete', { label: entry.label }));
 }
 
 function notifyDeleted(entry, label) {
     pushUndo({ ...entry, label });
-    showToast(`已删除${label}`, UNDO_DURATION, {
-        label: '撤销',
+    showToast(t('toast.deleted', { label }), UNDO_DURATION, {
+        label: t('common.undo'),
         onClick: undoDelete,
     });
 }
@@ -399,7 +418,7 @@ function deleteCategory(index) {
             index,
             item: JSON.parse(JSON.stringify(category)),
         },
-        `分类「${category.name}」`,
+        t('category.label', { name: displayCategoryName(category) }),
     );
     draft.categories.splice(index, 1);
     scheduleAutoSave();
@@ -416,7 +435,7 @@ function deleteEngine(ci, ei) {
             index: ei,
             item: JSON.parse(JSON.stringify(engine)),
         },
-        `「${engine.name}」`,
+        t('engine.label', { name: localizeEngineName(engine.name) }),
     );
     category.engines.splice(ei, 1);
     scheduleAutoSave();
@@ -451,7 +470,7 @@ function submitCategory(name) {
     if (!ctx) return;
     const category = draft.categories[ctx.index];
     if (category) {
-        const nextName = name || '空';
+        const nextName = name || t('category.emptyName');
         if (category.name !== nextName) {
             category.name = nextName;
             scheduleAutoSave();
@@ -866,7 +885,11 @@ function copyEngineToCategory() {
         if (target) {
             target.engines.push(copy);
             scheduleAutoSave();
-            showToast(`已复制「${source.name}」`);
+            showToast(
+                t('toast.copied', {
+                    name: localizeEngineName(source.name),
+                }),
+            );
         }
     }
 }
@@ -1109,7 +1132,7 @@ async function submitEngine(engine) {
     const ctx = engineDialog.value;
     if (!ctx || engineSaving.value) return;
     if (!engine.name || !engine.url) {
-        alert('标题和链接必填');
+        alert(t('engine.required'));
         return;
     }
     engineSaving.value = true;
@@ -1174,7 +1197,11 @@ async function loadFaviconInBackground(id, url, token) {
     // 图标在此期间被修改或该条目已删除时丢弃结果
     if (!engine || engine.favicon !== url) return;
     if (!data) {
-        console.warn('[SEJ] 后台获取图标失败:', url, reason || '未知原因');
+        console.warn(
+            '[SEJ] 后台获取图标失败:',
+            url,
+            reason || t('favicon.backgroundFailed'),
+        );
         return;
     }
     engine.faviconData = data;
@@ -1194,7 +1221,7 @@ function createCategoryKey() {
 async function addCategory() {
     draft.categories.push({
         _id: nextId(),
-        name: '新分类',
+        name: t('category.newName'),
         key: createCategoryKey(),
         enabled: true,
         engines: [],
@@ -1233,7 +1260,7 @@ function saveConfig(text) {
         try {
             parsed = JSON.parse(text);
         } catch (e) {
-            alert('JSON 解析失败');
+            alert(t('config.parseFailed'));
             return;
         }
         cancelAutoSave();
@@ -1331,6 +1358,8 @@ onBeforeUnmount(() => {
     document.removeEventListener('pointermove', onDragMove);
     document.removeEventListener('pointerup', stopDrag);
     document.removeEventListener('pointercancel', stopDrag);
+    // 未保存的语言选择不带到面板外
+    setLanguagePreference(settings.settingData.language);
 });
 </script>
 
@@ -1338,8 +1367,8 @@ onBeforeUnmount(() => {
     <div id="settingLayerMask" ref="maskEl" :style="{ display: 'flex', opacity: maskVisible ? 1 : 0 }" @click.self="close" @transitionend="onMaskTransitionEnd">
         <div id="settingLayer" ref="layerEl" :style="layerStyle" @click.stop>
             <div class="sej-panel-header" @pointerdown="startDrag" @contextmenu.prevent>
-                <span class="sej-panel-title">搜索跳转设置</span>
-                <button type="button" class="sej-panel-close" title="关闭" aria-label="关闭"
+                <span class="sej-panel-title">{{ t('settings.title') }}</span>
+                <button type="button" class="sej-panel-close" :title="t('settings.close')" :aria-label="t('settings.close')"
                     @click.stop="close" @pointerdown.stop>✕</button>
             </div>
             <!-- 引擎列表管理区域；长按条目在触屏上进入拖动，禁止原生长按菜单 -->
@@ -1352,15 +1381,15 @@ onBeforeUnmount(() => {
                     <!-- 类别标题 -->
                     <div class="sejtitle drag" :data-xin="category.enabled ? 1 : -1"
                         :data-iqxintitle="category.key"
-                        :title="`编辑分类：${category.name}`"
+                        :title="t('settings.editCategory', { name: displayCategoryName(category) })"
                         @pointerdown="onDragPointerDown($event, 'category', ci)"
                         @click.stop="openCategoryDialog(ci)">
-                        <span class="iqxin-pointer-events">{{ category.name }}</span>
+                        <span class="iqxin-pointer-events">{{ displayCategoryName(category) }}</span>
                         <span class="sej-hover-edit" v-html="PENCIL"></span>
                         <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': !category.enabled }"
-                            :title="category.enabled ? '隐藏' : '显示'" @click.stop="toggleCategory(ci)"
+                            :title="category.enabled ? t('common.hide') : t('common.show')" @click.stop="toggleCategory(ci)"
                             v-html="category.enabled ? EYE : EYE_OFF"></span>
-                        <span class="sej-hover-delete" title="删除分类" @pointerdown.stop
+                        <span class="sej-hover-delete" :title="t('settings.deleteCategory')" @pointerdown.stop
                             @click.stop="deleteCategory(ci)" v-html="TRASH"></span>
                     </div>
 
@@ -1370,20 +1399,20 @@ onBeforeUnmount(() => {
                         <span v-for="(engine, ei) in category.engines" :key="engine._id" class="drag"
                             :data-sej-drag-el="'engine-' + engine._id"
                             :class="{ 'sej-drag-placeholder': dragCtx?.type === 'engine' && dragCtx.key === engine._id }"
-                            :title="`编辑：${engine.name}`"
+                            :title="t('settings.editEngine', { name: localizeEngineName(engine.name) })"
                             @pointerdown="onDragPointerDown($event, 'engine', ci, ei)"
                             @click.stop="editEngine(ci, ei)">
                             <span class="sej-engine" :data-iqxintitle="engine.name" :data-iqxinimg="engine.favicon"
                                 :data-iqxinlink="engine.url" :data-iqxintarget="engine.target === '_self' ? '_self' : null"
                                 :data-iqxindisabled="engine.disable ? 'true' : null">
                                 <img class="sej-engine-icon" :src="getFaviconSrc(engine)" alt="" />
-                                <span>{{ engine.name }}</span>
+                                <span>{{ localizeEngineName(engine.name) }}</span>
                             </span>
                             <span class="sej-hover-edit" v-html="PENCIL"></span>
                             <span class="iqxin-set-toggle" :class="{ 'iqxin-set-hidden': engine.disable }"
-                                :title="engine.disable ? '显示' : '隐藏'" @click.stop="toggleEngine(ci, ei)"
+                                :title="engine.disable ? t('common.show') : t('common.hide')" @click.stop="toggleEngine(ci, ei)"
                                 v-html="engine.disable ? EYE_OFF : EYE"></span>
-                            <span class="sej-hover-delete" title="删除引擎" @pointerdown.stop
+                            <span class="sej-hover-delete" :title="t('settings.deleteEngine')" @pointerdown.stop
                                 @click.stop="deleteEngine(ci, ei)" v-html="TRASH"></span>
                         </span>
                         <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
@@ -1391,13 +1420,13 @@ onBeforeUnmount(() => {
                             @click.stop="addEngine(ci)">
                             <span v-if="copyTargetCi === ci" class="sej-copy-icon" v-html="COPY"></span>
                             <template v-else>+</template>
-                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">复制一份到此栏目</span>
+                            <span v-if="copyTargetCi === ci" class="sej-copy-hint">{{ t('settings.copyHere') }}</span>
                         </span>
                     </div>
                 </div>
                 <!-- 新增分类占位卡片 -->
                 <div class="iqxin-items sej-add-category-card" role="button" tabindex="0"
-                    title="添加列表" aria-label="添加列表"
+                    :title="t('settings.addCategory')" :aria-label="t('settings.addCategory')"
                     @click="addCategory" @keydown.enter="addCategory" @keydown.space.prevent="addCategory">
                     <span class="sej-add-category-plus">+</span>
                 </div>
@@ -1406,45 +1435,54 @@ onBeforeUnmount(() => {
             <div id="btnEle">
                 <div class="btnEleLayer">
                     <div class="sej-footer-options">
-                        <span id="xin-HideTheSameLink" title="比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索">
-                            <label>防止原地跳转<input type="checkbox" v-model="draft.HideTheSameLink" /></label>
+                        <span id="xin-HideTheSameLink" :title="t('settings.hideSameLinkTip')">
+                            <label>{{ t('settings.hideSameLink') }}<input type="checkbox" v-model="draft.HideTheSameLink" /></label>
                         </span>
                         <span id="xin-selectSearch">
-                            <label>划词搜索<input type="checkbox" v-model="draft.selectSearch" /></label>
+                            <label>{{ t('settings.selectSearch') }}<input type="checkbox" v-model="draft.selectSearch" /></label>
                         </span>
                         <span id="xin-transtion">
-                            <label>过渡动画<input type="checkbox" v-model="draft.transtion" /></label>
+                            <label>{{ t('settings.transition') }}<input type="checkbox" v-model="draft.transtion" /></label>
                         </span>
-                        <span id="xin-centerDisplay" title="搜索条始终居中显示">
-                            <label>强制居中<input type="checkbox" v-model="draft.center" /></label>
+                        <span id="xin-centerDisplay" :title="t('settings.centerTip')">
+                            <label>{{ t('settings.center') }}<input type="checkbox" v-model="draft.center" /></label>
                         </span>
-                        <span id="iqxin-fixedTopS" title="页面下滑时搜索条固定在顶部显示">
-                            <label>固顶显示<input type="checkbox" v-model="draft.fixedTop" /></label>
+                        <span id="iqxin-fixedTopS" :title="t('settings.fixedTopTip')">
+                            <label>{{ t('settings.fixedTop') }}<input type="checkbox" v-model="draft.fixedTop" /></label>
                         </span>
-                        <span v-show="draft.fixedTop" id="iqxin-fixedTopUpward" title="仅在向上滚动页面时显示">
-                            <label>下滑不显示<input type="checkbox" v-model="draft.fixedTopUpward" /></label>
+                        <span v-show="draft.fixedTop" id="iqxin-fixedTopUpward" :title="t('settings.fixedTopUpwardTip')">
+                            <label>{{ t('settings.fixedTopUpward') }}<input type="checkbox" v-model="draft.fixedTopUpward" /></label>
+                        </span>
+                        <span id="xin-language">
+                            <label>{{ t('settings.language') }}
+                                <select v-model="draft.language" class="sej-language-select">
+                                    <option value="auto">{{ t('settings.languageAuto') }}</option>
+                                    <option value="zh-CN">简体中文</option>
+                                    <option value="en">English</option>
+                                </select>
+                            </label>
                         </span>
                     </div>
                     <div class="sej-footer-bar">
                         <div class="sej-footer-selects">
-                            <span id="xin-modification" @click="openConfig">编辑配置文件</span>
-                            <span id="xin-loadIcons" title="把所有远程图标内嵌为 data 链接"
+                            <span id="xin-modification" @click="openConfig">{{ t('settings.editConfig') }}</span>
+                            <span id="xin-loadIcons" :title="t('settings.loadIconsTip')"
                                 :class="{ 'sej-loading': loadingIcons }" @click="loadAllIcons">
-                                {{ loadingIcons ? '加载中…' : '加载所有图标缓存' }}
+                                {{ loadingIcons ? t('settings.loading') : t('settings.loadIcons') }}
                             </span>
                         </div>
                         <div class="sej-footer-links">
-                            <span class="feedback" title="在 GreasyFork 进行反馈">
+                            <span class="feedback" :title="t('settings.feedbackGreasyFork')">
                                 <a target="_blank" href="https://greasyfork.org/zh-CN/users/1238054">Greasy
                                     Fork</a>
                             </span>
-                            <span class="feedback" title="在 Github 进行反馈">
+                            <span class="feedback" :title="t('settings.feedbackGitHub')">
                                 <a target="_blank" href="https://github.com/sherlocknieh/Monkey-Scripts">GitHub</a>
                             </span>
                         </div>
                         <div class="sej-footer-actions">
-                            <span id="xin-save" title="关闭" :class="{ 'sej-saving': saving }" @click="save">
-                                {{ saving ? '关闭中…' : '关闭' }}
+                            <span id="xin-save" :title="t('settings.close')" :class="{ 'sej-saving': saving }" @click="save">
+                                {{ saving ? t('settings.saving') : t('settings.close') }}
                             </span>
                         </div>
                     </div>
@@ -1456,11 +1494,11 @@ onBeforeUnmount(() => {
                 @delete="deleteEngineFromDialog" @cancel="cancelEngineDialog" />
 
             <CategoryEditDialog v-if="categoryDialog"
-                :name="draft.categories[categoryDialog.index]?.name || ''" @submit="submitCategory"
+                :name="displayCategoryName(draft.categories[categoryDialog.index]) || ''" @submit="submitCategory"
                 @delete="deleteCategoryFromDialog" @cancel="cancelCategoryDialog" />
 
             <ConfigEditor v-if="configOpen" :initial-text="configText" @save="saveConfig" @reset="reset(true)"
-                @close="configOpen = false" @copy="showToast('复制成功')" @notify="showToast" />
+                @close="configOpen = false" @copy="showToast(t('toast.copySuccess'))" @notify="showToast" />
         </div>
     </div>
 </template>

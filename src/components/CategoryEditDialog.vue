@@ -1,5 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
+import { t } from '../i18n/index.js';
 
 const props = defineProps({
   name: { type: String, default: '' },
@@ -24,24 +25,24 @@ function submit() {
 
 <template>
   <div id="sej-categoryBox" class="sej-dialog-box">
-    <div class="sej-dialog-title">编辑分类</div>
+    <div class="sej-dialog-title">{{ t('category.title') }}</div>
     <label class="sej-field">
-      <span>名称</span>
-      <input ref="input" v-model="value" placeholder="必填" :disabled="busy"
+      <span>{{ t('common.name') }}</span>
+      <input ref="input" v-model="value" :placeholder="t('common.required')" :disabled="busy"
         @keydown.enter="submit" />
     </label>
     <div class="sej-dialog-actions">
       <button type="button" class="addItemBoxBtn sej-dialog-danger" :disabled="busy"
         @click="$emit('delete')">
-        删除分类
+        {{ t('category.delete') }}
       </button>
       <button type="button" class="addItemBoxBtn iqxin-closeBtn" :disabled="busy"
         @click="$emit('cancel')">
-        取消
+        {{ t('common.cancel') }}
       </button>
       <button type="button" class="addItemBoxBtn iqxin-enterBtn" :disabled="busy"
         @click="submit">
-        确定
+        {{ t('common.confirm') }}
       </button>
     </div>
   </div>

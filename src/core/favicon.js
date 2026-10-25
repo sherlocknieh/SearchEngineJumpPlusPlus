@@ -1,4 +1,5 @@
 import { GM_xmlhttpRequest } from '$';
+import { t } from '../i18n/index.js';
 
 const ICON_TIMEOUT = 4000;
 const MAX_ICON_BYTES = 64 * 1024;
@@ -54,7 +55,7 @@ function requestIcon(url) {
     return new Promise((resolve) => {
         const request = getRequestFn();
         if (!request) {
-            resolve({ response: null, reason: '缺少 GM 请求接口' });
+            resolve({ response: null, reason: t('favicon.noRequestApi') });
             return;
         }
         let settled = false;
@@ -71,12 +72,18 @@ function requestIcon(url) {
                 timeout: ICON_TIMEOUT,
                 headers: { Accept: 'image/*,*/*;q=0.8' },
                 onload: (response) => finish({ response }),
-                onerror: () => finish({ response: null, reason: '网络错误' }),
-                ontimeout: () => finish({ response: null, reason: '请求超时' }),
-                onabort: () => finish({ response: null, reason: '请求已取消' }),
+                onerror: () =>
+                    finish({ response: null, reason: t('favicon.networkError') }),
+                ontimeout: () =>
+                    finish({ response: null, reason: t('favicon.timeout') }),
+                onabort: () =>
+                    finish({ response: null, reason: t('favicon.aborted') }),
             });
         } catch (e) {
-            finish({ response: null, reason: '请求异常：' + (e?.message || e) });
+            finish({
+                response: null,
+                reason: t('favicon.requestError', { message: e?.message || e }),
+            });
         }
     });
 }
@@ -96,17 +103,22 @@ export async function resolveFavicon(url) {
     if (!/^https?:\/\//i.test(source)) return { data: '', reason: '' };
 
     const { response, reason } = await requestIcon(source);
-    if (!response) return { data: '', reason: reason || '请求失败' };
+    if (!response) {
+        return { data: '', reason: reason || t('favicon.requestFailed') };
+    }
     if (response.status < 200 || response.status >= 300) {
         return { data: '', reason: `HTTP ${response.status || 0}` };
     }
 
     const buffer = response.response;
     if (!buffer || buffer.byteLength === 0) {
-        return { data: '', reason: '响应为空' };
+        return { data: '', reason: t('favicon.emptyResponse') };
     }
     if (buffer.byteLength > MAX_ICON_BYTES) {
-        return { data: '', reason: `超过 ${MAX_ICON_BYTES / 1024}KB` };
+        return {
+            data: '',
+            reason: t('favicon.tooLarge', { size: MAX_ICON_BYTES / 1024 }),
+        };
     }
 
     let mime = getHeader(response.responseHeaders, 'content-type')
@@ -117,7 +129,12 @@ export async function resolveFavicon(url) {
         mime = mimeFromUrl(source);
     }
     if (!/^image\//.test(mime)) {
-        return { data: '', reason: `不是图片（${mime || '未知类型'}）` };
+        return {
+            data: '',
+            reason: t('favicon.notImage', {
+                type: mime || t('favicon.unknownType'),
+            }),
+        };
     }
 
     try {
@@ -127,7 +144,7 @@ export async function resolveFavicon(url) {
         };
     } catch (e) {
         console.warn('[SEJ] 图标转换失败:', source, e);
-        return { data: '', reason: '转换失败' };
+        return { data: '', reason: t('favicon.convertFailed') };
     }
 }
 

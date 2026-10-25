@@ -5,6 +5,7 @@ import { reactive } from 'vue';
 import defaultConfig from '../data/engines.json';
 import rules from '../data/rules.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
+import { normalizeLanguage, setLanguagePreference } from '../i18n/index.js';
 
 
 /** GM 存储中配置数据使用的键名 */
@@ -30,6 +31,7 @@ function createDefaultSettings() {
     transtion: true,    // 默认开启动画
     selectSearch: true, // 默认开启划词搜索
     center: false,    // 默认跟随各站点规则排版，不强制居中
+    language: 'auto', // 默认跟随浏览器/系统语言
     // 默认分类及顺序；第三项表示该分类是否在跳转条中显示
     engineCategories: defaultConfig.engineCategories.map((entry) => entry.slice()),
     // 默认引擎列表；从 engines.json 导入
@@ -103,6 +105,8 @@ function normalizeSettings(raw, defaults) {
   }
   // center 兼容旧版的 0/1 写法，统一转为布尔值
   settings.center = data.center === true || data.center === 1 || data.center === '1';
+  // 语言偏好：auto 跟随浏览器，否则限定在支持的语言内
+  settings.language = normalizeLanguage(data.language ?? defaults.language);
 
   // 分类数据损坏时整体回退到默认分类（复制一份，避免修改默认值）
   const categories =
@@ -137,6 +141,7 @@ export class Settings {
     // 实际生效的配置
     this.settingData = null;
     this.initSettings();
+    setLanguagePreference(this.settingData.language);
   }
 
   // 初始化设置
@@ -172,6 +177,7 @@ export class Settings {
       }
     }
     Object.assign(this.settingData, plain);
+    setLanguagePreference(this.settingData.language);
   }
 
   // 把最新设置写入存储

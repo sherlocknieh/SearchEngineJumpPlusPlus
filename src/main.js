@@ -8,6 +8,7 @@ import { onRestartRequest } from './core/appControl.js';
 import { useSettings, STORAGE_KEY } from './stores/settings.js';
 import { openSettingPanel, closeSettingPanel, showToast, ui } from './stores/ui.js';
 import { initStorage, pullLatest, watchValue } from './core/storage.js';
+import { t } from './i18n/index.js';
 
 // 严格 CSP 页面的兼容样式
 const CSP_COMPAT_STYLE = `
@@ -127,7 +128,7 @@ function boot() {
     if (registerMenu) {
       try {
         registerMenu(
-          INSTANCE_ROLE === 'dev' ? '设置菜单（开发版）' : '设置菜单',
+          t(INSTANCE_ROLE === 'dev' ? 'menu.settingsDev' : 'menu.settings'),
           openSettingPanel,
         );
         menuRegistered = true;
@@ -222,7 +223,7 @@ function applyRemoteSettings() {
   }
   if (!useSettings().reload()) return;
   restart();
-  showToast('SearchEngineJump: 已从其他页面同步配置');
+  showToast(t('toast.syncedFromOtherPages'));
 }
 
 function setupSettingsSync() {

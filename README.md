@@ -6,6 +6,8 @@
 
 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 
+支持中英文界面, 默认跟随浏览器语言, 也可在设置面板中手动切换。
+
 安装地址: 
 
 - https://github.com/sherlocknieh/SearchEngineJumpPlusPlus/raw/main/dist/SearchEngineJump++.user.js
@@ -51,7 +53,7 @@
 
 ## TODO
 
-- [ ] 增加英文支持
+- [x] 增加英文支持
 - [x] 划词搜索时, 设置为"在当前页打开"的引擎也只会新标签打开
 
 - [x] 移动鼠标到搜索条上时, 悬浮面板有概率不显示

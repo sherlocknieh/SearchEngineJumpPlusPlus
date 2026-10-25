@@ -1,5 +1,6 @@
 <script setup>
 import { getFaviconSrc } from '../core/favicon.js';
+import { localizeEngineName } from '../i18n/index.js';
 
 defineProps({
   engine: { type: Object, required: true },
@@ -17,6 +18,6 @@ const emit = defineEmits(['jump']);
       :src="getFaviconSrc(engine)"
       alt=""
     />
-    <span>{{ engine.name }}</span>
+    <span>{{ localizeEngineName(engine.name) }}</span>
   </a>
 </template>

@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
+import { localizeCategoryName } from '../i18n/index.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
 import { addStyle, getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
 import {
@@ -42,7 +43,7 @@ const categories = computed(() =>
   data.engineCategories
     .filter(([, , enabled]) => enabled)
     .map(([name, key]) => ({
-      name,
+      name: localizeCategoryName(name, key),
       key,
       engines: (data.engineList[key] || []).filter((engine) => {
         if (engine.disable) return false;

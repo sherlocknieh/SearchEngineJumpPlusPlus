@@ -340,6 +340,25 @@
   gap: 6px;
   color: inherit;
 }
+#btnEle .sej-language-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 6px;
+  background: var(--sej-input-bg);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 2px 4px;
+  margin-left: 2px;
+  cursor: pointer;
+  outline: none;
+}
+#btnEle .sej-language-select:focus-visible {
+  border-color: var(--sej-accent);
+  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+}
 #btnEle span:hover {
   background: var(--sej-surface-hover);
   color: var(--font-color-qxin);
