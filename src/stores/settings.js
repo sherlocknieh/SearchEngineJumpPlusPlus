@@ -5,6 +5,7 @@ import { reactive } from 'vue';
 import defaultConfig from '../data/engines.json';
 import rules from '../data/rules.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
+import { isPlainObject, normalizeEngine, normalizeCategories } from '../core/configData.js';
 import { normalizeLanguage, setLanguagePreference } from '../i18n/index.js';
 
 
@@ -40,51 +41,7 @@ function createDefaultSettings() {
 }
 
 // 检验本地配置格式
-function isObject(value) {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
-}
-
-// 加载引擎数据
-function normalizeEngine(raw) {
-  if (!isObject(raw)) return null;
-  const engine = {};
-  const ENGINE_STRINGS = ['name', 'url', 'favicon', 'faviconData'];
-  for (const key of ENGINE_STRINGS) {
-    if (typeof raw[key] === 'string') engine[key] = raw[key];
-  }
-  // url 是搜索跳转的必需字段，没有就视为无效引擎
-  if (!engine.url) return null;
-  // 仅在新标签页以外的打开方式才记录，减少冗余字段
-  if (raw.target === '_self') engine.target = '_self';
-  // 只有明确为 true 才视为隐藏，其他值一律按显示处理
-  if (raw.disable === true) engine.disable = true;
-
-  return engine;
-}
-
-// 加载类别数据
-function normalizeCategories(data) {
-  const raw = Array.isArray(data.engineCategories) // 优先使用新字段名: engineCategories
-    ? data.engineCategories
-    : Array.isArray(data.engineDetails) // 兼容旧字段: engineDetails
-      ? data.engineDetails
-      : null;
-  if (!raw) return null;
-  const seen = new Set();
-  const categories = [];
-  for (const entry of raw) {
-    if (!Array.isArray(entry)) continue;
-    const [name, key, enabled] = entry;
-    if (typeof key !== 'string' || !key || seen.has(key)) continue;
-    seen.add(key);
-    categories.push([
-      typeof name === 'string' ? name : key,
-      key,
-      typeof enabled === 'boolean' ? enabled : true,
-    ]);
-  }
-  return categories;
-}
+const isObject = isPlainObject;
 
 // 加载设置数据
 function normalizeSettings(raw, defaults) {

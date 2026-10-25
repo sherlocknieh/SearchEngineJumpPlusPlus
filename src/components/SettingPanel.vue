@@ -9,6 +9,7 @@ import {
     watch,
 } from 'vue';
 import { deleteValue, isSameValue } from '../core/storage.js';
+import { mergeIntoCategories } from '../core/configMerge.js';
 import { useSettings, STORAGE_KEY } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc, resolveFavicon } from '../core/favicon.js';
@@ -1254,6 +1255,46 @@ function openConfig() {
     configOpen.value = true;
 }
 
+// 合并导入：只把配置中的分类/引擎追加到草稿，保留当前设置与已有条目
+function mergeConfig(rawText) {
+    let parsed;
+    try {
+        parsed = JSON.parse(rawText);
+    } catch (e) {
+        alert(t('config.parseFailed'));
+        return;
+    }
+
+    const stats = mergeIntoCategories(draft.categories, parsed, nextId);
+    if (!stats) {
+        alert(t('config.mergeUnrecognized'));
+        return;
+    }
+
+    if (!stats.engines) {
+        showToast(t('toast.mergeNothing'), 3000);
+        return;
+    }
+
+    settingsChanged = true;
+    configOpen.value = false;
+    // 合并结果进入草稿后立即落盘，与其他重要编辑的处理方式一致
+    scheduleAutoSave();
+    const parts = [t('toast.mergedEngines', { count: stats.engines })];
+    if (stats.categories) {
+        parts.push(t('toast.mergedCategories', { count: stats.categories }));
+    }
+    if (stats.skipped) {
+        parts.push(t('toast.mergedSkipped', { count: stats.skipped }));
+    }
+    showToast(
+        t('toast.mergeImported', {
+            summary: parts.join(t('toast.listSeparator')),
+        }),
+        4000,
+    );
+}
+
 function saveConfig(text) {
     if (text) {
         let parsed;
@@ -1498,7 +1539,8 @@ onBeforeUnmount(() => {
                 @delete="deleteCategoryFromDialog" @cancel="cancelCategoryDialog" />
 
             <ConfigEditor v-if="configOpen" :initial-text="configText" @save="saveConfig" @reset="reset(true)"
-                @close="configOpen = false" @copy="showToast(t('toast.copySuccess'))" @notify="showToast" />
+                @close="configOpen = false" @copy="showToast(t('toast.copySuccess'))" @notify="showToast"
+                @merge="mergeConfig" />
         </div>
     </div>
 </template>

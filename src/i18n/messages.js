@@ -73,6 +73,11 @@ export const messages = {
     'toast.deleted': '已删除{label}',
     'toast.copied': '已复制「{name}」',
     'toast.copySuccess': '复制成功',
+    'toast.mergeImported': '已合并导入：{summary}',
+    'toast.mergedEngines': '新增 {count} 个引擎',
+    'toast.mergedCategories': '新增 {count} 个分类',
+    'toast.mergedSkipped': '跳过 {count} 个重复项',
+    'toast.mergeNothing': '导入内容中没有可合并的新引擎',
     'toast.syncedFromOtherPages':
       'SearchEngineJump: 已从其他页面同步配置',
 
@@ -113,10 +118,14 @@ export const messages = {
     'config.warningLine2': '但设置错误会导致脚本无法运行',
     'config.imported': '已导入 {name}',
     'config.parseFailed': 'JSON 解析失败',
+    'config.mergeUnrecognized': '无法识别的配置文件：没有找到引擎数据',
     'config.parseFailedExport': 'JSON 解析失败，无法导出',
     'config.exported': '配置已导出',
     'config.reset': '恢复默认',
     'config.import': '导入',
+    'config.mergeImport': '合并导入',
+    'config.mergeTip':
+      '把文本框中配置的引擎追加到现有列表（先“导入”或粘贴配置），保留当前设置',
     'config.export': '导出',
 
     'reset.confirmExported': '当前配置已导出为备份文件，确定要恢复默认设置吗？',
@@ -210,6 +219,11 @@ export const messages = {
     'toast.deleted': 'Deleted {label}',
     'toast.copied': 'Copied “{name}”',
     'toast.copySuccess': 'Copied',
+    'toast.mergeImported': 'Merged: {summary}',
+    'toast.mergedEngines': '{count} engines added',
+    'toast.mergedCategories': '{count} categories added',
+    'toast.mergedSkipped': '{count} duplicates skipped',
+    'toast.mergeNothing': 'No new engines found in the imported config',
     'toast.syncedFromOtherPages':
       'SearchEngineJump: Settings synced from another page',
 
@@ -250,10 +264,14 @@ export const messages = {
     'config.warningLine2': 'but invalid settings can break the script.',
     'config.imported': 'Imported {name}',
     'config.parseFailed': 'Failed to parse JSON',
+    'config.mergeUnrecognized': 'Unrecognized config file: no engine data found',
     'config.parseFailedExport': 'Failed to parse JSON; cannot export',
     'config.exported': 'Configuration exported',
     'config.reset': 'Restore defaults',
     'config.import': 'Import',
+    'config.mergeImport': 'Merge import',
+    'config.mergeTip':
+      'Append engines from the text above to the current list (import or paste first), keeping current settings',
     'config.export': 'Export',
 
     'reset.confirmExported':

@@ -7,7 +7,7 @@ const props = defineProps({
   initialText: { type: String, default: '' },
 });
 
-const emit = defineEmits(['save', 'reset', 'close', 'copy', 'notify']);
+const emit = defineEmits(['save', 'reset', 'close', 'copy', 'notify', 'merge']);
 
 const text = ref(props.initialText);
 const fileInput = ref(null);
@@ -77,6 +77,8 @@ function reset() {
     <div class="sej-dialog-actions">
       <button @click="reset">{{ t('config.reset') }}</button>
       <button @click="pickFile">{{ t('config.import') }}</button>
+      <!-- 合并导入：把文本框中配置的引擎追加到现有列表，先导入或粘贴配置再点击 -->
+      <button :title="t('config.mergeTip')" @click="$emit('merge', text)">{{ t('config.mergeImport') }}</button>
       <button @click="exportFile">{{ t('config.export') }}</button>
       <button @click="copy">{{ t('common.copy') }}</button>
       <button class="iqxin-closeBtn" @click="$emit('close')">{{ t('common.close') }}</button>
