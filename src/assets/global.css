@@ -715,7 +715,6 @@ span.iqxin-additem.sej-copy-target {
   width: 20px;
   height: 20px;
   object-fit: contain;
-  border-radius: 4px;
   background: var(--sej-surface-hover);
 }
 .sej-data-line {
@@ -767,7 +766,6 @@ span.iqxin-additem.sej-copy-target {
   flex: 0 0 auto;
   width: 16px;
   height: 16px;
-  border-radius: 3px;
   object-fit: contain;
 }
 .sej-preview-dot {
