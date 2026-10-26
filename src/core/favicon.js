@@ -16,38 +16,38 @@ const COMPRESS_START_SIZE = 64;
 const COMPRESS_MIN_SIZE = 16;
 
 const EXTENSION_MIME = {
-    '.ico': 'image/x-icon',
-    '.png': 'image/png',
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.gif': 'image/gif',
-    '.webp': 'image/webp',
-    '.svg': 'image/svg+xml',
-    '.bmp': 'image/bmp',
-    '.avif': 'image/avif',
+  '.ico': 'image/x-icon',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.webp': 'image/webp',
+  '.svg': 'image/svg+xml',
+  '.bmp': 'image/bmp',
+  '.avif': 'image/avif',
 };
 
 function getHeader(headers, name) {
-    if (!headers) return '';
-    const match = headers.match(new RegExp(`^${name}:\\s*(.+)$`, 'im'));
-    return match ? match[1].trim() : '';
+  if (!headers) return '';
+  const match = headers.match(new RegExp(`^${name}:\\s*(.+)$`, 'im'));
+  return match ? match[1].trim() : '';
 }
 
 function mimeFromUrl(url) {
-    const path = url.split(/[?#]/)[0].toLowerCase();
-    const dot = path.lastIndexOf('.');
-    if (dot === -1) return '';
-    return EXTENSION_MIME[path.slice(dot)] || '';
+  const path = url.split(/[?#]/)[0].toLowerCase();
+  const dot = path.lastIndexOf('.');
+  if (dot === -1) return '';
+  return EXTENSION_MIME[path.slice(dot)] || '';
 }
 
 function arrayBufferToBase64(buffer) {
-    const bytes = new Uint8Array(buffer);
-    const CHUNK = 0x8000;
-    let binary = '';
-    for (let i = 0; i < bytes.length; i += CHUNK) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
-    }
-    return btoa(binary);
+  const bytes = new Uint8Array(buffer);
+  const CHUNK = 0x8000;
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
 }
 
 /**
@@ -55,11 +55,11 @@ function arrayBufferToBase64(buffer) {
  * base64 每 4 个字符表示 3 字节，末尾的 = / == 只是填充，需要扣除。
  */
 function dataUrlBytes(dataUrl) {
-    const comma = dataUrl.indexOf(',');
-    if (comma === -1) return Infinity;
-    const base64 = dataUrl.slice(comma + 1);
-    const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
-    return Math.floor((base64.length * 3) / 4) - padding;
+  const comma = dataUrl.indexOf(',');
+  if (comma === -1) return Infinity;
+  const base64 = dataUrl.slice(comma + 1);
+  const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
+  return Math.floor((base64.length * 3) / 4) - padding;
 }
 
 /**
@@ -67,19 +67,20 @@ function dataUrlBytes(dataUrl) {
  * 由调用方执行 release 释放对象 URL，避免长期占用内存；失败返回 null。
  */
 function loadImageElement(blob) {
-    return new Promise((resolve) => {
-        const url = URL.createObjectURL(blob);
-        const image = new Image();
-        image.onload = () => resolve({
-            image,
-            release: () => URL.revokeObjectURL(url),
-        });
-        image.onerror = () => {
-            URL.revokeObjectURL(url);
-            resolve(null);
-        };
-        image.src = url;
-    });
+  return new Promise((resolve) => {
+    const url = URL.createObjectURL(blob);
+    const image = new Image();
+    image.onload = () =>
+      resolve({
+        image,
+        release: () => URL.revokeObjectURL(url),
+      });
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(null);
+    };
+    image.src = url;
+  });
 }
 
 /**
@@ -89,16 +90,16 @@ function loadImageElement(blob) {
  * 返回 { image, release }，release 负责释放 ImageBitmap 或 blob URL。
  */
 async function decodeIcon(buffer, mime) {
-    const blob = new Blob([buffer], { type: mime || 'application/octet-stream' });
-    if (typeof createImageBitmap === 'function') {
-        try {
-            const image = await createImageBitmap(blob);
-            return { image, release: () => image.close?.() };
-        } catch (e) {
-            // createImageBitmap 不支持该格式时，交给 <img> 再试一次
-        }
+  const blob = new Blob([buffer], { type: mime || 'application/octet-stream' });
+  if (typeof createImageBitmap === 'function') {
+    try {
+      const image = await createImageBitmap(blob);
+      return { image, release: () => image.close?.() };
+    } catch (e) {
+      // createImageBitmap 不支持该格式时，交给 <img> 再试一次
     }
-    return loadImageElement(blob);
+  }
+  return loadImageElement(blob);
 }
 
 /**
@@ -106,14 +107,14 @@ async function decodeIcon(buffer, mime) {
  * 不支持时 toDataURL('image/webp') 会静默回退成 PNG，因此用返回的 MIME 判断。
  */
 function supportsWebp() {
-    try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 1;
-        canvas.height = 1;
-        return canvas.toDataURL('image/webp').startsWith('data:image/webp');
-    } catch (e) {
-        return false;
-    }
+  try {
+    const canvas = document.createElement('canvas');
+    canvas.width = 1;
+    canvas.height = 1;
+    return canvas.toDataURL('image/webp').startsWith('data:image/webp');
+  } catch (e) {
+    return false;
+  }
 }
 
 /**
@@ -126,117 +127,108 @@ function supportsWebp() {
  * 3. 当前尺寸仍超限则最长边按 0.75 递减，最小到 16px。
  */
 async function compressIcon(buffer, mime) {
-    const decoded = await decodeIcon(buffer, mime);
-    if (!decoded) return '';
-    const { image, release } = decoded;
-    try {
-        // ImageBitmap 使用 width/height，<img> 使用 naturalWidth/naturalHeight
-        const sourceWidth = image.naturalWidth || image.width || 0;
-        const sourceHeight = image.naturalHeight || image.height || 0;
-        const hasSize = sourceWidth > 0 && sourceHeight > 0;
-        // 只有 viewBox、没有固有尺寸的 SVG 取不到宽高，按 64×64 处理
-        const sourceSide = hasSize
-            ? Math.max(sourceWidth, sourceHeight)
-            : COMPRESS_START_SIZE;
-        let maxSide = Math.min(COMPRESS_START_SIZE, sourceSide);
-        const webp = supportsWebp();
+  const decoded = await decodeIcon(buffer, mime);
+  if (!decoded) return '';
+  const { image, release } = decoded;
+  try {
+    // ImageBitmap 使用 width/height，<img> 使用 naturalWidth/naturalHeight
+    const sourceWidth = image.naturalWidth || image.width || 0;
+    const sourceHeight = image.naturalHeight || image.height || 0;
+    const hasSize = sourceWidth > 0 && sourceHeight > 0;
+    // 只有 viewBox、没有固有尺寸的 SVG 取不到宽高，按 64×64 处理
+    const sourceSide = hasSize ? Math.max(sourceWidth, sourceHeight) : COMPRESS_START_SIZE;
+    let maxSide = Math.min(COMPRESS_START_SIZE, sourceSide);
+    const webp = supportsWebp();
 
-        while (maxSide >= COMPRESS_MIN_SIZE) {
-            // 等比例缩放，保持图标不变形
-            const scale = maxSide / sourceSide;
-            const width = hasSize
-                ? Math.max(1, Math.round(sourceWidth * scale))
-                : maxSide;
-            const height = hasSize
-                ? Math.max(1, Math.round(sourceHeight * scale))
-                : maxSide;
+    while (maxSide >= COMPRESS_MIN_SIZE) {
+      // 等比例缩放，保持图标不变形
+      const scale = maxSide / sourceSide;
+      const width = hasSize ? Math.max(1, Math.round(sourceWidth * scale)) : maxSide;
+      const height = hasSize ? Math.max(1, Math.round(sourceHeight * scale)) : maxSide;
 
-            const canvas = document.createElement('canvas');
-            canvas.width = width;
-            canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            if (!ctx) return '';
-            ctx.drawImage(image, 0, 0, width, height);
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return '';
+      ctx.drawImage(image, 0, 0, width, height);
 
-            // 依次尝试更低的编码质量；PNG 不支持质量参数
-            const attempts = webp
-                ? [
-                    ['image/webp', 0.9],
-                    ['image/webp', 0.7],
-                    ['image/png', undefined],
-                ]
-                : [['image/png', undefined]];
-            for (const [type, quality] of attempts) {
-                const dataUrl = canvas.toDataURL(type, quality);
-                // 直接按 data URL 长度估算大小，省去额外的 Blob 异步读取
-                if (dataUrlBytes(dataUrl) <= MAX_ICON_BYTES) return dataUrl;
-            }
-            maxSide = Math.floor(maxSide * 0.75);
-        }
-        return '';
-    } catch (e) {
-        console.warn('[SEJ] 图标压缩失败:', e);
-        return '';
-    } finally {
-        // 无论成功与否都释放 ImageBitmap 或 blob URL
-        release?.();
+      // 依次尝试更低的编码质量；PNG 不支持质量参数
+      const attempts = webp
+        ? [
+            ['image/webp', 0.9],
+            ['image/webp', 0.7],
+            ['image/png', undefined],
+          ]
+        : [['image/png', undefined]];
+      for (const [type, quality] of attempts) {
+        const dataUrl = canvas.toDataURL(type, quality);
+        // 直接按 data URL 长度估算大小，省去额外的 Blob 异步读取
+        if (dataUrlBytes(dataUrl) <= MAX_ICON_BYTES) return dataUrl;
+      }
+      maxSide = Math.floor(maxSide * 0.75);
     }
+    return '';
+  } catch (e) {
+    console.warn('[SEJ] 图标压缩失败:', e);
+    return '';
+  } finally {
+    // 无论成功与否都释放 ImageBitmap 或 blob URL
+    release?.();
+  }
 }
 
 /**
  * 兼容只提供 GM.* 命名空间的管理器（如 Greasemonkey 4）。
  */
 function getRequestFn() {
-    if (typeof GM_xmlhttpRequest === 'function') return GM_xmlhttpRequest;
-    const gm = typeof globalThis !== 'undefined' ? globalThis.GM : undefined;
-    if (gm && typeof gm['xmlHttpRequest'] === 'function') {
-        return gm['xmlHttpRequest'].bind(gm);
-    }
-    return null;
+  if (typeof GM_xmlhttpRequest === 'function') return GM_xmlhttpRequest;
+  const gm = typeof globalThis !== 'undefined' ? globalThis.GM : undefined;
+  if (gm && typeof gm['xmlHttpRequest'] === 'function') {
+    return gm['xmlHttpRequest'].bind(gm);
+  }
+  return null;
 }
 
 function requestIcon(url) {
-    return new Promise((resolve) => {
-        const request = getRequestFn();
-        if (!request) {
-            resolve({ response: null, reason: t('favicon.noRequestApi') });
-            return;
-        }
-        let settled = false;
-        const finish = (result) => {
-            if (settled) return;
-            settled = true;
-            resolve(result);
-        };
-        try {
-            request({
-                method: 'GET',
-                url,
-                responseType: 'arraybuffer',
-                timeout: ICON_TIMEOUT,
-                headers: { Accept: 'image/*,*/*;q=0.8' },
-                onload: (response) => finish({ response }),
-                onerror: () =>
-                    finish({ response: null, reason: t('favicon.networkError') }),
-                ontimeout: () =>
-                    finish({ response: null, reason: t('favicon.timeout') }),
-                onabort: () =>
-                    finish({ response: null, reason: t('favicon.aborted') }),
-            });
-        } catch (e) {
-            finish({
-                response: null,
-                reason: t('favicon.requestError', { message: e?.message || e }),
-            });
-        }
-    });
+  return new Promise((resolve) => {
+    const request = getRequestFn();
+    if (!request) {
+      resolve({ response: null, reason: t('favicon.noRequestApi') });
+      return;
+    }
+    let settled = false;
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      resolve(result);
+    };
+    try {
+      request({
+        method: 'GET',
+        url,
+        responseType: 'arraybuffer',
+        timeout: ICON_TIMEOUT,
+        headers: { Accept: 'image/*,*/*;q=0.8' },
+        onload: (response) => finish({ response }),
+        onerror: () => finish({ response: null, reason: t('favicon.networkError') }),
+        ontimeout: () => finish({ response: null, reason: t('favicon.timeout') }),
+        onabort: () => finish({ response: null, reason: t('favicon.aborted') }),
+      });
+    } catch (e) {
+      finish({
+        response: null,
+        reason: t('favicon.requestError', { message: e?.message || e }),
+      });
+    }
+  });
 }
 
 /**
  * 图标显示地址：优先使用内嵌的 data URL，回退到原始链接。
  */
 export function getFaviconSrc(engine) {
-    return engine?.faviconData || engine?.favicon || '';
+  return engine?.faviconData || engine?.favicon || '';
 }
 
 /**
@@ -245,56 +237,53 @@ export function getFaviconSrc(engine) {
  * 未超限的图片按原格式直接转成 data URL，避免不必要的画质损失。
  */
 export async function resolveFavicon(url) {
-    const source = typeof url === 'string' ? url.trim() : '';
-    if (!/^https?:\/\//i.test(source)) return { data: '', reason: '' };
+  const source = typeof url === 'string' ? url.trim() : '';
+  if (!/^https?:\/\//i.test(source)) return { data: '', reason: '' };
 
-    const { response, reason } = await requestIcon(source);
-    if (!response) {
-        return { data: '', reason: reason || t('favicon.requestFailed') };
-    }
-    if (response.status < 200 || response.status >= 300) {
-        return { data: '', reason: `HTTP ${response.status || 0}` };
-    }
+  const { response, reason } = await requestIcon(source);
+  if (!response) {
+    return { data: '', reason: reason || t('favicon.requestFailed') };
+  }
+  if (response.status < 200 || response.status >= 300) {
+    return { data: '', reason: `HTTP ${response.status || 0}` };
+  }
 
-    const buffer = response.response;
-    if (!buffer || buffer.byteLength === 0) {
-        return { data: '', reason: t('favicon.emptyResponse') };
-    }
+  const buffer = response.response;
+  if (!buffer || buffer.byteLength === 0) {
+    return { data: '', reason: t('favicon.emptyResponse') };
+  }
 
-    let mime = getHeader(response.responseHeaders, 'content-type')
-        .split(';')[0]
-        .trim()
-        .toLowerCase();
-    // 部分静态服务器返回 application/octet-stream，按 URL 后缀再推断一次
-    if (!mime || mime === 'application/octet-stream') {
-        mime = mimeFromUrl(source);
-    }
-    if (!/^image\//.test(mime)) {
-        return {
-            data: '',
-            reason: t('favicon.notImage', {
-                type: mime || t('favicon.unknownType'),
-            }),
-        };
-    }
+  let mime = getHeader(response.responseHeaders, 'content-type').split(';')[0].trim().toLowerCase();
+  // 部分静态服务器返回 application/octet-stream，按 URL 后缀再推断一次
+  if (!mime || mime === 'application/octet-stream') {
+    mime = mimeFromUrl(source);
+  }
+  if (!/^image\//.test(mime)) {
+    return {
+      data: '',
+      reason: t('favicon.notImage', {
+        type: mime || t('favicon.unknownType'),
+      }),
+    };
+  }
 
-    try {
-        if (buffer.byteLength > MAX_ICON_BYTES) {
-            // 超限图标先缩小重编码；压缩失败则放弃内嵌，由调用方回退到原始链接
-            const compressed = await compressIcon(buffer, mime);
-            if (!compressed) {
-                return { data: '', reason: t('favicon.compressFailed') };
-            }
-            return { data: compressed, reason: '' };
-        }
-        return {
-            data: `data:${mime};base64,${arrayBufferToBase64(buffer)}`,
-            reason: '',
-        };
-    } catch (e) {
-        console.warn('[SEJ] 图标转换失败:', source, e);
-        return { data: '', reason: t('favicon.convertFailed') };
+  try {
+    if (buffer.byteLength > MAX_ICON_BYTES) {
+      // 超限图标先缩小重编码；压缩失败则放弃内嵌，由调用方回退到原始链接
+      const compressed = await compressIcon(buffer, mime);
+      if (!compressed) {
+        return { data: '', reason: t('favicon.compressFailed') };
+      }
+      return { data: compressed, reason: '' };
     }
+    return {
+      data: `data:${mime};base64,${arrayBufferToBase64(buffer)}`,
+      reason: '',
+    };
+  } catch (e) {
+    console.warn('[SEJ] 图标转换失败:', source, e);
+    return { data: '', reason: t('favicon.convertFailed') };
+  }
 }
 
 /**
@@ -302,7 +291,7 @@ export async function resolveFavicon(url) {
  * 获取失败或不是图片时原样返回。
  */
 export async function embedFavicon(url) {
-    const source = typeof url === 'string' ? url.trim() : '';
-    const { data } = await resolveFavicon(source);
-    return data || source;
+  const source = typeof url === 'string' ? url.trim() : '';
+  const { data } = await resolveFavicon(source);
+  return data || source;
 }

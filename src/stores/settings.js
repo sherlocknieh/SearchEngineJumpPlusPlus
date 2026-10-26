@@ -2,12 +2,11 @@
  * useSettings: 设置存储模块: 负责配置文件和挂载规则的加载,整理,写入;
  */
 import { reactive } from 'vue';
-import defaultConfig from '../data/engines.json';
 import { matchRule } from '../data/matchRule.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
-import { isPlainObject, normalizeEngine, normalizeCategories } from '../core/configData.js';
-import { normalizeLanguage, setLanguagePreference } from '../assets/i18n.js';
-
+import { createDefaultConfig, normalizeConfig } from '../core/configSchema.js';
+import { isPlainObject } from '../core/configData.js';
+import { setLanguagePreference } from '../assets/i18n.js';
 
 /** GM 存储中配置数据使用的键名 */
 export const STORAGE_KEY = 'searchEngineJumpData';
@@ -22,68 +21,6 @@ function nowText() {
   );
 }
 
-
-// 生成默认配置
-function createDefaultSettings() {
-  return {
-    HideTheSameLink: true,    // 默认隐藏与当前站点相同的引擎，避免重复跳转
-    fixedTop: false,    // 默认不固定跳转条，不启用“仅上拉显示”
-    fixedTopUpward: false,
-    selectSearch: true, // 默认开启划词搜索
-    center: false,    // 默认跟随各站点规则排版，不强制居中
-    language: 'auto', // 默认跟随浏览器/系统语言
-    // 默认分类及顺序；第三项表示该分类是否在跳转条中显示
-    engineCategories: defaultConfig.engineCategories.map((entry) => entry.slice()),
-    // 默认引擎列表；从 engines.json 导入
-    engineList: defaultConfig.engineList,
-  };
-}
-
-// 检验本地配置格式
-const isObject = isPlainObject;
-
-// 加载设置数据
-function normalizeSettings(raw, defaults) {
-  const data = isObject(raw) ? raw : {};
-  const settings = {};
-  // version 记录配置最近一次写入的时间，读取时原样保留
-  settings.version = typeof data.version === 'string' ? data.version : '';
-  // 布尔开关：类型正确才采用，否则回退默认值
-  const OPTION_FLAGS = [
-    'HideTheSameLink',
-    'selectSearch',
-    'center',
-    'fixedTop',
-    'fixedTopUpward',
-  ];
-  for (const key of OPTION_FLAGS) {
-    settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
-  }
-  // 语言偏好：auto 跟随浏览器，否则限定在支持的语言内
-  settings.language = normalizeLanguage(data.language ?? defaults.language);
-
-  // 分类数据损坏时整体回退到默认分类（复制一份，避免修改默认值）
-  const categories =
-    normalizeCategories(data) ||
-    defaults.engineCategories.map((entry) => entry.slice());
-
-  // 没有可用的 engineList 时，全部使用默认引擎
-  const rawList = isObject(data.engineList) ? data.engineList : null;
-  const engineList = {};
-  for (const [, key] of categories) {
-    const engines = rawList
-      ? Array.isArray(rawList[key])
-        ? rawList[key]
-        : []
-      : defaults.engineList[key] || [];
-    engineList[key] = engines.map(normalizeEngine).filter(Boolean);
-  }
-
-  settings.engineCategories = categories;
-  settings.engineList = engineList;
-  return settings;
-}
-
 // 设置管理器
 export class Settings {
   // 初始化操作
@@ -91,7 +28,7 @@ export class Settings {
     // 加载本地配置
     this.storedSettingData = getValue(STORAGE_KEY, null);
     // 加载默认配置
-    this.scriptSettingData = createDefaultSettings();
+    this.scriptSettingData = createDefaultConfig();
     // 实际生效的配置
     this.settingData = null;
     this.initSettings();
@@ -101,10 +38,7 @@ export class Settings {
   // 初始化设置
   initSettings() {
     if (this.storedSettingData) {
-      this.settingData = normalizeSettings(
-        this.storedSettingData,
-        this.scriptSettingData,
-      );
+      this.settingData = normalizeConfig(this.storedSettingData, this.scriptSettingData);
       // 旧配置读取后立即回写为规范形式，避免每次启动重复规范化
       if (!isSameValue(this.settingData, this.storedSettingData)) {
         this.settingData.version = nowText();
@@ -113,10 +47,7 @@ export class Settings {
     } else {
       // 不主动写入默认值：存储探测/读取失败时也返回空值，
       // 此时写回会把默认配置覆盖到已有配置上（部分站点曾出现该问题）。
-      this.settingData = normalizeSettings(
-        this.scriptSettingData,
-        this.scriptSettingData,
-      );
+      this.settingData = normalizeConfig(this.scriptSettingData, this.scriptSettingData);
     }
   }
 
@@ -136,17 +67,17 @@ export class Settings {
 
   // 把最新设置写入存储
   applySettings(next) {
-    this.applyNormalized(normalizeSettings(next, this.scriptSettingData));
+    this.applyNormalized(normalizeConfig(next, this.scriptSettingData));
     // 每次写入都刷新 version 为当前时间
     this.settingData.version = nowText();
     this.storedSettingData = this.settingData;
     return setValue(STORAGE_KEY, this.settingData);
   }
 
-  // 自动保存：把指定字段合并到当前设置后持久化。 
+  // 自动保存：把指定字段合并到当前设置后持久化。
   // 用于设置面板的增量修改，未传入的字段保持原值。
   savePartial(partial) {
-    if (!isObject(partial)) return 'memory';
+    if (!isPlainObject(partial)) return 'memory';
     const next = Object.assign({}, this.settingData, partial);
     return this.applySettings(next);
   }
@@ -154,8 +85,8 @@ export class Settings {
   // 从存储重新读取设置
   reload() {
     const stored = getValue(STORAGE_KEY, null);
-    if (!isObject(stored)) return false;
-    const normalized = normalizeSettings(stored, this.scriptSettingData);
+    if (!isPlainObject(stored)) return false;
+    const normalized = normalizeConfig(stored, this.scriptSettingData);
     if (this.settingData && isSameValue(normalized, this.settingData)) {
       return false;
     }
@@ -169,7 +100,6 @@ export class Settings {
     return matchRule(location.href);
   }
 }
-
 
 // 创建设置管理器实例
 let instance = null;

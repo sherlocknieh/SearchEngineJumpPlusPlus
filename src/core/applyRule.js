@@ -83,9 +83,7 @@ export function applyStylish(rule) {
   if (!rule?.stylish) return;
   addPageStyle(rule.stylish);
 
-  const scriptElementStyles = rule.stylish.match(
-    /#sej-container(-wrapper)?\s*\{[^}]+\}/g,
-  );
+  const scriptElementStyles = rule.stylish.match(/#sej-container(-wrapper)?\s*\{[^}]+\}/g);
   if (scriptElementStyles) {
     scriptElementStyles.forEach((ruleText) => addStyle(ruleText));
   }

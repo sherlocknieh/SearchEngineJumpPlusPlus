@@ -5,12 +5,12 @@ export default [
   {
     enabled: true,
     url: /^https?:\/\/www\.zhihu\.com\/search\?/i,
-    hosts: ["www.zhihu.com"],
+    hosts: ['www.zhihu.com'],
     fixedTop: 52,
     insertIntoDoc: {
-      keyword: "css;.Input",
-      target: "css;.Search-container",
-      where: "beforeBegin",
+      keyword: 'css;.Input',
+      target: 'css;.Search-container',
+      where: 'beforeBegin',
     },
     style: `
       margin: 10px auto 0px;
@@ -26,6 +26,6 @@ export default [
       background: #fff;
       box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);
     `,
-    stylish: ".TopSearch.Card{margin:30px auto;}",
+    stylish: '.TopSearch.Card{margin:30px auto;}',
   },
 ];

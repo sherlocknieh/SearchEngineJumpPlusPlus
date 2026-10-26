@@ -30,8 +30,7 @@ export const messages = {
     'settings.copyHere': '复制一份到此栏目',
     'settings.addCategory': '添加列表',
     'settings.hideSameLink': '防止原地跳转',
-    'settings.hideSameLinkTip':
-      '比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索',
+    'settings.hideSameLinkTip': '比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索',
     'settings.selectSearch': '划词搜索',
     'settings.center': '强制居中',
     'settings.centerTip': '搜索条始终居中显示',
@@ -46,15 +45,13 @@ export const messages = {
     'settings.language': '语言',
     'settings.languageAuto': '跟随浏览器',
 
-    'toast.autoSaveFailed':
-      '自动保存失败：存储不可用，请用“配置文件”复制备份',
+    'toast.autoSaveFailed': '自动保存失败：存储不可用，请用“配置文件”复制备份',
     'toast.autoSavedLocal': '已自动保存（当前仅本网站生效）',
     'toast.remoteConflict': '其他页面已更新设置，当前有未保存修改',
     'toast.syncAction': '同步',
     'toast.synced': '已同步其他页面保存的设置',
     'toast.saveFailed': '保存失败：存储不可用，请用“配置文件”复制备份',
-    'toast.savedLocal':
-      '已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）',
+    'toast.savedLocal': '已保存（当前仅本网站生效：脚本管理器未提供跨站点存储）',
     'toast.embeddedIcons': '已加载 {count} 个图标',
     'toast.iconsFailed': '{count} 个获取失败',
     'toast.autoSavedSuffix': '，已自动保存',
@@ -69,8 +66,7 @@ export const messages = {
     'toast.mergedCategories': '新增 {count} 个分类',
     'toast.mergedSkipped': '跳过 {count} 个重复项',
     'toast.mergeNothing': '导入内容中没有可合并的新引擎',
-    'toast.syncedFromOtherPages':
-      'SearchEngineJump: 已从其他页面同步配置',
+    'toast.syncedFromOtherPages': 'SearchEngineJump: 已从其他页面同步配置',
 
     'category.title': '编辑分类',
     'category.delete': '删除分类',
@@ -115,10 +111,8 @@ export const messages = {
     'config.import': '导入',
     'config.overwriteImport': '覆盖导入',
     'config.mergeImport': '合并导入',
-    'config.mergeTip':
-      '把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置',
+    'config.mergeTip': '把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置',
     'config.export': '导出',
-
 
     'jump.searchAll': '一键搜索全部：{name}',
 
@@ -182,12 +176,10 @@ export const messages = {
     'toast.autoSaveFailed':
       'Auto-save failed: storage unavailable. Use “Config file” to copy a backup.',
     'toast.autoSavedLocal': 'Saved automatically (this site only)',
-    'toast.remoteConflict':
-      'Settings were updated in another page and you have unsaved changes',
+    'toast.remoteConflict': 'Settings were updated in another page and you have unsaved changes',
     'toast.syncAction': 'Sync',
     'toast.synced': 'Synced settings saved in another page',
-    'toast.saveFailed':
-      'Save failed: storage unavailable. Use “Config file” to copy a backup.',
+    'toast.saveFailed': 'Save failed: storage unavailable. Use “Config file” to copy a backup.',
     'toast.savedLocal':
       'Saved (this site only: your userscript manager does not provide cross-site storage)',
     'toast.embeddedIcons': 'Embedded {count} icons',
@@ -204,8 +196,7 @@ export const messages = {
     'toast.mergedCategories': '{count} categories added',
     'toast.mergedSkipped': '{count} duplicates skipped',
     'toast.mergeNothing': 'No new engines found in the imported config',
-    'toast.syncedFromOtherPages':
-      'SearchEngineJump: Settings synced from another page',
+    'toast.syncedFromOtherPages': 'SearchEngineJump: Settings synced from another page',
 
     'category.title': 'Edit category',
     'category.delete': 'Delete category',
@@ -254,7 +245,6 @@ export const messages = {
       'Append engines from the imported file or the text above to the current list, keeping current settings',
     'config.export': 'Export',
 
-
     'jump.searchAll': 'Search all: {name}',
 
     'favicon.noRequestApi': 'GM request API unavailable',
@@ -291,18 +281,18 @@ export const DEFAULT_CATEGORY_NAMES = {
  * 默认引擎名称的英文别名。用户改名后不再匹配，保持用户输入。
  */
 export const DEFAULT_ENGINE_NAMES = {
-  'B站': 'Bilibili',
-  '豆瓣电影': 'Douban Movies',
-  '豆瓣读书': 'Douban Books',
-  '孔夫子旧书': 'Kongfuzi Used Books',
-  '金山词霸': 'Kingsoft PowerWord',
-  '知乎': 'Zhihu',
-  '类义词典': 'Thesaurus',
-  '人人影视': 'RRTV',
-  '动漫花园': 'DMHY',
-  '海盗湾': 'The Pirate Bay',
-  '豆包': 'Doubao',
-  '智谱GLM': 'Zhipu GLM',
-  '阿里千问': 'Qwen',
-  '知乎直答': 'Zhihu Zhida',
+  B站: 'Bilibili',
+  豆瓣电影: 'Douban Movies',
+  豆瓣读书: 'Douban Books',
+  孔夫子旧书: 'Kongfuzi Used Books',
+  金山词霸: 'Kingsoft PowerWord',
+  知乎: 'Zhihu',
+  类义词典: 'Thesaurus',
+  人人影视: 'RRTV',
+  动漫花园: 'DMHY',
+  海盗湾: 'The Pirate Bay',
+  豆包: 'Doubao',
+  智谱GLM: 'Zhipu GLM',
+  阿里千问: 'Qwen',
+  知乎直答: 'Zhihu Zhida',
 };

@@ -1,13 +1,5 @@
 <script setup>
-import {
-  computed,
-  nextTick,
-  onBeforeUnmount,
-  onMounted,
-  reactive,
-  ref,
-  watch,
-} from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { resolveFavicon } from '../core/favicon.js';
 import { t } from '../assets/i18n.js';
 
@@ -36,7 +28,17 @@ const initialFavicon = (props.initial.favicon || '').trim();
 
 // 常见二级后缀，如 example.com.cn 取 example
 const secondLevelSuffixes = new Set([
-  'com', 'net', 'org', 'gov', 'edu', 'co', 'ac', 'or', 'ne', 'go', 'adm',
+  'com',
+  'net',
+  'org',
+  'gov',
+  'edu',
+  'co',
+  'ac',
+  'or',
+  'ne',
+  'go',
+  'adm',
 ]);
 
 function titleFromUrl(raw) {
@@ -97,8 +99,7 @@ function registrableDomain(raw) {
   if (parts.length <= 2) return parts.join('.');
   const last = parts[parts.length - 1] || '';
   const secondLast = (parts[parts.length - 2] || '').toLowerCase();
-  const suffixLength =
-    last.length === 2 && secondLevelSuffixes.has(secondLast) ? 2 : 1;
+  const suffixLength = last.length === 2 && secondLevelSuffixes.has(secondLast) ? 2 : 1;
   return parts.slice(-(suffixLength + 1)).join('.');
 }
 
@@ -107,8 +108,8 @@ function hostFromUrl(raw) {
   const value = String(raw || '').trim();
   if (!value) return '';
   try {
-    return new URL(value.includes('://') ? value : `https://${value}`)
-      .hostname.toLowerCase()
+    return new URL(value.includes('://') ? value : `https://${value}`).hostname
+      .toLowerCase()
       .replace(/\.$/, '')
       .replace(/^www\./, '');
   } catch {
@@ -116,9 +117,7 @@ function hostFromUrl(raw) {
   }
 }
 
-const siteHost = computed(
-  () => hostFromUrl(form.url) || hostFromUrl(form.favicon),
-);
+const siteHost = computed(() => hostFromUrl(form.url) || hostFromUrl(form.favicon));
 
 // 标题/图标为空（或未手动改过）时，随链接自动更新
 const titleEdited = ref(Boolean((props.initial.name || '').trim()));
@@ -162,9 +161,7 @@ let previewToken = 0;
 const dataIconLink = computed(() => previewData.value.trim());
 const previewImage = computed(() => /^data:image\//i.test(dataIconLink.value));
 const canPreview = computed(
-  () =>
-    Boolean(siteHost.value) ||
-    /^(https?:\/\/|data:)/i.test(form.favicon.trim()),
+  () => Boolean(siteHost.value) || /^(https?:\/\/|data:)/i.test(form.favicon.trim()),
 );
 const previewLabel = computed(() => {
   if (previewLoading.value) return t('engine.cancelFetch');
@@ -174,10 +171,7 @@ const previewLabel = computed(() => {
 const extractorUrl = computed(() => {
   const host = siteHost.value;
   if (!host) return '';
-  return (
-    'https://convertico.com/favicon-extractor/?url=' +
-    encodeURIComponent(host)
-  );
+  return 'https://convertico.com/favicon-extractor/?url=' + encodeURIComponent(host);
 });
 const STEP_STATUS_TEXT = {
   pending: 'engine.stepPending',
@@ -380,9 +374,7 @@ async function previewIcon() {
   await Promise.all(previewSteps.value.map(settle));
   if (token !== previewToken) return;
   previewLoading.value = false;
-  previewFailed.value = !previewSteps.value.some(
-    (step) => step.status === 'ok',
-  );
+  previewFailed.value = !previewSteps.value.some((step) => step.status === 'ok');
 }
 
 onMounted(() => urlInput.value?.focus());
@@ -398,8 +390,7 @@ function uploadFavicon(event) {
   event.target.value = '';
   if (!file) return;
   const isImage =
-    file.type.startsWith('image/') ||
-    /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name);
+    file.type.startsWith('image/') || /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name);
   if (!isImage) {
     alert(t('engine.selectImage'));
     return;
@@ -428,10 +419,7 @@ function submit() {
   const data = previewData.value.trim();
   // 只回传与当前图标地址对应的数据，其余交给保存流程在后台获取
   const matched =
-    Boolean(data) &&
-    (dataEdited.value ||
-      previewUrl.value === favicon ||
-      /^data:/i.test(favicon));
+    Boolean(data) && (dataEdited.value || previewUrl.value === favicon || /^data:/i.test(favicon));
   emit('submit', {
     name: form.name,
     url,
@@ -449,27 +437,47 @@ function submit() {
     </div>
     <label class="sej-field">
       <span>{{ t('engine.url') }}</span>
-      <input ref="urlInput" v-model="form.url" :placeholder="t('common.required')" :disabled="busy" />
+      <input
+        ref="urlInput"
+        v-model="form.url"
+        :placeholder="t('common.required')"
+        :disabled="busy"
+      />
     </label>
     <label class="sej-field">
       <span>{{ t('engine.name') }}</span>
-      <input v-model="form.name" :placeholder="t('common.required')" :disabled="busy"
-        @input="markTitleEdited" />
+      <input
+        v-model="form.name"
+        :placeholder="t('common.required')"
+        :disabled="busy"
+        @input="markTitleEdited"
+      />
     </label>
     <div class="sej-field">
       <span>{{ t('engine.iconSrc') }}</span>
       <div class="sej-field-row">
-        <input v-model="form.favicon" :placeholder="t('common.optional')" :disabled="busy"
-          @input="markFaviconEdited" />
-        <button type="button" class="sej-icon-preview-btn"
-          :disabled="busy || (!previewLoading && !canPreview)" @click="previewIcon">
+        <input
+          v-model="form.favicon"
+          :placeholder="t('common.optional')"
+          :disabled="busy"
+          @input="markFaviconEdited"
+        />
+        <button
+          type="button"
+          class="sej-icon-preview-btn"
+          :disabled="busy || (!previewLoading && !canPreview)"
+          @click="previewIcon"
+        >
           {{ previewLabel }}
         </button>
       </div>
       <!-- 并行尝试的来源与结果；成功项可点选切换 -->
       <!-- 缩略图显示实际图标；非当前项提示“点击选用”，当前项显示“已获取” -->
       <div v-if="previewSteps.length" class="sej-preview-steps">
-        <div v-for="step in previewSteps" :key="step.url" :title="step.url"
+        <div
+          v-for="step in previewSteps"
+          :key="step.url"
+          :title="step.url"
           class="sej-preview-step"
           :class="[
             'is-' + step.status,
@@ -482,22 +490,35 @@ function submit() {
           :tabindex="step.status === 'ok' ? 0 : undefined"
           @click="chooseStep(step)"
           @keydown.enter.prevent="chooseStep(step)"
-          @keydown.space.prevent="chooseStep(step)">
-          <img v-if="step.status === 'ok' && step.data" class="sej-preview-thumb"
-            :src="step.data" alt="" />
+          @keydown.space.prevent="chooseStep(step)"
+        >
+          <img
+            v-if="step.status === 'ok' && step.data"
+            class="sej-preview-thumb"
+            :src="step.data"
+            alt=""
+          />
           <span v-else class="sej-preview-dot"></span>
           <span class="sej-preview-url">{{ step.url }}</span>
           <span v-if="step.status === 'failed' && step.reason" class="sej-preview-state">{{
             step.reason
           }}</span>
-          <span v-else-if="step.status === 'ok'" class="sej-preview-state sej-preview-icon"
+          <span
+            v-else-if="step.status === 'ok'"
+            class="sej-preview-state sej-preview-icon"
             :class="{ 'is-selected': step.url === previewUrl }"
             :title="step.url !== previewUrl ? t('engine.stepUse') : t('engine.stepOk')"
-            v-html="ICON_SELECT"></span>
+            v-html="ICON_SELECT"
+          ></span>
           <span v-else class="sej-preview-state">{{ t(STEP_STATUS_TEXT[step.status]) }}</span>
         </div>
-        <a v-if="extractorUrl" class="sej-preview-extractor"
-          :href="extractorUrl" target="_blank" rel="noopener">
+        <a
+          v-if="extractorUrl"
+          class="sej-preview-extractor"
+          :href="extractorUrl"
+          target="_blank"
+          rel="noopener"
+        >
           {{ t('engine.tryExtractor') }}
         </a>
       </div>
@@ -505,19 +526,32 @@ function submit() {
     <div class="sej-field">
       <span>{{ t('engine.iconData') }}</span>
       <div class="sej-data-line">
-        <input v-model="previewData" class="sej-data-input"
-          :placeholder="t('engine.iconDataPlaceholder')" :disabled="busy"
-          @input="markDataEdited" />
-        <button type="button" class="sej-icon-preview-btn"
-          :class="{ 'sej-has-icon': previewImage }" :disabled="busy"
+        <input
+          v-model="previewData"
+          class="sej-data-input"
+          :placeholder="t('engine.iconDataPlaceholder')"
+          :disabled="busy"
+          @input="markDataEdited"
+        />
+        <button
+          type="button"
+          class="sej-icon-preview-btn"
+          :class="{ 'sej-has-icon': previewImage }"
+          :disabled="busy"
           :title="previewImage ? t('engine.uploadReplace') : t('engine.upload')"
-          @click="pickFaviconFile">
+          @click="pickFaviconFile"
+        >
           <img v-if="previewImage" class="sej-icon-preview" :src="dataIconLink" alt="" />
           <template v-else>{{ t('engine.upload') }}</template>
         </button>
       </div>
-      <input ref="faviconFileInput" class="sej-file-input" type="file"
-        accept="image/*,.ico" @change="uploadFavicon" />
+      <input
+        ref="faviconFileInput"
+        class="sej-file-input"
+        type="file"
+        accept="image/*,.ico"
+        @change="uploadFavicon"
+      />
     </div>
     <label class="sej-field">
       <span>{{ t('engine.target') }}</span>
@@ -527,8 +561,13 @@ function submit() {
       </select>
     </label>
     <div class="sej-dialog-actions">
-      <button v-if="mode === 'edit'" type="button"
-        class="addItemBoxBtn sej-dialog-danger" :disabled="busy" @click="$emit('delete')">
+      <button
+        v-if="mode === 'edit'"
+        type="button"
+        class="addItemBoxBtn sej-dialog-danger"
+        :disabled="busy"
+        @click="$emit('delete')"
+      >
         {{ t('common.delete') }}
       </button>
       <button class="addItemBoxBtn iqxin-closeBtn" :disabled="busy" @click="$emit('cancel')">
@@ -553,7 +592,9 @@ function submit() {
   font-size: 12px;
   line-height: 1.4;
   cursor: pointer;
-  transition: border-color 0.12s ease-out, color 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
 }
 
 .sej-icon-preview-btn:hover:not(:disabled) {
@@ -684,7 +725,9 @@ function submit() {
   display: inline-flex;
   align-items: center;
   opacity: 0.45;
-  transition: opacity 0.12s ease-out, color 0.12s ease-out;
+  transition:
+    opacity 0.12s ease-out,
+    color 0.12s ease-out;
 }
 
 .sej-preview-icon svg {
@@ -734,5 +777,4 @@ function submit() {
   font-size: 13px;
   outline: none;
 }
-
 </style>

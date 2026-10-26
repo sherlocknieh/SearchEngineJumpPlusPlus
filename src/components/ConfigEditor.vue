@@ -75,7 +75,14 @@ function cancel() {
       {{ t('config.warningLine2') }}
     </p>
     <div class="sej-config-textarea">
-      <textarea ref="textareaEl" v-model="text" wrap="off" cols="45" rows="20" @input="dirty = true"></textarea>
+      <textarea
+        ref="textareaEl"
+        v-model="text"
+        wrap="off"
+        cols="45"
+        rows="20"
+        @input="dirty = true"
+      ></textarea>
     </div>
     <div class="sej-dialog-actions">
       <button class="sej-dialog-left" @click="reset">{{ t('config.reset') }}</button>
@@ -87,7 +94,9 @@ function cancel() {
         <input type="radio" name="sej-import-mode" value="overwrite" v-model="importMode" />
         {{ t('config.overwriteImport') }}
       </label>
-      <button class="iqxin-enterBtn" :disabled="!dirty" @click="apply">{{ t('common.apply') }}</button>
+      <button class="iqxin-enterBtn" :disabled="!dirty" @click="apply">
+        {{ t('common.apply') }}
+      </button>
       <button @click="cancel">{{ t('common.cancel') }}</button>
     </div>
   </div>
@@ -127,7 +136,9 @@ function cancel() {
   color: var(--font-color-qxin);
   font-family: inherit;
   font-size: 13px;
-  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out,
     color 0.12s ease-out;
 }
 
@@ -187,7 +198,9 @@ function cancel() {
   border: 1px solid var(--border-color-sej);
   border-radius: 10px;
   background: var(--sej-input-bg);
-  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
 }
 
 #iqxin-editCodeBox .sej-config-textarea:focus-within {
@@ -223,5 +236,4 @@ function cancel() {
   font-size: 14px;
   font-weight: 600;
 }
-
 </style>

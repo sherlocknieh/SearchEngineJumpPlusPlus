@@ -25,7 +25,9 @@ const emit = defineEmits(['jump']);
 <style>
 .sej-engine {
   padding: 0 13px;
-  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;
+  transition:
+    background-color 0.08s ease-out,
+    opacity 0.08s ease-out;
   font-size: 13px;
   font-family: var(--sej-font-family);
   display: inline-flex;

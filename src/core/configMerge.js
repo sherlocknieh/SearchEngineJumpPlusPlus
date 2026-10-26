@@ -2,31 +2,7 @@
  * 合并导入：读取一份配置文件，把其中的分类和搜索引擎追加到现有列表中。
  * 只新增内容，不删除也不覆盖现有引擎，便于从其他站点/用户导入备份。
  */
-import { isPlainObject, normalizeEngine, normalizeCategories } from './configData.js';
-
-/**
- * 读取配置文件为统一结构；无法识别时返回 null。
- * 兼容仅提供 engineList 的配置：按其中的键建立同名分类。
- */
-export function readConfig(data) {
-  if (!isPlainObject(data)) return null;
-  const rawList = isPlainObject(data.engineList) ? data.engineList : {};
-
-  let categories = normalizeCategories(data) || [];
-  if (!categories.length) {
-    const keys = Object.keys(rawList).filter((key) => Array.isArray(rawList[key]));
-    if (!keys.length) return null;
-    categories = keys.map((key) => [key, key, true]);
-  }
-
-  const engineList = {};
-  for (const [, key] of categories) {
-    const engines = Array.isArray(rawList[key]) ? rawList[key] : [];
-    engineList[key] = engines.map(normalizeEngine).filter(Boolean);
-  }
-
-  return { engineCategories: categories, engineList };
-}
+import { readConfig } from './configSchema.js';
 
 /**
  * 引擎去重键：忽略首尾空白、协议/域名大小写与末尾斜杠，
@@ -75,14 +51,10 @@ export function mergeIntoCategories(categories, imported, createId) {
     // 先按键名匹配，再按名称匹配，便于合并改名但语义相同的分类
     const target =
       categories.find((category) => category.key === key) ||
-      categories.find(
-        (category) => categoryNameKey(category.name) === categoryNameKey(name),
-      );
+      categories.find((category) => categoryNameKey(category.name) === categoryNameKey(name));
 
     const seen = new Set(
-      (target ? target.engines : [])
-        .map((engine) => engineUrlKey(engine.url))
-        .filter(Boolean),
+      (target ? target.engines : []).map((engine) => engineUrlKey(engine.url)).filter(Boolean),
     );
     const additions = [];
     for (const engine of engines) {

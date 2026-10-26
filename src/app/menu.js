@@ -23,13 +23,8 @@ export function registerMenu(beforeOpen) {
 
   const gm = globalThis.GM;
   const gmMenu =
-    typeof gm?.registerMenuCommand === 'function'
-      ? gm.registerMenuCommand.bind(gm)
-      : null;
-  const register =
-    typeof GM_registerMenuCommand === 'function'
-      ? GM_registerMenuCommand
-      : gmMenu;
+    typeof gm?.registerMenuCommand === 'function' ? gm.registerMenuCommand.bind(gm) : null;
+  const register = typeof GM_registerMenuCommand === 'function' ? GM_registerMenuCommand : gmMenu;
 
   if (!register) {
     // 标记为已处理，避免每次重启都重复输出提示
@@ -39,13 +34,10 @@ export function registerMenu(beforeOpen) {
   }
 
   try {
-    register(
-      t(INSTANCE_ROLE === 'dev' ? 'menu.settingsDev' : 'menu.settings'),
-      () => {
-        beforeOpen?.();
-        openSettingPanel();
-      },
-    );
+    register(t(INSTANCE_ROLE === 'dev' ? 'menu.settingsDev' : 'menu.settings'), () => {
+      beforeOpen?.();
+      openSettingPanel();
+    });
     registered = true;
   } catch (e) {
     console.warn('[SEJ] 注册菜单命令失败', e);

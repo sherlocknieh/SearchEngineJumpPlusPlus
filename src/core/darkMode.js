@@ -1,11 +1,6 @@
 import { getHost } from './shadowDom.js';
 
-const THEME_ATTRS = [
-  'data-theme',
-  'data-color-scheme',
-  'data-color-mode',
-  'theme',
-];
+const THEME_ATTRS = ['data-theme', 'data-color-scheme', 'data-color-mode', 'theme'];
 const DARK_HINT = /dark|night/;
 const LIGHT_HINT = /light/;
 
@@ -58,17 +53,13 @@ export function isDarkMode() {
   }
 
   // 从应用根节点逐级向上, 取第一个不透明的背景色
-  const start =
-    document.querySelector('#app, main, [role="main"], .app') || document.body;
+  const start = document.querySelector('#app, main, [role="main"], .app') || document.body;
   for (let el = start; el; el = el.parentElement) {
     const dark = isDarkColor(getComputedStyle(el).backgroundColor);
     if (dark !== null) return dark;
   }
 
-  return Boolean(
-    window.matchMedia &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches
-  );
+  return Boolean(window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
 }
 
 // 暗色变量由 global.css 的 :host[qxintheme="dark"] 提供, 这里只负责开关

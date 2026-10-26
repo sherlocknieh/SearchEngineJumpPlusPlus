@@ -1,4 +1,15 @@
 import { GM_getValue, GM_setValue, GM_deleteValue } from '$';
+import {
+  TS_SUFFIX,
+  cloneValue,
+  gmNamespace,
+  isPresent,
+  probeBackend,
+  LOCAL_PREFIX,
+  readLocal,
+  removeLocal,
+  writeLocal,
+} from './storageBackend.js';
 
 const memoryFallback = new Map();
 const asyncCache = new Map();
@@ -9,14 +20,24 @@ const asyncLoaded = new Set();
 const lastKnown = new Map();
 // 各键最近一次已知的写入时间戳，用于轮询时跳过整份配置的读取与比较
 const lastKnownStamp = new Map();
-const LOCAL_PREFIX = 'sej:storage:';
-const TS_SUFFIX = ':updatedAt';
-const PROBE_KEY = 'sej:probe:' + Date.now();
 
 // 'gm-sync' | 'gm-async' | 'local'
 let backend = 'local';
 let readyPromise = null;
-let warned = false;
+
+/**
+ * @param {boolean} cloned value 是否已是独立副本，可跳过复制
+ */
+function remember(key, value, cloned = false) {
+  if (isPresent(value)) lastKnown.set(key, cloned ? value : cloneValue(value));
+}
+
+function forget(key) {
+  lastKnown.delete(key);
+  lastKnownStamp.delete(key);
+  asyncCache.delete(key);
+  asyncLoaded.delete(key);
+}
 
 /**
  * 比较两份设置是否等价（忽略对象键顺序）。
@@ -57,123 +78,6 @@ function deepEqual(a, b) {
   return true;
 }
 
-function cloneValue(value) {
-  try {
-    return JSON.parse(JSON.stringify(value));
-  } catch (e) {
-    return value;
-  }
-}
-
-/**
- * @param {boolean} cloned value 是否已是独立副本，可跳过复制
- */
-function remember(key, value, cloned = false) {
-  if (isPresent(value)) lastKnown.set(key, cloned ? value : cloneValue(value));
-}
-
-function forget(key) {
-  lastKnown.delete(key);
-  lastKnownStamp.delete(key);
-  asyncCache.delete(key);
-  asyncLoaded.delete(key);
-}
-
-function gmNamespace() {
-  return typeof globalThis !== 'undefined' ? globalThis.GM : undefined;
-}
-
-function hasSyncGM() {
-  return (
-    typeof GM_getValue === 'function' && typeof GM_setValue === 'function'
-  );
-}
-
-function hasAsyncGM() {
-  const gm = gmNamespace();
-  return Boolean(
-    gm &&
-      typeof gm['getValue'] === 'function' &&
-      typeof gm['setValue'] === 'function',
-  );
-}
-
-function readLocal(key) {
-  try {
-    const raw = localStorage.getItem(LOCAL_PREFIX + key);
-    return raw === null ? undefined : JSON.parse(raw);
-  } catch (e) {
-    return undefined;
-  }
-}
-
-function writeLocal(key, value) {
-  try {
-    localStorage.setItem(LOCAL_PREFIX + key, JSON.stringify(value));
-    return true;
-  } catch (e) {
-    console.warn('[SEJ] localStorage 写入失败，回退内存存储', e);
-    return false;
-  }
-}
-
-function removeLocal(key) {
-  try {
-    localStorage.removeItem(LOCAL_PREFIX + key);
-  } catch (e) {
-    // ignore
-  }
-}
-
-function isPresent(value) {
-  return value !== undefined && value !== null;
-}
-
-function warnOnce() {
-  if (warned) return;
-  warned = true;
-  console.warn(
-    '[SEJ] 未检测到可用的脚本管理器存储（GM_getValue/GM.setValue），' +
-      '已改用 localStorage：配置仅在当前站点生效，跳转到其他网站会回到默认设置。',
-  );
-}
-
-async function probeSyncGM() {
-  if (!hasSyncGM()) return false;
-  try {
-    const token = String(Math.random());
-    GM_setValue(PROBE_KEY, token);
-    return GM_getValue(PROBE_KEY) === token;
-  } catch (e) {
-    return false;
-  } finally {
-    try {
-      if (typeof GM_deleteValue === 'function') GM_deleteValue(PROBE_KEY);
-    } catch (e) {
-      // ignore
-    }
-  }
-}
-
-async function probeAsyncGM() {
-  if (!hasAsyncGM()) return false;
-  const gm = gmNamespace();
-  try {
-    const token = String(Math.random());
-    await gm['setValue'](PROBE_KEY, token);
-    const value = await gm['getValue'](PROBE_KEY);
-    return value === token;
-  } catch (e) {
-    return false;
-  } finally {
-    try {
-      await gm['deleteValue']?.(PROBE_KEY);
-    } catch (e) {
-      // ignore
-    }
-  }
-}
-
 async function preloadAsync(keys) {
   const gm = gmNamespace();
   await Promise.all(
@@ -208,15 +112,8 @@ async function preloadAsync(keys) {
 export function initStorage(keys = []) {
   if (!readyPromise) {
     readyPromise = (async () => {
-      if (await probeSyncGM()) {
-        backend = 'gm-sync';
-      } else if (await probeAsyncGM()) {
-        backend = 'gm-async';
-        await preloadAsync(keys);
-      } else {
-        backend = 'local';
-        warnOnce();
-      }
+      backend = await probeBackend();
+      if (backend === 'gm-async') await preloadAsync(keys);
       if (backend === 'gm-sync') {
         for (const key of keys) {
           try {
@@ -291,9 +188,7 @@ export function setValue(key, value) {
         writeLocal(key + TS_SUFFIX, updatedAt);
       });
       // 时间戳供轮询做变更检测，缺了它就只能退回整份配置的深比较
-      Promise.resolve(gm['setValue'](key + TS_SUFFIX, updatedAt)).catch(
-        () => {},
-      );
+      Promise.resolve(gm['setValue'](key + TS_SUFFIX, updatedAt)).catch(() => {});
       stored = 'gm';
     } catch (e) {
       console.warn('[SEJ] GM.setValue 失败', e);

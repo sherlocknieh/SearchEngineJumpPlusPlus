@@ -68,7 +68,12 @@ export function submitPostForm(action, field, value, targetName) {
   form.method = 'post';
   form.action = action;
   form.style.cssText = 'display:none;';
-  form.innerHTML = `<input type="hidden" name="${field}" value="${value}"/>`;
+  // 用 DOM API 赋值，避免关键词中的引号/尖括号被当作 HTML 解析
+  const input = document.createElement('input');
+  input.type = 'hidden';
+  input.name = field;
+  input.value = value;
+  form.appendChild(input);
   if (targetName) form.target = targetName;
   document.body.appendChild(form);
   form.submit();
@@ -85,12 +90,7 @@ export function performJump(engine, keyword, settingData, forceNewTab = false) {
   const newTab = shouldOpenInNewTab(engine, forceNewTab);
 
   if (result.type === 'post') {
-    submitPostForm(
-      result.action,
-      result.field,
-      result.value,
-      newTab ? '_blank' : '_top',
-    );
+    submitPostForm(result.action, result.field, result.value, newTab ? '_blank' : '_top');
     return true;
   }
 
@@ -113,10 +113,7 @@ export function performJump(engine, keyword, settingData, forceNewTab = false) {
 export function openAllEngines(engines, keyword, settingData, matchedRule) {
   for (const engine of engines) {
     if (engine.disable) continue;
-    if (
-      settingData?.HideTheSameLink &&
-      matchedRule?.url?.test(engine.url)
-    ) {
+    if (settingData?.HideTheSameLink && matchedRule?.url?.test(engine.url)) {
       continue;
     }
     performJump(engine, keyword, settingData || {}, true);

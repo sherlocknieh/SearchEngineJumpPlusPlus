@@ -80,8 +80,7 @@ export function requestBoot() {
 function armLazyStart() {
   const onSelectionChange = () => {
     // 懒启动期间页面的鼠标/键盘事件都会走到这里，先做最廉价的判断
-    const selection =
-      typeof getSelection === 'function' ? getSelection() : null;
+    const selection = typeof getSelection === 'function' ? getSelection() : null;
     if (!selection || selection.isCollapsed) return;
     if (!selection.toString().trim()) return;
     requestBoot();

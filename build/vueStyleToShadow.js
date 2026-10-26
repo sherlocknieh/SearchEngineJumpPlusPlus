@@ -19,9 +19,7 @@ const UNSUPPORTED_ATTRS = /\bsrc=|\bscoped\b|\bmodule\b|\blang=/;
  * @param {object} [options]
  * @param {string} [options.shadowModule] 提供 addStyle 的模块，相对 Vite root
  */
-export default function vueStyleToShadow({
-  shadowModule = 'src/core/shadowDom.js',
-} = {}) {
+export default function vueStyleToShadow({ shadowModule = 'src/core/shadowDom.js' } = {}) {
   let importTarget = '';
 
   return {
@@ -45,10 +43,7 @@ export default function vueStyleToShadow({
       }
       if (!styles.length) return null;
 
-      const relative = path
-        .relative(path.dirname(id), importTarget)
-        .split(path.sep)
-        .join('/');
+      const relative = path.relative(path.dirname(id), importTarget).split(path.sep).join('/');
       const importPath = relative.startsWith('.') ? relative : `./${relative}`;
 
       const injection =

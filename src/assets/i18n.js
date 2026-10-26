@@ -1,9 +1,5 @@
 import { computed, ref } from 'vue';
-import {
-  messages,
-  DEFAULT_CATEGORY_NAMES,
-  DEFAULT_ENGINE_NAMES,
-} from './messages.js';
+import { messages, DEFAULT_CATEGORY_NAMES, DEFAULT_ENGINE_NAMES } from './messages.js';
 
 /** 支持的语言偏好；auto 表示跟随浏览器/系统语言 */
 export const LANGUAGE_OPTIONS = ['auto', 'zh-CN', 'en'];
@@ -13,9 +9,7 @@ const preference = ref('auto');
 
 function detectLocale() {
   if (typeof navigator === 'undefined') return FALLBACK_LOCALE;
-  const language = String(
-    navigator.languages?.[0] || navigator.language || '',
-  ).toLowerCase();
+  const language = String(navigator.languages?.[0] || navigator.language || '').toLowerCase();
   return language.startsWith('zh') ? 'zh-CN' : 'en';
 }
 

@@ -22,7 +22,9 @@ const SETTING =
 
 <style>
 #setBtn {
-  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;
+  transition:
+    background-color 0.08s ease-out,
+    opacity 0.08s ease-out;
   width: 30px;
   height: 30px;
   flex: 0 0 auto;

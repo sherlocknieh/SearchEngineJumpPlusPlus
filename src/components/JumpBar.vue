@@ -12,11 +12,7 @@ import {
   resolveRuleStyle,
   applyStylish,
 } from '../core/applyRule.js';
-import {
-  extractKeyword,
-  performJump,
-  openAllEngines,
-} from '../core/jump.js';
+import { extractKeyword, performJump, openAllEngines } from '../core/jump.js';
 import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';
@@ -124,8 +120,7 @@ function injectHost() {
 
   insertHost(insertTarget, insertPosition);
 
-  const needsWrapper =
-    !resolvedStyle.includes('sticky') && !resolvedStyle.includes('fixed');
+  const needsWrapper = !resolvedStyle.includes('sticky') && !resolvedStyle.includes('fixed');
   if (needsWrapper && matchedRule?.wrapperClass) {
     getHost().className += ` ${matchedRule.wrapperClass}`;
   }
@@ -191,10 +186,7 @@ function updateScrollHints() {
   if (!el) return;
   const maxScroll = el.scrollWidth - el.clientWidth;
   el.classList.toggle('sej-scroll-more-left', el.scrollLeft > 1);
-  el.classList.toggle(
-    'sej-scroll-more-right',
-    el.scrollLeft < maxScroll - 1,
-  );
+  el.classList.toggle('sej-scroll-more-right', el.scrollLeft < maxScroll - 1);
 }
 
 // 拖动时每次 pointermove 都同步读 scrollWidth/clientWidth 会反复触发布局，
@@ -287,19 +279,11 @@ function getFixedHeaderBottom(barLeft, barWidth) {
     const style = getComputedStyle(el);
     if (style.position !== 'fixed' && style.position !== 'sticky') return;
     const rect = el.getBoundingClientRect();
-    const overlapsBar =
-      rect.right > barLeft && rect.left < barLeft + barWidth;
-    if (
-      !overlapsBar &&
-      rect.width < window.innerWidth * 0.3
-    ) {
+    const overlapsBar = rect.right > barLeft && rect.left < barLeft + barWidth;
+    if (!overlapsBar && rect.width < window.innerWidth * 0.3) {
       return;
     }
-    if (
-      rect.top <= FIXED_GAP &&
-      rect.bottom > bottom &&
-      rect.bottom < window.innerHeight * 0.5
-    ) {
+    if (rect.top <= FIXED_GAP && rect.bottom > bottom && rect.bottom < window.innerHeight * 0.5) {
       bottom = rect.bottom;
     }
   };
@@ -369,9 +353,7 @@ function fixedToTop(fixedTopValue, color) {
 
   const rect = container.getBoundingClientRect();
   // 窄屏固定后同样占满可用宽度，避免沿用站点偏移导致被裁切
-  const left = narrow
-    ? gap
-    : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
+  const left = narrow ? gap : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
   const width = narrow
     ? Math.max(120, vw - gap * 2)
     : parseFloat(host.dataset.originalWidth) || rect.width;
@@ -394,9 +376,7 @@ function fixedToTop(fixedTopValue, color) {
     // 站点样式可能约束宿主宽度，固定后按固定前的实际宽度撑开，
     // 避免 max-width: 100% 与宿主收缩宽度互相影响导致跳转条换行
     host.style.width = width > 0 ? `${Math.ceil(width)}px` : 'max-content';
-    host.style.maxWidth = narrow
-      ? `${Math.ceil(width)}px`
-      : `calc(100vw - ${left + 12}px)`;
+    host.style.maxWidth = narrow ? `${Math.ceil(width)}px` : `calc(100vw - ${left + 12}px)`;
     host.style.position = 'fixed';
     host.style.top = `${Math.round(top)}px`;
     host.style.left = `${left}px`;
@@ -542,21 +522,14 @@ onMounted(async () => {
     document.addEventListener('keyup', onSelectionChange);
   }
 
-  if (
-    data.fixedTop &&
-    matchedRule &&
-    !inlineStyleBlocked &&
-    !isSelectSearch.value
-  ) {
-    originalContainerDistanceTop =
-      containerEl.value.getBoundingClientRect().top + window.scrollY;
+  if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isSelectSearch.value) {
+    originalContainerDistanceTop = containerEl.value.getBoundingClientRect().top + window.scrollY;
     if (data.fixedTopUpward) {
       window.addEventListener('wheel', onWheel);
     } else {
       window.addEventListener('scroll', onScroll);
     }
   }
-
 });
 
 onBeforeUnmount(() => {
@@ -584,10 +557,7 @@ onBeforeUnmount(() => {
     v-if="ready"
     ref="containerEl"
     id="sej-container"
-    :class="[
-      containerClass,
-      { selectSearch: isSelectSearch, 'sej-select-visible': barVisible },
-    ]"
+    :class="[containerClass, { selectSearch: isSelectSearch, 'sej-select-visible': barVisible }]"
     :aria-hidden="isSelectSearch && !barVisible ? 'true' : undefined"
   >
     <div
@@ -733,14 +703,18 @@ onBeforeUnmount(() => {
   transform: translateY(calc(-100% - 10px));
   visibility: hidden;
   pointer-events: none;
-  transition: transform 0.3s, visibility 0s linear 0.3s;
+  transition:
+    transform 0.3s,
+    visibility 0s linear 0.3s;
 }
 
 #sej-container.selectSearch.sej-select-visible {
   transform: none;
   visibility: visible;
   pointer-events: auto;
-  transition: transform 0.3s, visibility 0s linear 0s;
+  transition:
+    transform 0.3s,
+    visibility 0s linear 0s;
 }
 
 .sej-category-title {

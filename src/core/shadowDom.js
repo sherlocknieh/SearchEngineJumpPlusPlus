@@ -2,8 +2,7 @@ import { getCSPNonce } from './csp.js';
 
 // 开发脚本(server:)与正式版可能同时注入同一页面，用不同的宿主 id 共存
 export const INSTANCE_ROLE = import.meta.env.DEV ? 'dev' : 'prod';
-export const HOST_ID =
-  INSTANCE_ROLE === 'dev' ? 'sej-shadow-host-dev' : 'sej-shadow-host';
+export const HOST_ID = INSTANCE_ROLE === 'dev' ? 'sej-shadow-host-dev' : 'sej-shadow-host';
 export const HOST_SELECTOR = '#sej-shadow-host, #sej-shadow-host-dev';
 
 const ROLE_RANK = { prod: 0, dev: 1 };
@@ -92,10 +91,7 @@ export function addStyle(cssText) {
       const sheet = new CSSStyleSheet();
       sheet.replaceSync(cssText);
       constructableSheets.push(sheet);
-      shadowRoot.adoptedStyleSheets = [
-        ...shadowRoot.adoptedStyleSheets,
-        sheet,
-      ];
+      shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, sheet];
       return;
     } catch (e) {
       console.warn('Constructable stylesheet 注入失败，回退到 <style> 注入', e);

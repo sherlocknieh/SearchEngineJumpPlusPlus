@@ -5,24 +5,24 @@ export default [
   {
     enabled: true,
     url: /^https?:\/\/search\.bilibili\.com\/*/,
-    hosts: ["search.bilibili.com"],
+    hosts: ['search.bilibili.com'],
     fixedTop: 65,
     insertIntoDoc: {
       keyword: function () {
-        if (document.querySelector("#search-keyword")) {
-          return document.querySelector("#search-keyword").value;
+        if (document.querySelector('#search-keyword')) {
+          return document.querySelector('#search-keyword').value;
         } else {
-          return document.querySelector(".search-input-el").value;
+          return document.querySelector('.search-input-el').value;
         }
       },
       target: function () {
-        if (document.querySelector(".head-contain")) {
-          return document.querySelector(".head-contain");
+        if (document.querySelector('.head-contain')) {
+          return document.querySelector('.head-contain');
         } else {
-          return document.querySelector(".search-input");
+          return document.querySelector('.search-input');
         }
       },
-      where: "afterEnd",
+      where: 'afterEnd',
     },
     style: `
       width: 980px;

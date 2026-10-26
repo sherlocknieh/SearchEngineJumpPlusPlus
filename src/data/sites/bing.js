@@ -5,12 +5,12 @@ export default [
   {
     enabled: true,
     url: /^https?:\/\/[^.]*\.bing\.com\/search/,
-    hostSuffixes: ["bing.com"],
+    hostSuffixes: ['bing.com'],
     fixedTop: 60,
     insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_content",
-      where: "beforeBegin",
+      keyword: 'css;#sb_form_q',
+      target: 'css;#b_content',
+      where: 'beforeBegin',
     },
     style: `
       margin: 2px 0 2px;
@@ -25,12 +25,12 @@ export default [
   {
     enabled: true,
     url: /^https?:\/\/.*\.bing\.com\/images\/search/i,
-    hostSuffixes: ["bing.com"],
+    hostSuffixes: ['bing.com'],
     fixedTop: 88,
     insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_content",
-      where: "afterBegin",
+      keyword: 'css;#sb_form_q',
+      target: 'css;#b_content',
+      where: 'afterBegin',
     },
     style: `
       left: 160px;
@@ -39,12 +39,12 @@ export default [
   },
   {
     enabled: true,
-    url: /^https?:\/\/.*\.bing\.com\/dict\/search\?q\=/i,
-    hostSuffixes: ["bing.com"],
+    url: /^https?:\/\/.*\.bing\.com\/dict\/search\?q=/i,
+    hostSuffixes: ['bing.com'],
     insertIntoDoc: {
-      keyword: "css;#sb_form_q",
-      target: "css;#b_header",
-      where: "beforeEnd",
+      keyword: 'css;#sb_form_q',
+      target: 'css;#b_header',
+      where: 'beforeEnd',
     },
     style: `
       margin-top: 6px;

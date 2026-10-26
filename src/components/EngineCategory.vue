@@ -93,10 +93,7 @@ function measureAndPosition() {
   posLeft = Math.max(8, Math.min(posLeft, window.innerWidth - listWidth - 8));
 
   let posTop = rect.bottom + GAP;
-  if (
-    posTop + listHeight > window.innerHeight - 8 &&
-    rect.top - listHeight - GAP > 8
-  ) {
+  if (posTop + listHeight > window.innerHeight - 8 && rect.top - listHeight - GAP > 8) {
     posTop = rect.top - listHeight - GAP;
   }
 
@@ -112,9 +109,7 @@ function onScrollArea() {
 }
 
 function isDragScrolling() {
-  return Boolean(
-    scrollEl?.classList.contains('sej-scroll-dragging'),
-  );
+  return Boolean(scrollEl?.classList.contains('sej-scroll-dragging'));
 }
 
 async function show() {
@@ -266,7 +261,9 @@ onBeforeUnmount(() => {
         @keydown.space.stop.prevent="onTriggerAction"
       >
         <svg viewBox="0 0 16 16" aria-hidden="true">
-          <path d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" />
+          <path
+            d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
+          />
           <path d="M9.6 2.6h3.8v3.8" />
           <path d="M13.4 2.6 8.6 7.4" />
         </svg>
@@ -325,7 +322,9 @@ onBeforeUnmount(() => {
   border-radius: 4px;
   color: var(--font-color-qxin);
   cursor: pointer;
-  transition: background-color 0.08s ease-out, color 0.08s ease-out;
+  transition:
+    background-color 0.08s ease-out,
+    color 0.08s ease-out;
 }
 
 .sej-category-search-icon svg {

@@ -5,12 +5,12 @@ export default [
   {
     enabled: true,
     url: /^https?:\/\/www\.baidu\.com\/(?:s|baidu)/,
-    hosts: ["www.baidu.com"],
+    hosts: ['www.baidu.com'],
     fixedTop: 80,
     insertIntoDoc: {
-      keyword: "css;input#kw",
-      target: "css;#wrapper_wrapper",
-      where: "afterBegin",
+      keyword: 'css;input#kw',
+      target: 'css;#wrapper_wrapper',
+      where: 'afterBegin',
     },
     style: `
       margin-top: 8px;
