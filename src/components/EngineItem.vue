@@ -1,6 +1,6 @@
 <script setup>
 import { getFaviconSrc } from '../core/favicon.js';
-import { localizeEngineName } from '../i18n/index.js';
+import { localizeEngineName } from '../assets/i18n.js';
 
 defineProps({
   engine: { type: Object, required: true },

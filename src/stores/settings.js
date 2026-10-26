@@ -3,10 +3,10 @@
  */
 import { reactive } from 'vue';
 import defaultConfig from '../data/engines.json';
-import rules from '../data/rules.js';
+import { matchRule } from '../data/matchRule.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
 import { isPlainObject, normalizeEngine, normalizeCategories } from '../core/configData.js';
-import { normalizeLanguage, setLanguagePreference } from '../i18n/index.js';
+import { normalizeLanguage, setLanguagePreference } from '../assets/i18n.js';
 
 
 /** GM 存储中配置数据使用的键名 */
@@ -168,10 +168,7 @@ export class Settings {
 
   // 获取当前页面匹配的挂载规则
   getMatchedRule() {
-    for (const rule of [...rules]) {
-      if (rule.url.test(location.href)) return rule;
-    }
-    return null;
+    return matchRule(location.href);
   }
 }
 

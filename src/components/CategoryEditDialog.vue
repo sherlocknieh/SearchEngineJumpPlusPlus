@@ -1,6 +1,6 @@
 <script setup>
 import { onMounted, ref } from 'vue';
-import { t } from '../i18n/index.js';
+import { t } from '../assets/i18n.js';
 
 const props = defineProps({
   name: { type: String, default: '' },

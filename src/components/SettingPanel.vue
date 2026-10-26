@@ -19,7 +19,7 @@ import {
     localizeEngineName,
     setLanguagePreference,
     t,
-} from '../i18n/index.js';
+} from '../assets/i18n.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';

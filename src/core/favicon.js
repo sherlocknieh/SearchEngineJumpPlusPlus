@@ -1,5 +1,5 @@
 import { GM_xmlhttpRequest } from '$';
-import { t } from '../i18n/index.js';
+import { t } from '../assets/i18n.js';
 
 /** 单次图标请求的超时时间（毫秒） */
 const ICON_TIMEOUT = 4000;

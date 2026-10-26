@@ -8,7 +8,7 @@ import { onRestartRequest } from './core/appControl.js';
 import { useSettings, STORAGE_KEY } from './stores/settings.js';
 import { openSettingPanel, closeSettingPanel, showToast, ui } from './stores/ui.js';
 import { initStorage, pullLatest, watchValue } from './core/storage.js';
-import { t } from './i18n/index.js';
+import { t } from './assets/i18n.js';
 
 // 严格 CSP 页面的兼容样式
 const CSP_COMPAT_STYLE = `

@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
-import { localizeCategoryName } from '../i18n/index.js';
+import { localizeCategoryName } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
 import { addStyle, getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
 import {
@@ -24,6 +24,8 @@ import SettingButton from './SettingButton.vue';
 const settings = useSettings();
 const data = settings.settingData;
 const matchedRule = settings.getMatchedRule();
+// 站点行为补丁由 siteStyles 模块提供
+const sitePatches = matchedRule?.patches ?? {};
 const inlineStyleBlocked = isInlineStyleBlocked();
 
 const ready = ref(false);
@@ -134,11 +136,12 @@ const VIEWPORT_GAP = 4;
 // 窄屏下即使类别很少也占满可用宽度
 const NARROW_BAR_MAX = 640;
 
-// 部分站点（如 Bing）的内容容器比视口更宽，跳转条按宿主居中时会偏出屏幕。
-// 溢出时按视口限制宽度并水平移入可见区域，保证右侧设置按钮可点击。
+// 站点的内容容器可能比视口更宽（如 Bing），跳转条按宿主居中时会偏出屏幕。
+// 由站点的 patches.constrainToViewport 开启：按视口限制宽度并水平移入可见区域。
 function constrainBarToViewport() {
   const el = containerEl.value;
   if (!el || isSelectSearch.value) return;
+  if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth) return;
   if (getHost().style.position === 'fixed') return;
 
   el.style.maxWidth = '';
@@ -152,10 +155,12 @@ function constrainBarToViewport() {
   const vw = document.documentElement.clientWidth;
   const gap = VIEWPORT_GAP;
   const available = Math.max(120, vw - gap * 2);
-  if (vw <= NARROW_BAR_MAX) {
-    // 用像素上限覆盖 max-width: 100%，避免站点网格列较窄时留下较大右边距
+  if (vw <= NARROW_BAR_MAX && sitePatches.narrowFullWidth) {
     el.style.setProperty('width', `${available}px`, 'important');
-    el.style.maxWidth = `${available}px`;
+    // 部分站点（如 Google）按网格列计算百分比 max-width，改用像素上限
+    if (sitePatches.narrowMaxWidthInPixels) {
+      el.style.maxWidth = `${available}px`;
+    }
   }
   let rect = el.getBoundingClientRect();
 
@@ -164,6 +169,7 @@ function constrainBarToViewport() {
     rect = el.getBoundingClientRect();
   }
 
+  if (!sitePatches.constrainToViewport) return;
   if (rect.left >= gap && rect.right <= vw - gap) return;
 
   // 取消站点规则的水平偏移，按视口把跳转条移入可见区域
@@ -304,36 +310,10 @@ function getFixedHeaderBottom(barLeft, barWidth) {
     el = el.parentElement;
   }
 
-  // 部分站点（如 Google 窄屏）的搜索框会伸出吸顶头部，
-  // 以搜索框实际底边为准，避免跳转条盖住搜索框
-  const inputEl =
-    typeof inputTarget === 'function' ? inputTarget() : inputTarget;
-  const searchBox =
-    inputEl instanceof Element ? inputEl.closest('form') || inputEl : null;
-  if (searchBox) {
-    let insideFixed = false;
-    for (
-      let node = searchBox;
-      node && node !== document.documentElement;
-      node = node.parentElement
-    ) {
-      const pos = getComputedStyle(node).position;
-      if (pos === 'fixed' || pos === 'sticky') {
-        insideFixed = true;
-        break;
-      }
-    }
-    const rect = searchBox.getBoundingClientRect();
-    const overlaps = rect.right > barLeft && rect.left < barLeft + barWidth;
-    if (
-      insideFixed &&
-      overlaps &&
-      rect.top < window.innerHeight * 0.5 &&
-      rect.bottom > bottom &&
-      rect.bottom < window.innerHeight * 0.5
-    ) {
-      bottom = rect.bottom;
-    }
+  // 站点可通过 patches.getFixedHeaderBottom 接管吸顶头部底部计算
+  const getBottom = sitePatches.getFixedHeaderBottom;
+  if (typeof getBottom === 'function') {
+    return getBottom({ bottom, barLeft, barWidth, inputTarget });
   }
   return bottom;
 }
@@ -348,7 +328,7 @@ function fixedToTop(fixedTopValue, color) {
   const host = getHost();
   const container = containerEl.value;
   const vw = document.documentElement.clientWidth;
-  const narrow = vw <= NARROW_BAR_MAX;
+  const narrow = vw <= NARROW_BAR_MAX && Boolean(sitePatches.narrowFullWidth);
   const gap = VIEWPORT_GAP;
 
   const rect = container.getBoundingClientRect();

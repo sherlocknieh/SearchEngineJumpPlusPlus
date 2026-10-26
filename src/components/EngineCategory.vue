@@ -8,7 +8,7 @@ let openCategory = null;
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { getDropRoot } from '../core/shadow.js';
-import { t } from '../i18n/index.js';
+import { t } from '../assets/i18n.js';
 import EngineItem from './EngineItem.vue';
 
 const props = defineProps({

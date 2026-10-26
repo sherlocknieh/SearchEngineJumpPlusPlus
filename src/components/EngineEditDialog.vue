@@ -9,7 +9,7 @@ import {
   watch,
 } from 'vue';
 import { resolveFavicon } from '../core/favicon.js';
-import { t } from '../i18n/index.js';
+import { t } from '../assets/i18n.js';
 
 const props = defineProps({
   mode: { type: String, default: 'add' },
