@@ -224,33 +224,4 @@ function cancel() {
   font-weight: 600;
 }
 
-#importingBox {
-  position: fixed;
-  width: min(350px, calc(100vw - 32px));
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  padding: 16px 24px;
-  border: 1px solid var(--border-color-sej);
-  border-radius: 12px;
-  background: var(--background-setting-qxin);
-  color: var(--font-color-qxin);
-}
-
-#importingBox li {
-  margin: 5px;
-  border-bottom: 1px solid var(--border-color-sej);
-}
-
-#importingBox li p {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  margin-top: 0;
-  margin-bottom: 0;
-}
-
-.xin-importing-item {
-  cursor: pointer;
-}
 </style>

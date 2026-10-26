@@ -4,7 +4,7 @@ import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
 import { localizeCategoryName } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
-import { getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
+import { getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadowDom.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -697,10 +697,6 @@ onBeforeUnmount(() => {
   visibility: visible;
   pointer-events: auto;
   transition: transform 0.3s, visibility 0s linear 0s;
-}
-
-#sej-expanded-category {
-  font-weight: bold;
 }
 
 .sej-category-title {

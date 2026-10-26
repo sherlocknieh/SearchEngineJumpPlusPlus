@@ -1,54 +1,12 @@
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import monkey from 'vite-plugin-monkey';
-
-const rootDir = path.dirname(fileURLToPath(import.meta.url));
-const shadowModule = path.join(rootDir, 'src/core/shadow.js');
-
-// 脚本运行在 Shadow DOM 中，Vue 默认注入到 document.head 的样式不会生效。
-// 这里把 <style> 里的内容改成运行时 addStyle(css)，由 shadow.js 注入 Shadow Root。
-function vueStyleToShadow() {
-  return {
-    name: 'sej-vue-style-to-shadow',
-    enforce: 'pre',
-    transform(code, id) {
-      if (!id.endsWith('.vue')) return null;
-
-      const styleRe = /<style\b[^>]*>([\s\S]*?)<\/style>/g;
-      const blocks = [...code.matchAll(styleRe)];
-      if (!blocks.length) return null;
-
-      const relative = path
-        .relative(path.dirname(id), shadowModule)
-        .split(path.sep)
-        .join('/');
-      const importPath = relative.startsWith('.') ? relative : `./${relative}`;
-      const injection = [
-        `\nimport { addStyle as __sejAddStyle } from ${JSON.stringify(importPath)};`,
-        ...blocks.map((match) => `__sejAddStyle(${JSON.stringify(match[1])});`),
-        '',
-      ].join('\n');
-
-      const cleaned = code.replace(styleRe, '');
-      if (/<script setup[^>]*>/.test(cleaned)) {
-        return cleaned.replace(
-          /<script setup[^>]*>/,
-          (tag) => tag + injection,
-        );
-      }
-      if (/<script[^>]*>/.test(cleaned)) {
-        return cleaned.replace(/<script[^>]*>/, (tag) => tag + injection);
-      }
-      return `<script>${injection}</script>\n${cleaned}`;
-    },
-  };
-}
+import vueStyleToShadow from './build/vueStyleToShadow.js';
 
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
   plugins: [
+    // 组件样式需要注入 Shadow Root，不能用 Vue 默认的 document.head 注入
     vueStyleToShadow(),
     vue(),
     monkey({

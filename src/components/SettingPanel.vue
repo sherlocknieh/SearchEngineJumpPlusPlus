@@ -48,7 +48,6 @@ const OPTION_KEYS = [
     'fixedTopUpward',
     'HideTheSameLink',
     'center',
-    'transtion',
     'selectSearch',
     'language',
 ];
@@ -566,9 +565,9 @@ function cancelDragAnimations() {
 
 // FLIP：记录改动前后的位置，让被挤开的元素平滑移动到新位置
 async function animateReorder(mutate) {
-    const reduceMotion =
-        !draft.transtion ||
-        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const reduceMotion = window.matchMedia?.(
+        '(prefers-reduced-motion: reduce)',
+    ).matches;
     const before = reduceMotion ? null : snapshotRects();
     mutate();
     if (reduceMotion) return;
@@ -1538,9 +1537,6 @@ onBeforeUnmount(() => {
                         <span id="xin-selectSearch">
                             <label>{{ t('settings.selectSearch') }}<input type="checkbox" v-model="draft.selectSearch" /></label>
                         </span>
-                        <span id="xin-transtion">
-                            <label>{{ t('settings.transition') }}<input type="checkbox" v-model="draft.transtion" /></label>
-                        </span>
                         <span id="xin-centerDisplay" :title="t('settings.centerTip')">
                             <label>{{ t('settings.center') }}<input type="checkbox" v-model="draft.center" /></label>
                         </span>
@@ -1657,7 +1653,7 @@ onBeforeUnmount(() => {
   user-select: none;
   -moz-user-select: none;
   touch-action: manipulation;
-  padding-bottom: 80px;
+  padding: 20px;
   box-sizing: border-box;
   color: var(--font-color-qxin);
 }
@@ -1979,13 +1975,10 @@ onBeforeUnmount(() => {
 #btnEle {
   position: relative;
   width: 100%;
+  margin-top: 10px;
   background: transparent;
   border-radius: 0;
   flex: 0 0 auto;
-}
-
-#btnEle {
-  margin-top: 10px;
 }
 
 #btnEle span {
@@ -2197,6 +2190,7 @@ onBeforeUnmount(() => {
 }
 
 #btnEle #xin-save {
+  position: relative;
   background: var(--sej-accent);
   border-color: transparent;
   color: var(--sej-accent-contrast);
@@ -2216,10 +2210,6 @@ onBeforeUnmount(() => {
 }
 
 /* 自动保存成功反馈：关闭按钮外扩绿色波纹，「已保存」文字上滑淡入 */
-#btnEle #xin-save {
-  position: relative;
-}
-
 #btnEle #xin-save.sej-save-flash {
   animation: sej-save-glow 0.9s ease-out;
 }
@@ -2277,12 +2267,6 @@ onBeforeUnmount(() => {
   }
 }
 
-#btnEle span.iqxin-btn-active {
-  background: var(--sej-accent-weak);
-  border-color: var(--sej-accent);
-  color: var(--sej-accent);
-}
-
 #settingLayerMask input[type="checkbox"],
 #settingLayerMask input[type="radio"] {
   appearance: none;
@@ -2325,10 +2309,6 @@ onBeforeUnmount(() => {
   border-width: 0 2px 2px 0;
   background: none;
   transform: rotate(45deg);
-}
-
-.drop-over {
-  opacity: 0.6;
 }
 
 .iqxin-set-toggle {
@@ -2496,11 +2476,6 @@ span.iqxin-additem.sej-copy-target {
 }
 
 /* ---------- Vue 重构版设置面板布局优化 ---------- */
-#settingLayerMask {
-  padding: 20px;
-  box-sizing: border-box;
-}
-
 #sej-settings-body {
   display: flex;
   flex: 1 1 auto;
@@ -2564,7 +2539,6 @@ span.iqxin-additem.sej-copy-target {
   pointer-events: none;
 }
 
-#newSearchListBox,
 #newSearchBox,
 .sej-dialog-box {
   position: fixed;
@@ -2618,14 +2592,6 @@ span.iqxin-additem.sej-copy-target {
   display: none;
 }
 
-.sej-field-inline {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  cursor: pointer;
-}
-
 .sej-dialog-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2634,7 +2600,6 @@ span.iqxin-additem.sej-copy-target {
   margin-top: 16px;
 }
 
-#newSearchListBox input,
 #newSearchBox input,
 .sej-dialog-box input {
   width: 100%;
@@ -2650,7 +2615,6 @@ span.iqxin-additem.sej-copy-target {
   transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
 }
 
-#newSearchListBox input:focus,
 #newSearchBox input:focus,
 .sej-dialog-box input:focus {
   background: var(--sej-input-bg);

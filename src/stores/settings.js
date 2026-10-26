@@ -29,7 +29,6 @@ function createDefaultSettings() {
     HideTheSameLink: true,    // 默认隐藏与当前站点相同的引擎，避免重复跳转
     fixedTop: false,    // 默认不固定跳转条，不启用“仅上拉显示”
     fixedTopUpward: false,
-    transtion: true,    // 默认开启动画
     selectSearch: true, // 默认开启划词搜索
     center: false,    // 默认跟随各站点规则排版，不强制居中
     language: 'auto', // 默认跟随浏览器/系统语言
@@ -53,7 +52,6 @@ function normalizeSettings(raw, defaults) {
   const OPTION_FLAGS = [
     'HideTheSameLink',
     'selectSearch',
-    'transtion',
     'center',
     'fixedTop',
     'fixedTopUpward',

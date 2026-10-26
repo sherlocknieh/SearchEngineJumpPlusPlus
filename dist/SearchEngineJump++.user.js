@@ -41,6 +41,13 @@
 		if (!no_symbols) __defProp(target, Symbol.toStringTag, { value: "Module" });
 		return target;
 	};
+	var restartHandler = null;
+	function onRestartRequest(handler) {
+		restartHandler = handler;
+	}
+	function requestRestart() {
+		if (restartHandler) restartHandler();
+	}
 	function makeMap(str) {
 		const map = Object.create(null);
 		for (const key of str.split(",")) map[key] = 1;
@@ -4823,14 +4830,6 @@
 		if (isString(container)) return document.querySelector(container);
 		return container;
 	}
-	var _GM_addStyle = (() => typeof GM_addStyle != "undefined" ? GM_addStyle : void 0)();
-	var _GM_deleteValue = (() => typeof GM_deleteValue != "undefined" ? GM_deleteValue : void 0)();
-	var _GM_getValue = (() => typeof GM_getValue != "undefined" ? GM_getValue : void 0)();
-	var _GM_info = (() => typeof GM_info != "undefined" ? GM_info : void 0)();
-	var _GM_openInTab = (() => typeof GM_openInTab != "undefined" ? GM_openInTab : void 0)();
-	var _GM_registerMenuCommand = (() => typeof GM_registerMenuCommand != "undefined" ? GM_registerMenuCommand : void 0)();
-	var _GM_setValue = (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
-	var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
 	var ui = reactive({
 		categoryIcon: true,
 		iconSource: 0,
@@ -4924,10 +4923,6 @@
 			shadowRoot.appendChild(dropRoot);
 		}
 		return dropRoot;
-	}
-	function getRoot() {
-		if (!shadowRoot) initialize();
-		return shadowRoot;
 	}
 	function insertHost(target, position = "beforeend") {
 		if (!shadowHost) initialize();
@@ -5038,7 +5033,6 @@
 		fixedTop: false,
 		fixedTopUpward: false,
 		HideTheSameLink: true,
-		transtion: true,
 		selectSearch: true,
 		center: false,
 		engineCategories: [
@@ -5471,6 +5465,14 @@
 		"./sites/youdao.js": youdao_exports,
 		"./sites/zhihu.js": zhihu_exports
 	})).sort(([a], [b]) => a.localeCompare(b)).flatMap(([, mod]) => Array.isArray(mod.default) ? mod.default : [mod.default]).filter(Boolean));
+	var _GM_addStyle = (() => typeof GM_addStyle != "undefined" ? GM_addStyle : void 0)();
+	var _GM_deleteValue = (() => typeof GM_deleteValue != "undefined" ? GM_deleteValue : void 0)();
+	var _GM_getValue = (() => typeof GM_getValue != "undefined" ? GM_getValue : void 0)();
+	var _GM_info = (() => typeof GM_info != "undefined" ? GM_info : void 0)();
+	var _GM_openInTab = (() => typeof GM_openInTab != "undefined" ? GM_openInTab : void 0)();
+	var _GM_registerMenuCommand = (() => typeof GM_registerMenuCommand != "undefined" ? GM_registerMenuCommand : void 0)();
+	var _GM_setValue = (() => typeof GM_setValue != "undefined" ? GM_setValue : void 0)();
+	var _GM_xmlhttpRequest = (() => typeof GM_xmlhttpRequest != "undefined" ? GM_xmlhttpRequest : void 0)();
 	var memoryFallback = new Map();
 	var asyncCache = new Map();
 	var asyncLoaded = new Set();
@@ -5798,7 +5800,6 @@
 			"settings.hideSameLink": "防止原地跳转",
 			"settings.hideSameLinkTip": "比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索",
 			"settings.selectSearch": "划词搜索",
-			"settings.transition": "过渡动画",
 			"settings.center": "强制居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.fixedTop": "固顶显示",
@@ -5917,7 +5918,6 @@
 			"settings.hideSameLink": "Prevent same-site jumps",
 			"settings.hideSameLinkTip": "For example, Google is hidden from the engine list on a Google results page",
 			"settings.selectSearch": "Selection search",
-			"settings.transition": "Animations",
 			"settings.center": "Force center",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.fixedTop": "Pin to top",
@@ -6106,7 +6106,6 @@
 			HideTheSameLink: true,
 			fixedTop: false,
 			fixedTopUpward: false,
-			transtion: true,
 			selectSearch: true,
 			center: false,
 			language: "auto",
@@ -6122,7 +6121,6 @@
 		for (const key of [
 			"HideTheSameLink",
 			"selectSearch",
-			"transtion",
 			"center",
 			"fixedTop",
 			"fixedTopUpward"
@@ -6608,7 +6606,7 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n.sej-category-search-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.08s ease-out, color 0.08s ease-out;\n}\n\n.sej-category-search-icon svg {\n  width: 14px;\n  height: 14px;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-category-search-icon:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n  color: var(--sej-accent, #4285f4);\n}\n\n.sej-category-search-icon:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n.sej-category-search-icon:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 6px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n.sej-category-search-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.08s ease-out, color 0.08s ease-out;\n}\n\n.sej-category-search-icon svg {\n  width: 14px;\n  height: 14px;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-category-search-icon:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n  color: var(--sej-accent, #4285f4);\n}\n\n.sej-category-search-icon:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n.sej-category-search-icon:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const emit = __emit;
 			const dropRoot = getDropRoot();
 			const triggerEl = ref(null);
@@ -6856,7 +6854,7 @@
 	var _sfc_main$6 = {
 		__name: "JumpBar",
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  gap: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  /* 内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /* 不显示滚动条，改用鼠标/触屏拖动；纵向手势仍交给页面滚动 */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: pan-y;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘提示可以继续拖动 */\n#sej-container > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 20px);\n  mask-image: linear-gradient(to right, transparent, #000 20px);\n}\n\n#sej-container > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 20px);\n  mask-image: linear-gradient(to left, transparent, #000 20px);\n}\n\n#sej-container > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 20px,\n    #000 calc(100% - 20px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 20px,\n    #000 calc(100% - 20px),\n    transparent\n  );\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n  margin-left: 2px;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform 0.3s, visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition: transform 0.3s, visibility 0s linear 0s;\n}\n\n#sej-expanded-category {\n  font-weight: bold;\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n\n@keyframes iqxinsejopen {\n  0% {\n    transform: scale(0.01, 0.01);\n    opacity: 0;\n  }\n  100% {\n    transform: scale(1, 1);\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  gap: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  /* 内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /* 不显示滚动条，改用鼠标/触屏拖动；纵向手势仍交给页面滚动 */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: pan-y;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘提示可以继续拖动 */\n#sej-container > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 20px);\n  mask-image: linear-gradient(to right, transparent, #000 20px);\n}\n\n#sej-container > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 20px);\n  mask-image: linear-gradient(to left, transparent, #000 20px);\n}\n\n#sej-container > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 20px,\n    #000 calc(100% - 20px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 20px,\n    #000 calc(100% - 20px),\n    transparent\n  );\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n  margin-left: 2px;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition: transform 0.3s, visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition: transform 0.3s, visibility 0s linear 0s;\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n\n@keyframes iqxinsejopen {\n  0% {\n    transform: scale(0.01, 0.01);\n    opacity: 0;\n  }\n  100% {\n    transform: scale(1, 1);\n    opacity: 1;\n  }\n}\n");
 			const settings = useSettings();
 			const data = settings.settingData;
 			const matchedRule = settings.getMatchedRule();
@@ -7335,13 +7333,6 @@
 		}
 		return stats;
 	}
-	var restartHandler = null;
-	function onRestartRequest(handler) {
-		restartHandler = handler;
-	}
-	function requestRestart() {
-		if (restartHandler) restartHandler();
-	}
 	var _hoisted_1$3 = { id: "newSearchBox" };
 	var _hoisted_2$3 = { class: "sej-dialog-title" };
 	var _hoisted_3$3 = { class: "sej-field" };
@@ -7419,7 +7410,7 @@
 			"delete"
 		],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition: border-color 0.12s ease-out, color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover,\n.sej-preview-step.is-active {\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：空心圆勾，悬停时提示可点击 */\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  color: var(--sej-accent);\n  opacity: 1;\n}\n\n/* 已选用：实心圆勾，与未选用状态区分明显 */\n.sej-preview-icon.is-selected {\n  color: var(--sej-accent);\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n\n.iqxin-help-link {\n  color: var(--font-color-qxin);\n  opacity: 0.6;\n}\n");
+			addStyle("\n.sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition: border-color 0.12s ease-out, color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover,\n.sej-preview-step.is-active {\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：空心圆勾，悬停时提示可点击 */\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  color: var(--sej-accent);\n  opacity: 1;\n}\n\n/* 已选用：实心圆勾，与未选用状态区分明显 */\n.sej-preview-icon.is-selected {\n  color: var(--sej-accent);\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n\n");
 			const props = __props;
 			const emit = __emit;
 			const form = reactive({
@@ -7925,7 +7916,7 @@
 		},
 		emits: ["apply", "cancel"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n#iqxin-editCodeBox {\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  z-index: 200000100;\n  width: min(560px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n}\n\n#iqxin-editCodeBox p {\n  margin: 0;\n}\n\n#iqxin-editCodeBox button {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n#iqxin-editCodeBox button:hover {\n  background: var(--sej-surface-hover);\n}\n\n#iqxin-editCodeBox button:disabled {\n  cursor: not-allowed;\n  opacity: 0.5;\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.92;\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn:disabled,\n#iqxin-editCodeBox .iqxin-enterBtn:disabled:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.5;\n}\n\n#iqxin-editCodeBox .iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 导入方式互斥勾选 */\n#iqxin-editCodeBox .sej-import-mode {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  user-select: none;\n}\n\n/* 圆角裁剪滚动条，避免滚动条方角突出到圆角外 */\n#iqxin-editCodeBox .sej-config-textarea {\n  display: flex;\n  flex: 1 1 auto;\n  min-height: 240px;\n  overflow: hidden;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 10px;\n  background: var(--sej-input-bg);\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n\n#iqxin-editCodeBox .sej-config-textarea:focus-within {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n#iqxin-editCodeBox textarea {\n  width: 100%;\n  box-sizing: border-box;\n  flex: 1 1 auto;\n  min-height: 0;\n  padding: 10px;\n  overflow: auto;\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  color: var(--font-color-qxin);\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.5;\n  resize: none;\n  outline: none;\n}\n\n#iqxin-editCodeBox textarea::-webkit-resizer,\n#iqxin-editCodeBox textarea::-webkit-scrollbar-corner {\n  background: transparent;\n}\n\n.iqxin-warning {\n  color: var(--sej-danger);\n  font-size: 14px;\n  font-weight: 600;\n}\n\n#importingBox {\n  position: fixed;\n  width: min(350px, calc(100vw - 32px));\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  padding: 16px 24px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  color: var(--font-color-qxin);\n}\n\n#importingBox li {\n  margin: 5px;\n  border-bottom: 1px solid var(--border-color-sej);\n}\n\n#importingBox li p {\n  white-space: nowrap;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  margin-top: 0;\n  margin-bottom: 0;\n}\n\n.xin-importing-item {\n  cursor: pointer;\n}\n");
+			addStyle("\n#iqxin-editCodeBox {\n  position: fixed;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  z-index: 200000100;\n  width: min(560px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  box-sizing: border-box;\n  display: flex;\n  flex-direction: column;\n  gap: 10px;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n}\n\n#iqxin-editCodeBox p {\n  margin: 0;\n}\n\n#iqxin-editCodeBox button {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n#iqxin-editCodeBox button:hover {\n  background: var(--sej-surface-hover);\n}\n\n#iqxin-editCodeBox button:disabled {\n  cursor: not-allowed;\n  opacity: 0.5;\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.92;\n}\n\n#iqxin-editCodeBox .iqxin-enterBtn:disabled,\n#iqxin-editCodeBox .iqxin-enterBtn:disabled:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.5;\n}\n\n#iqxin-editCodeBox .iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 导入方式互斥勾选 */\n#iqxin-editCodeBox .sej-import-mode {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  font-size: 13px;\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  user-select: none;\n}\n\n/* 圆角裁剪滚动条，避免滚动条方角突出到圆角外 */\n#iqxin-editCodeBox .sej-config-textarea {\n  display: flex;\n  flex: 1 1 auto;\n  min-height: 240px;\n  overflow: hidden;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 10px;\n  background: var(--sej-input-bg);\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n\n#iqxin-editCodeBox .sej-config-textarea:focus-within {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n#iqxin-editCodeBox textarea {\n  width: 100%;\n  box-sizing: border-box;\n  flex: 1 1 auto;\n  min-height: 0;\n  padding: 10px;\n  overflow: auto;\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  color: var(--font-color-qxin);\n  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;\n  font-size: 12px;\n  line-height: 1.5;\n  resize: none;\n  outline: none;\n}\n\n#iqxin-editCodeBox textarea::-webkit-resizer,\n#iqxin-editCodeBox textarea::-webkit-scrollbar-corner {\n  background: transparent;\n}\n\n.iqxin-warning {\n  color: var(--sej-danger);\n  font-size: 14px;\n  font-weight: 600;\n}\n\n");
 			const props = __props;
 			const emit = __emit;
 			const text = ref(props.initialText);
@@ -8066,26 +8057,25 @@
 	var _hoisted_19 = { class: "sej-footer-options" };
 	var _hoisted_20 = ["title"];
 	var _hoisted_21 = { id: "xin-selectSearch" };
-	var _hoisted_22 = { id: "xin-transtion" };
+	var _hoisted_22 = ["title"];
 	var _hoisted_23 = ["title"];
 	var _hoisted_24 = ["title"];
-	var _hoisted_25 = ["title"];
-	var _hoisted_26 = { id: "xin-language" };
-	var _hoisted_27 = { value: "auto" };
-	var _hoisted_28 = { class: "sej-footer-bar" };
-	var _hoisted_29 = { class: "sej-footer-selects" };
-	var _hoisted_30 = {
+	var _hoisted_25 = { id: "xin-language" };
+	var _hoisted_26 = { value: "auto" };
+	var _hoisted_27 = { class: "sej-footer-bar" };
+	var _hoisted_28 = { class: "sej-footer-selects" };
+	var _hoisted_29 = {
 		id: "xin-modification",
 		class: "sej-config-box"
 	};
+	var _hoisted_30 = ["title"];
 	var _hoisted_31 = ["title"];
 	var _hoisted_32 = ["title"];
-	var _hoisted_33 = ["title"];
-	var _hoisted_34 = { class: "sej-footer-links" };
+	var _hoisted_33 = { class: "sej-footer-links" };
+	var _hoisted_34 = ["title"];
 	var _hoisted_35 = ["title"];
-	var _hoisted_36 = ["title"];
-	var _hoisted_37 = { class: "sej-footer-actions" };
-	var _hoisted_38 = ["title"];
+	var _hoisted_36 = { class: "sej-footer-actions" };
+	var _hoisted_37 = ["title"];
 	var COPY = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>";
 	var EYE = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>";
 	var EYE_OFF = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94\"/><path d=\"M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19\"/><path d=\"M14.12 14.12a3 3 0 1 1-4.24-4.24\"/><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"/></svg>";
@@ -8101,7 +8091,7 @@
 	var _sfc_main$2 = {
 		__name: "SettingPanel",
 		setup(__props) {
-			addStyle("\n#settingLayerMask {\n  display: none;\n  justify-content: center;\n  align-items: center;\n  position: fixed;\n  inset: 0;\n  background-color: rgba(16, 18, 22, 0.42);\n  backdrop-filter: blur(12px);\n  z-index: 200000000;\n  overflow: auto;\n  font-family: var(--sej-font-family);\n  min-height: 100%;\n  font-size: 14px;\n  transition: opacity 0.15s ease-out;\n  opacity: 0;\n  animation: sej-setting-mask-in 0.15s ease;\n  user-select: none;\n  -moz-user-select: none;\n  touch-action: manipulation;\n  padding-bottom: 80px;\n  box-sizing: border-box;\n  color: var(--font-color-qxin);\n}\n\n#settingLayer {\n  display: flex;\n  flex-direction: column;\n  box-sizing: border-box;\n  --sej-panel-pad-x: 20px;\n  --sej-panel-pad-top: 16px;\n  padding: var(--sej-panel-pad-top) var(--sej-panel-pad-x) 16px;\n  background-color: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 16px;\n  box-shadow: var(--sej-panel-shadow);\n  position: absolute;\n  width: auto;\n  min-width: min(720px, calc(100vw - 32px));\n  max-width: min(960px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  margin: 0;\n  overflow: visible;\n  animation: sej-panel-in 0.16s ease-out;\n}\n\n@keyframes sej-panel-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px) scale(0.99);\n  }\n}\n\n.sej-panel-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  flex: 0 0 auto;\n  padding: 0 2px 12px;\n  cursor: move;\n  /* 触屏拖动标题栏时不要触发页面滚动/长按菜单 */\n  touch-action: none;\n  -webkit-touch-callout: none;\n  -webkit-user-select: none;\n  user-select: none;\n}\n\n.sej-panel-title {\n  font-size: 15px;\n  font-weight: 600;\n  letter-spacing: 0.01em;\n}\n\n.sej-panel-close {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: none;\n  border-radius: 50%;\n  background: var(--sej-surface-hover);\n  color: transparent;\n  font-size: 0;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 1;\n  transition: background-color 0.12s ease-out, opacity 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n.sej-panel-close::before,\n.sej-panel-close::after {\n  content: \"\";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 12px;\n  height: 1.5px;\n  border-radius: 2px;\n  background: var(--font-color-qxin);\n  transform: translate(-50%, -50%) rotate(45deg);\n}\n\n.sej-panel-close::after {\n  transform: translate(-50%, -50%) rotate(-45deg);\n}\n\n.sej-panel-close:hover {\n  background: var(--sej-active-bg);\n}\n\n.sej-panel-close:active {\n  transform: scale(0.92);\n  opacity: 0.75;\n}\n\n.iqxin-items {\n  display: flex;\n  flex-direction: column;\n  flex: 0 0 220px;\n  width: 220px;\n  min-width: 0;\n  max-width: 220px;\n  box-sizing: border-box;\n  margin: 0;\n  padding: 6px;\n  border-radius: 12px;\n  border: 1px solid var(--border-color-sej);\n  background: var(--sej-surface-2);\n}\n\n.sej-add-category-card {\n  align-items: center;\n  justify-content: center;\n  min-height: 140px;\n  background: transparent;\n  border: 1px dashed var(--sej-checkbox-border);\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-add-category-card:hover {\n  background: var(--sej-surface-hover);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-add-category-card:focus-visible {\n  background: var(--sej-surface-hover);\n  outline: 2px solid var(--sej-accent);\n  outline-offset: 2px;\n}\n\n.sej-add-category-plus {\n  font-size: 42px;\n  font-weight: 300;\n  line-height: 1;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-add-category-card:hover .sej-add-category-plus {\n  opacity: 1;\n}\n\n.sejcon {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n}\n\n.sejcon > .drag {\n  flex: 0 0 auto;\n}\n\n#settingLayer .drag {\n  display: block;\n  position: relative;\n  /* 触屏：tap 立即响应；长按由脚本接管拖动，禁用原生长按菜单 */\n  touch-action: manipulation;\n  -webkit-touch-callout: none;\n  -webkit-user-select: none;\n  user-select: none;\n}\n\n/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */\n#settingLayer .sej-drag-placeholder,\n#settingLayer .sej-drag-placeholder * {\n  visibility: hidden !important;\n}\n\n#settingLayer .sejtitle:active,\n#settingLayer .sejcon > .drag:active {\n  cursor: grabbing;\n}\n\n.sej-drag-ghost {\n  position: fixed !important;\n  left: 0 !important;\n  top: 0 !important;\n  margin: 0 !important;\n  z-index: 200000200;\n  opacity: 1 !important;\n  pointer-events: none;\n  box-sizing: border-box;\n  overflow: hidden;\n  will-change: transform;\n}\n\n.sej-drag-ghost * {\n  pointer-events: none !important;\n}\n\n.sej-drag-ghost-engine {\n  border-radius: 8px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);\n}\n\n.sej-drag-ghost-category {\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);\n}\n\n#settingLayer .sej-engine {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  padding: 0 82px 0 8px;\n  width: 100%;\n  height: 30px;\n  box-sizing: border-box;\n  border-radius: 8px;\n  font-family: var(--sej-font-family);\n  font-size: 13px;\n  color: var(--font-color-qxin);\n  text-decoration: none;\n  white-space: nowrap;\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  cursor: pointer;\n}\n\n#settingLayer .sej-engine > span {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.sejtitle {\n  text-align: left;\n  /* 左侧与引擎条目对齐，右侧避开编辑/删除/显隐按钮 */\n  padding: 5px 82px 5px 8px;\n  margin-bottom: 2px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  cursor: pointer;\n  position: relative;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.5;\n  border-radius: 8px;\n}\n\n/* 标题下方的细分隔线，用于和引擎条目区分 */\n.sejtitle::after {\n  content: \"\";\n  position: absolute;\n  left: 8px;\n  right: 8px;\n  bottom: 0;\n  height: 1px;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n#settingLayerMask [data-xin] {\n  margin: 1px 0;\n  border-radius: 8px;\n}\n\n.sejcon [data-xin] {\n  cursor: pointer;\n}\n\n/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */\n#settingLayerMask [data-iqxindisabled=\"true\"],\n[data-xin^=\"-\"] {\n  background-color: transparent;\n  color: var(--font-color-qxin);\n  transition: background-color 0.12s ease-out;\n}\n\n#settingLayerMask [data-iqxindisabled=\"true\"] > span,\n#settingLayerMask [data-iqxindisabled=\"true\"] .sej-engine-icon,\n[data-xin^=\"-\"] > .iqxin-pointer-events {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */\n.sej-category-hidden .sej-engine > span,\n.sej-category-hidden .sej-engine .sej-engine-icon,\n.sej-category-hidden .iqxin-additem {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n#settingLayerMask .sej-engine:hover {\n  background-color: var(--sej-surface-hover);\n}\n\n#settingLayerMask [data-iqxindisabled=\"true\"]:hover,\n[data-xin^=\"-\"]:hover {\n  background-color: transparent;\n}\n\n.sej-category-hidden .sej-engine:hover {\n  background-color: transparent;\n}\n\n#settingLayerMask label {\n  cursor: pointer;\n}\n\n#settingLayerMask .sej-engine-icon {\n  vertical-align: middle;\n}\n\n#btnEle {\n  position: relative;\n  width: 100%;\n  background: transparent;\n  border-radius: 0;\n  flex: 0 0 auto;\n}\n\n#btnEle {\n  margin-top: 10px;\n}\n\n#btnEle span {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  box-sizing: border-box;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  margin: 0;\n  color: var(--font-color-qxin);\n  padding: 4px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out, opacity 0.12s ease-out, transform 0.1s ease-out;\n}\n\n#btnEle label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  color: inherit;\n}\n\n#btnEle .sej-language-select {\n  appearance: none;\n  -webkit-appearance: none;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 6px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  padding: 2px 4px;\n  margin-left: 2px;\n  cursor: pointer;\n  outline: none;\n}\n\n#btnEle .sej-language-select:focus-visible {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n#btnEle span:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle a {\n  color: var(--font-color-qxin);\n  opacity: 0.7;\n  text-decoration: none;\n  font-family: inherit;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle a:hover {\n  opacity: 1;\n  color: var(--sej-accent);\n}\n\n#btnEle span:active,\n#btnEle a:active {\n  transform: scale(0.96);\n  opacity: 0.8;\n}\n\n#btnEle .feedback {\n  background: transparent;\n  border-color: transparent;\n  padding: 4px 6px;\n}\n\n#btnEle .feedback:hover {\n  background: transparent;\n  border-color: transparent;\n  color: var(--sej-accent);\n}\n\n#btnEle > div {\n  width: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 8px;\n  box-sizing: border-box;\n}\n\n#btnEle > div.btnEleLayer {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  align-items: stretch;\n  background: transparent;\n  border-radius: 0;\n  border-top: 1px solid var(--border-color-sej);\n  padding-top: 12px;\n  gap: 8px;\n}\n\n.sej-footer-options,\n.sej-footer-bar,\n.sej-footer-selects,\n.sej-footer-links,\n.sej-footer-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  min-width: 0;\n}\n\n.sej-footer-options {\n  gap: 8px;\n}\n\n.sej-footer-bar {\n  gap: 8px 12px;\n}\n\n.sej-footer-selects {\n  gap: 8px;\n}\n\n/* 配置文件：齿轮入口与导入/导出合并为同一个容器 */\n#btnEle .sej-config-box {\n  display: inline-flex;\n  align-items: center;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  border-radius: 8px;\n  overflow: hidden;\n}\n\n#btnEle .sej-config-box button {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  min-height: 30px;\n  margin: 0;\n  padding: 4px 9px;\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle .sej-config-box .sej-config-open {\n  padding-left: 10px;\n}\n\n#btnEle .sej-config-box button:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle .sej-config-box button:active {\n  transform: scale(0.96);\n}\n\n#btnEle .sej-config-box button:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#btnEle .sej-config-box svg {\n  flex: 0 0 auto;\n}\n\n#btnEle span.sej-config-sep {\n  flex: 0 0 auto;\n  width: 1px;\n  height: 16px;\n  min-height: 16px;\n  margin: 0;\n  padding: 0;\n  border: 0;\n  border-radius: 0;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n.sej-footer-links {\n  gap: 0;\n  margin-left: auto;\n}\n\n.sej-footer-actions {\n  margin-left: 4px;\n}\n\n#btnEle #xin-save {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n#btnEle #xin-save:hover {\n  background: var(--sej-accent);\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n#btnEle #xin-save.sej-saving {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n\n/* 自动保存成功反馈：关闭按钮外扩绿色波纹，「已保存」文字上滑淡入 */\n#btnEle #xin-save {\n  position: relative;\n}\n\n#btnEle #xin-save.sej-save-flash {\n  animation: sej-save-glow 0.9s ease-out;\n}\n\n#btnEle #xin-save.sej-save-flash::after {\n  content: \"\";\n  position: absolute;\n  inset: 0;\n  border-radius: inherit;\n  border: 2px solid var(--sej-success, #188038);\n  pointer-events: none;\n  animation: sej-save-ripple 0.9s ease-out forwards;\n}\n\n.sej-save-text {\n  font-style: normal;\n}\n\n.sej-save-text.sej-save-text-flash {\n  animation: sej-save-text-in 0.9s ease-out;\n}\n\n@keyframes sej-save-glow {\n  0%,\n  100% {\n    box-shadow: 0 0 0 0 transparent;\n  }\n  35% {\n    box-shadow: 0 0 0 4px var(--sej-success-weak, rgba(24, 128, 56, 0.14));\n  }\n  70% {\n    box-shadow: 0 0 0 2px var(--sej-success-weak, rgba(24, 128, 56, 0.14));\n  }\n}\n\n@keyframes sej-save-ripple {\n  0% {\n    opacity: 0.9;\n    transform: scale(1);\n  }\n  100% {\n    opacity: 0;\n    transform: scale(1.18, 1.5);\n  }\n}\n\n@keyframes sej-save-text-in {\n  0% {\n    opacity: 0;\n    transform: translateY(5px);\n  }\n  30% {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n#btnEle span.iqxin-btn-active {\n  background: var(--sej-accent-weak);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n#settingLayerMask input[type=\"checkbox\"],\n#settingLayerMask input[type=\"radio\"] {\n  appearance: none;\n  -webkit-appearance: none;\n  width: 16px;\n  height: 16px;\n  display: inline-block;\n  box-sizing: border-box;\n  vertical-align: -3px;\n  margin: 0 !important;\n  padding: 0;\n  position: relative;\n  border: 1.5px solid var(--sej-checkbox-border);\n  border-radius: 5px;\n  background: var(--sej-input-bg);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out;\n}\n\n#settingLayerMask input[type=\"checkbox\"]:before,\n#settingLayerMask input[type=\"radio\"]:before {\n  content: none;\n}\n\n#settingLayerMask input[type=\"checkbox\"]:checked,\n#settingLayerMask input[type=\"radio\"]:checked {\n  background: var(--sej-accent);\n  border-color: var(--sej-accent);\n}\n\n#settingLayerMask input[type=\"checkbox\"]:checked:after,\n#settingLayerMask input[type=\"radio\"]:checked:after {\n  content: \"\";\n  position: absolute;\n  left: 4px;\n  top: 1px;\n  width: 4px;\n  height: 8px;\n  border: solid var(--sej-accent-contrast);\n  border-width: 0 2px 2px 0;\n  background: none;\n  transform: rotate(45deg);\n}\n\n.drop-over {\n  opacity: 0.6;\n}\n\n.iqxin-set-toggle {\n  opacity: 0.6;\n  position: absolute;\n  background: transparent;\n  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */\n  top: 0;\n  bottom: 0;\n  height: fit-content;\n  margin-top: auto;\n  margin-bottom: auto;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n  right: 6px;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n}\n\n.iqxin-set-toggle svg {\n  display: block;\n}\n\n.iqxin-set-toggle.iqxin-set-hidden {\n  opacity: 0.35;\n}\n\n.iqxin-set-toggle:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n/* 悬浮操作：右侧依次为编辑、删除、显隐按钮 */\n.sej-hover-edit,\n.sej-hover-delete {\n  position: absolute;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-hover-edit {\n  top: 0;\n  bottom: 0;\n  right: 54px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n}\n\n.sej-hover-delete {\n  top: 0;\n  bottom: 0;\n  right: 30px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n}\n\n.sej-hover-edit svg,\n.sej-hover-delete svg {\n  display: block;\n}\n\n.sejtitle:hover .sej-hover-edit,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit {\n  opacity: 0.6;\n}\n\n.sejtitle:hover .sej-hover-delete,\n#settingLayer .sejcon > .drag:hover > .sej-hover-delete {\n  opacity: 0.6;\n  pointer-events: auto;\n}\n\n.sejtitle:hover .sej-hover-edit:hover,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n.sej-hover-delete:hover {\n  opacity: 1;\n  background: var(--sej-danger-weak, rgba(220, 53, 69, 0.12));\n  color: var(--sej-danger, #dc3545);\n}\n\nspan.iqxin-additem {\n  display: inline-block;\n  position: relative;\n  text-align: center;\n  width: 100%;\n  box-sizing: border-box;\n  margin: auto 0 2px;\n  padding: 5px 0;\n  border: 1px dashed currentColor;\n  border-radius: 8px;\n  color: var(--font-color-qxin);\n  opacity: 0.55;\n  cursor: pointer;\n  visibility: visible;\n  transition: opacity 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\nspan.iqxin-additem:hover {\n  opacity: 1;\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\nspan.iqxin-additem.sej-copy-target {\n  opacity: 1;\n  border-style: solid;\n  border-color: var(--sej-accent);\n  background: var(--sej-accent-weak);\n  color: var(--sej-accent);\n}\n\n.sej-copy-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  vertical-align: middle;\n  line-height: 1;\n}\n\n.sej-copy-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n}\n\n.sej-copy-hint {\n  position: absolute;\n  left: 50%;\n  bottom: calc(100% + 6px);\n  transform: translateX(-50%);\n  z-index: 5;\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: rgba(20, 22, 26, 0.82);\n  color: #fff;\n  font-size: 12px;\n  line-height: 1.5;\n  white-space: nowrap;\n  pointer-events: none;\n}\n\n@keyframes sej-setting-mask-in {\n  from {\n    opacity: 0;\n  }\n}\n\n/* ---------- Vue 重构版设置面板布局优化 ---------- */\n#settingLayerMask {\n  padding: 20px;\n  box-sizing: border-box;\n}\n\n#sej-settings-body {\n  display: flex;\n  flex: 1 1 auto;\n  flex-wrap: wrap;\n  align-content: flex-start;\n  gap: 10px;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */\n  margin-top: 0;\n  margin-right: calc(var(--sej-panel-pad-x) * -1);\n  padding-top: 2px;\n  padding-right: var(--sej-panel-pad-x);\n  padding-bottom: 4px;\n}\n\n#sej-settings-body::-webkit-scrollbar {\n  width: 8px;\n}\n\n#sej-settings-body::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover);\n  border-radius: 4px;\n}\n\n#settingLayer #btnEle {\n  flex: 0 0 auto;\n}\n\n@media (max-width: 780px) {\n  #btnEle span {\n    font-size: 12px;\n    padding: 5px 8px;\n  }\n  #btnEle .sej-config-box button {\n    font-size: 12px;\n    padding: 5px 7px;\n  }\n  #btnEle .sej-config-box .sej-config-open {\n    padding-left: 8px;\n  }\n  #settingLayer {\n    --sej-panel-pad-x: 12px;\n    min-width: calc(100vw - 16px);\n    max-width: calc(100vw - 16px);\n    max-height: calc(100vh - 16px);\n  }\n}\n\n@media (max-width: 560px) {\n  .iqxin-items {\n    flex: 1 1 160px;\n    width: auto;\n    max-width: none;\n  }\n}\n\n.iqxin-pointer-events,\n#settingLayer .sej-engine * {\n  pointer-events: none;\n}\n\n#newSearchListBox,\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition: opacity 0.14s ease-out, transform 0.14s ease-out;\n}\n\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n\n.sej-field > span {\n  opacity: 0.65;\n}\n\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n.sej-file-input {\n  display: none;\n}\n\n.sej-field-inline {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  font-size: 13px;\n  cursor: pointer;\n}\n\n.sej-dialog-actions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n\n#newSearchListBox input,\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n\n#newSearchListBox input:focus,\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 单独占据操作栏左侧，其余按钮保持右对齐 */\n.sej-dialog-left {\n  margin-right: auto;\n}\n\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n");
+			addStyle("\n#settingLayerMask {\n  display: none;\n  justify-content: center;\n  align-items: center;\n  position: fixed;\n  inset: 0;\n  background-color: rgba(16, 18, 22, 0.42);\n  backdrop-filter: blur(12px);\n  z-index: 200000000;\n  overflow: auto;\n  font-family: var(--sej-font-family);\n  min-height: 100%;\n  font-size: 14px;\n  transition: opacity 0.15s ease-out;\n  opacity: 0;\n  animation: sej-setting-mask-in 0.15s ease;\n  user-select: none;\n  -moz-user-select: none;\n  touch-action: manipulation;\n  padding: 20px;\n  box-sizing: border-box;\n  color: var(--font-color-qxin);\n}\n\n#settingLayer {\n  display: flex;\n  flex-direction: column;\n  box-sizing: border-box;\n  --sej-panel-pad-x: 20px;\n  --sej-panel-pad-top: 16px;\n  padding: var(--sej-panel-pad-top) var(--sej-panel-pad-x) 16px;\n  background-color: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 16px;\n  box-shadow: var(--sej-panel-shadow);\n  position: absolute;\n  width: auto;\n  min-width: min(720px, calc(100vw - 32px));\n  max-width: min(960px, calc(100vw - 32px));\n  max-height: calc(100vh - 48px);\n  margin: 0;\n  overflow: visible;\n  animation: sej-panel-in 0.16s ease-out;\n}\n\n@keyframes sej-panel-in {\n  from {\n    opacity: 0;\n    transform: translateY(6px) scale(0.99);\n  }\n}\n\n.sej-panel-header {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n  flex: 0 0 auto;\n  padding: 0 2px 12px;\n  cursor: move;\n  /* 触屏拖动标题栏时不要触发页面滚动/长按菜单 */\n  touch-action: none;\n  -webkit-touch-callout: none;\n  -webkit-user-select: none;\n  user-select: none;\n}\n\n.sej-panel-title {\n  font-size: 15px;\n  font-weight: 600;\n  letter-spacing: 0.01em;\n}\n\n.sej-panel-close {\n  position: relative;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 28px;\n  height: 28px;\n  padding: 0;\n  border: none;\n  border-radius: 50%;\n  background: var(--sej-surface-hover);\n  color: transparent;\n  font-size: 0;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 1;\n  transition: background-color 0.12s ease-out, opacity 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n.sej-panel-close::before,\n.sej-panel-close::after {\n  content: \"\";\n  position: absolute;\n  left: 50%;\n  top: 50%;\n  width: 12px;\n  height: 1.5px;\n  border-radius: 2px;\n  background: var(--font-color-qxin);\n  transform: translate(-50%, -50%) rotate(45deg);\n}\n\n.sej-panel-close::after {\n  transform: translate(-50%, -50%) rotate(-45deg);\n}\n\n.sej-panel-close:hover {\n  background: var(--sej-active-bg);\n}\n\n.sej-panel-close:active {\n  transform: scale(0.92);\n  opacity: 0.75;\n}\n\n.iqxin-items {\n  display: flex;\n  flex-direction: column;\n  flex: 0 0 220px;\n  width: 220px;\n  min-width: 0;\n  max-width: 220px;\n  box-sizing: border-box;\n  margin: 0;\n  padding: 6px;\n  border-radius: 12px;\n  border: 1px solid var(--border-color-sej);\n  background: var(--sej-surface-2);\n}\n\n.sej-add-category-card {\n  align-items: center;\n  justify-content: center;\n  min-height: 140px;\n  background: transparent;\n  border: 1px dashed var(--sej-checkbox-border);\n  color: var(--font-color-qxin);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-add-category-card:hover {\n  background: var(--sej-surface-hover);\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-add-category-card:focus-visible {\n  background: var(--sej-surface-hover);\n  outline: 2px solid var(--sej-accent);\n  outline-offset: 2px;\n}\n\n.sej-add-category-plus {\n  font-size: 42px;\n  font-weight: 300;\n  line-height: 1;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-add-category-card:hover .sej-add-category-plus {\n  opacity: 1;\n}\n\n.sejcon {\n  display: flex;\n  flex-direction: column;\n  flex: 1 1 auto;\n}\n\n.sejcon > .drag {\n  flex: 0 0 auto;\n}\n\n#settingLayer .drag {\n  display: block;\n  position: relative;\n  /* 触屏：tap 立即响应；长按由脚本接管拖动，禁用原生长按菜单 */\n  touch-action: manipulation;\n  -webkit-touch-callout: none;\n  -webkit-user-select: none;\n  user-select: none;\n}\n\n/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */\n#settingLayer .sej-drag-placeholder,\n#settingLayer .sej-drag-placeholder * {\n  visibility: hidden !important;\n}\n\n#settingLayer .sejtitle:active,\n#settingLayer .sejcon > .drag:active {\n  cursor: grabbing;\n}\n\n.sej-drag-ghost {\n  position: fixed !important;\n  left: 0 !important;\n  top: 0 !important;\n  margin: 0 !important;\n  z-index: 200000200;\n  opacity: 1 !important;\n  pointer-events: none;\n  box-sizing: border-box;\n  overflow: hidden;\n  will-change: transform;\n}\n\n.sej-drag-ghost * {\n  pointer-events: none !important;\n}\n\n.sej-drag-ghost-engine {\n  border-radius: 8px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);\n}\n\n.sej-drag-ghost-category {\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);\n}\n\n#settingLayer .sej-engine {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  padding: 0 82px 0 8px;\n  width: 100%;\n  height: 30px;\n  box-sizing: border-box;\n  border-radius: 8px;\n  font-family: var(--sej-font-family);\n  font-size: 13px;\n  color: var(--font-color-qxin);\n  text-decoration: none;\n  white-space: nowrap;\n  transition: background-color 0.08s ease-out, opacity 0.08s ease-out;\n  cursor: pointer;\n}\n\n#settingLayer .sej-engine > span {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.sejtitle {\n  text-align: left;\n  /* 左侧与引擎条目对齐，右侧避开编辑/删除/显隐按钮 */\n  padding: 5px 82px 5px 8px;\n  margin-bottom: 2px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  cursor: pointer;\n  position: relative;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.5;\n  border-radius: 8px;\n}\n\n/* 标题下方的细分隔线，用于和引擎条目区分 */\n.sejtitle::after {\n  content: \"\";\n  position: absolute;\n  left: 8px;\n  right: 8px;\n  bottom: 0;\n  height: 1px;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n#settingLayerMask [data-xin] {\n  margin: 1px 0;\n  border-radius: 8px;\n}\n\n.sejcon [data-xin] {\n  cursor: pointer;\n}\n\n/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */\n#settingLayerMask [data-iqxindisabled=\"true\"],\n[data-xin^=\"-\"] {\n  background-color: transparent;\n  color: var(--font-color-qxin);\n  transition: background-color 0.12s ease-out;\n}\n\n#settingLayerMask [data-iqxindisabled=\"true\"] > span,\n#settingLayerMask [data-iqxindisabled=\"true\"] .sej-engine-icon,\n[data-xin^=\"-\"] > .iqxin-pointer-events {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */\n.sej-category-hidden .sej-engine > span,\n.sej-category-hidden .sej-engine .sej-engine-icon,\n.sej-category-hidden .iqxin-additem {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n#settingLayerMask .sej-engine:hover {\n  background-color: var(--sej-surface-hover);\n}\n\n#settingLayerMask [data-iqxindisabled=\"true\"]:hover,\n[data-xin^=\"-\"]:hover {\n  background-color: transparent;\n}\n\n.sej-category-hidden .sej-engine:hover {\n  background-color: transparent;\n}\n\n#settingLayerMask label {\n  cursor: pointer;\n}\n\n#settingLayerMask .sej-engine-icon {\n  vertical-align: middle;\n}\n\n#btnEle {\n  position: relative;\n  width: 100%;\n  margin-top: 10px;\n  background: transparent;\n  border-radius: 0;\n  flex: 0 0 auto;\n}\n\n#btnEle span {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  box-sizing: border-box;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  margin: 0;\n  color: var(--font-color-qxin);\n  padding: 4px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out, opacity 0.12s ease-out, transform 0.1s ease-out;\n}\n\n#btnEle label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  color: inherit;\n}\n\n#btnEle .sej-language-select {\n  appearance: none;\n  -webkit-appearance: none;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 6px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  padding: 2px 4px;\n  margin-left: 2px;\n  cursor: pointer;\n  outline: none;\n}\n\n#btnEle .sej-language-select:focus-visible {\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n#btnEle span:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle a {\n  color: var(--font-color-qxin);\n  opacity: 0.7;\n  text-decoration: none;\n  font-family: inherit;\n  transition: opacity 0.12s ease-out, color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle a:hover {\n  opacity: 1;\n  color: var(--sej-accent);\n}\n\n#btnEle span:active,\n#btnEle a:active {\n  transform: scale(0.96);\n  opacity: 0.8;\n}\n\n#btnEle .feedback {\n  background: transparent;\n  border-color: transparent;\n  padding: 4px 6px;\n}\n\n#btnEle .feedback:hover {\n  background: transparent;\n  border-color: transparent;\n  color: var(--sej-accent);\n}\n\n#btnEle > div {\n  width: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 8px;\n  box-sizing: border-box;\n}\n\n#btnEle > div.btnEleLayer {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  align-items: stretch;\n  background: transparent;\n  border-radius: 0;\n  border-top: 1px solid var(--border-color-sej);\n  padding-top: 12px;\n  gap: 8px;\n}\n\n.sej-footer-options,\n.sej-footer-bar,\n.sej-footer-selects,\n.sej-footer-links,\n.sej-footer-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  min-width: 0;\n}\n\n.sej-footer-options {\n  gap: 8px;\n}\n\n.sej-footer-bar {\n  gap: 8px 12px;\n}\n\n.sej-footer-selects {\n  gap: 8px;\n}\n\n/* 配置文件：齿轮入口与导入/导出合并为同一个容器 */\n#btnEle .sej-config-box {\n  display: inline-flex;\n  align-items: center;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  border-radius: 8px;\n  overflow: hidden;\n}\n\n#btnEle .sej-config-box button {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  min-height: 30px;\n  margin: 0;\n  padding: 4px 9px;\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition: background-color 0.12s ease-out, color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle .sej-config-box .sej-config-open {\n  padding-left: 10px;\n}\n\n#btnEle .sej-config-box button:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle .sej-config-box button:active {\n  transform: scale(0.96);\n}\n\n#btnEle .sej-config-box button:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#btnEle .sej-config-box svg {\n  flex: 0 0 auto;\n}\n\n#btnEle span.sej-config-sep {\n  flex: 0 0 auto;\n  width: 1px;\n  height: 16px;\n  min-height: 16px;\n  margin: 0;\n  padding: 0;\n  border: 0;\n  border-radius: 0;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n.sej-footer-links {\n  gap: 0;\n  margin-left: auto;\n}\n\n.sej-footer-actions {\n  margin-left: 4px;\n}\n\n#btnEle #xin-save {\n  position: relative;\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n#btnEle #xin-save:hover {\n  background: var(--sej-accent);\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n#btnEle #xin-save.sej-saving {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n\n/* 自动保存成功反馈：关闭按钮外扩绿色波纹，「已保存」文字上滑淡入 */\n#btnEle #xin-save.sej-save-flash {\n  animation: sej-save-glow 0.9s ease-out;\n}\n\n#btnEle #xin-save.sej-save-flash::after {\n  content: \"\";\n  position: absolute;\n  inset: 0;\n  border-radius: inherit;\n  border: 2px solid var(--sej-success, #188038);\n  pointer-events: none;\n  animation: sej-save-ripple 0.9s ease-out forwards;\n}\n\n.sej-save-text {\n  font-style: normal;\n}\n\n.sej-save-text.sej-save-text-flash {\n  animation: sej-save-text-in 0.9s ease-out;\n}\n\n@keyframes sej-save-glow {\n  0%,\n  100% {\n    box-shadow: 0 0 0 0 transparent;\n  }\n  35% {\n    box-shadow: 0 0 0 4px var(--sej-success-weak, rgba(24, 128, 56, 0.14));\n  }\n  70% {\n    box-shadow: 0 0 0 2px var(--sej-success-weak, rgba(24, 128, 56, 0.14));\n  }\n}\n\n@keyframes sej-save-ripple {\n  0% {\n    opacity: 0.9;\n    transform: scale(1);\n  }\n  100% {\n    opacity: 0;\n    transform: scale(1.18, 1.5);\n  }\n}\n\n@keyframes sej-save-text-in {\n  0% {\n    opacity: 0;\n    transform: translateY(5px);\n  }\n  30% {\n    opacity: 1;\n    transform: translateY(0);\n  }\n}\n\n#settingLayerMask input[type=\"checkbox\"],\n#settingLayerMask input[type=\"radio\"] {\n  appearance: none;\n  -webkit-appearance: none;\n  width: 16px;\n  height: 16px;\n  display: inline-block;\n  box-sizing: border-box;\n  vertical-align: -3px;\n  margin: 0 !important;\n  padding: 0;\n  position: relative;\n  border: 1.5px solid var(--sej-checkbox-border);\n  border-radius: 5px;\n  background: var(--sej-input-bg);\n  cursor: pointer;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out;\n}\n\n#settingLayerMask input[type=\"checkbox\"]:before,\n#settingLayerMask input[type=\"radio\"]:before {\n  content: none;\n}\n\n#settingLayerMask input[type=\"checkbox\"]:checked,\n#settingLayerMask input[type=\"radio\"]:checked {\n  background: var(--sej-accent);\n  border-color: var(--sej-accent);\n}\n\n#settingLayerMask input[type=\"checkbox\"]:checked:after,\n#settingLayerMask input[type=\"radio\"]:checked:after {\n  content: \"\";\n  position: absolute;\n  left: 4px;\n  top: 1px;\n  width: 4px;\n  height: 8px;\n  border: solid var(--sej-accent-contrast);\n  border-width: 0 2px 2px 0;\n  background: none;\n  transform: rotate(45deg);\n}\n\n.iqxin-set-toggle {\n  opacity: 0.6;\n  position: absolute;\n  background: transparent;\n  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */\n  top: 0;\n  bottom: 0;\n  height: fit-content;\n  margin-top: auto;\n  margin-bottom: auto;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n  right: 6px;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n}\n\n.iqxin-set-toggle svg {\n  display: block;\n}\n\n.iqxin-set-toggle.iqxin-set-hidden {\n  opacity: 0.35;\n}\n\n.iqxin-set-toggle:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n/* 悬浮操作：右侧依次为编辑、删除、显隐按钮 */\n.sej-hover-edit,\n.sej-hover-delete {\n  position: absolute;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n  opacity: 0;\n  pointer-events: none;\n  transition: opacity 0.12s ease-out, background-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-hover-edit {\n  top: 0;\n  bottom: 0;\n  right: 54px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n}\n\n.sej-hover-delete {\n  top: 0;\n  bottom: 0;\n  right: 30px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n}\n\n.sej-hover-edit svg,\n.sej-hover-delete svg {\n  display: block;\n}\n\n.sejtitle:hover .sej-hover-edit,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit {\n  opacity: 0.6;\n}\n\n.sejtitle:hover .sej-hover-delete,\n#settingLayer .sejcon > .drag:hover > .sej-hover-delete {\n  opacity: 0.6;\n  pointer-events: auto;\n}\n\n.sejtitle:hover .sej-hover-edit:hover,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n.sej-hover-delete:hover {\n  opacity: 1;\n  background: var(--sej-danger-weak, rgba(220, 53, 69, 0.12));\n  color: var(--sej-danger, #dc3545);\n}\n\nspan.iqxin-additem {\n  display: inline-block;\n  position: relative;\n  text-align: center;\n  width: 100%;\n  box-sizing: border-box;\n  margin: auto 0 2px;\n  padding: 5px 0;\n  border: 1px dashed currentColor;\n  border-radius: 8px;\n  color: var(--font-color-qxin);\n  opacity: 0.55;\n  cursor: pointer;\n  visibility: visible;\n  transition: opacity 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\nspan.iqxin-additem:hover {\n  opacity: 1;\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\nspan.iqxin-additem.sej-copy-target {\n  opacity: 1;\n  border-style: solid;\n  border-color: var(--sej-accent);\n  background: var(--sej-accent-weak);\n  color: var(--sej-accent);\n}\n\n.sej-copy-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  vertical-align: middle;\n  line-height: 1;\n}\n\n.sej-copy-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n}\n\n.sej-copy-hint {\n  position: absolute;\n  left: 50%;\n  bottom: calc(100% + 6px);\n  transform: translateX(-50%);\n  z-index: 5;\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: rgba(20, 22, 26, 0.82);\n  color: #fff;\n  font-size: 12px;\n  line-height: 1.5;\n  white-space: nowrap;\n  pointer-events: none;\n}\n\n@keyframes sej-setting-mask-in {\n  from {\n    opacity: 0;\n  }\n}\n\n/* ---------- Vue 重构版设置面板布局优化 ---------- */\n#sej-settings-body {\n  display: flex;\n  flex: 1 1 auto;\n  flex-wrap: wrap;\n  align-content: flex-start;\n  gap: 10px;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */\n  margin-top: 0;\n  margin-right: calc(var(--sej-panel-pad-x) * -1);\n  padding-top: 2px;\n  padding-right: var(--sej-panel-pad-x);\n  padding-bottom: 4px;\n}\n\n#sej-settings-body::-webkit-scrollbar {\n  width: 8px;\n}\n\n#sej-settings-body::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover);\n  border-radius: 4px;\n}\n\n#settingLayer #btnEle {\n  flex: 0 0 auto;\n}\n\n@media (max-width: 780px) {\n  #btnEle span {\n    font-size: 12px;\n    padding: 5px 8px;\n  }\n  #btnEle .sej-config-box button {\n    font-size: 12px;\n    padding: 5px 7px;\n  }\n  #btnEle .sej-config-box .sej-config-open {\n    padding-left: 8px;\n  }\n  #settingLayer {\n    --sej-panel-pad-x: 12px;\n    min-width: calc(100vw - 16px);\n    max-width: calc(100vw - 16px);\n    max-height: calc(100vh - 16px);\n  }\n}\n\n@media (max-width: 560px) {\n  .iqxin-items {\n    flex: 1 1 160px;\n    width: auto;\n    max-width: none;\n  }\n}\n\n.iqxin-pointer-events,\n#settingLayer .sej-engine * {\n  pointer-events: none;\n}\n\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition: opacity 0.14s ease-out, transform 0.14s ease-out;\n}\n\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n\n.sej-field > span {\n  opacity: 0.65;\n}\n\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n.sej-file-input {\n  display: none;\n}\n\n.sej-dialog-actions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;\n}\n\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n  box-shadow: 0 0 0 3px var(--sej-focus-ring);\n}\n\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 单独占据操作栏左侧，其余按钮保持右对齐 */\n.sej-dialog-left {\n  margin-right: auto;\n}\n\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n");
 			const settings = useSettings();
 			const source = computed(() => settings.settingData);
 			function displayCategoryName(category) {
@@ -8113,7 +8103,6 @@
 				"fixedTopUpward",
 				"HideTheSameLink",
 				"center",
-				"transtion",
 				"selectSearch",
 				"language"
 			];
@@ -8514,7 +8503,7 @@
 				}
 			}
 			async function animateReorder(mutate) {
-				const reduceMotion = !draft.transtion || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+				const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 				const before = reduceMotion ? null : snapshotRects();
 				mutate();
 				if (reduceMotion) return;
@@ -9214,7 +9203,7 @@
 					ref_key: "layerEl",
 					ref: layerEl,
 					style: normalizeStyle(layerStyle.value),
-					onClick: _cache[13] || (_cache[13] = withModifiers(() => {}, ["stop"]))
+					onClick: _cache[12] || (_cache[12] = withModifiers(() => {}, ["stop"]))
 				}, [
 					createBaseVNode("div", {
 						class: "sej-panel-header",
@@ -9325,7 +9314,7 @@
 						"aria-label": unref(t)("settings.addCategory"),
 						onClick: addCategory,
 						onKeydown: [withKeys(addCategory, ["enter"]), withKeys(withModifiers(addCategory, ["prevent"]), ["space"])]
-					}, [..._cache[14] || (_cache[14] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_16)], 32),
+					}, [..._cache[13] || (_cache[13] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_16)], 32),
 					createBaseVNode("div", _hoisted_17, [createBaseVNode("div", _hoisted_18, [createBaseVNode("div", _hoisted_19, [
 						createBaseVNode("span", {
 							id: "xin-HideTheSameLink",
@@ -9338,47 +9327,43 @@
 							type: "checkbox",
 							"onUpdate:modelValue": _cache[7] || (_cache[7] = ($event) => draft.selectSearch = $event)
 						}, null, 512), [[vModelCheckbox, draft.selectSearch]])])]),
-						createBaseVNode("span", _hoisted_22, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.transition")), 1), withDirectives(createBaseVNode("input", {
-							type: "checkbox",
-							"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => draft.transtion = $event)
-						}, null, 512), [[vModelCheckbox, draft.transtion]])])]),
 						createBaseVNode("span", {
 							id: "xin-centerDisplay",
 							title: unref(t)("settings.centerTip")
 						}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.center")), 1), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
-							"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => draft.center = $event)
-						}, null, 512), [[vModelCheckbox, draft.center]])])], 8, _hoisted_23),
+							"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => draft.center = $event)
+						}, null, 512), [[vModelCheckbox, draft.center]])])], 8, _hoisted_22),
 						createBaseVNode("span", {
 							id: "iqxin-fixedTopS",
 							title: unref(t)("settings.fixedTopTip")
 						}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTop")), 1), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
-							"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => draft.fixedTop = $event)
-						}, null, 512), [[vModelCheckbox, draft.fixedTop]])])], 8, _hoisted_24),
+							"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => draft.fixedTop = $event)
+						}, null, 512), [[vModelCheckbox, draft.fixedTop]])])], 8, _hoisted_23),
 						withDirectives(createBaseVNode("span", {
 							id: "iqxin-fixedTopUpward",
 							title: unref(t)("settings.fixedTopUpwardTip")
 						}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTopUpward")), 1), withDirectives(createBaseVNode("input", {
 							type: "checkbox",
-							"onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => draft.fixedTopUpward = $event)
-						}, null, 512), [[vModelCheckbox, draft.fixedTopUpward]])])], 8, _hoisted_25), [[vShow, draft.fixedTop]]),
-						createBaseVNode("span", _hoisted_26, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), withDirectives(createBaseVNode("select", {
-							"onUpdate:modelValue": _cache[12] || (_cache[12] = ($event) => draft.language = $event),
+							"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => draft.fixedTopUpward = $event)
+						}, null, 512), [[vModelCheckbox, draft.fixedTopUpward]])])], 8, _hoisted_24), [[vShow, draft.fixedTop]]),
+						createBaseVNode("span", _hoisted_25, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), withDirectives(createBaseVNode("select", {
+							"onUpdate:modelValue": _cache[11] || (_cache[11] = ($event) => draft.language = $event),
 							class: "sej-language-select"
 						}, [
-							createBaseVNode("option", _hoisted_27, toDisplayString(unref(t)("settings.languageAuto")), 1),
-							_cache[15] || (_cache[15] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-							_cache[16] || (_cache[16] = createBaseVNode("option", { value: "en" }, "English", -1))
+							createBaseVNode("option", _hoisted_26, toDisplayString(unref(t)("settings.languageAuto")), 1),
+							_cache[14] || (_cache[14] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+							_cache[15] || (_cache[15] = createBaseVNode("option", { value: "en" }, "English", -1))
 						], 512), [[vModelSelect, draft.language]])])])
-					]), createBaseVNode("div", _hoisted_28, [
-						createBaseVNode("div", _hoisted_29, [createBaseVNode("div", _hoisted_30, [
+					]), createBaseVNode("div", _hoisted_27, [
+						createBaseVNode("div", _hoisted_28, [createBaseVNode("div", _hoisted_29, [
 							createBaseVNode("button", {
 								type: "button",
 								class: "sej-config-open",
 								title: unref(t)("settings.editConfig"),
 								onClick: openConfig
-							}, [_cache[17] || (_cache[17] = createBaseVNode("svg", {
+							}, [_cache[16] || (_cache[16] = createBaseVNode("svg", {
 								width: "16",
 								height: "16",
 								viewBox: "0 0 24 24",
@@ -9392,8 +9377,8 @@
 								cx: "12",
 								cy: "12",
 								r: "3"
-							}), createBaseVNode("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" })], -1)), createTextVNode(" " + toDisplayString(unref(t)("settings.editConfig")), 1)], 8, _hoisted_31),
-							_cache[20] || (_cache[20] = createBaseVNode("span", {
+							}), createBaseVNode("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" })], -1)), createTextVNode(" " + toDisplayString(unref(t)("settings.editConfig")), 1)], 8, _hoisted_30),
+							_cache[19] || (_cache[19] = createBaseVNode("span", {
 								class: "sej-config-sep",
 								"aria-hidden": "true"
 							}, null, -1)),
@@ -9402,7 +9387,7 @@
 								class: "sej-config-action",
 								title: unref(t)("config.import"),
 								onClick: pickConfigFile
-							}, [_cache[18] || (_cache[18] = createBaseVNode("svg", {
+							}, [_cache[17] || (_cache[17] = createBaseVNode("svg", {
 								width: "16",
 								height: "16",
 								viewBox: "0 0 24 24",
@@ -9416,8 +9401,8 @@
 								createBaseVNode("path", { d: "M12 21V9" }),
 								createBaseVNode("path", { d: "m7 14 5-5 5 5" }),
 								createBaseVNode("path", { d: "M5 3h14" })
-							], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.import")), 1)], 8, _hoisted_32),
-							_cache[21] || (_cache[21] = createBaseVNode("span", {
+							], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.import")), 1)], 8, _hoisted_31),
+							_cache[20] || (_cache[20] = createBaseVNode("span", {
 								class: "sej-config-sep",
 								"aria-hidden": "true"
 							}, null, -1)),
@@ -9426,7 +9411,7 @@
 								class: "sej-config-action",
 								title: unref(t)("config.export"),
 								onClick: exportConfig
-							}, [_cache[19] || (_cache[19] = createBaseVNode("svg", {
+							}, [_cache[18] || (_cache[18] = createBaseVNode("svg", {
 								width: "16",
 								height: "16",
 								viewBox: "0 0 24 24",
@@ -9440,7 +9425,7 @@
 								createBaseVNode("path", { d: "M12 3v12" }),
 								createBaseVNode("path", { d: "m7 10 5 5 5-5" }),
 								createBaseVNode("path", { d: "M5 21h14" })
-							], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.export")), 1)], 8, _hoisted_33)
+							], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.export")), 1)], 8, _hoisted_32)
 						]), createBaseVNode("input", {
 							ref_key: "configFileInput",
 							ref: configFileInput,
@@ -9449,20 +9434,20 @@
 							accept: "application/json,.json",
 							onChange: importConfigFile
 						}, null, 544)]),
-						createBaseVNode("div", _hoisted_34, [createBaseVNode("span", {
+						createBaseVNode("div", _hoisted_33, [createBaseVNode("span", {
 							class: "feedback",
 							title: unref(t)("settings.feedbackGreasyFork")
-						}, [..._cache[22] || (_cache[22] = [createBaseVNode("a", {
+						}, [..._cache[21] || (_cache[21] = [createBaseVNode("a", {
 							target: "_blank",
 							href: "https://greasyfork.org/zh-CN/users/1238054"
-						}, "Greasy Fork", -1)])], 8, _hoisted_35), createBaseVNode("span", {
+						}, "Greasy Fork", -1)])], 8, _hoisted_34), createBaseVNode("span", {
 							class: "feedback",
 							title: unref(t)("settings.feedbackGitHub")
-						}, [..._cache[23] || (_cache[23] = [createBaseVNode("a", {
+						}, [..._cache[22] || (_cache[22] = [createBaseVNode("a", {
 							target: "_blank",
 							href: "https://github.com/sherlocknieh/Monkey-Scripts"
-						}, "GitHub", -1)])], 8, _hoisted_36)]),
-						createBaseVNode("div", _hoisted_37, [createBaseVNode("span", {
+						}, "GitHub", -1)])], 8, _hoisted_35)]),
+						createBaseVNode("div", _hoisted_36, [createBaseVNode("span", {
 							id: "xin-save",
 							title: unref(t)("settings.close"),
 							class: normalizeClass({
@@ -9470,7 +9455,7 @@
 								"sej-save-flash": saveFlash.value
 							}),
 							onClick: save
-						}, [createBaseVNode("i", { class: normalizeClass(["sej-save-text", { "sej-save-text-flash": saveFlash.value }]) }, toDisplayString(saving.value ? unref(t)("settings.saving") : saveFlash.value ? unref(t)("settings.saved") : unref(t)("settings.close")), 3)], 10, _hoisted_38)])
+						}, [createBaseVNode("i", { class: normalizeClass(["sej-save-text", { "sej-save-text-flash": saveFlash.value }]) }, toDisplayString(saving.value ? unref(t)("settings.saving") : saveFlash.value ? unref(t)("settings.saved") : unref(t)("settings.close")), 3)], 10, _hoisted_37)])
 					])])]),
 					engineDialog.value ? (openBlock(), createBlock(_sfc_main$5, {
 						key: 0,
@@ -9540,7 +9525,7 @@
 			};
 		}
 	};
-	var global_default = "/* ==UserStyle==\n@name           SearchEngineJumpPlusGlobalStyle\n@description    Global style for SearchEngineJumpPlus\n@version        5.32.0\n@namespace      https://greasyfork.org/en/scripts/454280-searchenginejumpplus\n@license        MIT\n@author         MUTED64\n==/UserStyle== */\n\n/* 夜间模式 - 默认主题变量 */\n:root,\n:host,\nbody {\n  --font-color-qxin: #333;\n  --background-color-qxin: #fffffff0;\n  --background-avtive-color-qxin: #ccc;\n  --background-active-enable-qxin: #cff9ff;\n  --background-active-disable-qxin: #ffa2a2;\n  --background-hover-color-qxin: #eaeaea;\n  --trigger-shown-qxin: #f1f3f4 !important;\n  --background-btn-qxin: #eff4f8;\n  --background-setting-qxin: #fff;\n  --box-shadow-color-sej: hsla(0, 0%, 0%, 7%);\n  --border-color-sej: #e1e6ea;\n\n  /* 跳转条现代化外观 */\n  --sej-font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n    \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif;\n  --sej-bar-bg: rgba(255, 255, 255, 0.88);\n  --sej-hover-bg: rgba(0, 0, 0, 0.055);\n  --sej-active-bg: rgba(0, 0, 0, 0.1);\n  --sej-accent: #4285f4;\n  --sej-accent-weak: rgba(66, 133, 244, 0.12);\n  --sej-radius-bar: 12px;\n  --sej-radius-item: 8px;\n  --sej-radius-menu: 12px;\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3);\n\n  /* 设置面板 */\n  --sej-surface-2: rgba(0, 0, 0, 0.025);\n  --sej-surface-hover: rgba(0, 0, 0, 0.06);\n  --sej-input-bg: #fff;\n  --sej-btn-bg: #fff;\n  --sej-checkbox-border: #cfd5dd;\n  --sej-focus-ring: rgba(66, 133, 244, 0.22);\n  --sej-accent-contrast: #fff;\n  --sej-danger: #d93025;\n  --sej-danger-weak: rgba(217, 48, 37, 0.1);\n  --sej-success: #188038;\n  --sej-success-weak: rgba(24, 128, 56, 0.14);\n  --sej-panel-shadow: 0 24px 64px -24px hsla(0, 0%, 0%, 0.45),\n    0 2px 8px hsla(0, 0%, 0%, 0.06);\n}\n\n/* 暗黑模式变量 - 当主文档是暗黑模式时 */\n:root[qxintheme=\"dark\"],\n:host([qxintheme=\"dark\"]),\nbody[qxintheme=\"dark\"] {\n  --font-color-qxin: #bdc1bc;\n  --background-color-qxin: #202124f0;\n  --background-avtive-color-qxin: #424242;\n  --background-active-enable-qxin: #274144;\n  --background-active-disable-qxin: #583535;\n  --background-hover-color-qxin: #424242;\n  --trigger-shown-qxin: #3c4043 !important;\n  --background-btn-qxin: #292f36;\n  --background-setting-qxin: #202124;\n  --box-shadow-color-sej: hsla(0, 0%, 70%, 10%);\n  --border-color-sej: #3b4547;\n\n  --sej-bar-bg: rgba(32, 33, 36, 0.9);\n  --sej-hover-bg: rgba(255, 255, 255, 0.09);\n  --sej-active-bg: rgba(255, 255, 255, 0.14);\n  --sej-accent: #8ab4f8;\n  --sej-accent-weak: rgba(138, 180, 248, 0.18);\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.5),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.8);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.5),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.85);\n\n  --sej-surface-2: rgba(255, 255, 255, 0.045);\n  --sej-surface-hover: rgba(255, 255, 255, 0.09);\n  --sej-input-bg: #17181a;\n  --sej-btn-bg: rgba(255, 255, 255, 0.04);\n  --sej-checkbox-border: #4a5459;\n  --sej-focus-ring: rgba(138, 180, 248, 0.3);\n  --sej-accent-contrast: #202124;\n  --sej-danger: #f28b82;\n  --sej-danger-weak: rgba(242, 139, 130, 0.14);\n  --sej-success: #81c995;\n  --sej-success-weak: rgba(129, 201, 149, 0.16);\n  --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),\n    0 2px 8px hsla(0, 0%, 0%, 0.5);\n}\n";
+	var global_default = "/* ==UserStyle==\n@name           SearchEngineJumpPlusGlobalStyle\n@description    Global style for SearchEngineJumpPlus\n@version        5.32.0\n@namespace      https://greasyfork.org/en/scripts/454280-searchenginejumpplus\n@license        MIT\n@author         MUTED64\n==/UserStyle== */\n\n/* 夜间模式 - 默认主题变量 */\n:host {\n  --font-color-qxin: #333;\n  --background-color-qxin: #fffffff0;\n  --background-hover-color-qxin: #eaeaea;\n  --trigger-shown-qxin: #f1f3f4 !important;\n  --background-setting-qxin: #fff;\n  --border-color-sej: #e1e6ea;\n\n  /* 跳转条现代化外观 */\n  --sej-font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\",\n    \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif;\n  --sej-bar-bg: rgba(255, 255, 255, 0.88);\n  --sej-hover-bg: rgba(0, 0, 0, 0.055);\n  --sej-active-bg: rgba(0, 0, 0, 0.1);\n  --sej-accent: #4285f4;\n  --sej-accent-weak: rgba(66, 133, 244, 0.12);\n  --sej-radius-bar: 12px;\n  --sej-radius-item: 8px;\n  --sej-radius-menu: 12px;\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3);\n\n  /* 设置面板 */\n  --sej-surface-2: rgba(0, 0, 0, 0.025);\n  --sej-surface-hover: rgba(0, 0, 0, 0.06);\n  --sej-input-bg: #fff;\n  --sej-btn-bg: #fff;\n  --sej-checkbox-border: #cfd5dd;\n  --sej-focus-ring: rgba(66, 133, 244, 0.22);\n  --sej-accent-contrast: #fff;\n  --sej-danger: #d93025;\n  --sej-danger-weak: rgba(217, 48, 37, 0.1);\n  --sej-success: #188038;\n  --sej-success-weak: rgba(24, 128, 56, 0.14);\n  --sej-panel-shadow: 0 24px 64px -24px hsla(0, 0%, 0%, 0.45),\n    0 2px 8px hsla(0, 0%, 0%, 0.06);\n}\n\n/* 暗黑模式变量 - 当主文档是暗黑模式时 */\n:host([qxintheme=\"dark\"]) {\n  --font-color-qxin: #bdc1bc;\n  --background-color-qxin: #202124f0;\n  --background-hover-color-qxin: #424242;\n  --trigger-shown-qxin: #3c4043 !important;\n  --background-setting-qxin: #202124;\n  --border-color-sej: #3b4547;\n\n  --sej-bar-bg: rgba(32, 33, 36, 0.9);\n  --sej-hover-bg: rgba(255, 255, 255, 0.09);\n  --sej-active-bg: rgba(255, 255, 255, 0.14);\n  --sej-accent: #8ab4f8;\n  --sej-accent-weak: rgba(138, 180, 248, 0.18);\n  --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.5),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.8);\n  --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.5),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.85);\n\n  --sej-surface-2: rgba(255, 255, 255, 0.045);\n  --sej-surface-hover: rgba(255, 255, 255, 0.09);\n  --sej-input-bg: #17181a;\n  --sej-btn-bg: rgba(255, 255, 255, 0.04);\n  --sej-checkbox-border: #4a5459;\n  --sej-focus-ring: rgba(138, 180, 248, 0.3);\n  --sej-accent-contrast: #202124;\n  --sej-danger: #f28b82;\n  --sej-danger-weak: rgba(242, 139, 130, 0.14);\n  --sej-success: #81c995;\n  --sej-success-weak: rgba(129, 201, 149, 0.16);\n  --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),\n    0 2px 8px hsla(0, 0%, 0%, 0.5);\n}\n\n/* 分类下拉菜单挂载容器本身不参与布局 */\n#sej-drop-lists {\n  display: contents;\n}\n";
 	var THEME_ATTRS = [
 		"data-theme",
 		"data-color-scheme",
@@ -9644,49 +9629,52 @@
 			setTimeout(applyDarkModeIfNeeded, delay);
 		});
 	}
-	var CSP_COMPAT_STYLE = `
-  .sej-engine-icon { width: 16px; height: 16px; flex: 0 0 auto; object-fit: cover; display: inline-block; }
-  .sej-engine-icon:not([src]) { display: none; }
-  .sej-category-title { font-weight: 600; padding: 0 12px; opacity: 0.8; }
-  #newSearchBox #iqxin-newTarget { border-radius: 8px; border: 1px solid var(--border-color-sej); padding: 7px 9px; }
-  .iqxin-help-link { color: #999; }
-  #iqxin-editCodeBox textarea { overflow: auto; border-radius: 10px; }
-  .iqxin-warning { color: red; font-size: 1.2em; }
-  #sej-drop-lists { display: contents; }
-`;
-	var NON_TRANSITION_STYLE = `
-  .sej-engine, .sej-drop-list-trigger, .sej-drop-list { transition: none !important; animation: none !important; }
-  #sej-container { animation: none !important; }
-  .sej-drop-list { backdrop-filter: none !important; }
-`;
-	var SETTINGS_NON_TRANSITION_STYLE = `
-  #settingLayer, #btnEle span, .iqxin-set-del,
-  span.iqxin-additem, #newSearchBox, .addItemBoxBtn, #settingLayerMask {
-    transition: none !important;
-  }
-  #settingLayerMask { animation: none !important; }
-  #settingLayerMask { backdrop-filter: none !important; }
-  #settingLayer { animation: none !important; }
-  .sej-panel-close {
-    transition: none !important;
-  }
-`;
-	var DELAY_LIST = [
-		/^https?:\/\/google\.infinitynewtab\.com\/\?q/,
-		/^https?:\/\/www\.zhihu\.com\/search\?/,
-		/^https?:\/\/www\.iciba\.com\/word\?/,
-		/^https?:\/\/neeva\.com\/search\?/i,
-		/^https?:\/\/s\.taobao\.com\/search/,
-		/^https?:\/\/y\.qq\.com\/n\/ryqq\/search/i,
-		/^https?:\/\/www\.quora\.com\/search\?/i,
-		/^https?:\/\/search\.bilibili\.com\/*/,
-		/^https?:\/\/github\.com/i,
-		/^https?:\/\/(www\.)?baidu\.com/i
-	];
+	var registered = false;
+	function registerMenu() {
+		if (registered) return;
+		const gm = globalThis.GM;
+		const gmMenu = typeof gm?.registerMenuCommand === "function" ? gm.registerMenuCommand.bind(gm) : null;
+		const register = typeof _GM_registerMenuCommand === "function" ? _GM_registerMenuCommand : gmMenu;
+		if (!register) {
+			registered = true;
+			console.info("[SEJ] 当前脚本管理器不支持菜单命令，可使用跳转条右侧的设置按钮");
+			return;
+		}
+		try {
+			register(t("menu.settings"), openSettingPanel);
+			registered = true;
+		} catch (e) {
+			console.warn("[SEJ] 注册菜单命令失败", e);
+		}
+	}
 	var app = null;
-	var menuRegistered = false;
 	function isRunning() {
 		return Boolean(document.getElementById(HOST_ID));
+	}
+	function teardown() {
+		if (app) {
+			try {
+				app.unmount();
+			} catch (e) {}
+			app = null;
+		}
+		reset();
+	}
+	function boot({ force = false } = {}) {
+		if (!force && isRunning()) return;
+		teardown();
+		const root = initialize();
+		addStyle(global_default);
+		applyDarkModeIfNeeded();
+		watchDarkModeChanges();
+		document.body.appendChild(getHost());
+		app = createApp(_sfc_main);
+		app.mount(root);
+		registerMenu();
+	}
+	function restart() {
+		closeSettingPanel();
+		boot({ force: true });
 	}
 	function printBanner() {
 		try {
@@ -9696,63 +9684,22 @@
 			console.info(`\n%c ${name} v${version} \n%c 问题反馈(GitHub):\t\thttps://github.com/MUTED64/SearchEngineJumpPlus/issues/new\t\t\t\t\t\t\t\n%c 问题反馈(GreasyFork):\thttps://greasyfork.org/scripts/454280-searchenginejumpplus-搜索引擎快捷跳转/feedback\t\n`, "color:#eee;background:#444;padding:6px 0;border-radius:6px 6px 0 0;", "color:#444;background:#eee;padding:6px 0;border-radius:0 6px 0 0", "color:#444;background:#eee;padding:6px 0;border-radius:0 0 6px 6px;");
 		} catch (e) {}
 	}
-	function boot() {
-		if (isRunning()) return;
-		if (app) {
-			try {
-				app.unmount();
-			} catch (e) {}
-			app = null;
-		}
-		reset();
-		initialize();
-		addStyle(global_default);
-		addStyle(CSP_COMPAT_STYLE);
-		const { settingData } = useSettings();
-		if (!settingData.transtion) {
-			addStyle(NON_TRANSITION_STYLE);
-			addStyle(SETTINGS_NON_TRANSITION_STYLE);
-		}
-		applyDarkModeIfNeeded();
-		watchDarkModeChanges();
-		document.body.appendChild(getHost());
-		app = createApp(_sfc_main);
-		app.mount(getRoot());
-		if (!menuRegistered) {
-			const gmNamespace = typeof globalThis !== "undefined" ? globalThis.GM : void 0;
-			const gmMenu = gmNamespace && typeof gmNamespace["registerMenuCommand"] === "function" ? gmNamespace["registerMenuCommand"].bind(gmNamespace) : null;
-			const registerMenu = typeof _GM_registerMenuCommand === "function" ? _GM_registerMenuCommand : gmMenu;
-			if (registerMenu) try {
-				registerMenu(t("menu.settings"), openSettingPanel);
-				menuRegistered = true;
-			} catch (e) {
-				console.warn("[SEJ] 注册菜单命令失败", e);
-			}
-			else {
-				menuRegistered = true;
-				console.info("[SEJ] 当前脚本管理器不支持菜单命令，可使用跳转条右侧的设置按钮");
-			}
-		}
+	var DELAY_START_PATTERNS = [
+		/^https?:\/\/www\.zhihu\.com\/search\?/,
+		/^https?:\/\/www\.iciba\.com\/word\?/,
+		/^https?:\/\/search\.bilibili\.com\//,
+		/^https?:\/\/(www\.)?baidu\.com/i
+	];
+	var DELAY_START_MS = 1e3;
+	function shouldDelayStart(href = location.href) {
+		return DELAY_START_PATTERNS.some((re) => re.test(href));
 	}
 	async function startScript() {
-		if (window.self != window.top) return;
+		if (window.self !== window.top) return;
 		printBanner();
 		await initStorage([STORAGE_KEY]);
-		if (DELAY_LIST.some((re) => location.href.search(re) !== -1)) setTimeout(() => {
-			if (!isRunning()) boot();
-		}, 1e3);
+		if (shouldDelayStart()) setTimeout(() => boot(), DELAY_START_MS);
 		else boot();
-	}
-	function restart() {
-		closeSettingPanel();
-		if (app) {
-			try {
-				app.unmount();
-			} catch (e) {}
-			app = null;
-		}
-		reset();
-		boot();
 	}
 	function normalizeURL(urlString) {
 		try {
@@ -9763,26 +9710,24 @@
 			return urlString;
 		}
 	}
-	function listenUrlChange() {
+	function toComparable(url) {
+		return normalizeURL(decodeURI(url).replaceAll(" ", "+"));
+	}
+	function listenUrlChange(onNavigate) {
 		if (window.onurlchange !== null) return;
-		let lastURL = normalizeURL(decodeURI(location.href).replaceAll(" ", "+"));
+		let lastURL = toComparable(location.href);
 		window.addEventListener("urlchange", (e) => {
-			const newURL = normalizeURL(decodeURI(e.url).replaceAll(" ", "+"));
+			const newURL = toComparable(e.url);
 			if (lastURL === newURL) return;
 			lastURL = newURL;
-			if (app) {
-				try {
-					app.unmount();
-				} catch (err) {}
-				app = null;
-			}
-			reset();
-			startScript();
+			teardown();
+			onNavigate();
 		});
 	}
-	var settingsSyncStarted = false;
-	var settingsSyncTimer = null;
-	var pollTimer = null;
+	var SYNC_DEBOUNCE_MS = 200;
+	var SYNC_POLL_MS = 2e3;
+	var started = false;
+	var syncTimer = null;
 	function applyRemoteSettings() {
 		if (ui.settingPanelOpen) {
 			ui.settingsRevision++;
@@ -9793,18 +9738,17 @@
 		showToast(t("toast.syncedFromOtherPages"));
 	}
 	function setupSettingsSync() {
-		if (settingsSyncStarted) return;
-		settingsSyncStarted = true;
+		if (started) return;
+		started = true;
 		watchValue(STORAGE_KEY, () => {
-			clearTimeout(settingsSyncTimer);
-			settingsSyncTimer = setTimeout(applyRemoteSettings, 200);
+			clearTimeout(syncTimer);
+			syncTimer = setTimeout(applyRemoteSettings, SYNC_DEBOUNCE_MS);
 		});
 		const poll = async () => {
-			if (!app || ui.settingPanelOpen || document.hidden) return;
+			if (!isRunning() || ui.settingPanelOpen || document.hidden) return;
 			if (await pullLatest("searchEngineJumpData")) applyRemoteSettings();
 		};
-		clearInterval(pollTimer);
-		pollTimer = setInterval(poll, 2e3);
+		setInterval(poll, SYNC_POLL_MS);
 		document.addEventListener("visibilitychange", () => {
 			if (!document.hidden) poll();
 		});
@@ -9812,6 +9756,6 @@
 	}
 	onRestartRequest(restart);
 	startScript();
-	listenUrlChange();
+	listenUrlChange(startScript);
 	setupSettingsSync();
 })();

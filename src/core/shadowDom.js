@@ -52,11 +52,6 @@ export function getDropRoot() {
   return dropRoot;
 }
 
-export function getRoot() {
-  if (!shadowRoot) initialize();
-  return shadowRoot;
-}
-
 export function insertHost(target, position = 'beforeend') {
   if (!shadowHost) initialize();
 

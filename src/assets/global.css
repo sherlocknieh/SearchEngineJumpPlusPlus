@@ -8,19 +8,12 @@
 ==/UserStyle== */
 
 /* 夜间模式 - 默认主题变量 */
-:root,
-:host,
-body {
+:host {
   --font-color-qxin: #333;
   --background-color-qxin: #fffffff0;
-  --background-avtive-color-qxin: #ccc;
-  --background-active-enable-qxin: #cff9ff;
-  --background-active-disable-qxin: #ffa2a2;
   --background-hover-color-qxin: #eaeaea;
   --trigger-shown-qxin: #f1f3f4 !important;
-  --background-btn-qxin: #eff4f8;
   --background-setting-qxin: #fff;
-  --box-shadow-color-sej: hsla(0, 0%, 0%, 7%);
   --border-color-sej: #e1e6ea;
 
   /* 跳转条现代化外观 */
@@ -56,19 +49,12 @@ body {
 }
 
 /* 暗黑模式变量 - 当主文档是暗黑模式时 */
-:root[qxintheme="dark"],
-:host([qxintheme="dark"]),
-body[qxintheme="dark"] {
+:host([qxintheme="dark"]) {
   --font-color-qxin: #bdc1bc;
   --background-color-qxin: #202124f0;
-  --background-avtive-color-qxin: #424242;
-  --background-active-enable-qxin: #274144;
-  --background-active-disable-qxin: #583535;
   --background-hover-color-qxin: #424242;
   --trigger-shown-qxin: #3c4043 !important;
-  --background-btn-qxin: #292f36;
   --background-setting-qxin: #202124;
-  --box-shadow-color-sej: hsla(0, 0%, 70%, 10%);
   --border-color-sej: #3b4547;
 
   --sej-bar-bg: rgba(32, 33, 36, 0.9);
@@ -94,4 +80,9 @@ body[qxintheme="dark"] {
   --sej-success-weak: rgba(129, 201, 149, 0.16);
   --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),
     0 2px 8px hsla(0, 0%, 0%, 0.5);
+}
+
+/* 分类下拉菜单挂载容器本身不参与布局 */
+#sej-drop-lists {
+  display: contents;
 }

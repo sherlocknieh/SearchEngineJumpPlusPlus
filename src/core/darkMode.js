@@ -1,4 +1,4 @@
-import { getHost } from './shadow.js';
+import { getHost } from './shadowDom.js';
 
 const THEME_ATTRS = [
   'data-theme',

@@ -213,10 +213,6 @@ export function initStorage(keys = []) {
   return readyPromise;
 }
 
-export function getStorageBackend() {
-  return backend;
-}
-
 export function getValue(key, defaultValue) {
   if (backend === 'gm-sync') {
     try {

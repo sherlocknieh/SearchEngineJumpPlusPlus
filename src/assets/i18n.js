@@ -7,7 +7,6 @@ import {
 
 /** 支持的语言偏好；auto 表示跟随浏览器/系统语言 */
 export const LANGUAGE_OPTIONS = ['auto', 'zh-CN', 'en'];
-export const SUPPORTED_LOCALES = ['zh-CN', 'en'];
 export const FALLBACK_LOCALE = 'zh-CN';
 
 const preference = ref('auto');
@@ -31,10 +30,6 @@ export function normalizeLanguage(value) {
 
 export function setLanguagePreference(value) {
   preference.value = normalizeLanguage(value);
-}
-
-export function getLanguagePreference() {
-  return preference.value;
 }
 
 /**

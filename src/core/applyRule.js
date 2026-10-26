@@ -1,6 +1,6 @@
 import { GM_addStyle } from '$';
 import { getCSPNonce } from './csp.js';
-import { addStyle } from './shadow.js';
+import { addStyle } from './shadowDom.js';
 
 let pageStyleEl = null;
 

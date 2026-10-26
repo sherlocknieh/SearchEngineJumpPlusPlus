@@ -735,8 +735,4 @@ function submit() {
   outline: none;
 }
 
-.iqxin-help-link {
-  color: var(--font-color-qxin);
-  opacity: 0.6;
-}
 </style>

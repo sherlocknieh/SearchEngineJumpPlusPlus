@@ -7,11 +7,11 @@ let openCategory = null;
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
-import { getDropRoot } from '../core/shadow.js';
+import { getDropRoot } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
 import EngineItem from './EngineItem.vue';
 
-const props = defineProps({
+defineProps({
   name: { type: String, required: true },
   engines: { type: Array, required: true },
   showIcon: { type: Boolean, default: true },
@@ -379,7 +379,7 @@ onBeforeUnmount(() => {
   top: -10000px;
   left: 0;
   min-width: 128px;
-  padding: 6px;
+  padding: 4px;
   box-sizing: border-box;
   text-align: left;
   font-size: 13px;
