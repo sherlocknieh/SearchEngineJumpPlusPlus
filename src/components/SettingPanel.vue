@@ -8,9 +8,9 @@ import {
     ref,
     watch,
 } from 'vue';
-import { deleteValue, isSameValue } from '../core/storage.js';
+import { isSameValue } from '../core/storage.js';
 import { mergeIntoCategories } from '../core/configMerge.js';
-import { useSettings, STORAGE_KEY } from '../stores/settings.js';
+import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { embedFavicon, getFaviconSrc, resolveFavicon } from '../core/favicon.js';
 import { closeSettingPanel, showToast, ui } from '../stores/ui.js';
@@ -83,24 +83,34 @@ const engineSaving = ref(false);
 const saving = ref(false);
 const loadingIcons = ref(false);
 const configOpen = ref(false);
+// 从文件导入时缓存解析结果，等用户在配置编辑器中决定覆盖或合并
+const pendingImport = ref(null);
+const configFileInput = ref(null);
 
 const UNDO_DURATION = 5000;
 const undoStack = [];
 
-const configText = computed(() => {
-    const clean = JSON.parse(JSON.stringify(source.value));
+function formatConfigText(data) {
+    const clean = JSON.parse(JSON.stringify(data));
     if (clean.engineList) delete clean.engineList.engineCategories;
     return JSON.stringify(clean, null, 4);
-});
+}
 
-function buildEngineData() {
-    const engineCategories = draft.categories.map((cat) => [
+const configText = computed(() => formatConfigText(source.value));
+
+// 恢复默认时填入文本框的初始配置
+const defaultConfigText = computed(() =>
+    formatConfigText(settings.scriptSettingData),
+);
+
+function buildEngineData(categories = draft.categories) {
+    const engineCategories = categories.map((cat) => [
         cat.name,
         cat.key,
         cat.enabled,
     ]);
     const engineList = {};
-    for (const cat of draft.categories) {
+    for (const cat of categories) {
         engineList[cat.key] = cat.engines.map((engine) => {
             const item = {
                 name: engine.name,
@@ -116,10 +126,10 @@ function buildEngineData() {
     return { engineCategories, engineList };
 }
 
-function buildResult() {
+function buildResult(categories = draft.categories) {
     const result = {};
     for (const key of OPTION_KEYS) result[key] = draft[key];
-    Object.assign(result, buildEngineData());
+    Object.assign(result, buildEngineData(categories));
     // version 由保存时刷新；这里沿用当前值，避免无改动也被判为有修改
     result.version = source.value.version;
     return result;
@@ -277,50 +287,53 @@ async function save() {
     close();
 }
 
+// 打开设置时静默触发一次：把远程图标内嵌为 data 链接并自动保存
 async function loadAllIcons() {
     if (loadingIcons.value || saving.value) return;
     const pending = remoteFaviconEngines().length;
-    if (!pending) {
-        showToast(t('toast.noIcons'));
-        return;
-    }
+    if (!pending) return;
     loadingIcons.value = true;
     try {
-        showToast(t('toast.embeddingIcons', { count: pending }), 60000);
         const { converted, failed } = await embedRemoteFavicons();
-        const parts = [];
-        if (converted) parts.push(t('toast.embeddedIcons', { count: converted }));
-        if (!converted && !failed) parts.push(t('toast.noLoadableIcons'));
-        else if (failed) parts.push(t('toast.iconsFailed', { count: failed }));
-        const separator = t('toast.listSeparator');
-        if (converted) {
-            scheduleAutoSave();
-            showToast(
-                `${parts.join(separator)}${t('toast.autoSavedSuffix')}`,
-                4000,
-            );
-        } else {
-            showToast(parts.join(separator), 4000);
-        }
+        if (disposed || !converted) return;
+        scheduleAutoSave();
+        const parts = [t('toast.embeddedIcons', { count: converted })];
+        if (failed) parts.push(t('toast.iconsFailed', { count: failed }));
+        showToast(
+            `${parts.join(t('toast.listSeparator'))}${t('toast.autoSavedSuffix')}`,
+            4000,
+        );
     } finally {
         loadingIcons.value = false;
     }
 }
 
-function reset(exported = false) {
-    const message = exported
-        ? t('reset.confirmExported')
-        : t('reset.confirm');
-    if (confirm(message)) {
-        cancelAutoSave();
-        remoteSynced = false;
-        deleteValue(STORAGE_KEY);
-        location.reload();
+function applyConfig(text) {
+    const parsed = parseConfigInput(text);
+    if (!parsed) return;
+    cancelAutoSave();
+    remoteSynced = false;
+    const backend = settings.applySettings(parsed);
+    pendingImport.value = null;
+    refreshDraft();
+    if (backend === 'memory') {
+        showToast(t('toast.saveFailed'), 5000);
+    } else {
+        settingsChanged = true;
     }
+    configOpen.value = false;
+}
+
+// 取消：丢弃窗口内的所有预览改动，不写入设置
+function cancelConfig() {
+    pendingImport.value = null;
+    configOpen.value = false;
 }
 
 let closeTimer = null;
 let closed = false;
+// 面板关闭后不再回写自动内嵌图标的结果
+let disposed = false;
 // 面板内合并了其他页面写入的设置后，关闭面板时重建一次以刷新跳转条
 let remoteSynced = false;
 
@@ -1252,65 +1265,88 @@ function getICON(olink) {
 }
 
 function openConfig() {
+    pendingImport.value = null;
     configOpen.value = true;
 }
 
-// 合并导入：只把配置中的分类/引擎追加到草稿，保留当前设置与已有条目
-function mergeConfig(rawText) {
-    let parsed;
+function pickConfigFile() {
+    configFileInput.value?.click();
+}
+
+async function importConfigFile(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
     try {
-        parsed = JSON.parse(rawText);
+        pendingImport.value = JSON.parse(await file.text());
+        // 窗口先展示当前配置，等用户选择覆盖或合并后再切换内容
+        configOpen.value = true;
     } catch (e) {
         alert(t('config.parseFailed'));
-        return;
     }
+}
 
-    const stats = mergeIntoCategories(draft.categories, parsed, nextId);
+function exportConfig() {
+    const blob = new Blob([configText.value], {
+        type: 'application/json;charset=utf-8',
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'SearchEngineJump.json';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showToast(t('config.exported'));
+}
+
+function parseConfigInput(input) {
+    if (typeof input !== 'string') return input;
+    try {
+        return JSON.parse(input);
+    } catch (e) {
+        alert(t('config.parseFailed'));
+        return null;
+    }
+}
+
+// 合并预览：在草稿的副本上合并，返回供文本框展示的配置，不写入设置
+function mergePreview(input, silent = false) {
+    const parsed = parseConfigInput(input);
+    if (!parsed) return '';
+
+    const categories = draft.categories.map((cat) => ({
+        ...cat,
+        engines: cat.engines.map((engine) => ({ ...engine })),
+    }));
+    const stats = mergeIntoCategories(categories, parsed, nextId);
     if (!stats) {
-        alert(t('config.mergeUnrecognized'));
-        return;
+        if (!silent) alert(t('config.mergeUnrecognized'));
+        return '';
     }
 
     if (!stats.engines) {
-        showToast(t('toast.mergeNothing'), 3000);
-        return;
-    }
-
-    settingsChanged = true;
-    configOpen.value = false;
-    // 合并结果进入草稿后立即落盘，与其他重要编辑的处理方式一致
-    scheduleAutoSave();
-    const parts = [t('toast.mergedEngines', { count: stats.engines })];
-    if (stats.categories) {
-        parts.push(t('toast.mergedCategories', { count: stats.categories }));
-    }
-    if (stats.skipped) {
-        parts.push(t('toast.mergedSkipped', { count: stats.skipped }));
-    }
-    showToast(
-        t('toast.mergeImported', {
-            summary: parts.join(t('toast.listSeparator')),
-        }),
-        4000,
-    );
-}
-
-function saveConfig(text) {
-    if (text) {
-        let parsed;
-        try {
-            parsed = JSON.parse(text);
-        } catch (e) {
-            alert(t('config.parseFailed'));
-            return;
-        }
-        cancelAutoSave();
-        remoteSynced = false;
-        settings.applySettings(parsed);
-        setTimeout(requestRestart, 0);
+        // 没有新增条目时仍然返回完整配置，避免切换模式后只剩导入文件内容
+        if (!silent) showToast(t('toast.mergeNothing'), 3000);
     } else {
-        reset();
+        const parts = [t('toast.mergedEngines', { count: stats.engines })];
+        if (stats.categories) {
+            parts.push(t('toast.mergedCategories', { count: stats.categories }));
+        }
+        if (stats.skipped) {
+            parts.push(t('toast.mergedSkipped', { count: stats.skipped }));
+        }
+        if (!silent) {
+            showToast(
+                t('toast.mergeImported', {
+                    summary: parts.join(t('toast.listSeparator')),
+                }),
+                4000,
+            );
+        }
     }
+    return formatConfigText(buildResult(categories));
 }
 
 const dragging = ref(false);
@@ -1374,10 +1410,13 @@ onMounted(() => {
     window.addEventListener('blur', onWindowBlur);
     nextTick(() => {
         maskVisible.value = true;
+        // 打开设置时静默内嵌一次远程图标，省去单独的操作按钮
+        loadAllIcons();
     });
 });
 
 onBeforeUnmount(() => {
+    disposed = true;
     // 关闭面板时立即落盘尚未触发的自动保存，避免刚完成的编辑丢失
     if (autosaveQueued) {
         clearTimeout(autosaveTimer);
@@ -1506,11 +1545,44 @@ onBeforeUnmount(() => {
                     </div>
                     <div class="sej-footer-bar">
                         <div class="sej-footer-selects">
-                            <span id="xin-modification" @click="openConfig">{{ t('settings.editConfig') }}</span>
-                            <span id="xin-loadIcons" :title="t('settings.loadIconsTip')"
-                                :class="{ 'sej-loading': loadingIcons }" @click="loadAllIcons">
-                                {{ loadingIcons ? t('settings.loading') : t('settings.loadIcons') }}
-                            </span>
+                            <div id="xin-modification" class="sej-config-box">
+                                <button type="button" class="sej-config-open" :title="t('settings.editConfig')"
+                                    @click="openConfig">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" aria-hidden="true">
+                                        <circle cx="12" cy="12" r="3" />
+                                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
+                                    </svg>
+                                    {{ t('settings.editConfig') }}
+                                </button>
+                                <span class="sej-config-sep" aria-hidden="true"></span>
+                                <button type="button" class="sej-config-action" :title="t('config.import')"
+                                    @click="pickConfigFile">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 21V9" />
+                                        <path d="m7 14 5-5 5 5" />
+                                        <path d="M5 3h14" />
+                                    </svg>
+                                    {{ t('config.import') }}
+                                </button>
+                                <span class="sej-config-sep" aria-hidden="true"></span>
+                                <button type="button" class="sej-config-action" :title="t('config.export')"
+                                    @click="exportConfig">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+                                        stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                        stroke-linejoin="round" aria-hidden="true">
+                                        <path d="M12 3v12" />
+                                        <path d="m7 10 5 5 5-5" />
+                                        <path d="M5 21h14" />
+                                    </svg>
+                                    {{ t('config.export') }}
+                                </button>
+                            </div>
+                            <input ref="configFileInput" class="sej-file-input" type="file"
+                                accept="application/json,.json" @change="importConfigFile" />
                         </div>
                         <div class="sej-footer-links">
                             <span class="feedback" :title="t('settings.feedbackGreasyFork')">
@@ -1538,9 +1610,9 @@ onBeforeUnmount(() => {
                 :name="displayCategoryName(draft.categories[categoryDialog.index]) || ''" @submit="submitCategory"
                 @delete="deleteCategoryFromDialog" @cancel="cancelCategoryDialog" />
 
-            <ConfigEditor v-if="configOpen" :initial-text="configText" @save="saveConfig" @reset="reset(true)"
-                @close="configOpen = false" @copy="showToast(t('toast.copySuccess'))" @notify="showToast"
-                @merge="mergeConfig" />
+            <ConfigEditor v-if="configOpen" :initial-text="configText" :default-text="defaultConfigText"
+                :imported="pendingImport" :merge-preview="mergePreview" @apply="applyConfig"
+                @cancel="cancelConfig" />
         </div>
     </div>
 </template>

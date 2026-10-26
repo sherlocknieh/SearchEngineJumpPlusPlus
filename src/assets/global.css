@@ -428,6 +428,66 @@
 .sej-footer-selects {
   gap: 8px;
 }
+/* 配置文件：齿轮入口与导入/导出合并为同一个容器 */
+#btnEle .sej-config-box {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  background: var(--sej-surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+#btnEle .sej-config-box button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.12s ease-out, color 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+#btnEle .sej-config-box .sej-config-open {
+  padding-left: 10px;
+}
+#btnEle .sej-config-box button:hover {
+  background: var(--sej-surface-hover);
+  color: var(--font-color-qxin);
+}
+#btnEle .sej-config-box button:active {
+  transform: scale(0.96);
+}
+#btnEle .sej-config-box button:focus-visible {
+  outline: 2px solid var(--sej-accent);
+  outline-offset: -2px;
+}
+#btnEle .sej-config-box svg {
+  flex: 0 0 auto;
+}
+#btnEle span.sej-config-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--border-color-sej);
+  pointer-events: none;
+}
 .sej-footer-links {
   gap: 0;
   margin-left: auto;
@@ -451,17 +511,13 @@
   opacity: 0.6;
   pointer-events: none;
 }
-#btnEle span.sej-loading {
-  cursor: progress;
-  opacity: 0.6;
-  pointer-events: none;
-}
 #btnEle span.iqxin-btn-active {
   background: var(--sej-accent-weak);
   border-color: var(--sej-accent);
   color: var(--sej-accent);
 }
-#settingLayerMask input[type="checkbox"] {
+#settingLayerMask input[type="checkbox"],
+#settingLayerMask input[type="radio"] {
   appearance: none;
   -webkit-appearance: none;
   width: 16px;
@@ -478,14 +534,17 @@
   cursor: pointer;
   transition: background-color 0.12s ease-out, border-color 0.12s ease-out;
 }
-#settingLayerMask input[type="checkbox"]:before {
+#settingLayerMask input[type="checkbox"]:before,
+#settingLayerMask input[type="radio"]:before {
   content: none;
 }
-#settingLayerMask input[type="checkbox"]:checked {
+#settingLayerMask input[type="checkbox"]:checked,
+#settingLayerMask input[type="radio"]:checked {
   background: var(--sej-accent);
   border-color: var(--sej-accent);
 }
-#settingLayerMask input[type="checkbox"]:checked:after {
+#settingLayerMask input[type="checkbox"]:checked:after,
+#settingLayerMask input[type="radio"]:checked:after {
   content: "";
   position: absolute;
   left: 4px;
@@ -800,6 +859,31 @@ span.iqxin-additem.sej-copy-target {
   flex: 0 0 auto;
   opacity: 0.7;
 }
+.sej-preview-state.sej-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.45;
+  transition: opacity 0.12s ease-out, color 0.12s ease-out;
+}
+.sej-preview-icon svg {
+  display: block;
+}
+/* 未选用：空心圆勾，悬停时提示可点击 */
+.sej-preview-step.is-selectable:hover .sej-preview-icon {
+  color: var(--sej-accent);
+  opacity: 1;
+}
+/* 已选用：实心圆勾，与未选用状态区分明显 */
+.sej-preview-icon.is-selected {
+  color: var(--sej-accent);
+  opacity: 1;
+}
+.sej-preview-icon.is-selected svg circle {
+  fill: currentColor;
+}
+.sej-preview-icon.is-selected svg path {
+  stroke: var(--sej-accent-contrast);
+}
 .sej-preview-extractor {
   align-self: flex-start;
   margin-top: 2px;
@@ -881,6 +965,10 @@ span.iqxin-additem.sej-copy-target {
   border-color: var(--sej-danger);
   color: var(--sej-danger);
 }
+/* 单独占据操作栏左侧，其余按钮保持右对齐 */
+.sej-dialog-left {
+  margin-right: auto;
+}
 .sej-dialog-danger:hover {
   background: var(--sej-danger-weak);
   border-color: var(--sej-danger);
@@ -944,36 +1032,78 @@ span.iqxin-additem.sej-copy-target {
 #iqxin-editCodeBox button:hover {
   background: var(--sej-surface-hover);
 }
+#iqxin-editCodeBox button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 #iqxin-editCodeBox .iqxin-enterBtn {
   background: var(--sej-accent);
   border-color: transparent;
   color: var(--sej-accent-contrast);
+}
+#iqxin-editCodeBox .iqxin-enterBtn:hover {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  opacity: 0.92;
+}
+#iqxin-editCodeBox .iqxin-enterBtn:disabled,
+#iqxin-editCodeBox .iqxin-enterBtn:disabled:hover {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  opacity: 0.5;
 }
 #iqxin-editCodeBox .iqxin-closeBtn:hover {
   background: var(--sej-danger-weak);
   border-color: var(--sej-danger);
   color: var(--sej-danger);
 }
+/* 导入方式互斥勾选 */
+#iqxin-editCodeBox .sej-import-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--font-color-qxin);
+  cursor: pointer;
+  user-select: none;
+}
+/* 圆角裁剪滚动条，避免滚动条方角突出到圆角外 */
+#iqxin-editCodeBox .sej-config-textarea {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 240px;
+  overflow: hidden;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 10px;
+  background: var(--sej-input-bg);
+  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+#iqxin-editCodeBox .sej-config-textarea:focus-within {
+  border-color: var(--sej-accent);
+  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+}
 #iqxin-editCodeBox textarea {
   width: 100%;
   box-sizing: border-box;
   flex: 1 1 auto;
-  min-height: 240px;
+  min-height: 0;
   padding: 10px;
   overflow: auto;
-  border: 1px solid var(--border-color-sej);
-  border-radius: 10px;
-  background: var(--sej-input-bg);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--font-color-qxin);
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
-  resize: vertical;
+  resize: none;
   outline: none;
 }
-#iqxin-editCodeBox textarea:focus {
-  border-color: var(--sej-accent);
-  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+#iqxin-editCodeBox textarea::-webkit-resizer,
+#iqxin-editCodeBox textarea::-webkit-scrollbar-corner {
+  background: transparent;
 }
 .iqxin-warning {
   color: var(--sej-danger);
@@ -1424,6 +1554,13 @@ body[qxintheme="dark"] {
   #btnEle span {
     font-size: 12px;
     padding: 5px 8px;
+  }
+  #btnEle .sej-config-box button {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  #btnEle .sej-config-box .sej-config-open {
+    padding-left: 8px;
   }
   #settingLayer {
     --sej-panel-pad-x: 12px;

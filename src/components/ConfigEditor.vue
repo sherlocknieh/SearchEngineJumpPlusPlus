@@ -1,67 +1,69 @@
 <script setup>
-import { ref } from 'vue';
-import { GM_setClipboard } from '$';
+import { ref, watch } from 'vue';
 import { t } from '../i18n/index.js';
 
 const props = defineProps({
   initialText: { type: String, default: '' },
+  // 恢复默认时填入文本框的配置
+  defaultText: { type: String, default: '' },
+  // 从设置面板导入的文件内容；有值时优先用于覆盖/合并
+  imported: { type: Object, default: null },
+  // 由设置面板计算合并结果，返回合并后的配置文本（不写入设置）
+  mergePreview: { type: Function, default: null },
 });
 
-const emit = defineEmits(['save', 'reset', 'close', 'copy', 'notify', 'merge']);
+const emit = defineEmits(['apply', 'cancel']);
 
 const text = ref(props.initialText);
-const fileInput = ref(null);
+const textareaEl = ref(null);
+const dirty = ref(false);
+// 导入方式互斥选择，默认合并
+const importMode = ref('merge');
 
-function copy() {
-  GM_setClipboard(text.value);
-  emit('copy');
-}
+// 有未应用的改动时不再同步外部配置，避免覆盖预览内容
+watch(
+  () => props.initialText,
+  (value) => {
+    if (dirty.value || document.activeElement === textareaEl.value) return;
+    text.value = value;
+  },
+);
 
-function pickFile() {
-  fileInput.value?.click();
-}
-
-async function importFile(event) {
-  const file = event.target.files?.[0];
-  event.target.value = '';
-  if (!file) return;
-  try {
-    const parsed = JSON.parse(await file.text());
-    text.value = JSON.stringify(parsed, null, 4);
-    emit('notify', t('config.imported', { name: file.name }));
-  } catch (e) {
-    alert(t('config.parseFailed'));
-  }
-}
-
-function exportFile() {
-  let parsed;
-  try {
-    parsed = JSON.parse(text.value);
-  } catch (e) {
-    alert(t('config.parseFailedExport'));
-    return false;
-  }
-
-  const blob = new Blob([JSON.stringify(parsed, null, 4)], {
-    type: 'application/json;charset=utf-8',
-  });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `SearchEngineJump.json`;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
-  emit('notify', t('config.exported'));
+function previewMerge(silent = false) {
+  const merged = props.mergePreview?.(props.imported, silent);
+  if (!merged) return false;
+  text.value = merged;
+  dirty.value = true;
   return true;
 }
 
-// 恢复默认属于破坏性操作，先自动导出当前配置作为备份
+function previewOverwrite() {
+  text.value = JSON.stringify(props.imported, null, 4);
+  dirty.value = true;
+}
+
+// 用单选框保证互斥，切换时更新文本框预览
+watch(importMode, (mode) => {
+  if (!props.imported) return;
+  if (mode === 'merge') previewMerge();
+  else previewOverwrite();
+});
+
+// 打开导入窗口时默认预览合并结果
+if (props.imported) previewMerge(true);
+
+// 只把默认配置填入文本框，等点击“应用”时统一生效
 function reset() {
-  if (!exportFile()) return;
-  emit('reset');
+  text.value = props.defaultText;
+  dirty.value = true;
+}
+
+function apply() {
+  emit('apply', text.value);
+}
+
+function cancel() {
+  emit('cancel');
 }
 </script>
 
@@ -72,17 +74,21 @@ function reset() {
       {{ t('config.warningLine1') }}<br />
       {{ t('config.warningLine2') }}
     </p>
-    <textarea v-model="text" wrap="off" cols="45" rows="20"></textarea>
-    <input ref="fileInput" class="sej-file-input" type="file" accept="application/json,.json" @change="importFile" />
+    <div class="sej-config-textarea">
+      <textarea ref="textareaEl" v-model="text" wrap="off" cols="45" rows="20" @input="dirty = true"></textarea>
+    </div>
     <div class="sej-dialog-actions">
-      <button @click="reset">{{ t('config.reset') }}</button>
-      <button @click="pickFile">{{ t('config.import') }}</button>
-      <!-- 合并导入：把文本框中配置的引擎追加到现有列表，先导入或粘贴配置再点击 -->
-      <button :title="t('config.mergeTip')" @click="$emit('merge', text)">{{ t('config.mergeImport') }}</button>
-      <button @click="exportFile">{{ t('config.export') }}</button>
-      <button @click="copy">{{ t('common.copy') }}</button>
-      <button class="iqxin-closeBtn" @click="$emit('close')">{{ t('common.close') }}</button>
-      <button class="iqxin-enterBtn" @click="$emit('save', text)">{{ t('common.save') }}</button>
+      <button class="sej-dialog-left" @click="reset">{{ t('config.reset') }}</button>
+      <label v-if="imported" class="sej-import-mode" :title="t('config.mergeTip')">
+        <input type="radio" name="sej-import-mode" value="merge" v-model="importMode" />
+        {{ t('config.mergeImport') }}
+      </label>
+      <label v-if="imported" class="sej-import-mode">
+        <input type="radio" name="sej-import-mode" value="overwrite" v-model="importMode" />
+        {{ t('config.overwriteImport') }}
+      </label>
+      <button class="iqxin-enterBtn" :disabled="!dirty" @click="apply">{{ t('common.apply') }}</button>
+      <button @click="cancel">{{ t('common.cancel') }}</button>
     </div>
   </div>
 </template>

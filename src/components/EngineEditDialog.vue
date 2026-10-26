@@ -20,6 +20,10 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel', 'delete']);
 
+// 图标选择状态：未选用为空心圆勾，已选用为实心圆勾
+const ICON_SELECT =
+  '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>';
+
 const form = reactive({
   name: props.initial.name || '',
   url: props.initial.url || '',
@@ -453,7 +457,7 @@ function submit() {
         @input="markTitleEdited" />
     </label>
     <div class="sej-field">
-      <span>{{ t('engine.icon') }}</span>
+      <span>{{ t('engine.iconSrc') }}</span>
       <div class="sej-field-row">
         <input v-model="form.favicon" :placeholder="t('common.optional')" :disabled="busy"
           @input="markFaviconEdited" />
@@ -483,13 +487,14 @@ function submit() {
             :src="step.data" alt="" />
           <span v-else class="sej-preview-dot"></span>
           <span class="sej-preview-url">{{ step.url }}</span>
-          <span class="sej-preview-state">{{
-            step.status === 'failed' && step.reason
-              ? step.reason
-              : step.status === 'ok' && step.url !== previewUrl
-                ? t('engine.stepUse')
-                : t(STEP_STATUS_TEXT[step.status])
+          <span v-if="step.status === 'failed' && step.reason" class="sej-preview-state">{{
+            step.reason
           }}</span>
+          <span v-else-if="step.status === 'ok'" class="sej-preview-state sej-preview-icon"
+            :class="{ 'is-selected': step.url === previewUrl }"
+            :title="step.url !== previewUrl ? t('engine.stepUse') : t('engine.stepOk')"
+            v-html="ICON_SELECT"></span>
+          <span v-else class="sej-preview-state">{{ t(STEP_STATUS_TEXT[step.status]) }}</span>
         </div>
         <a v-if="extractorUrl" class="sej-preview-extractor"
           :href="extractorUrl" target="_blank" rel="noopener">

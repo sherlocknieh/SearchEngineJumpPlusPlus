@@ -47,21 +47,20 @@ const isObject = isPlainObject;
 function normalizeSettings(raw, defaults) {
   const data = isObject(raw) ? raw : {};
   const settings = {};
-  const OPTION_FLAGS = [
-    'fixedTop',
-    'fixedTopUpward',
-    'HideTheSameLink',
-    'transtion',
-    'selectSearch',
-  ];
   // version 记录配置最近一次写入的时间，读取时原样保留
   settings.version = typeof data.version === 'string' ? data.version : '';
   // 布尔开关：类型正确才采用，否则回退默认值
+  const OPTION_FLAGS = [
+    'HideTheSameLink',
+    'selectSearch',
+    'transtion',
+    'center',
+    'fixedTop',
+    'fixedTopUpward',
+  ];
   for (const key of OPTION_FLAGS) {
     settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
   }
-  // center 兼容旧版的 0/1 写法，统一转为布尔值
-  settings.center = data.center === true || data.center === 1 || data.center === '1';
   // 语言偏好：auto 跟随浏览器，否则限定在支持的语言内
   settings.language = normalizeLanguage(data.language ?? defaults.language);
 
