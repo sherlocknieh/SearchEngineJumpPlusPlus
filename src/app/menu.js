@@ -13,9 +13,12 @@ let registered = false;
  * - 传统 GM_registerMenuCommand
  * - Greasemonkey 4 的 GM.registerMenuCommand
  *
+ * @param {() => void} [beforeOpen] 打开设置面板前的准备工作。
+ *   划词条延迟挂载时用它先启动脚本，否则面板没有宿主可以渲染。
+ *
  * 不支持菜单命令时只提示一次，用户仍可使用跳转条右侧的设置按钮。
  */
-export function registerMenu() {
+export function registerMenu(beforeOpen) {
   if (registered) return;
 
   const gm = globalThis.GM;
@@ -38,7 +41,10 @@ export function registerMenu() {
   try {
     register(
       t(INSTANCE_ROLE === 'dev' ? 'menu.settingsDev' : 'menu.settings'),
-      openSettingPanel,
+      () => {
+        beforeOpen?.();
+        openSettingPanel();
+      },
     );
     registered = true;
   } catch (e) {

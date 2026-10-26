@@ -26,6 +26,8 @@ function applyRemoteSettings() {
     return;
   }
   if (!useSettings().reload()) return;
+  // 延迟启动的页面还没挂载跳转条，重新读取设置即可，无需重建
+  if (!isRunning()) return;
   restart();
   showToast(t('toast.syncedFromOtherPages'));
 }

@@ -505,6 +505,9 @@ onMounted(async () => {
   if (!initTargets()) return;
   ready.value = true;
 
+  // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
+  if (isSelectSearch.value) onSelectionChange();
+
   if (matchedRule) {
     applyStylish(matchedRule);
     resolvedStyle = resolveRuleStyle(matchedRule, data) || '';
