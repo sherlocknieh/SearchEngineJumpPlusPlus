@@ -104,7 +104,21 @@ function measureAndPosition() {
   left.value = posLeft + 'px';
 }
 
+// 类别区横向滚动时让已展开的面板跟随触发项
+let scrollEl = null;
+
+function onScrollArea() {
+  if (shown.value) measureAndPosition();
+}
+
+function isDragScrolling() {
+  return Boolean(
+    scrollEl?.classList.contains('sej-scroll-dragging'),
+  );
+}
+
 async function show() {
+  if (isDragScrolling()) return;
   if (shown.value) {
     active.value = true;
     return;
@@ -183,6 +197,10 @@ function onEngineJump(engine) {
 function onDocMouseMove(e) {
   pointer.x = e.clientX;
   pointer.y = e.clientY;
+  if (isDragScrolling()) {
+    if (shown.value) hide();
+    return;
+  }
   const overTrigger = isPointerOverTrigger(e);
   if (!overTrigger) hoverSuppressed = false;
 
@@ -212,12 +230,16 @@ function onDocPointerDown(e) {
 onMounted(() => {
   document.addEventListener('mousemove', onDocMouseMove);
   document.addEventListener('pointerdown', onDocPointerDown);
+  scrollEl = triggerEl.value?.closest('.sej-scroll') || null;
+  scrollEl?.addEventListener('scroll', onScrollArea, { passive: true });
 });
 
 onBeforeUnmount(() => {
   if (openCategory === hide) openCategory = null;
   document.removeEventListener('mousemove', onDocMouseMove);
   document.removeEventListener('pointerdown', onDocPointerDown);
+  scrollEl?.removeEventListener('scroll', onScrollArea);
+  scrollEl = null;
   if (pinnedCategory === unpin) pinnedCategory = null;
 });
 </script>

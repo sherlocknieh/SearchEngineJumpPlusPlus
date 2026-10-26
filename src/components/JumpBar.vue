@@ -31,6 +31,7 @@ const isSelectSearch = ref(false);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
+const scrollEl = ref(null);
 const containerClass = ref('rwl-exempt');
 
 let inputTarget = null;
@@ -129,7 +130,7 @@ function injectHost() {
 }
 
 const FIXED_GAP = 8;
-const VIEWPORT_GAP = 8;
+const VIEWPORT_GAP = 4;
 
 // 部分站点（如 Bing）的内容容器比视口更宽，跳转条按宿主居中时会偏出屏幕。
 // 溢出时按视口限制宽度并水平移入可见区域，保证右侧设置按钮可点击。
@@ -140,20 +141,108 @@ function constrainBarToViewport() {
 
   el.style.maxWidth = '';
   el.style.marginLeft = '';
-  let rect = el.getBoundingClientRect();
-  const vw = document.documentElement.clientWidth;
-  if (rect.left >= VIEWPORT_GAP && rect.right <= vw - VIEWPORT_GAP) return;
+  if (el.dataset.sejLeftConstrained) {
+    el.style.left = '';
+    delete el.dataset.sejLeftConstrained;
+  }
 
-  const available = Math.max(80, vw - VIEWPORT_GAP * 2);
+  const vw = document.documentElement.clientWidth;
+  const gap = VIEWPORT_GAP;
+  const available = Math.max(120, vw - gap * 2);
+  let rect = el.getBoundingClientRect();
+
   if (rect.width > available) {
     el.style.maxWidth = `${available}px`;
+    rect = el.getBoundingClientRect();
   }
-  // 取消站点规则的居中，先与宿主左边缘对齐，再整体移入视口
-  el.style.marginLeft = '0px';
+
+  if (rect.left >= gap && rect.right <= vw - gap) return;
+
+  // 取消站点规则的水平偏移，按视口把跳转条移入可见区域
+  el.dataset.sejLeftConstrained = '1';
+  el.style.left = 'auto';
   rect = el.getBoundingClientRect();
-  const maxLeft = vw - VIEWPORT_GAP - rect.width;
-  const desiredLeft = Math.max(VIEWPORT_GAP, Math.min(rect.left, maxLeft));
-  el.style.marginLeft = `${desiredLeft - rect.left}px`;
+  const maxLeft = Math.max(gap, vw - gap - rect.width);
+  const desiredLeft = Math.min(Math.max(rect.left, gap), maxLeft);
+  el.style.marginLeft = `${Math.round(desiredLeft - rect.left)}px`;
+}
+
+// 类别区使用鼠标/触屏拖动横向滑动，不显示滚动条
+const DRAG_THRESHOLD = 6;
+let dragState = null;
+let suppressClickUntil = 0;
+
+function updateScrollHints() {
+  const el = scrollEl.value;
+  if (!el) return;
+  const maxScroll = el.scrollWidth - el.clientWidth;
+  el.classList.toggle('sej-scroll-more-left', el.scrollLeft > 1);
+  el.classList.toggle(
+    'sej-scroll-more-right',
+    el.scrollLeft < maxScroll - 1,
+  );
+}
+
+function onScrollPointerDown(e) {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  suppressClickUntil = 0;
+  const el = scrollEl.value;
+  if (!el || el.scrollWidth <= el.clientWidth) return;
+  el.classList.remove('sej-scroll-dragging');
+  dragState = {
+    pointerId: e.pointerId,
+    startX: e.clientX,
+    startY: e.clientY,
+    startLeft: el.scrollLeft,
+    moved: false,
+  };
+}
+
+function onWindowPointerMove(e) {
+  const state = dragState;
+  if (!state || e.pointerId !== state.pointerId) return;
+  if (e.pointerType !== 'touch' && e.buttons === 0) {
+    endScrollDrag(e);
+    return;
+  }
+  const el = scrollEl.value;
+  if (!el) return;
+
+  const dx = e.clientX - state.startX;
+  const dy = e.clientY - state.startY;
+  if (!state.moved) {
+    // 纵向手势留给页面滚动，横向移动超过阈值才开始拖动
+    if (Math.abs(dx) < DRAG_THRESHOLD || Math.abs(dx) <= Math.abs(dy)) return;
+    state.moved = true;
+    el.classList.add('sej-scroll-dragging');
+  }
+
+  if (e.cancelable) e.preventDefault();
+  el.scrollLeft = state.startLeft - dx;
+  updateScrollHints();
+}
+
+function endScrollDrag(e) {
+  const state = dragState;
+  if (!state || (e && e.pointerId !== state.pointerId)) return;
+  if (state.moved) {
+    // 拖动结束后的 click 不应触发类别
+    suppressClickUntil = performance.now() + 400;
+    scrollEl.value?.classList.remove('sej-scroll-dragging');
+  }
+  dragState = null;
+}
+
+function onScrollClickCapture(e) {
+  if (performance.now() >= suppressClickUntil) return;
+  suppressClickUntil = 0;
+  e.preventDefault();
+  e.stopPropagation();
+}
+
+function onViewportResize() {
+  constrainBarToViewport();
+  updateScrollHints();
 }
 
 // 查找视口顶部是否存在吸顶/固定头部，返回其底边高度
@@ -270,6 +359,7 @@ function fixedToTop(fixedTopValue, color) {
 
 let scrollRaf = 0;
 let fixedTopTimers = [];
+let constrainTimers = [];
 
 function scheduleFixedTopRefresh() {
   fixedTopTimers.forEach(clearTimeout);
@@ -344,7 +434,20 @@ onMounted(async () => {
   injectHost();
   startStackSync();
   constrainBarToViewport();
-  window.addEventListener('resize', constrainBarToViewport);
+  updateScrollHints();
+  // 入场动画的 scale 会让首帧测量偏小，动画结束后重新校准
+  constrainTimers = [180, 400].map((delay) =>
+    setTimeout(() => {
+      constrainBarToViewport();
+      updateScrollHints();
+    }, delay),
+  );
+  window.addEventListener('resize', onViewportResize);
+  window.addEventListener('pointermove', onWindowPointerMove, {
+    passive: false,
+  });
+  window.addEventListener('pointerup', endScrollDrag);
+  window.addEventListener('pointercancel', endScrollDrag);
 
   if (isSelectSearch.value) {
     document.addEventListener('selectionchange', onSelectionChange);
@@ -376,9 +479,15 @@ onBeforeUnmount(() => {
   document.removeEventListener('keyup', onSelectionChange);
   window.removeEventListener('scroll', onScroll);
   window.removeEventListener('wheel', onWheel);
-  window.removeEventListener('resize', constrainBarToViewport);
+  window.removeEventListener('resize', onViewportResize);
+  window.removeEventListener('pointermove', onWindowPointerMove);
+  window.removeEventListener('pointerup', endScrollDrag);
+  window.removeEventListener('pointercancel', endScrollDrag);
+  dragState = null;
+  scrollEl.value?.classList.remove('sej-scroll-dragging');
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
   fixedTopTimers.forEach(clearTimeout);
+  constrainTimers.forEach(clearTimeout);
   stopStackSync();
 });
 </script>
@@ -394,27 +503,36 @@ onBeforeUnmount(() => {
     ]"
     :aria-hidden="isSelectSearch && !barVisible ? 'true' : undefined"
   >
-    <template v-for="category in categories" :key="category.key">
-      <template v-if="inlineStyleBlocked">
-        <span v-if="inlineStyleBlocked" class="sej-category-title">
-          {{ category.name }}
-        </span>
-        <EngineItem
-          v-for="engine in category.engines"
-          :key="engine.url + engine.name"
-          :engine="engine"
+    <div
+      ref="scrollEl"
+      class="sej-scroll"
+      @pointerdown="onScrollPointerDown"
+      @click.capture="onScrollClickCapture"
+      @dragstart.prevent
+      @scroll.passive="updateScrollHints"
+    >
+      <template v-for="category in categories" :key="category.key">
+        <template v-if="inlineStyleBlocked">
+          <span class="sej-category-title">
+            {{ category.name }}
+          </span>
+          <EngineItem
+            v-for="engine in category.engines"
+            :key="engine.url + engine.name"
+            :engine="engine"
+            @jump="onJump"
+          />
+        </template>
+        <EngineCategory
+          v-else
+          :name="category.name"
+          :engines="category.engines"
+          :show-icon="ui.categoryIcon"
           @jump="onJump"
+          @jump-all="onJumpAll(category.engines)"
         />
       </template>
-      <EngineCategory
-        v-else
-        :name="category.name"
-        :engines="category.engines"
-        :show-icon="ui.categoryIcon"
-        @jump="onJump"
-        @jump-all="onJumpAll(category.engines)"
-      />
-    </template>
+    </div>
 
     <SettingButton />
   </div>
