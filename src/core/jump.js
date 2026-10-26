@@ -18,7 +18,8 @@ export function encodeKeyword(keyword) {
 export function prepareJump(engine, keyword, { hideTheSameLink }) {
   let kw = keyword;
   if (hideTheSameLink === false) {
-    kw = kw.replace(/site:[^\s]+/, '');
+    // 去掉 site: 限定及紧随其后的空白，避免关键词以空格开头被编码成 %20
+    kw = kw.replace(/\bsite:[^\s]+\s*/g, '').trim();
   }
 
   const encoded = encodeKeyword(kw);

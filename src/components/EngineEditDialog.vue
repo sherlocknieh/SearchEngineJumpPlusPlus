@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import { resolveFavicon } from '../core/favicon.js';
 import { t } from '../assets/i18n.js';
+import { useModalA11y } from '../composables/useModalA11y.js';
 
 const props = defineProps({
   mode: { type: String, default: 'add' },
@@ -24,6 +25,16 @@ const form = reactive({
 });
 
 const urlInput = ref(null);
+const rootEl = ref(null);
+
+useModalA11y({
+  containerEl: rootEl,
+  initialFocus: urlInput,
+  onClose: () => {
+    if (!props.busy) emit('cancel');
+  },
+});
+
 const initialFavicon = (props.initial.favicon || '').trim();
 
 // 常见二级后缀，如 example.com.cn 取 example
@@ -431,8 +442,14 @@ function submit() {
 </script>
 
 <template>
-  <div id="newSearchBox">
-    <div class="sej-dialog-title">
+  <div
+    id="newSearchBox"
+    ref="rootEl"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sej-engine-title"
+  >
+    <div id="sej-engine-title" class="sej-dialog-title">
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
     <label class="sej-field">

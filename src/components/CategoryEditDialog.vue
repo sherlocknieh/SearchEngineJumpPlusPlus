@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue';
 import { t } from '../assets/i18n.js';
+import { useModalA11y } from '../composables/useModalA11y.js';
 
 const props = defineProps({
   name: { type: String, default: '' },
@@ -9,8 +10,17 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'delete', 'cancel']);
 
+const rootEl = ref(null);
 const input = ref(null);
 const value = ref(props.name);
+
+useModalA11y({
+  containerEl: rootEl,
+  initialFocus: input,
+  onClose: () => {
+    if (!props.busy) emit('cancel');
+  },
+});
 
 onMounted(() => {
   input.value?.focus();
@@ -24,8 +34,15 @@ function submit() {
 </script>
 
 <template>
-  <div id="sej-categoryBox" class="sej-dialog-box">
-    <div class="sej-dialog-title">{{ t('category.title') }}</div>
+  <div
+    id="sej-categoryBox"
+    ref="rootEl"
+    class="sej-dialog-box"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="sej-category-title"
+  >
+    <div id="sej-category-title" class="sej-dialog-title">{{ t('category.title') }}</div>
     <label class="sej-field">
       <span>{{ t('common.name') }}</span>
       <input

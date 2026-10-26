@@ -16,6 +16,7 @@ import {
 import { useAutoSave } from '../composables/useAutoSave.js';
 import { usePanelDrag } from '../composables/usePanelDrag.js';
 import { useDragSort } from '../composables/useDragSort.js';
+import { useModalA11y } from '../composables/useModalA11y.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
@@ -631,6 +632,8 @@ function mergePreview(input, silent = false) {
   return configToText(buildResult(categories));
 }
 
+useModalA11y({ containerEl: layerEl, onClose: close });
+
 const { startDrag, dispose: disposePanelDrag } = usePanelDrag({
   layerEl,
   maskEl,
@@ -672,9 +675,17 @@ onBeforeUnmount(() => {
     @click.self="close"
     @transitionend="onMaskTransitionEnd"
   >
-    <div id="settingLayer" ref="layerEl" :style="layerStyle" @click.stop>
+    <div
+      id="settingLayer"
+      ref="layerEl"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sej-settings-title"
+      :style="layerStyle"
+      @click.stop
+    >
       <div class="sej-panel-header" @pointerdown="startDrag" @contextmenu.prevent>
-        <span class="sej-panel-title">{{ t('settings.title') }}</span>
+        <span id="sej-settings-title" class="sej-panel-title">{{ t('settings.title') }}</span>
         <button
           type="button"
           class="sej-panel-close"

@@ -1,6 +1,7 @@
 <script setup>
 import { ref, watch } from 'vue';
 import { t } from '../assets/i18n.js';
+import { useModalA11y } from '../composables/useModalA11y.js';
 
 const props = defineProps({
   initialText: { type: String, default: '' },
@@ -15,7 +16,14 @@ const props = defineProps({
 const emit = defineEmits(['apply', 'cancel']);
 
 const text = ref(props.initialText);
+const rootEl = ref(null);
 const textareaEl = ref(null);
+
+useModalA11y({
+  containerEl: rootEl,
+  initialFocus: textareaEl,
+  onClose: () => emit('cancel'),
+});
 const dirty = ref(false);
 // 导入方式互斥选择，默认合并
 const importMode = ref('merge');
@@ -68,7 +76,13 @@ function cancel() {
 </script>
 
 <template>
-  <div id="iqxin-editCodeBox">
+  <div
+    id="iqxin-editCodeBox"
+    ref="rootEl"
+    role="dialog"
+    aria-modal="true"
+    :aria-label="t('settings.editConfig')"
+  >
     <p>
       <span class="iqxin-warning">! ! !</span><br />
       {{ t('config.warningLine1') }}<br />

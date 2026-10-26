@@ -40,10 +40,27 @@ describe('prepareJump', () => {
     });
   });
 
-  it('HideTheSameLink 为 false 时移除 site: 限定', () => {
-    // 现有实现只删除 site: 片段，分隔空格会被编码，断言保持当前行为
+  it('HideTheSameLink 为 false 时移除 site: 限定及多余空格', () => {
     expect(prepareJump(engine, 'site:a.test keyword', { hideTheSameLink: false }).url).toBe(
-      'https://a.test/?q=%20keyword',
+      'https://a.test/?q=keyword',
+    );
+    expect(prepareJump(engine, '  site:a.test   keyword', { hideTheSameLink: false }).url).toBe(
+      'https://a.test/?q=keyword',
+    );
+    expect(
+      prepareJump(engine, 'site:a.test site:b.test keyword', { hideTheSameLink: false }).url,
+    ).toBe('https://a.test/?q=keyword');
+  });
+
+  it('不把普通单词中的 site: 当作限定', () => {
+    expect(prepareJump(engine, 'website:a.test', { hideTheSameLink: false }).url).toBe(
+      'https://a.test/?q=website%3Aa.test',
+    );
+  });
+
+  it('只有 site: 时生成空关键词', () => {
+    expect(prepareJump(engine, 'site:a.test', { hideTheSameLink: false }).url).toBe(
+      'https://a.test/?q=',
     );
   });
 
