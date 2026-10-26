@@ -1253,7 +1253,7 @@ span#setBtn:active {
   );
   height: fit-content;
   flex-wrap: nowrap;
-  justify-content: flex-start;
+  justify-content: center;
   user-select: none;
 }
 /* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */
@@ -1262,7 +1262,8 @@ span#setBtn:active {
   flex-wrap: nowrap;
   align-items: center;
   gap: 2px;
-  flex: 1 1 auto;
+  /* 内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */
+  flex: 0 1 auto;
   min-width: 0;
   overflow-x: auto;
   overflow-y: hidden;

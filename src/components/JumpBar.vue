@@ -153,7 +153,9 @@ function constrainBarToViewport() {
   const gap = VIEWPORT_GAP;
   const available = Math.max(120, vw - gap * 2);
   if (vw <= NARROW_BAR_MAX) {
+    // 用像素上限覆盖 max-width: 100%，避免站点网格列较窄时留下较大右边距
     el.style.setProperty('width', `${available}px`, 'important');
+    el.style.maxWidth = `${available}px`;
   }
   let rect = el.getBoundingClientRect();
 
@@ -247,7 +249,11 @@ function onScrollClickCapture(e) {
 }
 
 function onViewportResize() {
-  constrainBarToViewport();
+  if (getHost().style.position === 'fixed') {
+    fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
+  } else {
+    constrainBarToViewport();
+  }
   updateScrollHints();
 }
 
@@ -297,6 +303,38 @@ function getFixedHeaderBottom(barLeft, barWidth) {
     consider(el);
     el = el.parentElement;
   }
+
+  // 部分站点（如 Google 窄屏）的搜索框会伸出吸顶头部，
+  // 以搜索框实际底边为准，避免跳转条盖住搜索框
+  const inputEl =
+    typeof inputTarget === 'function' ? inputTarget() : inputTarget;
+  const searchBox =
+    inputEl instanceof Element ? inputEl.closest('form') || inputEl : null;
+  if (searchBox) {
+    let insideFixed = false;
+    for (
+      let node = searchBox;
+      node && node !== document.documentElement;
+      node = node.parentElement
+    ) {
+      const pos = getComputedStyle(node).position;
+      if (pos === 'fixed' || pos === 'sticky') {
+        insideFixed = true;
+        break;
+      }
+    }
+    const rect = searchBox.getBoundingClientRect();
+    const overlaps = rect.right > barLeft && rect.left < barLeft + barWidth;
+    if (
+      insideFixed &&
+      overlaps &&
+      rect.top < window.innerHeight * 0.5 &&
+      rect.bottom > bottom &&
+      rect.bottom < window.innerHeight * 0.5
+    ) {
+      bottom = rect.bottom;
+    }
+  }
   return bottom;
 }
 
@@ -309,19 +347,30 @@ function fixedToTop(fixedTopValue, color) {
   const fixedTop = fixedTopValue ? fixedTopValue : 0;
   const host = getHost();
   const container = containerEl.value;
+  const vw = document.documentElement.clientWidth;
+  const narrow = vw <= NARROW_BAR_MAX;
+  const gap = VIEWPORT_GAP;
 
-  if (originalContainerDistanceTop - window.scrollY <= fixedTop) {
+  const rect = container.getBoundingClientRect();
+  // 窄屏固定后同样占满可用宽度，避免沿用站点偏移导致被裁切
+  const left = narrow
+    ? gap
+    : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
+  const width = narrow
+    ? Math.max(120, vw - gap * 2)
+    : parseFloat(host.dataset.originalWidth) || rect.width;
+  const headerBottom = getFixedHeaderBottom(left, width);
+  const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
+  // 跳转条滚到吸顶头部下沿时就固定，避免中途被头部遮挡
+  const threshold = Math.max(fixedTop, headerBottom > 0 ? baseTop : 0);
+
+  if (originalContainerDistanceTop - window.scrollY <= threshold) {
     if (host.style.position !== 'fixed') {
-      const rect = container.getBoundingClientRect();
-      host.dataset.originalLeft = rect.left;
-      host.dataset.originalWidth = rect.width;
+      host.dataset.originalLeft = narrow ? gap : rect.left;
+      host.dataset.originalWidth = narrow ? width : rect.width;
       // 站点头部可能在本条固定后才变为吸顶，稍后再校准一次位置
       scheduleFixedTopRefresh();
     }
-    const left = Math.max(0, parseFloat(host.dataset.originalLeft) || 0);
-    const width = parseFloat(host.dataset.originalWidth) || 0;
-    const headerBottom = getFixedHeaderBottom(left, width);
-    const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
     // 另一个实例的固定跳转条也在视口顶部时，向下让位
     const top = baseTop + getStackOffset();
 
@@ -329,7 +378,9 @@ function fixedToTop(fixedTopValue, color) {
     // 站点样式可能约束宿主宽度，固定后按固定前的实际宽度撑开，
     // 避免 max-width: 100% 与宿主收缩宽度互相影响导致跳转条换行
     host.style.width = width > 0 ? `${Math.ceil(width)}px` : 'max-content';
-    host.style.maxWidth = `calc(100vw - ${left + 12}px)`;
+    host.style.maxWidth = narrow
+      ? `${Math.ceil(width)}px`
+      : `calc(100vw - ${left + 12}px)`;
     host.style.position = 'fixed';
     host.style.top = `${Math.round(top)}px`;
     host.style.left = `${left}px`;
@@ -340,9 +391,15 @@ function fixedToTop(fixedTopValue, color) {
     container.style.top = '0';
     container.style.gridColumn = 'auto';
     container.style.margin = '0';
+    if (narrow) {
+      container.style.setProperty('width', `${Math.ceil(width)}px`, 'important');
+    }
     container.style.backgroundColor = color;
+    updateScrollHints();
   } else {
-    const wasFixed = host.style.position === 'fixed';
+    // 已经处于非固定状态时不要再清理样式，否则会抹掉视口校正留下的偏移
+    if (host.style.position !== 'fixed') return;
+
     host.style.position = '';
     host.style.top = '';
     host.style.left = '';
@@ -359,7 +416,7 @@ function fixedToTop(fixedTopValue, color) {
     container.style.gridColumn = '';
     container.style.margin = '';
     container.style.backgroundColor = '';
-    if (wasFixed) constrainBarToViewport();
+    constrainBarToViewport();
   }
 }
 
