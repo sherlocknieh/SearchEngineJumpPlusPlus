@@ -13,6 +13,7 @@ const TOAST_STACK_STEP = 43;
 let shadowHost = null;
 let shadowRoot = null;
 const constructableSheets = [];
+const injectedStyles = new Set();
 
 function supportsConstructableStylesheets() {
   return (
@@ -87,7 +88,8 @@ export function insertHost(target, position = 'beforeend') {
 }
 
 export function addStyle(cssText) {
-  if (!cssText) return;
+  if (!cssText || injectedStyles.has(cssText)) return;
+  injectedStyles.add(cssText);
   if (!shadowRoot) initialize();
 
   if (supportsConstructableStylesheets()) {
@@ -121,6 +123,7 @@ export function reset() {
   shadowRoot = null;
   dropRoot = null;
   constructableSheets.length = 0;
+  injectedStyles.clear();
   stackSheet = null;
   stackSheetText = '';
 }

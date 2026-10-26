@@ -92,3 +92,165 @@ function cancel() {
     </div>
   </div>
 </template>
+
+<style>
+#iqxin-editCodeBox {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 200000100;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 20px;
+  background: var(--background-setting-qxin);
+  border: 1px solid var(--border-color-sej);
+  border-radius: 14px;
+  box-shadow: var(--sej-shadow-menu);
+  color: var(--font-color-qxin);
+}
+
+#iqxin-editCodeBox p {
+  margin: 0;
+}
+
+#iqxin-editCodeBox button {
+  cursor: pointer;
+  background: var(--sej-btn-bg);
+  border: 1px solid var(--border-color-sej);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  transition: background-color 0.12s ease-out, border-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+#iqxin-editCodeBox button:hover {
+  background: var(--sej-surface-hover);
+}
+
+#iqxin-editCodeBox button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+#iqxin-editCodeBox .iqxin-enterBtn {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+}
+
+#iqxin-editCodeBox .iqxin-enterBtn:hover {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  opacity: 0.92;
+}
+
+#iqxin-editCodeBox .iqxin-enterBtn:disabled,
+#iqxin-editCodeBox .iqxin-enterBtn:disabled:hover {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  opacity: 0.5;
+}
+
+#iqxin-editCodeBox .iqxin-closeBtn:hover {
+  background: var(--sej-danger-weak);
+  border-color: var(--sej-danger);
+  color: var(--sej-danger);
+}
+
+/* 导入方式互斥勾选 */
+#iqxin-editCodeBox .sej-import-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--font-color-qxin);
+  cursor: pointer;
+  user-select: none;
+}
+
+/* 圆角裁剪滚动条，避免滚动条方角突出到圆角外 */
+#iqxin-editCodeBox .sej-config-textarea {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 240px;
+  overflow: hidden;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 10px;
+  background: var(--sej-input-bg);
+  transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out;
+}
+
+#iqxin-editCodeBox .sej-config-textarea:focus-within {
+  border-color: var(--sej-accent);
+  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+}
+
+#iqxin-editCodeBox textarea {
+  width: 100%;
+  box-sizing: border-box;
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 10px;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--font-color-qxin);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+}
+
+#iqxin-editCodeBox textarea::-webkit-resizer,
+#iqxin-editCodeBox textarea::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.iqxin-warning {
+  color: var(--sej-danger);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#importingBox {
+  position: fixed;
+  width: min(350px, calc(100vw - 32px));
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  padding: 16px 24px;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 12px;
+  background: var(--background-setting-qxin);
+  color: var(--font-color-qxin);
+}
+
+#importingBox li {
+  margin: 5px;
+  border-bottom: 1px solid var(--border-color-sej);
+}
+
+#importingBox li p {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.xin-importing-item {
+  cursor: pointer;
+}
+</style>

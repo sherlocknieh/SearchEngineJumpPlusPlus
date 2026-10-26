@@ -4,7 +4,7 @@ import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
 import { localizeCategoryName } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
-import { addStyle, getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
+import { getHost, insertHost, getStackOffset, refreshStackLayout } from '../core/shadow.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -580,3 +580,154 @@ onBeforeUnmount(() => {
     <SettingButton />
   </div>
 </template>
+
+<style>
+#sej-container {
+  display: flex;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+  padding: 2px;
+  gap: 2px;
+  font-size: 13px;
+  font-family: var(--sej-font-family);
+  -webkit-font-smoothing: antialiased;
+  transform-origin: top center;
+  animation: sejopen 0.14s ease-out;
+  color: var(--font-color-qxin);
+  background: var(--sej-bar-bg, var(--background-color-qxin));
+  backdrop-filter: blur(20px) saturate(180%);
+  width: max-content !important;
+  max-width: min(100%, calc(100vw - 8px));
+  box-sizing: border-box;
+  border-radius: var(--sej-radius-bar, 12px);
+  border: 1px solid var(--border-color-sej);
+  overflow: hidden;
+  box-shadow: var(
+    --sej-shadow-bar,
+    0 1px 2px hsla(0, 0%, 0%, 0.06),
+    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)
+  );
+  height: fit-content;
+  flex-wrap: nowrap;
+  justify-content: center;
+  user-select: none;
+}
+
+/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */
+#sej-container > .sej-scroll {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  /* 内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  /* 不显示滚动条，改用鼠标/触屏拖动；纵向手势仍交给页面滚动 */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  touch-action: pan-y;
+  cursor: grab;
+}
+
+#sej-container > .sej-scroll::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+#sej-container > .sej-scroll.sej-scroll-dragging,
+#sej-container > .sej-scroll.sej-scroll-dragging * {
+  cursor: grabbing;
+}
+
+/* 左右仍有隐藏内容时，用渐隐边缘提示可以继续拖动 */
+#sej-container > .sej-scroll.sej-scroll-more-left {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 20px);
+  mask-image: linear-gradient(to right, transparent, #000 20px);
+}
+
+#sej-container > .sej-scroll.sej-scroll-more-right {
+  -webkit-mask-image: linear-gradient(to left, transparent, #000 20px);
+  mask-image: linear-gradient(to left, transparent, #000 20px);
+}
+
+#sej-container > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 20px,
+    #000 calc(100% - 20px),
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 20px,
+    #000 calc(100% - 20px),
+    transparent
+  );
+}
+
+#sej-container > #setBtn {
+  flex: 0 0 auto;
+  margin-left: 2px;
+}
+
+/* 滑词搜索样式 */
+#sej-container.selectSearch {
+  position: fixed;
+  top: 2px;
+  left: 0;
+  right: 0;
+  z-index: 99999999;
+  margin: 0 auto;
+  transform: translateY(calc(-100% - 10px));
+  visibility: hidden;
+  pointer-events: none;
+  transition: transform 0.3s, visibility 0s linear 0.3s;
+}
+
+#sej-container.selectSearch.sej-select-visible {
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition: transform 0.3s, visibility 0s linear 0s;
+}
+
+#sej-expanded-category {
+  font-weight: bold;
+}
+
+.sej-category-title {
+  font-weight: 600;
+  padding: 0 12px;
+  opacity: 0.8;
+}
+
+@keyframes sejopen {
+  0% {
+    transform: translateY(-4px) scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+@keyframes iqxinsejopen {
+  0% {
+    transform: scale(0.01, 0.01);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1, 1);
+    opacity: 1;
+  }
+}
+</style>

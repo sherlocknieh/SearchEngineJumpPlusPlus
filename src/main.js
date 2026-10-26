@@ -33,13 +33,13 @@ const NON_TRANSITION_STYLE = `
 const SETTINGS_NON_TRANSITION_STYLE = `
   #settingLayer, #btnEle span, .iqxin-set-del,
   span.iqxin-additem, #newSearchBox, .addItemBoxBtn, #settingLayerMask {
-    transition: none;
+    transition: none !important;
   }
-  #settingLayerMask { animation: none; }
-  #settingLayerMask { backdrop-filter: none; }
-  #settingLayer { animation: none; }
+  #settingLayerMask { animation: none !important; }
+  #settingLayerMask { backdrop-filter: none !important; }
+  #settingLayer { animation: none !important; }
   .sej-panel-close {
-    transition: none;
+    transition: none !important;
   }
 `;
 

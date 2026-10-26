@@ -307,3 +307,103 @@ onBeforeUnmount(() => {
     </Teleport>
   </span>
 </template>
+
+<style>
+.sej-category {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.sej-category-search-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  border-radius: 4px;
+  color: var(--font-color-qxin);
+  cursor: pointer;
+  transition: background-color 0.08s ease-out, color 0.08s ease-out;
+}
+
+.sej-category-search-icon svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.sej-category-search-icon:hover {
+  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));
+  color: var(--sej-accent, #4285f4);
+}
+
+.sej-category-search-icon:active {
+  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));
+}
+
+.sej-category-search-icon:focus-visible {
+  outline: 2px solid var(--sej-accent, #4285f4);
+  outline-offset: -2px;
+}
+
+.sej-engine.sej-drop-list-trigger-shown {
+  background-color: var(--trigger-shown-qxin);
+}
+
+.sej-drop-list > .sej-engine {
+  display: flex;
+  justify-content: flex-start;
+  width: 100%;
+  height: 30px;
+  padding: 0 10px;
+  gap: 8px;
+  border-radius: var(--sej-radius-item, 8px);
+  font-weight: 400;
+}
+
+.sej-drop-list > .sej-engine + .sej-engine {
+  margin-top: 1px;
+}
+
+.sej-drop-list {
+  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */
+  position: fixed;
+  display: none;
+  opacity: 0.2;
+  top: -10000px;
+  left: 0;
+  min-width: 128px;
+  padding: 6px;
+  box-sizing: border-box;
+  text-align: left;
+  font-size: 13px;
+  font-family: var(--sej-font-family);
+  -webkit-font-smoothing: antialiased;
+  box-shadow: var(
+    --sej-shadow-menu,
+    0 2px 6px hsla(0, 0%, 0%, 0.06),
+    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)
+  );
+  background-color: var(--sej-bar-bg, var(--background-color-qxin));
+  backdrop-filter: blur(20px) saturate(180%);
+  transition: opacity 0.08s ease-out;
+  animation: sej-drop-menu-in 0.1s ease-out;
+  overflow: hidden;
+  border-radius: var(--sej-radius-menu, 12px);
+  border: 1px solid var(--border-color-sej);
+  user-select: none;
+}
+
+@keyframes sej-drop-menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+</style>
