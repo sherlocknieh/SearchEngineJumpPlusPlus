@@ -6743,6 +6743,7 @@
 	var _hoisted_2$4 = { class: "sej-category-title" };
 	var FIXED_GAP = 8;
 	var VIEWPORT_GAP = 4;
+	var NARROW_BAR_MAX = 640;
 	var DRAG_THRESHOLD$1 = 6;
 	var _sfc_main$6 = {
 		__name: "JumpBar",
@@ -6821,6 +6822,7 @@
 				if (getHost().style.position === "fixed") return;
 				el.style.maxWidth = "";
 				el.style.marginLeft = "";
+				el.style.removeProperty("width");
 				if (el.dataset.sejLeftConstrained) {
 					el.style.left = "";
 					delete el.dataset.sejLeftConstrained;
@@ -6828,6 +6830,7 @@
 				const vw = document.documentElement.clientWidth;
 				const gap = VIEWPORT_GAP;
 				const available = Math.max(120, vw - 8);
+				if (vw <= NARROW_BAR_MAX) el.style.setProperty("width", `${available}px`, "important");
 				let rect = el.getBoundingClientRect();
 				if (rect.width > available) {
 					el.style.maxWidth = `${available}px`;

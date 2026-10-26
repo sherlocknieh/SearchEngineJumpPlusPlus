@@ -131,6 +131,8 @@ function injectHost() {
 
 const FIXED_GAP = 8;
 const VIEWPORT_GAP = 4;
+// 窄屏下即使类别很少也占满可用宽度
+const NARROW_BAR_MAX = 640;
 
 // 部分站点（如 Bing）的内容容器比视口更宽，跳转条按宿主居中时会偏出屏幕。
 // 溢出时按视口限制宽度并水平移入可见区域，保证右侧设置按钮可点击。
@@ -141,6 +143,7 @@ function constrainBarToViewport() {
 
   el.style.maxWidth = '';
   el.style.marginLeft = '';
+  el.style.removeProperty('width');
   if (el.dataset.sejLeftConstrained) {
     el.style.left = '';
     delete el.dataset.sejLeftConstrained;
@@ -149,6 +152,9 @@ function constrainBarToViewport() {
   const vw = document.documentElement.clientWidth;
   const gap = VIEWPORT_GAP;
   const available = Math.max(120, vw - gap * 2);
+  if (vw <= NARROW_BAR_MAX) {
+    el.style.setProperty('width', `${available}px`, 'important');
+  }
   let rect = el.getBoundingClientRect();
 
   if (rect.width > available) {
