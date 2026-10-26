@@ -18,6 +18,9 @@ importers:
       '@vitejs/plugin-vue':
         specifier: ^6.0.6
         version: 6.0.10(vite@8.3.5(@types/node@26.6.5))(vue@3.5.44)
+      '@vue/compiler-sfc':
+        specifier: ^3.5.44
+        version: 3.5.44
       '@vue/test-utils':
         specifier: ^2.5.1
         version: 2.5.1(@vue/compiler-dom@3.5.44)(@vue/server-renderer@3.5.44)(vue@3.5.44)

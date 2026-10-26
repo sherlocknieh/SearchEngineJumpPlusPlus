@@ -1,0 +1,196 @@
+.sej-icon-preview-btn {
+  flex: 0 0 auto;
+  padding: 7px 12px;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 8px;
+  background: var(--sej-btn-bg);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition:
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+.sej-icon-preview-btn:hover:not(:disabled) {
+  border-color: var(--sej-accent);
+  color: var(--sej-accent);
+}
+
+.sej-icon-preview-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* 已有图标时按钮只显示缩略图 */
+.sej-icon-preview-btn.sej-has-icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+}
+
+.sej-icon-preview {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  background: var(--sej-surface-hover);
+}
+
+.sej-data-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sej-data-line input {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+/* 图标获取来源列表 */
+.sej-preview-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: var(--sej-surface-2);
+  font-size: 12px;
+}
+
+.sej-preview-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 18px;
+  color: var(--font-color-qxin);
+  border-radius: 4px;
+}
+
+/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */
+.sej-preview-step.is-selectable {
+  cursor: pointer;
+}
+
+.sej-preview-step.is-selectable:hover,
+.sej-preview-step.is-active {
+  background: var(--sej-surface-hover);
+}
+
+.sej-preview-step.is-selectable:focus-visible {
+  outline: 2px solid var(--sej-accent);
+  outline-offset: -2px;
+}
+
+/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */
+.sej-preview-thumb {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.sej-preview-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sej-checkbox-border);
+}
+
+.sej-preview-step.is-loading .sej-preview-dot {
+  background: var(--sej-accent);
+}
+
+.sej-preview-step.is-ok .sej-preview-dot {
+  background: #34a853;
+}
+
+.sej-preview-step.is-failed .sej-preview-dot {
+  background: var(--sej-danger);
+}
+
+.sej-preview-step.is-failed,
+.sej-preview-step.is-pending,
+.sej-preview-step.is-canceled {
+  opacity: 0.6;
+}
+
+.sej-preview-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sej-preview-state {
+  flex: 0 0 auto;
+  opacity: 0.7;
+}
+
+.sej-preview-state.sej-preview-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.45;
+  transition:
+    opacity 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+.sej-preview-icon svg {
+  display: block;
+}
+
+/* 未选用：空心圆勾，悬停时提示可点击 */
+.sej-preview-step.is-selectable:hover .sej-preview-icon {
+  color: var(--sej-accent);
+  opacity: 1;
+}
+
+/* 已选用：实心圆勾，与未选用状态区分明显 */
+.sej-preview-icon.is-selected {
+  color: var(--sej-accent);
+  opacity: 1;
+}
+
+.sej-preview-icon.is-selected svg circle {
+  fill: currentColor;
+}
+
+.sej-preview-icon.is-selected svg path {
+  stroke: var(--sej-accent-contrast);
+}
+
+.sej-preview-extractor {
+  align-self: flex-start;
+  margin-top: 2px;
+  color: var(--sej-accent);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.sej-preview-extractor:hover {
+  text-decoration: underline;
+}
+
+#newSearchBox #iqxin-newTarget {
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid var(--border-color-sej);
+  padding: 7px 9px;
+  background: var(--sej-input-bg);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  outline: none;
+}
