@@ -183,6 +183,19 @@ let autosaveQueued = false;
 let autosaveWarnedLocal = false;
 let settingsChanged = false;
 
+// 自动保存成功后，在底部关闭按钮上短暂显示 ✓ 反馈
+const saveFlash = ref(false);
+let saveFlashTimer = null;
+
+function pulseSaveFeedback() {
+    saveFlash.value = true;
+    clearTimeout(saveFlashTimer);
+    saveFlashTimer = setTimeout(() => {
+        saveFlashTimer = null;
+        saveFlash.value = false;
+    }, 900);
+}
+
 function cancelAutoSave() {
     autosaveQueued = false;
     clearTimeout(autosaveTimer);
@@ -203,6 +216,7 @@ function flushAutoSave() {
         return;
     }
     settingsChanged = true;
+    pulseSaveFeedback();
     if (backend === 'local' && !autosaveWarnedLocal) {
         autosaveWarnedLocal = true;
         showToast(t('toast.autoSavedLocal'), 3000);
@@ -320,6 +334,7 @@ function applyConfig(text) {
         showToast(t('toast.saveFailed'), 5000);
     } else {
         settingsChanged = true;
+        pulseSaveFeedback();
     }
     configOpen.value = false;
 }
@@ -1435,6 +1450,7 @@ onBeforeUnmount(() => {
     document.removeEventListener('keydown', onKeydown);
     window.removeEventListener('blur', onWindowBlur);
     clearTimeout(closeTimer);
+    clearTimeout(saveFlashTimer);
     document.removeEventListener('pointermove', onDragMove);
     document.removeEventListener('pointerup', stopDrag);
     document.removeEventListener('pointercancel', stopDrag);
@@ -1594,8 +1610,9 @@ onBeforeUnmount(() => {
                             </span>
                         </div>
                         <div class="sej-footer-actions">
-                            <span id="xin-save" :title="t('settings.close')" :class="{ 'sej-saving': saving }" @click="save">
-                                {{ saving ? t('settings.saving') : t('settings.close') }}
+                            <span id="xin-save" :title="t('settings.close')"
+                                :class="{ 'sej-saving': saving, 'sej-save-flash': saveFlash }" @click="save">
+                                {{ saving ? t('settings.saving') : saveFlash ? t('settings.saved') : t('settings.close') }}
                             </span>
                         </div>
                     </div>

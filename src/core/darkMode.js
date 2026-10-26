@@ -33,6 +33,8 @@ export const DARK_MODE_STYLE = `
     --sej-accent-contrast: #202124;
     --sej-danger: #f28b82;
     --sej-danger-weak: rgba(242, 139, 130, 0.14);
+    --sej-success: #81c995;
+    --sej-success-weak: rgba(129, 201, 149, 0.16);
     --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),
       0 2px 8px hsla(0, 0%, 0%, 0.5);
   }

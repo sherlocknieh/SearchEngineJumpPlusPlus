@@ -22,6 +22,7 @@ export const messages = {
 
     'settings.title': '搜索跳转设置',
     'settings.close': '关闭',
+    'settings.saved': '已保存',
     'settings.editCategory': '编辑分类：{name}',
     'settings.editEngine': '编辑：{name}',
     'settings.deleteCategory': '删除分类',
@@ -155,6 +156,7 @@ export const messages = {
 
     'settings.title': 'Search Jump Settings',
     'settings.close': 'Close',
+    'settings.saved': 'Saved',
     'settings.editCategory': 'Edit category: {name}',
     'settings.editEngine': 'Edit: {name}',
     'settings.deleteCategory': 'Delete category',

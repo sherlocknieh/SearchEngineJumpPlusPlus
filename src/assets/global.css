@@ -511,6 +511,28 @@
   opacity: 0.6;
   pointer-events: none;
 }
+/* 自动保存成功反馈：底部关闭按钮短暂显示「已保存」并泛绿 */
+#btnEle #xin-save.sej-save-flash {
+  animation: sej-save-btn 0.9s ease-out;
+}
+@keyframes sej-save-btn {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(1.05);
+    background: var(--sej-success, #188038);
+    color: var(--sej-accent-contrast, #fff);
+  }
+  60% {
+    transform: scale(1);
+    background: var(--sej-success, #188038);
+    color: var(--sej-accent-contrast, #fff);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
 #btnEle span.iqxin-btn-active {
   background: var(--sej-accent-weak);
   border-color: var(--sej-accent);
@@ -626,12 +648,17 @@
 }
 .sejtitle:hover .sej-hover-edit,
 #settingLayer .sejcon > .drag:hover > .sej-hover-edit {
-  opacity: 0.4;
+  opacity: 0.6;
 }
 .sejtitle:hover .sej-hover-delete,
 #settingLayer .sejcon > .drag:hover > .sej-hover-delete {
-  opacity: 0.8;
+  opacity: 0.6;
   pointer-events: auto;
+}
+.sejtitle:hover .sej-hover-edit:hover,
+#settingLayer .sejcon > .drag:hover > .sej-hover-edit:hover {
+  opacity: 1;
+  background: var(--sej-surface-hover);
 }
 .sej-hover-delete:hover {
   opacity: 1;
@@ -1281,6 +1308,8 @@ body {
   --sej-accent-contrast: #fff;
   --sej-danger: #d93025;
   --sej-danger-weak: rgba(217, 48, 37, 0.1);
+  --sej-success: #188038;
+  --sej-success-weak: rgba(24, 128, 56, 0.14);
   --sej-panel-shadow: 0 24px 64px -24px hsla(0, 0%, 0%, 0.45),
     0 2px 8px hsla(0, 0%, 0%, 0.06);
 }
@@ -1319,6 +1348,8 @@ body[qxintheme="dark"] {
   --sej-accent-contrast: #202124;
   --sej-danger: #f28b82;
   --sej-danger-weak: rgba(242, 139, 130, 0.14);
+  --sej-success: #81c995;
+  --sej-success-weak: rgba(129, 201, 149, 0.16);
   --sej-panel-shadow: 0 24px 64px -20px hsla(0, 0%, 0%, 0.85),
     0 2px 8px hsla(0, 0%, 0%, 0.5);
 }
