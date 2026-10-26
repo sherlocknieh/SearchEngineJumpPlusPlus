@@ -1612,7 +1612,9 @@ onBeforeUnmount(() => {
                         <div class="sej-footer-actions">
                             <span id="xin-save" :title="t('settings.close')"
                                 :class="{ 'sej-saving': saving, 'sej-save-flash': saveFlash }" @click="save">
-                                {{ saving ? t('settings.saving') : saveFlash ? t('settings.saved') : t('settings.close') }}
+                                <i class="sej-save-text" :class="{ 'sej-save-text-flash': saveFlash }">
+                                    {{ saving ? t('settings.saving') : saveFlash ? t('settings.saved') : t('settings.close') }}
+                                </i>
                             </span>
                         </div>
                     </div>
