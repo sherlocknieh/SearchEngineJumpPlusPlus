@@ -748,6 +748,27 @@ span.iqxin-additem.sej-copy-target {
   gap: 6px;
   line-height: 18px;
   color: var(--font-color-qxin);
+  border-radius: 4px;
+}
+/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */
+.sej-preview-step.is-selectable {
+  cursor: pointer;
+}
+.sej-preview-step.is-selectable:hover,
+.sej-preview-step.is-active {
+  background: var(--sej-surface-hover);
+}
+.sej-preview-step.is-selectable:focus-visible {
+  outline: 2px solid var(--sej-accent);
+  outline-offset: -2px;
+}
+/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */
+.sej-preview-thumb {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  object-fit: contain;
 }
 .sej-preview-dot {
   flex: 0 0 auto;

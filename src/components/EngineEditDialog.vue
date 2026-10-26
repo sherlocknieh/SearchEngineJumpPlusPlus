@@ -58,7 +58,7 @@ function titleFromUrl(raw) {
   const label = parts[parts.length - suffixLength - 1] || parts[0];
   return label ? label.charAt(0).toUpperCase() + label.slice(1) : '';
 }
-
+// 从 URL 取图标地址（默认 /favicon.ico）
 function faviconFromUrl(raw) {
   const value = String(raw || '').trim();
   if (!value) return '';
@@ -69,6 +69,33 @@ function faviconFromUrl(raw) {
   } catch {
     return '';
   }
+}
+
+/**
+ * 取可注册域名（站点主域名），用于补充图标候选。
+ * 依据常见二级后缀表判断，例如：
+ *   chat.deepseek.com  -> deepseek.com
+ *   gemini.google.com   -> google.com
+ *   www.example.com.cn -> example.com.cn
+ *   en.wikipedia.org   -> wikipedia.org
+ *   deepseek.com       -> deepseek.com（本身已是主域名）
+ * IP 地址原样返回，避免把最后一段数字当成后缀。
+ */
+function registrableDomain(raw) {
+  const host = String(raw || '')
+    .trim()
+    .toLowerCase()
+    .replace(/\.$/, '');
+  if (!host || !host.includes('.') || /^\d+(\.\d+){3}$/.test(host)) {
+    return host;
+  }
+  const parts = host.split('.').filter(Boolean);
+  if (parts.length <= 2) return parts.join('.');
+  const last = parts[parts.length - 1] || '';
+  const secondLast = (parts[parts.length - 2] || '').toLowerCase();
+  const suffixLength =
+    last.length === 2 && secondLevelSuffixes.has(secondLast) ? 2 : 1;
+  return parts.slice(-(suffixLength + 1)).join('.');
 }
 
 // 站点主机名（保留子域，去掉 www.）
@@ -120,9 +147,12 @@ const previewData = ref('');
 const previewUrl = ref('');
 const previewLoading = ref(false);
 const previewFailed = ref(false);
-// 本次获取依次尝试的来源及结果
+// 本轮并行尝试的来源及结果；status 为 pending/loading/ok/failed/canceled，
+// data 为该来源获取到并压缩后的 data URL，用于缩略图与后续切换
 const previewSteps = ref([]);
+// 图标地址 → data URL 的缓存，避免重复请求，也用于点选来源时即时切换
 const previewCache = new Map();
+// 每轮获取、取消或用户改地址时递增；异步结果返回后据此判断是否已过期
 let previewToken = 0;
 
 const dataIconLink = computed(() => previewData.value.trim());
@@ -173,11 +203,21 @@ function setManualPreviewData(value) {
   dataEdited.value = Boolean(value);
 }
 
+/**
+ * 预览流程自己回写 form.favicon 时计数 +1。
+ * favicon 的 watch 看到计数大于 0 就跳过“地址变化即取消获取”的逻辑，
+ * 否则自动填入第一个成功项会把仍在进行的其他来源请求全部作废，
+ * 用户就无法在多条成功路径之间选择了。
+ */
+let internalUpdates = 0;
+
 // 图标地址变化时保留已有图标继续显示，能对应上新地址才替换；
 // 新地址的图标留到点击确定后在后台获取
 watch(
   () => form.favicon,
   (value) => {
+    // 预览流程自己写入的地址由 applyPreview 负责，不走这里的取消逻辑
+    if (internalUpdates > 0) return;
     previewToken++;
     const url = value.trim();
     previewLoading.value = false;
@@ -187,6 +227,7 @@ watch(
       setPreviewData(url, url);
       return;
     }
+    // 之前获取过该地址时直接复用缓存，不再请求
     if (previewCache.has(url)) {
       setPreviewData(previewCache.get(url), url);
       return;
@@ -198,28 +239,56 @@ watch(
   { immediate: true },
 );
 
+/**
+ * 取消本轮获取：递增 token 让未返回的请求结果失效，
+ * 并把仍在等待/加载的来源标记为已取消；已成功的选项保留，仍可点选。
+ */
 function cancelPreview() {
   previewToken++;
   previewLoading.value = false;
   previewFailed.value = true;
-  const current = previewSteps.value.find((step) => step.status === 'loading');
-  if (current) current.status = 'canceled';
+  previewSteps.value.forEach((step) => {
+    if (step.status === 'loading' || step.status === 'pending') {
+      step.status = 'canceled';
+    }
+  });
 }
 
-// 命中可用结果：写回图标地址与缓存，并保留来源记录
+/**
+ * 采用某条来源的图标：把结果写入缓存，同步图标地址、图标数据和当前高亮项。
+ * 不发起新请求；地址变化不会被当成用户改动，因此不会中断同批次其他请求。
+ */
 async function applyPreview(step, data) {
   step.status = 'ok';
-  previewLoading.value = false;
-  previewFailed.value = false;
   previewCache.set(step.url, data);
   if (form.favicon.trim() !== step.url) {
+    internalUpdates++;
     form.favicon = step.url;
-    // 等 favicon 的 watch 清理旧预览后再写入转换结果
+    // 等 favicon 的 watch 处理完（此处会被 internalUpdates 跳过）再写入数据
     await nextTick();
+    internalUpdates--;
   }
   setPreviewData(data, step.url);
 }
 
+/**
+ * 用户在多条成功来源中点选：切换图标地址、图标数据与当前高亮项。
+ * 数据已在获取阶段写入 step.data / previewCache，这里不再请求网络。
+ */
+async function chooseStep(step) {
+  if (props.busy || step.status !== 'ok' || !step.data) return;
+  if (step.url === previewUrl.value) return;
+  await applyPreview(step, step.data);
+}
+
+/**
+ * 获取图标入口：
+ * - 正在获取时再次点击视为取消；
+ * - 构造候选（当前地址、可注册域名的 favicon.ico、完整主机名 / 可注册域名
+ *   的公共图标服务）并去重；
+ * - 所有候选并行请求，先返回的成功结果自动采用，其余成功项保留供点选；
+ * - 全部结束后根据是否存在成功项更新失败状态。
+ */
 async function previewIcon() {
   if (props.busy) return;
   if (previewLoading.value) {
@@ -235,15 +304,28 @@ async function previewIcon() {
     return;
   }
 
-  // 依次尝试：当前地址 → 公共图标服务
+  // 候选顺序：当前地址 → 主域名 favicon.ico → 完整主机名服务 → 主域名服务
   const candidates = [];
-  if (/^https?:\/\//i.test(url)) candidates.push({ url });
+  // 过滤空值并去重，避免同一地址被请求两次（例如图标本身就填了服务地址）
+  const addCandidate = (value) => {
+    if (!value || candidates.some((item) => item.url === value)) return;
+    candidates.push({ url: value });
+  };
+  // 当前地址是有效 URL 时，直接尝试
+  if (/^https?:\/\//i.test(url)) addCandidate(url);
   const host = siteHost.value;
   if (host) {
+    const domain = registrableDomain(host);
+    if (domain !== host) {
+      // 子域可能没有独立图标，优先尝试主域名自身的 favicon.ico
+      // （如 deepseek.com/favicon.ico）
+      addCandidate(faviconFromUrl(domain));
+    }
     // 公共图标服务使用完整主机名，保留 chat. 这类子域
-    const serviceUrl = `https://a.favicon.im/${host}`;
-    if (!candidates.some((item) => item.url === serviceUrl)) {
-      candidates.push({ url: serviceUrl });
+    addCandidate(`https://a.favicon.im/${host}`);
+    if (domain !== host) {
+      // 再尝试主域名的公共图标服务
+      addCandidate(`https://a.favicon.im/${domain}`);
     }
   }
   if (!candidates.length) return;
@@ -254,26 +336,49 @@ async function previewIcon() {
   previewSteps.value = candidates.map((item) => ({
     ...item,
     status: 'pending',
+    data: '',
   }));
 
-  for (const step of previewSteps.value) {
+  // 本批次是否已自动采用默认图标；其余成功项保留在列表中供用户点选
+  let applied = false;
+  /**
+   * 处理单个候选：命中缓存直接复用，否则请求并解析图标。
+   * token 变化说明本轮已取消或被新一轮取代，此时丢弃结果。
+   * 成功结果写入缓存；本批次尚未采用任何图标时，把它作为默认图标。
+   */
+  const settle = async (step) => {
     if (previewCache.has(step.url)) {
-      await applyPreview(step, previewCache.get(step.url));
-      return;
+      // 之前已成功获取过该地址，直接复用，不再产生网络请求
+      step.data = previewCache.get(step.url);
+      step.status = 'ok';
+    } else {
+      step.status = 'loading';
+      const { data, reason } = await resolveFavicon(step.url);
+      if (token !== previewToken) return;
+      if (data) {
+        step.data = data;
+        step.status = 'ok';
+        previewCache.set(step.url, data);
+      } else {
+        step.reason = reason;
+        step.status = 'failed';
+        return;
+      }
     }
-    step.status = 'loading';
-    const { data, reason } = await resolveFavicon(step.url);
-    if (token !== previewToken) return;
-    if (data) {
-      await applyPreview(step, data);
-      return;
+    // 谁先返回用谁作为默认图标，其余成功项留给用户选择
+    if (!applied) {
+      applied = true;
+      await applyPreview(step, step.data);
     }
-    step.reason = reason;
-    step.status = 'failed';
-  }
+  };
 
+  // 所有候选并行执行，整体耗时取决于最慢的一条（受请求超时限制）
+  await Promise.all(previewSteps.value.map(settle));
+  if (token !== previewToken) return;
   previewLoading.value = false;
-  previewFailed.value = true;
+  previewFailed.value = !previewSteps.value.some(
+    (step) => step.status === 'ok',
+  );
 }
 
 onMounted(() => urlInput.value?.focus());
@@ -357,16 +462,33 @@ function submit() {
           {{ previewLabel }}
         </button>
       </div>
-      <!-- 依次尝试的来源与结果 -->
+      <!-- 并行尝试的来源与结果；成功项可点选切换 -->
+      <!-- 缩略图显示实际图标；非当前项提示“点击选用”，当前项显示“已获取” -->
       <div v-if="previewSteps.length" class="sej-preview-steps">
         <div v-for="step in previewSteps" :key="step.url" :title="step.url"
-          class="sej-preview-step" :class="'is-' + step.status">
-          <span class="sej-preview-dot"></span>
+          class="sej-preview-step"
+          :class="[
+            'is-' + step.status,
+            {
+              'is-selectable': step.status === 'ok',
+              'is-active': step.status === 'ok' && step.url === previewUrl,
+            },
+          ]"
+          :role="step.status === 'ok' ? 'button' : undefined"
+          :tabindex="step.status === 'ok' ? 0 : undefined"
+          @click="chooseStep(step)"
+          @keydown.enter.prevent="chooseStep(step)"
+          @keydown.space.prevent="chooseStep(step)">
+          <img v-if="step.status === 'ok' && step.data" class="sej-preview-thumb"
+            :src="step.data" alt="" />
+          <span v-else class="sej-preview-dot"></span>
           <span class="sej-preview-url">{{ step.url }}</span>
           <span class="sej-preview-state">{{
             step.status === 'failed' && step.reason
               ? step.reason
-              : t(STEP_STATUS_TEXT[step.status])
+              : step.status === 'ok' && step.url !== previewUrl
+                ? t('engine.stepUse')
+                : t(STEP_STATUS_TEXT[step.status])
           }}</span>
         </div>
         <a v-if="extractorUrl" class="sej-preview-extractor"
