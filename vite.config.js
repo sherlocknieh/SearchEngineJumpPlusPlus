@@ -5,6 +5,8 @@ import vueStyleToShadow from './build/vueStyleToShadow.js';
 
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
+  // vite-plugin-monkey 默认不压缩产物；脚本会注入每个页面，压缩能显著降低解析开销
+  build: { minify: true },
   plugins: [
     // 组件样式需要注入 Shadow Root，不能用 Vue 默认的 document.head 注入
     vueStyleToShadow(),

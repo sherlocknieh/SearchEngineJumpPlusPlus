@@ -197,6 +197,18 @@ function updateScrollHints() {
   );
 }
 
+// 拖动时每次 pointermove 都同步读 scrollWidth/clientWidth 会反复触发布局，
+// 合并到一帧里只读一次
+let hintsRaf = 0;
+
+function scheduleScrollHints() {
+  if (hintsRaf) return;
+  hintsRaf = requestAnimationFrame(() => {
+    hintsRaf = 0;
+    updateScrollHints();
+  });
+}
+
 function onScrollPointerDown(e) {
   if (e.pointerType === 'mouse' && e.button !== 0) return;
   suppressClickUntil = 0;
@@ -231,9 +243,10 @@ function onWindowPointerMove(e) {
     el.classList.add('sej-scroll-dragging');
   }
 
-  if (e.cancelable) e.preventDefault();
+  // 监听器是 passive 的：横向拖动由 .sej-scroll 的 touch-action: pan-y
+  // 与 user-select: none 保证，无需在这里阻止默认行为
   el.scrollLeft = state.startLeft - dx;
-  updateScrollHints();
+  scheduleScrollHints();
 }
 
 function endScrollDrag(e) {
@@ -255,6 +268,8 @@ function onScrollClickCapture(e) {
 }
 
 function onViewportResize() {
+  // 视口或布局变化后，缓存的吸顶头部高度可能失效
+  invalidateHeaderCache();
   if (getHost().style.position === 'fixed') {
     fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
   } else {
@@ -318,6 +333,27 @@ function getFixedHeaderBottom(barLeft, barWidth) {
   return bottom;
 }
 
+// 吸顶头部检测要遍历祖先的 getComputedStyle 并做多点命中测试，
+// 比普通布局读取贵得多；顶部结构在滚动过程中基本不变，按时间缓存结果。
+const HEADER_CACHE_MS = 120;
+let headerBottomCache = { key: '', bottom: 0, at: 0 };
+
+function invalidateHeaderCache() {
+  headerBottomCache = { key: '', bottom: 0, at: 0 };
+}
+
+function getFixedHeaderBottomCached(barLeft, barWidth) {
+  const now = performance.now();
+  const key = `${Math.round(barLeft)}:${Math.round(barWidth)}`;
+  const cache = headerBottomCache;
+  if (cache.key === key && now - cache.at < HEADER_CACHE_MS) {
+    return cache.bottom;
+  }
+  const bottom = getFixedHeaderBottom(barLeft, barWidth);
+  headerBottomCache = { key, bottom, at: now };
+  return bottom;
+}
+
 function fixedToTop(fixedTopValue, color) {
   if (!containerEl.value || inlineStyleBlocked) return;
   if (resolvedStyle.includes('sticky') || resolvedStyle.includes('fixed')) {
@@ -339,7 +375,7 @@ function fixedToTop(fixedTopValue, color) {
   const width = narrow
     ? Math.max(120, vw - gap * 2)
     : parseFloat(host.dataset.originalWidth) || rect.width;
-  const headerBottom = getFixedHeaderBottom(left, width);
+  const headerBottom = getFixedHeaderBottomCached(left, width);
   const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
   // 跳转条滚到吸顶头部下沿时就固定，避免中途被头部遮挡
   const threshold = Math.max(fixedTop, headerBottom > 0 ? baseTop : 0);
@@ -439,25 +475,29 @@ function onSelectionChange() {
   }
 }
 
-// 另一个实例可能稍后才挂载，短暂轮询 + 窗口尺寸变化时重新计算避让间距
-let stackTimer = 0;
-let stackTries = 0;
+// 另一个实例可能稍后才挂载：退避重试几次即可，避免长时间高频读取布局。
+// 每次检测都要 getBoundingClientRect，原实现固定 500ms × 20 次代价偏高。
+const STACK_SYNC_DELAYS = [0, 250, 750, 1500, 3000, 6000];
+let stackTimers = [];
 
 function startStackSync() {
-  refreshStackLayout();
+  stopStackSync();
   window.addEventListener('resize', refreshStackLayout);
 
-  clearInterval(stackTimer);
-  stackTries = 0;
-  stackTimer = setInterval(() => {
-    refreshStackLayout();
-    if (++stackTries >= 20) stopStackSync();
-  }, 500);
+  stackTimers = STACK_SYNC_DELAYS.map((delay, index) =>
+    setTimeout(() => {
+      refreshStackLayout();
+      // 重试结束后不再需要 resize 监听，与原先行为保持一致
+      if (index === STACK_SYNC_DELAYS.length - 1) {
+        window.removeEventListener('resize', refreshStackLayout);
+      }
+    }, delay),
+  );
 }
 
 function stopStackSync() {
-  clearInterval(stackTimer);
-  stackTimer = 0;
+  stackTimers.forEach(clearTimeout);
+  stackTimers = [];
   window.removeEventListener('resize', refreshStackLayout);
 }
 
@@ -487,7 +527,7 @@ onMounted(async () => {
   );
   window.addEventListener('resize', onViewportResize);
   window.addEventListener('pointermove', onWindowPointerMove, {
-    passive: false,
+    passive: true,
   });
   window.addEventListener('pointerup', endScrollDrag);
   window.addEventListener('pointercancel', endScrollDrag);
@@ -529,6 +569,7 @@ onBeforeUnmount(() => {
   dragState = null;
   scrollEl.value?.classList.remove('sej-scroll-dragging');
   if (scrollRaf) cancelAnimationFrame(scrollRaf);
+  if (hintsRaf) cancelAnimationFrame(hintsRaf);
   fixedTopTimers.forEach(clearTimeout);
   constrainTimers.forEach(clearTimeout);
   stopStackSync();

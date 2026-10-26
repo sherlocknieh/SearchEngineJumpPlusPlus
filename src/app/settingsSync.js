@@ -6,8 +6,8 @@ import { isRunning, restart } from './lifecycle.js';
 
 /** GM 存储变化后的防抖时间，避免连续写入导致多次重启 */
 const SYNC_DEBOUNCE_MS = 200;
-/** 没有变更监听时的轮询间隔 */
-const SYNC_POLL_MS = 2000;
+/** 没有变更监听时的轮询间隔；先比对时间戳，未变化时几乎无开销 */
+const SYNC_POLL_MS = 5000;
 
 // 只初始化一次，避免重复注册监听与定时器
 let started = false;
