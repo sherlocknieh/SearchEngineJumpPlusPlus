@@ -654,6 +654,33 @@ span#setBtn:active {
   -webkit-user-select: none;
   user-select: none;
 }
+/* 列表滚动容器：内容可能很长，滚动条贴住面板内边缘 */
+#sej-settings-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */
+  margin-top: 0;
+  margin-right: calc(var(--sej-panel-pad-x) * -1);
+  padding-top: 2px;
+  padding-right: var(--sej-panel-pad-x);
+  padding-bottom: 4px;
+}
+
+#sej-settings-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+#sej-settings-body::-webkit-scrollbar-thumb {
+  background: var(--sej-surface-hover);
+  border-radius: 4px;
+}
+
 /* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */
 #settingLayer .sej-drag-placeholder,
 #settingLayer .sej-drag-placeholder * {
@@ -802,6 +829,20 @@ span#setBtn:active {
 
 #settingLayerMask .sej-engine-icon {
   vertical-align: middle;
+}
+
+/* 窄屏下类别卡片占满可用宽度 */
+@media (max-width: 560px) {
+  .iqxin-items {
+    flex: 1 1 160px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.iqxin-pointer-events,
+#settingLayer .sej-engine * {
+  pointer-events: none;
 }
 #btnEle {
   position: relative;
@@ -1026,6 +1067,31 @@ span#setBtn:active {
 
 .sej-footer-actions {
   margin-left: 4px;
+}
+
+/* 底栏不参与内容区伸缩，并在窄屏下收紧 */
+#settingLayer #btnEle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 780px) {
+  #btnEle span {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  #btnEle .sej-config-box button {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  #btnEle .sej-config-box .sej-config-open {
+    padding-left: 8px;
+  }
+  #settingLayer {
+    --sej-panel-pad-x: 12px;
+    min-width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
 }
 #btnEle #xin-save {
   position: relative;
@@ -1320,69 +1386,7 @@ span.iqxin-additem.sej-copy-target {
     opacity: 0;
   }
 }
-/* ---------- Vue 重构版设置面板布局优化 ---------- */
-#sej-settings-body {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 10px;
-  min-height: 0;
-  overflow-y: auto;
-  overflow-x: hidden;
-  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */
-  margin-top: 0;
-  margin-right: calc(var(--sej-panel-pad-x) * -1);
-  padding-top: 2px;
-  padding-right: var(--sej-panel-pad-x);
-  padding-bottom: 4px;
-}
-
-#sej-settings-body::-webkit-scrollbar {
-  width: 8px;
-}
-
-#sej-settings-body::-webkit-scrollbar-thumb {
-  background: var(--sej-surface-hover);
-  border-radius: 4px;
-}
-
-#settingLayer #btnEle {
-  flex: 0 0 auto;
-}
-
-@media (max-width: 780px) {
-  #btnEle span {
-    font-size: 12px;
-    padding: 5px 8px;
-  }
-  #btnEle .sej-config-box button {
-    font-size: 12px;
-    padding: 5px 7px;
-  }
-  #btnEle .sej-config-box .sej-config-open {
-    padding-left: 8px;
-  }
-  #settingLayer {
-    --sej-panel-pad-x: 12px;
-    min-width: calc(100vw - 16px);
-    max-width: calc(100vw - 16px);
-    max-height: calc(100vh - 16px);
-  }
-}
-
-@media (max-width: 560px) {
-  .iqxin-items {
-    flex: 1 1 160px;
-    width: auto;
-    max-width: none;
-  }
-}
-
-.iqxin-pointer-events,
-#settingLayer .sej-engine * {
-  pointer-events: none;
-}
+/* ---------- 弹窗：引擎/分类编辑、配置编辑器 ---------- */
 
 #newSearchBox,
 .sej-dialog-box {

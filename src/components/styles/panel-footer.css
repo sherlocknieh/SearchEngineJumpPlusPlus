@@ -222,3 +222,28 @@
 .sej-footer-actions {
   margin-left: 4px;
 }
+
+/* 底栏不参与内容区伸缩，并在窄屏下收紧 */
+#settingLayer #btnEle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 780px) {
+  #btnEle span {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  #btnEle .sej-config-box button {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  #btnEle .sej-config-box .sej-config-open {
+    padding-left: 8px;
+  }
+  #settingLayer {
+    --sej-panel-pad-x: 12px;
+    min-width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+}
