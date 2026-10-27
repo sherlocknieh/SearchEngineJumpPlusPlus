@@ -18,22 +18,14 @@ import { t } from '../assets/i18n.js';
  */
 export function useAutoSave({ buildResult, getCurrent, settings, delay = 500 }) {
   const saving = ref(false);
-  // 自动保存成功后，在底部关闭按钮上短暂显示 ✓ 反馈
-  const saveFlash = ref(false);
 
   let autosaveTimer = null;
   let autosaveQueued = false;
   let autosaveWarnedLocal = false;
-  let saveFlashTimer = null;
   let settingsChanged = false;
 
-  function pulseSaveFeedback() {
-    saveFlash.value = true;
-    clearTimeout(saveFlashTimer);
-    saveFlashTimer = setTimeout(() => {
-      saveFlashTimer = null;
-      saveFlash.value = false;
-    }, 900);
+  function notifySaved() {
+    showToast(t('toast.autoSaved'));
   }
 
   function cancelAutoSave() {
@@ -56,10 +48,11 @@ export function useAutoSave({ buildResult, getCurrent, settings, delay = 500 }) 
       return;
     }
     settingsChanged = true;
-    pulseSaveFeedback();
     if (backend === 'local' && !autosaveWarnedLocal) {
       autosaveWarnedLocal = true;
       showToast(t('toast.autoSavedLocal'), 3000);
+    } else {
+      notifySaved();
     }
   }
 
@@ -115,19 +108,16 @@ export function useAutoSave({ buildResult, getCurrent, settings, delay = 500 }) 
 
   function dispose() {
     cancelAutoSave();
-    clearTimeout(saveFlashTimer);
-    saveFlashTimer = null;
   }
 
   return {
     saving,
-    saveFlash,
     cancelAutoSave,
     flushAutoSave,
     scheduleAutoSave,
     flushPending,
     saveNow,
-    pulseSaveFeedback,
+    notifySaved,
     markSettingsChanged,
     takeSettingsChanged,
     dispose,

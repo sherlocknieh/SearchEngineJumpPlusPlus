@@ -36,7 +36,7 @@ describe('useConfigIO', () => {
     const onRefresh = vi.fn();
     const onCancel = vi.fn();
     const onChanged = vi.fn();
-    const onFeedback = vi.fn();
+    const onSaved = vi.fn();
     const onResetRemote = vi.fn();
     const api = useConfigIO({
       draft,
@@ -59,10 +59,10 @@ describe('useConfigIO', () => {
       refreshDraft: onRefresh,
       cancelAutoSave: onCancel,
       markSettingsChanged: onChanged,
-      pulseSaveFeedback: onFeedback,
+      notifySaved: onSaved,
       resetRemoteSynced: onResetRemote,
     });
-    return { api, onRefresh, onCancel, onChanged, onFeedback, onResetRemote };
+    return { api, onRefresh, onCancel, onChanged, onSaved, onResetRemote };
   }
 
   beforeEach(() => {
@@ -102,7 +102,7 @@ describe('useConfigIO', () => {
   });
 
   it('应用配置会取消自动保存并刷新草稿', () => {
-    const { api, onRefresh, onCancel, onChanged, onFeedback, onResetRemote } = setup();
+    const { api, onRefresh, onCancel, onChanged, onSaved, onResetRemote } = setup();
     api.applyConfig(
       JSON.stringify({ engineCategories: [['新', 'x', true]], engineList: { x: [] } }),
     );
@@ -112,7 +112,7 @@ describe('useConfigIO', () => {
     expect(settings.applySettings).toHaveBeenCalledTimes(1);
     expect(onRefresh).toHaveBeenCalledTimes(1);
     expect(onChanged).toHaveBeenCalledTimes(1);
-    expect(onFeedback).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledTimes(1);
     expect(api.configOpen.value).toBe(false);
   });
 

@@ -22,7 +22,6 @@ export const messages = {
 
     'settings.title': '搜索跳转设置',
     'settings.close': '关闭',
-    'settings.saved': '已保存',
     'settings.editCategory': '编辑分类：{name}',
     'settings.editEngine': '编辑：{name}',
     'settings.deleteCategory': '删除分类',
@@ -48,6 +47,7 @@ export const messages = {
     'settings.languageAuto': '跟随浏览器',
 
     'toast.autoSaveFailed': '自动保存失败：存储不可用，请用“配置文件”复制备份',
+    'toast.autoSaved': '已保存',
     'toast.autoSavedLocal': '已自动保存（当前仅本网站生效）',
     'toast.remoteConflict': '其他页面已更新设置，当前有未保存修改',
     'toast.syncAction': '同步',
@@ -151,7 +151,6 @@ export const messages = {
 
     'settings.title': 'Search Jump Settings',
     'settings.close': 'Close',
-    'settings.saved': 'Saved',
     'settings.editCategory': 'Edit category: {name}',
     'settings.editEngine': 'Edit: {name}',
     'settings.deleteCategory': 'Delete category',
@@ -180,6 +179,7 @@ export const messages = {
 
     'toast.autoSaveFailed':
       'Auto-save failed: storage unavailable. Use “Config file” to copy a backup.',
+    'toast.autoSaved': 'Saved',
     'toast.autoSavedLocal': 'Saved automatically (this site only)',
     'toast.remoteConflict': 'Settings were updated in another page and you have unsaved changes',
     'toast.syncAction': 'Sync',

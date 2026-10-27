@@ -19,7 +19,7 @@ import { t } from '../assets/i18n.js';
  * @param {() => void} options.refreshDraft 应用后刷新草稿
  * @param {() => void} options.cancelAutoSave 取消待执行的自动保存
  * @param {() => void} options.markSettingsChanged 标记设置已修改
- * @param {() => void} options.pulseSaveFeedback 保存反馈
+ * @param {() => void} options.notifySaved 保存成功后的 toast 提示
  * @param {() => void} options.resetRemoteSynced 重置“已同步远端”标记
  */
 export function useConfigIO({
@@ -31,7 +31,7 @@ export function useConfigIO({
   refreshDraft,
   cancelAutoSave,
   markSettingsChanged,
-  pulseSaveFeedback,
+  notifySaved,
   resetRemoteSynced,
 }) {
   const configOpen = ref(false);
@@ -138,7 +138,7 @@ export function useConfigIO({
       showToast(t('toast.saveFailed'), 5000);
     } else {
       markSettingsChanged();
-      pulseSaveFeedback();
+      notifySaved();
     }
     configOpen.value = false;
   }

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAutoSave } from '../src/composables/useAutoSave.js';
+import { t } from '../src/assets/i18n.js';
+import { ui } from '../src/stores/ui.js';
 
 function setup({ delay = 500 } = {}) {
   const unchanged = { fixedTop: false, engineList: {} };
@@ -52,6 +54,16 @@ describe('useAutoSave', () => {
     vi.advanceTimersByTime(500);
     expect(settings.savePartial).not.toHaveBeenCalled();
     expect(api.takeSettingsChanged()).toBe(false);
+    api.dispose();
+  });
+
+  it('自动保存成功后用 toast 提示', () => {
+    const { api, setBuilt } = setup();
+    setBuilt({ fixedTop: true, engineList: {} });
+    api.scheduleAutoSave();
+    vi.advanceTimersByTime(500);
+    expect(ui.toastVisible).toBe(true);
+    expect(ui.toastText).toBe(t('toast.autoSaved'));
     api.dispose();
   });
 

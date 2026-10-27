@@ -3,7 +3,6 @@ import { t } from '../assets/i18n.js';
 
 defineProps({
   saving: { type: Boolean, default: false },
-  saveFlash: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['open-config', 'pick-config-file', 'export-config', 'save']);
@@ -99,14 +98,10 @@ const emit = defineEmits(['open-config', 'pick-config-file', 'export-config', 's
       <span
         id="xin-save"
         :title="t('settings.close')"
-        :class="{ 'sej-saving': saving, 'sej-save-flash': saveFlash }"
+        :class="{ 'sej-saving': saving }"
         @click="emit('save')"
       >
-        <i class="sej-save-text" :class="{ 'sej-save-text-flash': saveFlash }">
-          {{
-            saving ? t('settings.saving') : saveFlash ? t('settings.saved') : t('settings.close')
-          }}
-        </i>
+        {{ saving ? t('settings.saving') : t('settings.close') }}
       </span>
     </div>
   </div>

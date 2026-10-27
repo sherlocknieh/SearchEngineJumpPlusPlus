@@ -56,12 +56,11 @@ let disposed = false;
 
 const {
   saving,
-  saveFlash,
   cancelAutoSave,
   scheduleAutoSave,
   flushPending,
   saveNow,
-  pulseSaveFeedback,
+  notifySaved,
   markSettingsChanged,
   takeSettingsChanged,
   dispose: disposeAutoSave,
@@ -93,7 +92,7 @@ const {
   refreshDraft,
   cancelAutoSave,
   markSettingsChanged,
-  pulseSaveFeedback,
+  notifySaved,
   resetRemoteSynced: () => {
     remoteSynced.value = false;
   },
@@ -351,7 +350,6 @@ onBeforeUnmount(() => {
           <SettingsOptions :options="draft" @update-option="updateOption" />
           <SettingsFooter
             :saving="saving"
-            :save-flash="saveFlash"
             @open-config="openConfig"
             @pick-config-file="pickConfigFile"
             @export-config="exportConfig"
