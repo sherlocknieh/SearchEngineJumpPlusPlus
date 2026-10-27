@@ -359,7 +359,6 @@ onBeforeUnmount(() => {
   position: relative;
   z-index: 2;
   padding: 2px;
-  gap: 2px;
   font-size: 13px;
   font-family: var(--sej-font-family);
   -webkit-font-smoothing: antialiased;
@@ -467,7 +466,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
+  width: 24px;
   min-width: 0;
   min-height: 0;
   margin: 0;
@@ -560,7 +559,6 @@ onBeforeUnmount(() => {
 
 #sej-container > #setBtn {
   flex: 0 0 auto;
-  margin-left: 2px;
 }
 
 /* 滑词搜索样式 */
