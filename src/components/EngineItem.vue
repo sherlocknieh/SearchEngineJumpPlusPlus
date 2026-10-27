@@ -1,23 +1,21 @@
 <script setup>
+import { computed } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName } from '../assets/i18n.js';
 
-defineProps({
+const props = defineProps({
   engine: { type: Object, required: true },
   showIcon: { type: Boolean, default: true },
 });
+
+const iconSrc = computed(() => (props.showIcon ? getFaviconSrc(props.engine) : ''));
 
 const emit = defineEmits(['jump']);
 </script>
 
 <template>
   <a class="sej-engine" @click.prevent.stop="emit('jump', engine)">
-    <img
-      v-if="showIcon && getFaviconSrc(engine)"
-      class="sej-engine-icon"
-      :src="getFaviconSrc(engine)"
-      alt=""
-    />
+    <img v-if="iconSrc" class="sej-engine-icon" :src="iconSrc" alt="" />
     <span>{{ localizeEngineName(engine.name) }}</span>
   </a>
 </template>

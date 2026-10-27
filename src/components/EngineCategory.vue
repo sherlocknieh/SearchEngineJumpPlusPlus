@@ -5,19 +5,25 @@ let openCategory = null;
 </script>
 
 <script setup>
-import { nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { getDropRoot } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
+import { subscribePointer } from '../composables/sharedPointer.js';
 import EngineItem from './EngineItem.vue';
 
-defineProps({
+const props = defineProps({
   name: { type: String, required: true },
   engines: { type: Array, required: true },
   showIcon: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(['jump', 'jumpAll']);
+
+// 分类标题只显示首个引擎的图标；计算一次，避免模板内重复读取
+const firstIconSrc = computed(() =>
+  props.showIcon && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
+);
 
 const dropRoot = getDropRoot();
 const triggerEl = ref(null);
@@ -72,10 +78,9 @@ function isPointerInside() {
 // 只用几何命中会误判：鼠标从边缘进入时坐标恰好落在触发项边界，
 // elementFromPoint 会命中相邻元素；被其他面板遮住时几何上又仍然“命中”。
 // 因此以事件命中路径为准，几何判定只作为廉价的预筛选。
-function isPointerOverTrigger(e) {
+function isPointerOverTrigger(path) {
   const trigger = triggerEl.value;
   if (!trigger || !hitTest(trigger)) return false;
-  const path = e?.composedPath?.();
   if (!path) return true;
   return path.includes(trigger);
 }
@@ -188,15 +193,16 @@ function onEngineJump(engine) {
 }
 
 // 用指针坐标统一判定是否仍在触发器/子菜单范围内，
-// 不依赖 enter/leave 事件顺序，避免间隙、裁剪或事件丢失导致误关闭
-function onDocMouseMove(e) {
+// 不依赖 enter/leave 事件顺序，避免间隙、裁剪或事件丢失导致误关闭。
+// 事件由 sharedPointer 统一以 rAF 合并，避免每个分类各挂一个 document mousemove。
+function onDocMouseMove(e, path) {
   pointer.x = e.clientX;
   pointer.y = e.clientY;
   if (isDragScrolling()) {
     if (shown.value) hide();
     return;
   }
-  const overTrigger = isPointerOverTrigger(e);
+  const overTrigger = isPointerOverTrigger(path);
   if (!overTrigger) hoverSuppressed = false;
 
   if (!shown.value) {
@@ -222,17 +228,21 @@ function onDocPointerDown(e) {
   unpin();
 }
 
+let unsubscribePointer = null;
+
 onMounted(() => {
-  document.addEventListener('mousemove', onDocMouseMove);
-  document.addEventListener('pointerdown', onDocPointerDown);
+  unsubscribePointer = subscribePointer({
+    onMove: onDocMouseMove,
+    onPointerDown: onDocPointerDown,
+  });
   scrollEl = triggerEl.value?.closest('.sej-scroll') || null;
   scrollEl?.addEventListener('scroll', onScrollArea, { passive: true });
 });
 
 onBeforeUnmount(() => {
   if (openCategory === hide) openCategory = null;
-  document.removeEventListener('mousemove', onDocMouseMove);
-  document.removeEventListener('pointerdown', onDocPointerDown);
+  unsubscribePointer?.();
+  unsubscribePointer = null;
   scrollEl?.removeEventListener('scroll', onScrollArea);
   scrollEl = null;
   if (pinnedCategory === unpin) pinnedCategory = null;
@@ -268,12 +278,7 @@ onBeforeUnmount(() => {
           <path d="M13.4 2.6 8.6 7.4" />
         </svg>
       </span>
-      <img
-        v-else-if="showIcon && getFaviconSrc(engines[0])"
-        class="sej-engine-icon"
-        :src="getFaviconSrc(engines[0])"
-        alt=""
-      />
+      <img v-else-if="firstIconSrc" class="sej-engine-icon" :src="firstIconSrc" alt="" />
       <span>{{ name }}</span>
     </a>
 
