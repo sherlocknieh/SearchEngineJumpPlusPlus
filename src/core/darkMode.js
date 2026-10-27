@@ -101,18 +101,16 @@ export function watchDarkModeChanges() {
 
   if (typeof MutationObserver === 'function') {
     const observer = new MutationObserver(scheduleRefresh);
-    const observe = (el) => {
-      if (el) {
-        observer.observe(el, {
-          attributes: true,
-          attributeFilter: ['class', 'style', ...THEME_ATTRS],
-        });
-      }
+    // 不监听 body 的 style：部分站点会高频改写内联样式（动画/滚动条），
+    // 每次都会触发整条背景色计算。主题切换通常写在主题属性、class，
+    // 或 documentElement 的内联 color-scheme 上。
+    const observe = (el, attributeFilter) => {
+      if (el) observer.observe(el, { attributes: true, attributeFilter });
     };
-    observe(document.documentElement);
-    observe(document.body);
+    observe(document.documentElement, ['class', 'style', ...THEME_ATTRS]);
+    observe(document.body, ['class', ...THEME_ATTRS]);
     document.addEventListener('DOMContentLoaded', () => {
-      observe(document.body);
+      observe(document.body, ['class', ...THEME_ATTRS]);
       scheduleRefresh();
     });
   }
