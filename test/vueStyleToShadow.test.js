@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
-import vueStyleToShadow from '../build/vueStyleToShadow.js';
+import vueStyleToShadow from '../.build/vueStyleToShadow.js';
 
 const ROOT = process.cwd();
 const FILE = path.join(ROOT, 'src/components/Demo.vue');

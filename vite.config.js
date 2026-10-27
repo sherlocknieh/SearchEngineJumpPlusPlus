@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import monkey from 'vite-plugin-monkey';
-import vueStyleToShadow from './build/vueStyleToShadow.js';
+import vueStyleToShadow from './.build/vueStyleToShadow.js';
 
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
