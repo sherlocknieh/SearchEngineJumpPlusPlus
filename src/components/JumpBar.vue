@@ -13,6 +13,7 @@ import {
   applyStylish,
 } from '../core/applyRule.js';
 import { extractKeyword, performJump, openAllEngines } from '../core/jump.js';
+import { getSelectedText } from '../core/selection.js';
 import { useFixedTop } from '../composables/useFixedTop.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
@@ -165,13 +166,14 @@ function injectHost() {
 }
 
 function onSelectionChange() {
-  const selection = getSelection();
-  if (selection.isCollapsed) {
+  // 输入框内的选区默认忽略，可在设置面板中单独开启
+  const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  if (!text) {
     barVisible.value = false;
-  } else {
-    selectionText.value = selection.toString();
-    barVisible.value = true;
+    return;
   }
+  selectionText.value = text;
+  barVisible.value = true;
 }
 
 onMounted(async () => {

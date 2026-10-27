@@ -38,11 +38,18 @@ describe('normalizeConfig', () => {
 
   it('类型错误的选项回退默认值', () => {
     const result = normalizeConfig(
-      { fixedTop: 'yes', selectSearch: 0, language: 'fr', engineCategories: [] },
+      {
+        fixedTop: 'yes',
+        selectSearch: 0,
+        selectSearchInInput: 'yes',
+        language: 'fr',
+        engineCategories: [],
+      },
       defaults,
     );
     expect(result.fixedTop).toBe(defaults.fixedTop);
     expect(result.selectSearch).toBe(defaults.selectSearch);
+    expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
     expect(result.language).toBe('auto');
   });
 

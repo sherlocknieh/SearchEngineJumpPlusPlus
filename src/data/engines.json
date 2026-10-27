@@ -4,6 +4,7 @@
   "fixedTopUpward": false,
   "HideTheSameLink": true,
   "selectSearch": true,
+  "selectSearchInInput": false,
   "center": false,
   "engineCategories": [
     ["搜索", "web", true],

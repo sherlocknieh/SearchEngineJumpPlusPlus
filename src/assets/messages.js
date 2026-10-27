@@ -32,6 +32,8 @@ export const messages = {
     'settings.hideSameLink': '防止原地跳转',
     'settings.hideSameLinkTip': '比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索',
     'settings.selectSearch': '划词搜索',
+    'settings.selectSearchInInput': '输入框内划词',
+    'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.center': '强制居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.fixedTop': '固顶显示',
@@ -160,6 +162,9 @@ export const messages = {
     'settings.hideSameLinkTip':
       'For example, Google is hidden from the engine list on a Google results page',
     'settings.selectSearch': 'Selection search',
+    'settings.selectSearchInInput': 'Selection in inputs',
+    'settings.selectSearchInInputTip':
+      'Show the selection bar when text is selected inside an input',
     'settings.center': 'Force center',
     'settings.centerTip': 'Always center the jump bar',
     'settings.fixedTop': 'Pin to top',

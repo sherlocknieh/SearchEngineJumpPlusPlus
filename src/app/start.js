@@ -4,6 +4,7 @@ import { printBanner } from './banner.js';
 import { DELAY_START_MS, shouldDelayStart } from './delay.js';
 import { boot } from './lifecycle.js';
 import { registerMenu } from './menu.js';
+import { getSelectedText } from '../core/selection.js';
 
 let startTimer = 0;
 let lazyListeners = null;
@@ -44,7 +45,9 @@ function armStart() {
   // - 开启划词搜索时等第一次划词再挂载；
   // - 连划词条也关闭时完全不挂载，只在打开设置菜单时按需启动。
   if (!settings.getMatchedRule()) {
-    if (settings.settingData.selectSearch) armLazyStart();
+    if (settings.settingData.selectSearch) {
+      armLazyStart(settings.settingData.selectSearchInInput);
+    }
     return;
   }
 
@@ -77,12 +80,11 @@ export function requestBoot() {
   boot();
 }
 
-function armLazyStart() {
+function armLazyStart(includeInput) {
   const onSelectionChange = () => {
     // 懒启动期间页面的鼠标/键盘事件都会走到这里，先做最廉价的判断
-    const selection = typeof getSelection === 'function' ? getSelection() : null;
-    if (!selection || selection.isCollapsed) return;
-    if (!selection.toString().trim()) return;
+    const text = getSelectedText({ includeInput });
+    if (!text.trim()) return;
     requestBoot();
   };
 
