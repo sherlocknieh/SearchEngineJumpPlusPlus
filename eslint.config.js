@@ -15,17 +15,13 @@ export default [
       globals: {
         ...globals.browser,
         ...globals.node,
-        // 由 vite-plugin-monkey 注入的油猴 API
+        // storageBackend/storage 会先检测脚本管理器是否注入旧版同步 API，
+        // 这类全局只在部分管理器存在，不能改为从 '$' 导入
         GM_getValue: 'readonly',
         GM_setValue: 'readonly',
         GM_deleteValue: 'readonly',
         GM_addValueChangeListener: 'readonly',
         GM_removeValueChangeListener: 'readonly',
-        GM_addStyle: 'readonly',
-        GM_openInTab: 'readonly',
-        GM_xmlhttpRequest: 'readonly',
-        GM_registerMenuCommand: 'readonly',
-        unsafeWindow: 'readonly',
       },
     },
     rules: {
