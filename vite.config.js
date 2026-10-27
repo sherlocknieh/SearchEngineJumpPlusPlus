@@ -9,11 +9,11 @@ export default defineConfig({
   // emptyOutDir 关闭：dist 里还有随源码提交的 images，构建时不能清空
   build: { minify: true, emptyOutDir: false },
   plugins: [
-    // 组件样式需要注入 Shadow Root，不能用 Vue 默认的 document.head 注入
-    vueStyleToShadow(),
     vue(),
+    vueStyleToShadow(),    // 使vue组件样式能注入 ShadowRoot
     monkey({
       entry: 'src/main.js',
+      server: { mountGmApi: true },      // dev 下挂载 GM_* 全局变量, 使调试时的表现和构建版一致
       build: { fileName: 'SearchEngineJump++.user.js' },
       userscript: {
         name: 'SearchEngineJump++',
