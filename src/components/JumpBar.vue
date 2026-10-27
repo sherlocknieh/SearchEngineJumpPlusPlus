@@ -23,6 +23,9 @@ import SettingButton from './SettingButton.vue';
 const settings = useSettings();
 const data = settings.settingData;
 const matchedRule = settings.getMatchedRule();
+// 记录本实例实际使用的规则，供 SPA 路由变化时判断能否复用
+settings.activeRule = matchedRule;
+settings.barMounted = false;
 // 站点行为补丁由 siteStyles 模块提供
 const sitePatches = matchedRule?.patches ?? {};
 const inlineStyleBlocked = isInlineStyleBlocked();
@@ -173,6 +176,7 @@ function onSelectionChange() {
 
 onMounted(async () => {
   if (!initTargets()) return;
+  settings.barMounted = true;
   ready.value = true;
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来

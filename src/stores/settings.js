@@ -32,6 +32,10 @@ export class Settings {
     this.scriptSettingData = createDefaultConfig();
     // 实际生效的配置
     this.settingData = null;
+    // 跳转条当前使用的站点规则；SPA 路由变化时用于判断是否需要重建
+    this.activeRule = null;
+    // 跳转条是否真正完成挂载（未找到输入框等情况下为 false，路由变化时需重试）
+    this.barMounted = false;
     this.initSettings();
     setLanguagePreference(this.settingData.language);
   }
