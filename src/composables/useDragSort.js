@@ -4,10 +4,23 @@
  * 分类与引擎共用一套指针事件：分类只能在分类之间换位，
  * 引擎可在分类内排序，也可拖到某个分类的加号上复刻一份。
  * 触屏使用长按启动，桌面端超过移动阈值才视为拖动。
+ *
+ * 几何计算、FLIP 动画、幽灵元素与自动滚动分别放在 ./drag/ 下，
+ * 这里只保留指针状态机与顺序变更。
  */
-import { nextTick, ref } from 'vue';
+import { ref } from 'vue';
 import { showToast } from '../stores/ui.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
+import { createDragAnimator } from './drag/dragAnimation.js';
+import { createDragAutoScroll } from './drag/dragAutoScroll.js';
+import { createDragGeometry } from './drag/dragGeometry.js';
+import { createDragGhost } from './drag/dragGhost.js';
+import { applyOrder, captureOrder } from './drag/dragOrder.js';
+
+const DRAG_THRESHOLD = 4;
+// 触屏：长按启动拖动，轻微移动仍视为点击/滚动
+const TOUCH_LONG_PRESS_MS = 280;
+const TOUCH_MOVE_SLOP = 10;
 
 /**
  * @param {object} options
@@ -20,131 +33,34 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   const dragCtx = ref(null);
   // 拖动搜索引擎时指针所在的“加号”分类，用于复刻提示
   const copyTargetCi = ref(null);
-  const dragAnimations = new WeakMap();
-  const DRAG_ANIMATION_MS = 160;
-  const DRAG_THRESHOLD = 4;
-  const DRAG_EDGE = 40;
-  // 触屏：长按启动拖动，轻微移动仍视为点击/滚动
-  const TOUCH_LONG_PRESS_MS = 280;
-  const TOUCH_MOVE_SLOP = 10;
   let dragSnapshot = null;
   let dragDropped = false;
   let pressCtx = null;
   let pressTimer = 0;
-  let ghostEl = null;
-  let ghostOffset = { x: 0, y: 0 };
   let suppressClick = false;
-  let scrollFrame = 0;
 
-  function dragElements() {
-    const root = layerEl.value;
-    return root ? Array.from(root.querySelectorAll('[data-sej-drag-el]')) : [];
-  }
+  const {
+    settingsBody,
+    sourceElement,
+    categoryCards,
+    categoryIndexAt,
+    addItemIndexAt,
+    engineInsertIndex,
+    dragElements,
+  } = createDragGeometry(() => layerEl.value);
+  const animator = createDragAnimator({ dragElements });
+  const ghost = createDragGhost({ layerEl });
 
-  function snapshotRects() {
-    const rects = new Map();
-    for (const el of dragElements()) {
-      rects.set(el.dataset.sejDragEl, el.getBoundingClientRect());
-    }
-    return rects;
-  }
-
-  function cancelDragAnimations() {
-    for (const el of dragElements()) {
-      const animation = dragAnimations.get(el);
-      if (animation) {
-        animation.cancel();
-        dragAnimations.delete(el);
-      }
-    }
-  }
-
-  // FLIP：记录改动前后的位置，让被挤开的元素平滑移动到新位置
-  async function animateReorder(mutate) {
-    const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    const before = reduceMotion ? null : snapshotRects();
-    mutate();
-    if (reduceMotion) return;
-    await nextTick();
-    cancelDragAnimations();
-    const after = snapshotRects();
-
-    for (const el of dragElements()) {
-      const key = el.dataset.sejDragEl;
-      const prev = before.get(key);
-      const next = after.get(key);
-      if (!prev || !next) continue;
-
-      let dx = prev.left - next.left;
-      let dy = prev.top - next.top;
-      if (!dx && !dy) continue;
-
-      // 嵌套元素（分类内的搜索引擎）需减去父级位移，避免重复偏移
-      const parent = el.parentElement?.closest('[data-sej-drag-el]');
-      if (parent) {
-        const parentPrev = before.get(parent.dataset.sejDragEl);
-        const parentNext = after.get(parent.dataset.sejDragEl);
-        if (parentPrev && parentNext) {
-          dx -= parentPrev.left - parentNext.left;
-          dy -= parentPrev.top - parentNext.top;
-        }
-      }
-
-      const animation = el.animate(
-        [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'translate(0, 0)' }],
-        {
-          duration: DRAG_ANIMATION_MS,
-          easing: 'cubic-bezier(0.2, 0, 0, 1)',
-        },
-      );
-      dragAnimations.set(el, animation);
-      animation.addEventListener('finish', () => {
-        if (dragAnimations.get(el) === animation) {
-          dragAnimations.delete(el);
-        }
-      });
-    }
-  }
-
-  function captureOrder() {
-    return {
-      categories: draft.categories.map((category) => category._id),
-      engines: Object.fromEntries(
-        draft.categories.map((category) => [
-          category._id,
-          category.engines.map((engine) => engine._id),
-        ]),
-      ),
-    };
-  }
+  const autoScroll = createDragAutoScroll({
+    getBody: settingsBody,
+    getPoint: () => pressCtx,
+    isDragging: () => Boolean(dragCtx.value && pressCtx),
+    onScroll: (x, y) => updateDragTarget(x, y),
+  });
 
   function restoreOrder(snapshot) {
-    const categories = new Map(draft.categories.map((category) => [category._id, category]));
-    const engines = new Map();
-    for (const category of draft.categories) {
-      for (const engine of category.engines) engines.set(engine._id, engine);
-    }
-
-    animateReorder(() => {
-      for (const category of draft.categories) {
-        const ids = snapshot.engines[category._id] || [];
-        category.engines.splice(
-          0,
-          category.engines.length,
-          ...ids.map((id) => engines.get(id)).filter(Boolean),
-        );
-      }
-      const ordered = snapshot.categories.map((id) => categories.get(id)).filter(Boolean);
-      draft.categories.splice(0, draft.categories.length, ...ordered);
-    });
+    animator.animateReorder(() => applyOrder(draft.categories, snapshot));
     dragCtx.value = null;
-  }
-
-  function sourceElement(type, ci, ei) {
-    if (type === 'category') return categoryCards()[ci] || null;
-    const card = categoryCards()[ci];
-    if (!card) return null;
-    return card.querySelectorAll(':scope > .sejcon > .drag')[ei] || null;
   }
 
   // 拖动开始前先记录按下的位置，移动超过阈值才真正进入拖动，避免影响点击编辑
@@ -214,7 +130,7 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   }
 
   function resetStaleDrag() {
-    if (!pressCtx && !ghostEl) return;
+    if (!pressCtx && !ghost.hasGhost()) return;
     if (dragSnapshot) {
       restoreOrder(dragSnapshot);
       dragSnapshot = null;
@@ -249,26 +165,11 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     if (!item) return false;
 
     const rect = p.sourceEl.getBoundingClientRect();
-    ghostOffset = { x: p.x - rect.left, y: p.y - rect.top };
-
-    dragSnapshot = captureOrder();
+    dragSnapshot = captureOrder(draft.categories);
     dragDropped = false;
     copyTargetCi.value = null;
 
-    // 用整块元素做跟手副本：拖动类别时整个类别框跟随鼠标，且保持不透明
-    const ghost = p.sourceEl.cloneNode(true);
-    ghost.removeAttribute('id');
-    ghost.removeAttribute('data-sej-drag-el');
-    ghost.querySelectorAll('[data-sej-drag-el]').forEach((el) => {
-      el.removeAttribute('data-sej-drag-el');
-    });
-    ghost.classList.remove('sej-drag-placeholder');
-    ghost.classList.add('sej-drag-ghost', `sej-drag-ghost-${p.type}`);
-    ghost.style.width = `${rect.width}px`;
-    ghost.style.height = `${rect.height}px`;
-    // 挂在设置面板内，保证副本沿用面板与条目的样式
-    (layerEl.value || p.sourceEl.getRootNode()).appendChild(ghost);
-    ghostEl = ghost;
+    ghost.show(p.sourceEl, rect, p.x, p.y, p.type);
 
     dragCtx.value = {
       type: p.type,
@@ -277,7 +178,6 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
       key: p.type === 'category' ? category.key : item._id,
     };
     p.started = true;
-    positionGhost(p.x, p.y);
     // 触屏：轻微震动提示已进入拖动（不支持的浏览器会忽略）
     if (p.touch) {
       try {
@@ -286,13 +186,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
         // ignore
       }
     }
-    startAutoScroll();
+    autoScroll.start();
     return true;
-  }
-
-  function positionGhost(x, y) {
-    if (!ghostEl) return;
-    ghostEl.style.transform = `translate3d(${x - ghostOffset.x}px, ${y - ghostOffset.y}px, 0)`;
   }
 
   function onDragPointerMove(e) {
@@ -316,21 +211,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     }
 
     if (e.cancelable) e.preventDefault();
-    positionGhost(p.x, p.y);
+    ghost.position(p.x, p.y);
     updateDragTarget(p.x, p.y);
-  }
-
-  function addItemIndexAt(x, y) {
-    const cards = categoryCards();
-    for (let i = 0; i < cards.length; i++) {
-      const add = cards[i].querySelector(':scope > .sejcon > .iqxin-additem');
-      if (!add) continue;
-      const rect = layoutRect(add);
-      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        return i;
-      }
-    }
-    return -1;
   }
 
   function updateDragTarget(x, y) {
@@ -414,11 +296,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   }
 
   function cleanupDrag() {
-    stopAutoScroll();
-    if (ghostEl) {
-      ghostEl.remove();
-      ghostEl = null;
-    }
+    autoScroll.stop();
+    ghost.remove();
     if (pressCtx?.sourceEl) {
       pressCtx.sourceEl.classList.remove('sej-drag-placeholder');
     }
@@ -462,114 +341,17 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     return true;
   }
 
-  function startAutoScroll() {
-    if (scrollFrame) return;
-    const tick = () => {
-      scrollFrame = 0;
-      if (!dragCtx.value || !pressCtx) return;
-      const body = settingsBody();
-      if (body) {
-        const rect = body.getBoundingClientRect();
-        const { x, y } = pressCtx;
-        let dy = 0;
-        if (x >= rect.left && x <= rect.right) {
-          if (y < rect.top + DRAG_EDGE && y >= rect.top - DRAG_EDGE) {
-            dy = -Math.ceil(((rect.top + DRAG_EDGE - y) / DRAG_EDGE) * 14);
-          } else if (y > rect.bottom - DRAG_EDGE && y <= rect.bottom + DRAG_EDGE) {
-            dy = Math.ceil(((y - rect.bottom + DRAG_EDGE) / DRAG_EDGE) * 14);
-          }
-        }
-        if (dy) {
-          body.scrollTop += dy;
-          updateDragTarget(x, y);
-        }
-      }
-      if (dragCtx.value) scrollFrame = requestAnimationFrame(tick);
-    };
-    scrollFrame = requestAnimationFrame(tick);
-  }
-
-  function stopAutoScroll() {
-    if (scrollFrame) cancelAnimationFrame(scrollFrame);
-    scrollFrame = 0;
-  }
-
   function moveCategoryTo(index) {
     const ctx = dragCtx.value;
     if (!ctx || ctx.type !== 'category' || ctx.ci === index) return;
     const category = draft.categories[ctx.ci];
     if (!category) return;
 
-    animateReorder(() => {
+    animator.animateReorder(() => {
       draft.categories.splice(ctx.ci, 1);
       draft.categories.splice(index, 0, category);
       ctx.ci = index;
     });
-  }
-
-  function settingsBody() {
-    return layerEl.value?.querySelector('#sej-settings-body') || null;
-  }
-
-  function categoryCards() {
-    const body = settingsBody();
-    return body
-      ? Array.from(body.querySelectorAll('.iqxin-items[data-sej-drag-el^="category-"]'))
-      : [];
-  }
-
-  function layoutOffset(el) {
-    let x = 0;
-    let y = 0;
-    let node = el;
-    while (node) {
-      x += node.offsetLeft;
-      y += node.offsetTop;
-      node = node.offsetParent;
-    }
-    return { x, y };
-  }
-
-  // 用布局位置（不含 FLIP transform）计算矩形：
-  // 动画进行中命中测试会落在过渡中的位置，导致来回抖动
-  function layoutRect(el) {
-    const body = settingsBody();
-    if (!body || !body.contains(el)) return el.getBoundingClientRect();
-    const base = body.getBoundingClientRect();
-    const bodyPos = layoutOffset(body);
-    const elPos = layoutOffset(el);
-    const width = el.offsetWidth;
-    const height = el.offsetHeight;
-    const left = base.left + elPos.x - bodyPos.x - body.scrollLeft;
-    const top = base.top + elPos.y - bodyPos.y - body.scrollTop;
-    return {
-      left,
-      top,
-      width,
-      height,
-      right: left + width,
-      bottom: top + height,
-    };
-  }
-
-  function categoryIndexAt(x, y) {
-    const cards = categoryCards();
-    for (let i = 0; i < cards.length; i++) {
-      const rect = layoutRect(cards[i]);
-      if (x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom) {
-        return i;
-      }
-    }
-    return -1;
-  }
-
-  function engineInsertIndex(card, y) {
-    const items = Array.from(card.querySelectorAll(':scope > .sejcon > .drag'));
-    for (let i = 0; i < items.length; i++) {
-      const rect = layoutRect(items[i]);
-      if (y < rect.top + rect.height / 2) return i;
-    }
-    return items.length;
   }
 
   function moveEngineTo(ci, insertBefore) {
@@ -588,7 +370,7 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
       if (from < insert) insert -= 1;
     }
 
-    animateReorder(() => {
+    animator.animateReorder(() => {
       source.engines.splice(from, 1);
       target.engines.splice(insert, 0, engine);
       ctx.ci = ci;
@@ -599,11 +381,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   function dispose() {
     detachDragListeners();
     clearPressTimer();
-    stopAutoScroll();
-    if (ghostEl) {
-      ghostEl.remove();
-      ghostEl = null;
-    }
+    autoScroll.stop();
+    ghost.remove();
     dragCtx.value = null;
     copyTargetCi.value = null;
   }
