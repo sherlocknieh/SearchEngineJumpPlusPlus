@@ -30,35 +30,26 @@ export default [
       narrowMaxWidthInPixels: true,
       // 搜索框会伸出吸顶头部，改用搜索框实际底边避让
       getFixedHeaderBottom({ bottom, barLeft, barWidth, inputTarget }) {
-        const inputEl = typeof inputTarget === 'function' ? inputTarget() : inputTarget;
-        const searchBox = inputEl instanceof Element ? inputEl.closest('form') || inputEl : null;
+        const searchBox =
+          inputTarget instanceof Element ? inputTarget.closest('form') || inputTarget : null;
         if (!searchBox) return bottom;
 
-        let insideFixed = false;
-        for (
-          let node = searchBox;
-          node && node !== document.documentElement;
-          node = node.parentElement
-        ) {
-          const pos = getComputedStyle(node).position;
-          if (pos === 'fixed' || pos === 'sticky') {
-            insideFixed = true;
-            break;
-          }
+        let node = searchBox;
+        while (node && node !== document.documentElement) {
+          if (/^(fixed|sticky)$/.test(getComputedStyle(node).position)) break;
+          node = node.parentElement;
         }
+        if (!node || node === document.documentElement) return bottom;
 
         const rect = searchBox.getBoundingClientRect();
+        const halfViewport = window.innerHeight * 0.5;
         const overlaps = rect.right > barLeft && rect.left < barLeft + barWidth;
-        if (
-          insideFixed &&
-          overlaps &&
-          rect.top < window.innerHeight * 0.5 &&
+        return overlaps &&
+          rect.top < halfViewport &&
           rect.bottom > bottom &&
-          rect.bottom < window.innerHeight * 0.5
-        ) {
-          return rect.bottom;
-        }
-        return bottom;
+          rect.bottom < halfViewport
+          ? rect.bottom
+          : bottom;
       },
     },
   },

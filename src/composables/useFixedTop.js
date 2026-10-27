@@ -12,12 +12,13 @@ const VIEWPORT_GAP = 4;
 const NARROW_BAR_MAX = 640;
 const HEADER_CACHE_MS = 120;
 
-// 直接用 UA 识别移动设备：部分移动浏览器的 pointer/hover 媒体查询不可靠
+// 部分移动浏览器的 pointer/hover 媒体查询不可靠，直接用 UA 识别
 const MOBILE_UA_RE =
   /Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile|Mobile/i;
 
-function isMobileDevice() {
-  return MOBILE_UA_RE.test(navigator.userAgent || '');
+function clearTimers(timers) {
+  timers.forEach(clearTimeout);
+  timers.length = 0;
 }
 
 /**
@@ -26,20 +27,18 @@ function isMobileDevice() {
  */
 function getViewportMetrics() {
   const vw = document.documentElement.clientWidth;
-  const mobile = isMobileDevice();
+  const mobile = MOBILE_UA_RE.test(navigator.userAgent || '');
   const vv = mobile ? window.visualViewport : null;
   return {
     vw,
-    mobile,
     narrow: vw <= NARROW_BAR_MAX || mobile,
-    viewLeft: vv ? vv.offsetLeft : 0,
-    viewWidth: vv ? vv.width : vw,
+    viewLeft: vv?.offsetLeft ?? 0,
+    viewWidth: vv?.width ?? vw,
   };
 }
 
-// 居中位移只在窄屏/移动端生效，重新测量前要先撤销
+// 居中位移只在窄屏/移动端生效，重新测量前先撤销
 function clearCenterOffset(el) {
-  if (!el.dataset.sejCentered) return;
   el.style.removeProperty('translate');
   delete el.dataset.sejCentered;
 }
@@ -80,7 +79,7 @@ export function useFixedTop({
   getInputTarget,
 }) {
   let originalContainerDistanceTop = 0;
-  let headerBottomCache = { key: '', bottom: 0, at: 0 };
+  let headerBottomCache = null;
   let scrollRaf = 0;
   let fixedTopTimers = [];
   let constrainTimers = [];
@@ -98,26 +97,19 @@ export function useFixedTop({
     if (getHost().style.position === 'fixed') return;
 
     const { vw, narrow, viewLeft, viewWidth } = getViewportMetrics();
+    const { constrainToViewport, narrowFullWidth, narrowMaxWidthInPixels } = sitePatches;
     // 移动端/窄屏：抵消站点规则里的 left、grid-column 等横向偏移
     el.classList.toggle('sej-mobile-centered', narrow);
-    if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth && !narrow) return;
+    if (!narrow && !constrainToViewport && !narrowFullWidth) return;
 
-    el.style.maxWidth = '';
-    el.style.marginLeft = '';
-    el.style.removeProperty('width');
-    if (el.dataset.sejLeftConstrained) {
-      el.style.left = '';
-      delete el.dataset.sejLeftConstrained;
-    }
+    ['max-width', 'margin-left', 'width', 'left'].forEach((prop) => el.style.removeProperty(prop));
 
     const gap = VIEWPORT_GAP;
     const available = Math.max(120, viewWidth - gap * 2);
-    if (narrow && sitePatches.narrowFullWidth) {
+    if (narrow && narrowFullWidth) {
       el.style.setProperty('width', `${available}px`, 'important');
       // 部分站点（如 Google）按网格列计算百分比 max-width，改用像素上限
-      if (sitePatches.narrowMaxWidthInPixels) {
-        el.style.maxWidth = `${available}px`;
-      }
+      if (narrowMaxWidthInPixels) el.style.maxWidth = `${available}px`;
     }
     let rect = el.getBoundingClientRect();
 
@@ -132,16 +124,13 @@ export function useFixedTop({
       return;
     }
 
-    if (!sitePatches.constrainToViewport) return;
-    if (rect.left >= gap && rect.right <= vw - gap) return;
+    if (!constrainToViewport || (rect.left >= gap && rect.right <= vw - gap)) return;
 
     // 取消站点规则的水平偏移，按视口把跳转条移入可见区域
-    el.dataset.sejLeftConstrained = '1';
     el.style.left = 'auto';
     rect = el.getBoundingClientRect();
     const maxLeft = Math.max(gap, vw - gap - rect.width);
-    const desiredLeft = Math.min(Math.max(rect.left, gap), maxLeft);
-    el.style.marginLeft = `${Math.round(desiredLeft - rect.left)}px`;
+    el.style.marginLeft = `${Math.round(Math.min(Math.max(rect.left, gap), maxLeft) - rect.left)}px`;
   }
 
   // 查找视口顶部是否存在吸顶/固定头部，返回其底边高度
@@ -185,62 +174,50 @@ export function useFixedTop({
 
     // 站点可通过 patches.getFixedHeaderBottom 接管吸顶头部底部计算
     const getBottom = sitePatches.getFixedHeaderBottom;
-    if (typeof getBottom === 'function') {
-      return getBottom({ bottom, barLeft, barWidth, inputTarget: getInputTarget() });
-    }
-    return bottom;
+    return getBottom
+      ? getBottom({ bottom, barLeft, barWidth, inputTarget: getInputTarget() })
+      : bottom;
   }
 
   // 吸顶头部检测要遍历祖先的 getComputedStyle 并做多点命中测试，
   // 比普通布局读取贵得多；顶部结构在滚动过程中基本不变，按时间缓存结果。
-  function invalidateHeaderCache() {
-    headerBottomCache = { key: '', bottom: 0, at: 0 };
+  function getFixedHeaderBottomCached(barLeft, barWidth) {
+    const key = `${Math.round(barLeft)}:${Math.round(barWidth)}`;
+    const now = performance.now();
+    if (headerBottomCache?.key !== key || now - headerBottomCache.at >= HEADER_CACHE_MS) {
+      headerBottomCache = { key, bottom: getFixedHeaderBottom(barLeft, barWidth), at: now };
+    }
+    return headerBottomCache.bottom;
   }
 
-  function getFixedHeaderBottomCached(barLeft, barWidth) {
-    const now = performance.now();
-    const key = `${Math.round(barLeft)}:${Math.round(barWidth)}`;
-    const cache = headerBottomCache;
-    if (cache.key === key && now - cache.at < HEADER_CACHE_MS) {
-      return cache.bottom;
-    }
-    const bottom = getFixedHeaderBottom(barLeft, barWidth);
-    headerBottomCache = { key, bottom, at: now };
-    return bottom;
-  }
+  const refreshFixedTop = () => fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
 
   function scheduleFixedTopRefresh() {
-    fixedTopTimers.forEach(clearTimeout);
+    clearTimers(fixedTopTimers);
     fixedTopTimers = [80, 250, 600].map((delay) =>
       setTimeout(() => {
-        if (getHost().style.position === 'fixed') {
-          fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
-        }
+        if (getHost().style.position === 'fixed') refreshFixedTop();
       }, delay),
     );
   }
 
   function fixedToTop(fixedTopValue, color) {
-    if (!containerEl.value || inlineStyleBlocked) return;
-    const resolvedStyle = getResolvedStyle();
-    if (resolvedStyle.includes('sticky') || resolvedStyle.includes('fixed')) {
-      return;
-    }
-
-    const fixedTop = fixedTopValue ? fixedTopValue : 0;
-    const host = getHost();
     const container = containerEl.value;
+    if (!container || inlineStyleBlocked) return;
+    const resolvedStyle = getResolvedStyle();
+    if (resolvedStyle.includes('sticky') || resolvedStyle.includes('fixed')) return;
+
+    const host = getHost();
     const { vw, narrow: narrowViewport } = getViewportMetrics();
     const narrow = narrowViewport && Boolean(sitePatches.narrowFullWidth);
     const gap = VIEWPORT_GAP;
-
     const rect = container.getBoundingClientRect();
     // 窄屏固定后同样占满可用宽度，避免沿用站点偏移导致被裁切；
-    // 移动端/窄屏则把跳转条按视口居中
-    const centeredInViewport = narrowViewport && !narrow;
+    // 其余窄视口把跳转条按视口居中
+    const centered = narrowViewport && !narrow;
     const left = narrow
       ? gap
-      : centeredInViewport
+      : centered
         ? Math.max(0, Math.round((vw - rect.width) / 2))
         : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
     const width = narrow
@@ -249,86 +226,66 @@ export function useFixedTop({
     const headerBottom = getFixedHeaderBottomCached(left, width);
     const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
     // 跳转条滚到吸顶头部下沿时就固定，避免中途被头部遮挡
-    const threshold = Math.max(fixedTop, headerBottom > 0 ? baseTop : 0);
+    const threshold = Math.max(fixedTopValue || 0, headerBottom > 0 ? baseTop : 0);
 
-    if (originalContainerDistanceTop - window.scrollY <= threshold) {
-      // 固定后由宿主定位，撤销页面内的居中位移
-      clearCenterOffset(container);
-      if (host.style.position !== 'fixed') {
-        host.dataset.originalLeft = narrow ? gap : rect.left;
-        host.dataset.originalWidth = narrow ? width : rect.width;
-        // 站点头部可能在本条固定后才变为吸顶，稍后再校准一次位置
-        scheduleFixedTopRefresh();
-      }
-      // 另一个实例的固定跳转条也在视口顶部时，向下让位
-      const top = baseTop + getStackOffset();
-
-      host.style.display = 'block';
-      // 站点样式可能约束宿主宽度，固定后按固定前的实际宽度撑开，
-      // 避免 max-width: 100% 与宿主收缩宽度互相影响导致跳转条换行
-      host.style.width = width > 0 ? `${Math.ceil(width)}px` : 'max-content';
-      host.style.maxWidth = narrow ? `${Math.ceil(width)}px` : `calc(100vw - ${left + 12}px)`;
-      host.style.position = 'fixed';
-      host.style.top = `${Math.round(top)}px`;
-      host.style.left = `${left}px`;
-      host.style.zIndex = '100000';
-
-      container.style.position = 'static';
-      container.style.left = '0';
-      container.style.top = '0';
-      container.style.gridColumn = 'auto';
-      container.style.margin = '0';
-      if (narrow) {
-        container.style.setProperty('width', `${Math.ceil(width)}px`, 'important');
-      }
-      container.style.backgroundColor = color;
-      updateScrollHints();
-    } else {
+    if (originalContainerDistanceTop - window.scrollY > threshold) {
       // 已经处于非固定状态时不要再清理样式，否则会抹掉视口校正留下的偏移
       if (host.style.position !== 'fixed') return;
-
-      host.style.position = '';
-      host.style.top = '';
-      host.style.left = '';
-      host.style.zIndex = '';
-      host.style.display = '';
-      host.style.width = '';
-      host.style.maxWidth = '';
+      // 宿主与容器的内联样式只由本模块维护，取消固定时整体清空即可
+      host.removeAttribute('style');
+      container.removeAttribute('style');
       delete host.dataset.originalLeft;
       delete host.dataset.originalWidth;
-
-      container.style.position = '';
-      container.style.left = '';
-      container.style.top = '';
-      container.style.gridColumn = '';
-      container.style.margin = '';
-      container.style.backgroundColor = '';
       constrainBarToViewport();
+      return;
     }
+
+    // 固定后由宿主定位，撤销页面内的居中位移
+    clearCenterOffset(container);
+    if (host.style.position !== 'fixed') {
+      host.dataset.originalLeft = narrow ? gap : rect.left;
+      host.dataset.originalWidth = narrow ? width : rect.width;
+      // 站点头部可能在本条固定后才变为吸顶，稍后再校准一次位置
+      scheduleFixedTopRefresh();
+    }
+    host.style.display = 'block';
+    // 站点样式可能约束宿主宽度，固定后按固定前的实际宽度撑开，
+    // 避免 max-width: 100% 与宿主收缩宽度互相影响导致跳转条换行
+    host.style.width = width > 0 ? `${Math.ceil(width)}px` : 'max-content';
+    host.style.maxWidth = narrow ? `${Math.ceil(width)}px` : `calc(100vw - ${left + 12}px)`;
+    host.style.position = 'fixed';
+    // 另一个实例的固定跳转条也在视口顶部时，向下让位
+    host.style.top = `${Math.round(baseTop + getStackOffset())}px`;
+    host.style.left = `${left}px`;
+    host.style.zIndex = '100000';
+
+    container.style.position = 'static';
+    container.style.left = '0';
+    container.style.top = '0';
+    container.style.gridColumn = 'auto';
+    container.style.margin = '0';
+    if (narrow) container.style.setProperty('width', `${Math.ceil(width)}px`, 'important');
+    container.style.backgroundColor = color;
+    updateScrollHints();
   }
 
   function onScroll() {
     if (scrollRaf) return;
     scrollRaf = requestAnimationFrame(() => {
       scrollRaf = 0;
-      fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
+      refreshFixedTop();
     });
   }
 
   function onWheel(e) {
-    if (e.wheelDelta > 0) {
-      fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
-    }
+    if (e.wheelDelta > 0) refreshFixedTop();
   }
 
   function onViewportResize() {
     // 视口或布局变化后，缓存的吸顶头部高度可能失效
-    invalidateHeaderCache();
-    if (getHost().style.position === 'fixed') {
-      fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
-    } else {
-      constrainBarToViewport();
-    }
+    headerBottomCache = null;
+    if (getHost().style.position === 'fixed') refreshFixedTop();
+    else constrainBarToViewport();
     updateScrollHints();
   }
 
@@ -340,6 +297,7 @@ export function useFixedTop({
 
   /** 入场动画/布局稳定后再校准一次，避免首帧测量偏小 */
   function scheduleConstrainCheck(delays = [180, 400]) {
+    clearTimers(constrainTimers);
     constrainTimers = delays.map((delay) =>
       setTimeout(() => {
         constrainBarToViewport();
@@ -349,10 +307,8 @@ export function useFixedTop({
   }
 
   function dispose() {
-    fixedTopTimers.forEach(clearTimeout);
-    constrainTimers.forEach(clearTimeout);
-    fixedTopTimers = [];
-    constrainTimers = [];
+    clearTimers(fixedTopTimers);
+    clearTimers(constrainTimers);
     if (scrollRaf) cancelAnimationFrame(scrollRaf);
     scrollRaf = 0;
   }
