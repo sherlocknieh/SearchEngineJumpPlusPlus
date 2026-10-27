@@ -20,34 +20,36 @@ function isMobileDevice() {
   return MOBILE_UA_RE.test(navigator.userAgent || '');
 }
 
-// 用内联 !important 覆盖站点规则的横向偏移，避免媒体查询在部分移动端不生效
-const MOBILE_CENTER_PROPS = [
-  'left',
-  'right',
-  'margin-left',
-  'margin-right',
-  'grid-column',
-  'justify-self',
-];
-const MOBILE_CENTER_VALUES = {
-  left: 'auto',
-  right: 'auto',
-  'margin-left': 'auto',
-  'margin-right': 'auto',
-  'grid-column': '1 / -1',
-  'justify-self': 'center',
-};
+/**
+ * 当前视口的横向度量。
+ * 移动端优先用 visualViewport，兼顾横向平移/缩放后真正可见的区域。
+ */
+function getViewportMetrics() {
+  const vw = document.documentElement.clientWidth;
+  const mobile = isMobileDevice();
+  const vv = mobile ? window.visualViewport : null;
+  return {
+    vw,
+    mobile,
+    narrow: vw <= NARROW_BAR_MAX || mobile,
+    viewLeft: vv ? vv.offsetLeft : 0,
+    viewWidth: vv ? vv.width : vw,
+  };
+}
 
-function setMobileCenterStyles(el, on) {
-  if (!on) {
-    delete el.dataset.sejMobileCentered;
-    MOBILE_CENTER_PROPS.forEach((prop) => el.style.removeProperty(prop));
-    return;
-  }
-  el.dataset.sejMobileCentered = '1';
-  MOBILE_CENTER_PROPS.forEach((prop) =>
-    el.style.setProperty(prop, MOBILE_CENTER_VALUES[prop], 'important'),
-  );
+// 居中位移只在窄屏/移动端生效，重新测量前要先撤销
+function clearCenterOffset(el) {
+  if (!el.dataset.sejCentered) return;
+  el.style.removeProperty('translate');
+  delete el.dataset.sejCentered;
+}
+
+function centerInViewport(el, { viewLeft, viewWidth }) {
+  const rect = el.getBoundingClientRect();
+  const delta = Math.round(viewLeft + viewWidth / 2 - (rect.left + rect.width / 2));
+  if (Math.abs(delta) <= 1) return;
+  el.style.setProperty('translate', `${delta}px 0`, 'important');
+  el.dataset.sejCentered = '1';
 }
 
 /**
@@ -92,21 +94,13 @@ export function useFixedTop({
     const el = containerEl.value;
     if (!el || isSelectSearch.value) return;
 
-    // 每次重新测量前先撤销上一次的居中位移（固定态下也不应残留）
-    if (el.dataset.sejCentered) {
-      el.style.removeProperty('translate');
-      delete el.dataset.sejCentered;
-    }
+    clearCenterOffset(el);
     if (getHost().style.position === 'fixed') return;
 
-    const vw = document.documentElement.clientWidth;
-    // 移动端按 UA 识别（宽视口也生效）；窄视口同时作为桌面小窗的兜底
-    const mobile = isMobileDevice();
-    const narrow = vw <= NARROW_BAR_MAX || mobile;
-    if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth && !narrow) {
-      setMobileCenterStyles(el, false);
-      return;
-    }
+    const { vw, narrow, viewLeft, viewWidth } = getViewportMetrics();
+    // 移动端/窄屏：抵消站点规则里的 left、grid-column 等横向偏移
+    el.classList.toggle('sej-mobile-centered', narrow);
+    if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth && !narrow) return;
 
     el.style.maxWidth = '';
     el.style.marginLeft = '';
@@ -115,14 +109,8 @@ export function useFixedTop({
       el.style.left = '';
       delete el.dataset.sejLeftConstrained;
     }
-    // 先落定移动端横向覆盖，下面量到的位置才是最终布局下的
-    setMobileCenterStyles(el, narrow);
 
     const gap = VIEWPORT_GAP;
-    // 移动端优先按可视视口计算，兼顾横向平移/缩放后真正可见的区域
-    const vv = mobile ? window.visualViewport : null;
-    const viewLeft = vv ? vv.offsetLeft : 0;
-    const viewWidth = vv ? vv.width : vw;
     const available = Math.max(120, viewWidth - gap * 2);
     if (narrow && sitePatches.narrowFullWidth) {
       el.style.setProperty('width', `${available}px`, 'important');
@@ -139,13 +127,8 @@ export function useFixedTop({
     }
 
     if (narrow) {
-      // 站点内容容器可能比视口更宽，用位移把跳转条对齐到视口中心。
-      // 用 translate 而不是改外边距，避免与页面自身的布局/居中互相影响。
-      const delta = Math.round(viewLeft + viewWidth / 2 - (rect.left + rect.width / 2));
-      if (Math.abs(delta) > 1) {
-        el.style.setProperty('translate', `${delta}px 0`, 'important');
-        el.dataset.sejCentered = '1';
-      }
+      // 布局可能比视口更宽，用位移把跳转条对齐到真正可见的中心
+      centerInViewport(el, { viewLeft, viewWidth });
       return;
     }
 
@@ -247,24 +230,17 @@ export function useFixedTop({
     const fixedTop = fixedTopValue ? fixedTopValue : 0;
     const host = getHost();
     const container = containerEl.value;
-    const vw = document.documentElement.clientWidth;
-    const mobile = isMobileDevice();
-    const narrow = (vw <= NARROW_BAR_MAX || mobile) && Boolean(sitePatches.narrowFullWidth);
+    const { vw, narrow: narrowViewport } = getViewportMetrics();
+    const narrow = narrowViewport && Boolean(sitePatches.narrowFullWidth);
     const gap = VIEWPORT_GAP;
-
-    // 先撤销窄屏居中位移，否则量到的是位移后的位置，固定时会重复偏移
-    if (container.dataset.sejCentered) {
-      container.style.removeProperty('translate');
-      delete container.dataset.sejCentered;
-    }
 
     const rect = container.getBoundingClientRect();
     // 窄屏固定后同样占满可用宽度，避免沿用站点偏移导致被裁切；
-    // 其余移动端设备把跳转条按视口居中
-    const centeredOnMobile = mobile && !narrow;
+    // 移动端/窄屏则把跳转条按视口居中
+    const centeredInViewport = narrowViewport && !narrow;
     const left = narrow
       ? gap
-      : centeredOnMobile
+      : centeredInViewport
         ? Math.max(0, Math.round((vw - rect.width) / 2))
         : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
     const width = narrow
@@ -276,6 +252,8 @@ export function useFixedTop({
     const threshold = Math.max(fixedTop, headerBottom > 0 ? baseTop : 0);
 
     if (originalContainerDistanceTop - window.scrollY <= threshold) {
+      // 固定后由宿主定位，撤销页面内的居中位移
+      clearCenterOffset(container);
       if (host.style.position !== 'fixed') {
         host.dataset.originalLeft = narrow ? gap : rect.left;
         host.dataset.originalWidth = narrow ? width : rect.width;

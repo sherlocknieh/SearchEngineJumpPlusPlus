@@ -384,6 +384,19 @@ onBeforeUnmount(() => {
   user-select: none;
 }
 
+/*
+ * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，
+ * 再由 JS 的 translate 把跳转条对齐到可视视口中心。
+ */
+#sej-container.sej-mobile-centered {
+  left: auto !important;
+  right: auto !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  grid-column: 1 / -1 !important;
+  justify-self: center !important;
+}
+
 /* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */
 #sej-container > .sej-scroll-viewport {
   position: relative;

@@ -83,21 +83,3 @@
 #sej-drop-lists {
   display: contents;
 }
-
-/*
- * 窄视口下跳转条始终在可用宽度内水平居中：
- * 覆盖各站点规则里的 left / grid-column / 水平外边距，
- * 不再依赖“强制居中”开关，也不局限于个别站点。
- * 移动端（含宽视口）由 JS 按 UA 识别后以同样的内联样式覆盖。
- * 划词条自己用 fixed + auto 外边距居中，排除在外。
- */
-@media (max-width: 640px) {
-  #sej-container:not(.selectSearch) {
-    left: auto !important;
-    right: auto !important;
-    margin-left: auto !important;
-    margin-right: auto !important;
-    grid-column: 1 / -1 !important;
-    justify-self: center !important;
-  }
-}

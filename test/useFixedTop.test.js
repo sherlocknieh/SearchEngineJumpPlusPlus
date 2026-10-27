@@ -60,15 +60,12 @@ describe('useFixedTop constrainBarToViewport', () => {
     expect(el.dataset.sejCentered).toBe('1');
   });
 
-  it('窄屏下用内联 !important 覆盖站点横向偏移', () => {
+  it('窄屏下标记为移动端居中', () => {
     const { api, el } = setup({ vw: 500, left: 600, width: 100 });
 
     api.constrainBarToViewport();
 
-    expect(el.style.getPropertyValue('left')).toBe('auto');
-    expect(el.style.getPropertyPriority('left')).toBe('important');
-    expect(el.style.getPropertyValue('margin-left')).toBe('auto');
-    expect(el.style.getPropertyPriority('margin-left')).toBe('important');
+    expect(el.classList.contains('sej-mobile-centered')).toBe(true);
   });
 
   it('视口变宽后撤销居中位移', () => {
@@ -80,8 +77,7 @@ describe('useFixedTop constrainBarToViewport', () => {
 
     expect(el.style.getPropertyValue('translate')).toBe('');
     expect(el.dataset.sejCentered).toBeUndefined();
-    expect(el.style.getPropertyValue('left')).toBe('');
-    expect(el.dataset.sejMobileCentered).toBeUndefined();
+    expect(el.classList.contains('sej-mobile-centered')).toBe(false);
   });
 
   it('桌面端未声明补丁的站点保持原布局', () => {
