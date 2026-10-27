@@ -2,12 +2,14 @@
 // 模块级共享，确保所有类别实例共用同一固定/展开状态
 let pinnedCategory = null;
 let openCategory = null;
+// 每个分类的下拉面板都需要一个在本 Shadow Root 内唯一的锚点名称
+let anchorSeq = 0;
 </script>
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
-import { getDropRoot } from '../core/shadowDom.js';
+import { getDropRoot, getHost } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
 import { subscribePointer } from '../composables/sharedPointer.js';
 import EngineItem from './EngineItem.vue';
@@ -25,14 +27,26 @@ const firstIconSrc = computed(() =>
   props.showIcon && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
 );
 
+// 支持 CSS Anchor Positioning 时，面板位置完全交给浏览器；
+// 否则回退到下面的 JS 坐标计算。
+const supportsAnchorPositioning = Boolean(
+  typeof CSS !== 'undefined' &&
+  CSS.supports?.('position-anchor: --sej-anchor') &&
+  CSS.supports?.('top: anchor(bottom)'),
+);
+anchorSeq += 1;
+const anchorId = `--sej-anchor-${anchorSeq}`;
+
 const dropRoot = getDropRoot();
 const triggerEl = ref(null);
 const listEl = ref(null);
 const shown = ref(false);
 const active = ref(false);
 const pinned = ref(false);
-const top = ref('-10000px');
-const left = ref('0px');
+const top = ref(supportsAnchorPositioning ? '' : '-10000px');
+const left = ref(supportsAnchorPositioning ? '' : '0px');
+const listPosition = ref('fixed');
+const halfWidth = ref('64px');
 
 const pointer = { x: -1, y: -1 };
 // 点击收起（再次点击固定项、点开引擎）后指针通常仍停在触发项上，
@@ -92,21 +106,64 @@ function isPointerOverTrigger(path) {
   return path.includes(trigger);
 }
 
+// 正常文档流里让面板相对 Shadow 宿主做 absolute 定位，页面滚动时由浏览器
+// 天然跟随跳转条；划词条或站点规则使容器 fixed/sticky 时才退回视口定位。
+function getPositioningMode() {
+  const trigger = triggerEl.value;
+  if (!trigger) return 'fixed';
+  const container = trigger.closest('#sej-container');
+  const containerPosition = container ? getComputedStyle(container).position : '';
+  if (containerPosition === 'fixed' || containerPosition === 'sticky') return 'fixed';
+  // 宿主没有定位上下文时 absolute 会相对更外层的祖先定位，位置会错
+  if (getComputedStyle(getHost()).position === 'static') return 'fixed';
+  return 'absolute';
+}
+
 function measureAndPosition() {
-  if (!triggerEl.value || !listEl.value) return;
-  const rect = triggerEl.value.getBoundingClientRect();
-  const listRect = listEl.value.getBoundingClientRect();
+  const trigger = triggerEl.value;
+  const list = listEl.value;
+  if (!trigger || !list) return;
+
+  if (supportsAnchorPositioning) {
+    // 位置由 CSS anchor()/position-try 计算，这里只同步用于视口钳制的半宽
+    listPosition.value = 'fixed';
+    top.value = '';
+    left.value = '';
+    halfWidth.value = `${list.getBoundingClientRect().width / 2}px`;
+    return;
+  }
+
+  const mode = getPositioningMode();
+  listPosition.value = mode;
+  // 先同步切换定位方式，下面量到的宽高才是最终布局下的
+  if (list.style.position !== mode) list.style.position = mode;
+
+  const rect = trigger.getBoundingClientRect();
+  const listRect = list.getBoundingClientRect();
   const listWidth = listRect.width;
   const listHeight = listRect.height;
-  // 面板紧贴分类标题，避免多行布局下鼠标下移时从缝隙掠过其他分类
+
+  // absolute 以宿主 padding box 为原点，fixed 以视口为原点
+  let originLeft = 0;
+  let originTop = 0;
+  if (mode === 'absolute') {
+    const host = getHost();
+    const hostRect = host.getBoundingClientRect();
+    originLeft = hostRect.left + host.clientLeft;
+    originTop = hostRect.top + host.clientTop;
+  }
+
   const GAP = 2;
+  let posLeft = rect.left - originLeft - (listWidth - rect.width) / 2;
+  // 8px 视口留白换算到当前定位坐标系
+  posLeft = Math.max(
+    8 - originLeft,
+    Math.min(posLeft, window.innerWidth - listWidth - 8 - originLeft),
+  );
 
-  let posLeft = rect.left - (listWidth - rect.width) / 2;
-  posLeft = Math.max(8, Math.min(posLeft, window.innerWidth - listWidth - 8));
-
-  let posTop = rect.bottom + GAP;
-  if (posTop + listHeight > window.innerHeight - 8 && rect.top - listHeight - GAP > 8) {
-    posTop = rect.top - listHeight - GAP;
+  let posTop = rect.bottom - originTop + GAP;
+  if (rect.bottom + GAP + listHeight > window.innerHeight - 8 && rect.top - listHeight - GAP > 8) {
+    posTop = rect.top - listHeight - GAP - originTop;
   }
 
   top.value = posTop + 'px';
@@ -118,6 +175,34 @@ let scrollEl = null;
 
 function onScrollArea() {
   if (shown.value) measureAndPosition();
+}
+
+// absolute 模式下由宿主天然跟随页面滚动；fixed 模式（划词条/吸顶容器）
+// 仍需在滚动时重新贴合触发项。
+let pageListenersOn = false;
+
+function onPageViewportChange(event) {
+  if (!shown.value) return;
+  if (supportsAnchorPositioning) {
+    // 位置由浏览器跟随，只有视口变化可能改变面板宽度时才重新量一次
+    if (event.type === 'resize') measureAndPosition();
+    return;
+  }
+  if (event.type === 'scroll' && listPosition.value === 'absolute') return;
+  measureAndPosition();
+}
+
+// 只在面板展开期间监听页面滚动，避免每个分类都常驻全局监听
+function setPageListeners(on) {
+  if (on === pageListenersOn) return;
+  pageListenersOn = on;
+  if (on) {
+    window.addEventListener('scroll', onPageViewportChange, { passive: true });
+    window.addEventListener('resize', onPageViewportChange, { passive: true });
+    return;
+  }
+  window.removeEventListener('scroll', onPageViewportChange);
+  window.removeEventListener('resize', onPageViewportChange);
 }
 
 function isDragScrolling() {
@@ -135,6 +220,7 @@ async function show() {
   if (openCategory && openCategory !== hide) openCategory();
   openCategory = hide;
   shown.value = true;
+  setPageListeners(true);
   await nextTick();
   if (!shown.value) return;
   measureAndPosition();
@@ -150,6 +236,7 @@ function hide() {
   if (openCategory === hide) openCategory = null;
   active.value = false;
   shown.value = false;
+  setPageListeners(false);
 }
 
 // 点击类别固定下拉面板，再次点击收起；固定后不再响应指针离开
@@ -252,6 +339,7 @@ onBeforeUnmount(() => {
   unsubscribePointer = null;
   scrollEl?.removeEventListener('scroll', onScrollArea);
   scrollEl = null;
+  setPageListeners(false);
   if (pinnedCategory === unpin) pinnedCategory = null;
 });
 </script>
@@ -262,6 +350,7 @@ onBeforeUnmount(() => {
       ref="triggerEl"
       class="sej-engine sej-drop-list-trigger"
       :class="{ 'sej-drop-list-trigger-shown': active }"
+      :style="{ anchorName: anchorId }"
       aria-haspopup="true"
       :aria-expanded="shown"
       @click.prevent.stop="onTriggerClick"
@@ -293,8 +382,12 @@ onBeforeUnmount(() => {
       <div
         ref="listEl"
         class="sej-drop-list"
+        :class="{ 'sej-drop-list-anchored': supportsAnchorPositioning }"
         :style="{
           display: shown ? 'block' : 'none',
+          position: listPosition,
+          positionAnchor: supportsAnchorPositioning ? anchorId : undefined,
+          '--sej-half-width': halfWidth,
           top,
           left,
           opacity: active ? 1 : 0.2,
@@ -383,7 +476,7 @@ onBeforeUnmount(() => {
 }
 
 .sej-drop-list {
-  /* 使用 fixed 定位确保在 Shadow DOM 中位置正确 */
+  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */
   position: fixed;
   display: none;
   opacity: 0.2;
@@ -409,6 +502,30 @@ onBeforeUnmount(() => {
   border-radius: var(--sej-radius-menu, 12px);
   border: 1px solid var(--border-color-sej);
   user-select: none;
+}
+
+/*
+ * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：
+ * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。
+ */
+.sej-drop-list.sej-drop-list-anchored {
+  top: anchor(bottom);
+  left: clamp(
+    calc(8px + var(--sej-half-width, 64px)),
+    anchor(center),
+    calc(100vw - 8px - var(--sej-half-width, 64px))
+  );
+  translate: -50% 0;
+  margin-top: 2px;
+  position-try-fallbacks: --sej-drop-above;
+}
+
+@position-try --sej-drop-above {
+  /* 下方空间不足时翻到触发项上方 */
+  top: auto;
+  bottom: anchor(top);
+  margin-top: 0;
+  margin-bottom: 2px;
 }
 
 @keyframes sej-drop-menu-in {

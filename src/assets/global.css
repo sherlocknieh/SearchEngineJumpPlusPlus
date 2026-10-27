@@ -9,6 +9,8 @@
 
 /* 夜间模式 - 默认主题变量 */
 :host {
+  /* 作为分类下拉面板的定位上下文，使面板能用 absolute 天然跟随跳转条 */
+  position: relative;
   --font-color-qxin: #333;
   --background-color-qxin: #fffffff0;
   --background-hover-color-qxin: #eaeaea;
@@ -80,4 +82,22 @@
 /* 分类下拉菜单挂载容器本身不参与布局 */
 #sej-drop-lists {
   display: contents;
+}
+
+/*
+ * 移动端下跳转条始终在可用宽度内水平居中：
+ * 覆盖各站点规则里的 left / grid-column / 水平外边距，
+ * 不再依赖“强制居中”开关，也不局限于个别站点。
+ * 除了窄视口，也用 pointer: coarse 识别横屏手机/平板等宽视口设备。
+ * 划词条自己用 fixed + auto 外边距居中，排除在外。
+ */
+@media (max-width: 640px), (pointer: coarse) {
+  #sej-container:not(.selectSearch) {
+    left: auto !important;
+    right: auto !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    grid-column: 1 / -1 !important;
+    justify-self: center !important;
+  }
 }
