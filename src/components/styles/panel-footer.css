@@ -1,0 +1,224 @@
+#btnEle {
+  position: relative;
+  width: 100%;
+  margin-top: 10px;
+  background: transparent;
+  border-radius: 0;
+  flex: 0 0 auto;
+}
+
+#btnEle span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 30px;
+  background: var(--sej-surface-2);
+  border: 1px solid transparent;
+  margin: 0;
+  color: var(--font-color-qxin);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out,
+    color 0.12s ease-out,
+    opacity 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+
+#btnEle label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+}
+
+#btnEle .sej-language-select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 6px;
+  background: var(--sej-input-bg);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 2px 4px;
+  margin-left: 2px;
+  cursor: pointer;
+  outline: none;
+}
+
+#btnEle .sej-language-select:focus-visible {
+  border-color: var(--sej-accent);
+  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+}
+
+#btnEle span:hover {
+  background: var(--sej-surface-hover);
+  color: var(--font-color-qxin);
+}
+
+#btnEle a {
+  color: var(--font-color-qxin);
+  opacity: 0.7;
+  text-decoration: none;
+  font-family: inherit;
+  transition:
+    opacity 0.12s ease-out,
+    color 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+
+#btnEle a:hover {
+  opacity: 1;
+  color: var(--sej-accent);
+}
+
+#btnEle span:active,
+#btnEle a:active {
+  transform: scale(0.96);
+  opacity: 0.8;
+}
+
+#btnEle .feedback {
+  background: transparent;
+  border-color: transparent;
+  padding: 4px 6px;
+}
+
+#btnEle .feedback:hover {
+  background: transparent;
+  border-color: transparent;
+  color: var(--sej-accent);
+}
+
+#btnEle > div {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+}
+
+#btnEle > div.btnEleLayer {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-items: stretch;
+  background: transparent;
+  border-radius: 0;
+  border-top: 1px solid var(--border-color-sej);
+  padding-top: 12px;
+  gap: 8px;
+}
+
+.sej-footer-options,
+.sej-footer-bar,
+.sej-footer-selects,
+.sej-footer-links,
+.sej-footer-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.sej-footer-options {
+  gap: 8px;
+}
+
+.sej-footer-bar {
+  gap: 8px 12px;
+}
+
+.sej-footer-selects {
+  gap: 8px;
+}
+
+/* 配置文件：齿轮入口与导入/导出合并为同一个容器 */
+#btnEle .sej-config-box {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  background: var(--sej-surface-2);
+  border: 1px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+#btnEle .sej-config-box button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  margin: 0;
+  padding: 4px 9px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.12s ease-out,
+    color 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+
+#btnEle .sej-config-box .sej-config-open {
+  padding-left: 10px;
+}
+
+#btnEle .sej-config-box button:hover {
+  background: var(--sej-surface-hover);
+  color: var(--font-color-qxin);
+}
+
+#btnEle .sej-config-box button:active {
+  transform: scale(0.96);
+}
+
+#btnEle .sej-config-box button:focus-visible {
+  outline: 2px solid var(--sej-accent);
+  outline-offset: -2px;
+}
+
+#btnEle .sej-config-box svg {
+  flex: 0 0 auto;
+}
+
+#btnEle span.sej-config-sep {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 16px;
+  min-height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--border-color-sej);
+  pointer-events: none;
+}
+
+.sej-footer-links {
+  gap: 0;
+  margin-left: auto;
+}
+
+.sej-footer-actions {
+  margin-left: 4px;
+}

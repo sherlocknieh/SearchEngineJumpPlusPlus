@@ -1,0 +1,293 @@
+#btnEle #xin-save {
+  position: relative;
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  font-weight: 600;
+}
+
+#btnEle #xin-save:hover {
+  background: var(--sej-accent);
+  color: var(--sej-accent-contrast);
+  opacity: 0.85;
+}
+
+#btnEle #xin-save.sej-saving {
+  cursor: progress;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 自动保存成功反馈：关闭按钮外扩绿色波纹，「已保存」文字上滑淡入 */
+#btnEle #xin-save.sej-save-flash {
+  animation: sej-save-glow 0.9s ease-out;
+}
+
+#btnEle #xin-save.sej-save-flash::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 2px solid var(--sej-success, #188038);
+  pointer-events: none;
+  animation: sej-save-ripple 0.9s ease-out forwards;
+}
+
+.sej-save-text {
+  font-style: normal;
+}
+
+.sej-save-text.sej-save-text-flash {
+  animation: sej-save-text-in 0.9s ease-out;
+}
+
+@keyframes sej-save-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  35% {
+    box-shadow: 0 0 0 4px var(--sej-success-weak, rgba(24, 128, 56, 0.14));
+  }
+  70% {
+    box-shadow: 0 0 0 2px var(--sej-success-weak, rgba(24, 128, 56, 0.14));
+  }
+}
+
+@keyframes sej-save-ripple {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.18, 1.5);
+  }
+}
+
+@keyframes sej-save-text-in {
+  0% {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#settingLayerMask input[type='checkbox'],
+#settingLayerMask input[type='radio'] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  box-sizing: border-box;
+  vertical-align: -3px;
+  margin: 0 !important;
+  padding: 0;
+  position: relative;
+  border: 1.5px solid var(--sej-checkbox-border);
+  border-radius: 5px;
+  background: var(--sej-input-bg);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out;
+}
+
+#settingLayerMask input[type='checkbox']:before,
+#settingLayerMask input[type='radio']:before {
+  content: none;
+}
+
+#settingLayerMask input[type='checkbox']:checked,
+#settingLayerMask input[type='radio']:checked {
+  background: var(--sej-accent);
+  border-color: var(--sej-accent);
+}
+
+#settingLayerMask input[type='checkbox']:checked:after,
+#settingLayerMask input[type='radio']:checked:after {
+  content: '';
+  position: absolute;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
+  border: solid var(--sej-accent-contrast);
+  border-width: 0 2px 2px 0;
+  background: none;
+  transform: rotate(45deg);
+}
+
+.iqxin-set-toggle {
+  opacity: 0.6;
+  position: absolute;
+  background: transparent;
+  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */
+  top: 0;
+  bottom: 0;
+  height: fit-content;
+  margin-top: auto;
+  margin-bottom: auto;
+  padding: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    opacity 0.12s ease-out,
+    background-color 0.12s ease-out,
+    color 0.12s ease-out;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--font-color-qxin);
+}
+
+.iqxin-set-toggle svg {
+  display: block;
+}
+
+.iqxin-set-toggle.iqxin-set-hidden {
+  opacity: 0.35;
+}
+
+.iqxin-set-toggle:hover {
+  opacity: 1;
+  background: var(--sej-surface-hover);
+}
+
+/* 悬浮操作：右侧依次为编辑、删除、显隐按钮 */
+.sej-hover-edit,
+.sej-hover-delete {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  color: var(--font-color-qxin);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.12s ease-out,
+    background-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+.sej-hover-edit {
+  top: 0;
+  bottom: 0;
+  right: 54px;
+  height: fit-content;
+  margin: auto 0;
+  padding: 3px;
+  border-radius: 6px;
+}
+
+.sej-hover-delete {
+  top: 0;
+  bottom: 0;
+  right: 30px;
+  height: fit-content;
+  margin: auto 0;
+  padding: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.sej-hover-edit svg,
+.sej-hover-delete svg {
+  display: block;
+}
+
+.sejtitle:hover .sej-hover-edit,
+#settingLayer .sejcon > .drag:hover > .sej-hover-edit {
+  opacity: 0.6;
+}
+
+.sejtitle:hover .sej-hover-delete,
+#settingLayer .sejcon > .drag:hover > .sej-hover-delete {
+  opacity: 0.6;
+  pointer-events: auto;
+}
+
+.sejtitle:hover .sej-hover-edit:hover,
+#settingLayer .sejcon > .drag:hover > .sej-hover-edit:hover {
+  opacity: 1;
+  background: var(--sej-surface-hover);
+}
+
+.sej-hover-delete:hover {
+  opacity: 1;
+  background: var(--sej-danger-weak, rgba(220, 53, 69, 0.12));
+  color: var(--sej-danger, #dc3545);
+}
+
+span.iqxin-additem {
+  display: inline-block;
+  position: relative;
+  text-align: center;
+  width: 100%;
+  box-sizing: border-box;
+  margin: auto 0 2px;
+  padding: 5px 0;
+  border: 1px dashed currentColor;
+  border-radius: 8px;
+  color: var(--font-color-qxin);
+  opacity: 0.55;
+  cursor: pointer;
+  visibility: visible;
+  transition:
+    opacity 0.12s ease-out,
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+span.iqxin-additem:hover {
+  opacity: 1;
+  border-color: var(--sej-accent);
+  color: var(--sej-accent);
+}
+
+span.iqxin-additem.sej-copy-target {
+  opacity: 1;
+  border-style: solid;
+  border-color: var(--sej-accent);
+  background: var(--sej-accent-weak);
+  color: var(--sej-accent);
+}
+
+.sej-copy-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  line-height: 1;
+}
+
+.sej-copy-icon svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.sej-copy-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 6px);
+  transform: translateX(-50%);
+  z-index: 5;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(20, 22, 26, 0.82);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+@keyframes sej-setting-mask-in {
+  from {
+    opacity: 0;
+  }
+}

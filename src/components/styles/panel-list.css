@@ -1,0 +1,149 @@
+/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */
+#settingLayer .sej-drag-placeholder,
+#settingLayer .sej-drag-placeholder * {
+  visibility: hidden !important;
+}
+
+#settingLayer .sejtitle:active,
+#settingLayer .sejcon > .drag:active {
+  cursor: grabbing;
+}
+
+.sej-drag-ghost {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  margin: 0 !important;
+  z-index: 200000200;
+  opacity: 1 !important;
+  pointer-events: none;
+  box-sizing: border-box;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.sej-drag-ghost * {
+  pointer-events: none !important;
+}
+
+.sej-drag-ghost-engine {
+  border-radius: 8px;
+  background: var(--background-setting-qxin);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+.sej-drag-ghost-category {
+  border: 1px solid var(--border-color-sej);
+  border-radius: 12px;
+  background: var(--background-setting-qxin);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+}
+
+#settingLayer .sej-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 82px 0 8px;
+  width: 100%;
+  height: 30px;
+  box-sizing: border-box;
+  border-radius: 8px;
+  font-family: var(--sej-font-family);
+  font-size: 13px;
+  color: var(--font-color-qxin);
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background-color 0.08s ease-out,
+    opacity 0.08s ease-out;
+  cursor: pointer;
+}
+
+#settingLayer .sej-engine > span {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sejtitle {
+  text-align: left;
+  /* 左侧与引擎条目对齐，右侧避开编辑/删除/显隐按钮 */
+  padding: 5px 82px 5px 8px;
+  margin-bottom: 2px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  position: relative;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.5;
+  border-radius: 8px;
+}
+
+/* 标题下方的细分隔线，用于和引擎条目区分 */
+.sejtitle::after {
+  content: '';
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 0;
+  height: 1px;
+  background: var(--border-color-sej);
+  pointer-events: none;
+}
+
+#settingLayerMask [data-xin] {
+  margin: 1px 0;
+  border-radius: 8px;
+}
+
+.sejcon [data-xin] {
+  cursor: pointer;
+}
+
+/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */
+#settingLayerMask [data-iqxindisabled='true'],
+[data-xin^='-'] {
+  background-color: transparent;
+  color: var(--font-color-qxin);
+  transition: background-color 0.12s ease-out;
+}
+
+#settingLayerMask [data-iqxindisabled='true'] > span,
+#settingLayerMask [data-iqxindisabled='true'] .sej-engine-icon,
+[data-xin^='-'] > .iqxin-pointer-events {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */
+.sej-category-hidden .sej-engine > span,
+.sej-category-hidden .sej-engine .sej-engine-icon,
+.sej-category-hidden .iqxin-additem {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+#settingLayerMask .sej-engine:hover {
+  background-color: var(--sej-surface-hover);
+}
+
+#settingLayerMask [data-iqxindisabled='true']:hover,
+[data-xin^='-']:hover {
+  background-color: transparent;
+}
+
+.sej-category-hidden .sej-engine:hover {
+  background-color: transparent;
+}
+
+#settingLayerMask label {
+  cursor: pointer;
+}
+
+#settingLayerMask .sej-engine-icon {
+  vertical-align: middle;
+}

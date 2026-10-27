@@ -654,7 +654,6 @@ span#setBtn:active {
   -webkit-user-select: none;
   user-select: none;
 }
-
 /* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */
 #settingLayer .sej-drag-placeholder,
 #settingLayer .sej-drag-placeholder * {
@@ -804,7 +803,6 @@ span#setBtn:active {
 #settingLayerMask .sej-engine-icon {
   vertical-align: middle;
 }
-
 #btnEle {
   position: relative;
   width: 100%;
@@ -1029,7 +1027,6 @@ span#setBtn:active {
 .sej-footer-actions {
   margin-left: 4px;
 }
-
 #btnEle #xin-save {
   position: relative;
   background: var(--sej-accent);
@@ -1323,7 +1320,6 @@ span.iqxin-additem.sej-copy-target {
     opacity: 0;
   }
 }
-
 /* ---------- Vue 重构版设置面板布局优化 ---------- */
 #sej-settings-body {
   display: flex;

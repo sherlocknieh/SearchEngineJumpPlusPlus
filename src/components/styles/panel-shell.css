@@ -1,0 +1,193 @@
+#settingLayerMask {
+  display: none;
+  justify-content: center;
+  align-items: center;
+  position: fixed;
+  inset: 0;
+  background-color: rgba(16, 18, 22, 0.42);
+  backdrop-filter: blur(12px);
+  z-index: 200000000;
+  overflow: auto;
+  font-family: var(--sej-font-family);
+  min-height: 100%;
+  font-size: 14px;
+  transition: opacity 0.15s ease-out;
+  opacity: 0;
+  animation: sej-setting-mask-in 0.15s ease;
+  user-select: none;
+  -moz-user-select: none;
+  touch-action: manipulation;
+  padding: 20px;
+  box-sizing: border-box;
+  color: var(--font-color-qxin);
+}
+
+#settingLayer {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  --sej-panel-pad-x: 20px;
+  --sej-panel-pad-top: 16px;
+  padding: var(--sej-panel-pad-top) var(--sej-panel-pad-x) 16px;
+  background-color: var(--background-setting-qxin);
+  border: 1px solid var(--border-color-sej);
+  border-radius: 16px;
+  box-shadow: var(--sej-panel-shadow);
+  position: absolute;
+  width: auto;
+  min-width: min(720px, calc(100vw - 32px));
+  max-width: min(960px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  margin: 0;
+  overflow: visible;
+  animation: sej-panel-in 0.16s ease-out;
+}
+
+@keyframes sej-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+.sej-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex: 0 0 auto;
+  padding: 0 2px 12px;
+  cursor: move;
+  /* 触屏拖动标题栏时不要触发页面滚动/长按菜单 */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.sej-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+.sej-panel-close {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: var(--sej-surface-hover);
+  color: transparent;
+  font-size: 0;
+  line-height: 0;
+  cursor: pointer;
+  opacity: 1;
+  transition:
+    background-color 0.12s ease-out,
+    opacity 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+
+.sej-panel-close::before,
+.sej-panel-close::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 12px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--font-color-qxin);
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.sej-panel-close::after {
+  transform: translate(-50%, -50%) rotate(-45deg);
+}
+
+.sej-panel-close:hover {
+  background: var(--sej-active-bg);
+}
+
+.sej-panel-close:active {
+  transform: scale(0.92);
+  opacity: 0.75;
+}
+
+.iqxin-items {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 220px;
+  width: 220px;
+  min-width: 0;
+  max-width: 220px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: 6px;
+  border-radius: 12px;
+  border: 1px solid var(--border-color-sej);
+  background: var(--sej-surface-2);
+}
+
+.sej-add-category-card {
+  align-items: center;
+  justify-content: center;
+  min-height: 140px;
+  background: transparent;
+  border: 1px dashed var(--sej-checkbox-border);
+  color: var(--font-color-qxin);
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+.sej-add-category-card:hover {
+  background: var(--sej-surface-hover);
+  border-color: var(--sej-accent);
+  color: var(--sej-accent);
+}
+
+.sej-add-category-card:focus-visible {
+  background: var(--sej-surface-hover);
+  outline: 2px solid var(--sej-accent);
+  outline-offset: 2px;
+}
+
+.sej-add-category-plus {
+  font-size: 42px;
+  font-weight: 300;
+  line-height: 1;
+  opacity: 0.45;
+  transition: opacity 0.12s ease-out;
+}
+
+.sej-add-category-card:hover .sej-add-category-plus {
+  opacity: 1;
+}
+
+.sejcon {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+}
+
+.sejcon > .drag {
+  flex: 0 0 auto;
+}
+
+#settingLayer .drag {
+  display: block;
+  position: relative;
+  /* 触屏：tap 立即响应；长按由脚本接管拖动，禁用原生长按菜单 */
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}

@@ -1,0 +1,211 @@
+/* ---------- Vue 重构版设置面板布局优化 ---------- */
+#sej-settings-body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 10px;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */
+  margin-top: 0;
+  margin-right: calc(var(--sej-panel-pad-x) * -1);
+  padding-top: 2px;
+  padding-right: var(--sej-panel-pad-x);
+  padding-bottom: 4px;
+}
+
+#sej-settings-body::-webkit-scrollbar {
+  width: 8px;
+}
+
+#sej-settings-body::-webkit-scrollbar-thumb {
+  background: var(--sej-surface-hover);
+  border-radius: 4px;
+}
+
+#settingLayer #btnEle {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 780px) {
+  #btnEle span {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
+  #btnEle .sej-config-box button {
+    font-size: 12px;
+    padding: 5px 7px;
+  }
+  #btnEle .sej-config-box .sej-config-open {
+    padding-left: 8px;
+  }
+  #settingLayer {
+    --sej-panel-pad-x: 12px;
+    min-width: calc(100vw - 16px);
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 16px);
+  }
+}
+
+@media (max-width: 560px) {
+  .iqxin-items {
+    flex: 1 1 160px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+.iqxin-pointer-events,
+#settingLayer .sej-engine * {
+  pointer-events: none;
+}
+
+#newSearchBox,
+.sej-dialog-box {
+  position: fixed;
+  z-index: 200000100;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(400px, calc(100vw - 32px));
+  box-sizing: border-box;
+  padding: 20px;
+  background: var(--background-setting-qxin);
+  border: 1px solid var(--border-color-sej);
+  border-radius: 14px;
+  box-shadow: var(--sej-shadow-menu);
+  color: var(--font-color-qxin);
+  margin: 0;
+  transition:
+    opacity 0.14s ease-out,
+    transform 0.14s ease-out;
+}
+
+.sej-dialog-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.sej-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+
+.sej-field > span {
+  opacity: 0.65;
+}
+
+.sej-field-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.sej-field-row input {
+  flex: 1 1 0;
+  width: auto;
+  min-width: 0;
+}
+
+.sej-file-input {
+  display: none;
+}
+
+.sej-dialog-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+#newSearchBox input,
+.sej-dialog-box input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--border-color-sej);
+  padding: 7px 9px;
+  border-radius: 8px;
+  outline: none;
+  color: var(--font-color-qxin);
+  background: var(--sej-input-bg);
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    border-color 0.12s ease-out,
+    box-shadow 0.12s ease-out;
+}
+
+#newSearchBox input:focus,
+.sej-dialog-box input:focus {
+  background: var(--sej-input-bg);
+  border-color: var(--sej-accent);
+  box-shadow: 0 0 0 3px var(--sej-focus-ring);
+}
+
+.addItemBoxBtn {
+  cursor: pointer;
+  background: var(--sej-btn-bg);
+  border: 1px solid var(--border-color-sej);
+  border-radius: 8px;
+  padding: 6px 14px;
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  transition:
+    background-color 0.12s ease-out,
+    border-color 0.12s ease-out,
+    color 0.12s ease-out;
+}
+
+.addItemBoxBtn:hover {
+  background: var(--sej-surface-hover);
+}
+
+.sej-dialog-danger {
+  margin-right: auto;
+  border-color: var(--sej-danger);
+  color: var(--sej-danger);
+}
+
+/* 单独占据操作栏左侧，其余按钮保持右对齐 */
+.sej-dialog-left {
+  margin-right: auto;
+}
+
+.sej-dialog-danger:hover {
+  background: var(--sej-danger-weak);
+  border-color: var(--sej-danger);
+  color: var(--sej-danger);
+}
+
+.iqxin-closeBtn,
+.iqxin-enterBtn {
+  box-sizing: border-box;
+}
+
+.iqxin-enterBtn {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  font-weight: 600;
+}
+
+.iqxin-enterBtn:hover {
+  background: var(--sej-accent);
+  border-color: transparent;
+  color: var(--sej-accent-contrast);
+  opacity: 0.85;
+}
+
+.iqxin-closeBtn:hover {
+  background: var(--sej-danger-weak);
+  border-color: var(--sej-danger);
+  color: var(--sej-danger);
+}

@@ -16,7 +16,7 @@ import { useUndoDelete } from '../composables/useUndoDelete.js';
 import { useSettingsDialogs } from '../composables/useSettingsDialogs.js';
 import { useSettingsDraft } from '../composables/useSettingsDraft.js';
 import { useRemoteSettingsSync } from '../composables/useRemoteSettingsSync.js';
-import settingPanelStyles from './SettingPanel.css?raw';
+import settingPanelStyles from './settingPanelStyles.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
 import ConfigEditor from './ConfigEditor.vue';
