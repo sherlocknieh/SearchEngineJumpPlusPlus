@@ -12,11 +12,41 @@ const VIEWPORT_GAP = 4;
 const NARROW_BAR_MAX = 640;
 const HEADER_CACHE_MS = 120;
 
-// 横屏手机/平板等宽视口设备同样按移动端处理
-function isMobilePointer() {
-  if (typeof window.matchMedia !== 'function') return false;
-  return (
-    window.matchMedia('(pointer: coarse)').matches || window.matchMedia('(hover: none)').matches
+// 直接用 UA 识别移动设备：部分移动浏览器的 pointer/hover 媒体查询不可靠
+const MOBILE_UA_RE =
+  /Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile|Mobile/i;
+
+function isMobileDevice() {
+  return MOBILE_UA_RE.test(navigator.userAgent || '');
+}
+
+// 用内联 !important 覆盖站点规则的横向偏移，避免媒体查询在部分移动端不生效
+const MOBILE_CENTER_PROPS = [
+  'left',
+  'right',
+  'margin-left',
+  'margin-right',
+  'grid-column',
+  'justify-self',
+];
+const MOBILE_CENTER_VALUES = {
+  left: 'auto',
+  right: 'auto',
+  'margin-left': 'auto',
+  'margin-right': 'auto',
+  'grid-column': '1 / -1',
+  'justify-self': 'center',
+};
+
+function setMobileCenterStyles(el, on) {
+  if (!on) {
+    delete el.dataset.sejMobileCentered;
+    MOBILE_CENTER_PROPS.forEach((prop) => el.style.removeProperty(prop));
+    return;
+  }
+  el.dataset.sejMobileCentered = '1';
+  MOBILE_CENTER_PROPS.forEach((prop) =>
+    el.style.setProperty(prop, MOBILE_CENTER_VALUES[prop], 'important'),
   );
 }
 
@@ -70,10 +100,13 @@ export function useFixedTop({
     if (getHost().style.position === 'fixed') return;
 
     const vw = document.documentElement.clientWidth;
-    // 宽视口设备（横屏手机、平板）也视为移动端，避免 media query 失效
-    const mobile = isMobilePointer();
+    // 移动端按 UA 识别（宽视口也生效）；窄视口同时作为桌面小窗的兜底
+    const mobile = isMobileDevice();
     const narrow = vw <= NARROW_BAR_MAX || mobile;
-    if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth && !narrow) return;
+    if (!sitePatches.constrainToViewport && !sitePatches.narrowFullWidth && !narrow) {
+      setMobileCenterStyles(el, false);
+      return;
+    }
 
     el.style.maxWidth = '';
     el.style.marginLeft = '';
@@ -82,9 +115,15 @@ export function useFixedTop({
       el.style.left = '';
       delete el.dataset.sejLeftConstrained;
     }
+    // 先落定移动端横向覆盖，下面量到的位置才是最终布局下的
+    setMobileCenterStyles(el, narrow);
 
     const gap = VIEWPORT_GAP;
-    const available = Math.max(120, vw - gap * 2);
+    // 移动端优先按可视视口计算，兼顾横向平移/缩放后真正可见的区域
+    const vv = mobile ? window.visualViewport : null;
+    const viewLeft = vv ? vv.offsetLeft : 0;
+    const viewWidth = vv ? vv.width : vw;
+    const available = Math.max(120, viewWidth - gap * 2);
     if (narrow && sitePatches.narrowFullWidth) {
       el.style.setProperty('width', `${available}px`, 'important');
       // 部分站点（如 Google）按网格列计算百分比 max-width，改用像素上限
@@ -102,10 +141,6 @@ export function useFixedTop({
     if (narrow) {
       // 站点内容容器可能比视口更宽，用位移把跳转条对齐到视口中心。
       // 用 translate 而不是改外边距，避免与页面自身的布局/居中互相影响。
-      // 移动端优先按可视视口计算，兼顾横向平移/缩放后的可见区域。
-      const vv = mobile ? window.visualViewport : null;
-      const viewLeft = vv ? vv.offsetLeft : 0;
-      const viewWidth = vv ? vv.width : vw;
       const delta = Math.round(viewLeft + viewWidth / 2 - (rect.left + rect.width / 2));
       if (Math.abs(delta) > 1) {
         el.style.setProperty('translate', `${delta}px 0`, 'important');
@@ -213,7 +248,7 @@ export function useFixedTop({
     const host = getHost();
     const container = containerEl.value;
     const vw = document.documentElement.clientWidth;
-    const mobile = isMobilePointer();
+    const mobile = isMobileDevice();
     const narrow = (vw <= NARROW_BAR_MAX || mobile) && Boolean(sitePatches.narrowFullWidth);
     const gap = VIEWPORT_GAP;
 

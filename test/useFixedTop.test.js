@@ -60,6 +60,17 @@ describe('useFixedTop constrainBarToViewport', () => {
     expect(el.dataset.sejCentered).toBe('1');
   });
 
+  it('窄屏下用内联 !important 覆盖站点横向偏移', () => {
+    const { api, el } = setup({ vw: 500, left: 600, width: 100 });
+
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('left')).toBe('auto');
+    expect(el.style.getPropertyPriority('left')).toBe('important');
+    expect(el.style.getPropertyValue('margin-left')).toBe('auto');
+    expect(el.style.getPropertyPriority('margin-left')).toBe('important');
+  });
+
   it('视口变宽后撤销居中位移', () => {
     const { api, el } = setup({ vw: 500, left: 600, width: 100 });
     api.constrainBarToViewport();
@@ -69,6 +80,8 @@ describe('useFixedTop constrainBarToViewport', () => {
 
     expect(el.style.getPropertyValue('translate')).toBe('');
     expect(el.dataset.sejCentered).toBeUndefined();
+    expect(el.style.getPropertyValue('left')).toBe('');
+    expect(el.dataset.sejMobileCentered).toBeUndefined();
   });
 
   it('桌面端未声明补丁的站点保持原布局', () => {
@@ -80,18 +93,13 @@ describe('useFixedTop constrainBarToViewport', () => {
     expect(el.dataset.sejCentered).toBeUndefined();
   });
 
-  it('触屏宽视口（横屏手机/平板）同样居中', () => {
-    const originalMatchMedia = window.matchMedia;
+  it('按 UA 识别移动设备，宽视口同样居中', () => {
+    const originalUA = Object.getOwnPropertyDescriptor(window.navigator, 'userAgent');
     const originalVisualViewport = Object.getOwnPropertyDescriptor(window, 'visualViewport');
-    window.matchMedia = (query) => ({
-      matches: query.includes('pointer: coarse'),
-      media: query,
-      onchange: null,
-      addEventListener() {},
-      removeEventListener() {},
-      addListener() {},
-      removeListener() {},
-      dispatchEvent: () => false,
+    Object.defineProperty(window.navigator, 'userAgent', {
+      configurable: true,
+      value:
+        'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Mobile Safari/537.36',
     });
     Object.defineProperty(window, 'visualViewport', { configurable: true, value: undefined });
 
@@ -102,7 +110,11 @@ describe('useFixedTop constrainBarToViewport', () => {
       expect(el.style.getPropertyValue('translate')).toBe('-200px 0');
       expect(el.dataset.sejCentered).toBe('1');
     } finally {
-      window.matchMedia = originalMatchMedia;
+      if (originalUA) {
+        Object.defineProperty(window.navigator, 'userAgent', originalUA);
+      } else {
+        delete window.navigator.userAgent;
+      }
       if (originalVisualViewport) {
         Object.defineProperty(window, 'visualViewport', originalVisualViewport);
       } else {
