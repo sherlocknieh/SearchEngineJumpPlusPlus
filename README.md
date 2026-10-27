@@ -16,15 +16,15 @@
 
 ### 主界面
 
-![主界面](images/jumpbar.png)
+![主界面](dist/images/jumpbar.png)
 
 ### 设置界面
 
-![设置界面](images/settings.png)
+![设置界面](dist/images/settings.png)
 
 ### 导出设置
 
-![设置导出界面](images/export.png)
+![设置导出界面](dist/images/export.png)
 
 ## 开发环境
 
