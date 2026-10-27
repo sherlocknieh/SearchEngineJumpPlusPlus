@@ -62,6 +62,28 @@ describe('useScrollDrag', () => {
     drag.dispose();
   });
 
+  it('触屏不接管拖动，交给浏览器原生滚动', () => {
+    const drag = setup();
+    el.scrollLeft = 100;
+    drag.onScrollPointerDown({
+      pointerType: 'touch',
+      pointerId: 2,
+      clientX: 100,
+      clientY: 50,
+    });
+    drag.onWindowPointerMove({
+      pointerId: 2,
+      pointerType: 'touch',
+      buttons: 0,
+      clientX: 140,
+      clientY: 50,
+    });
+
+    expect(el.scrollLeft).toBe(100);
+    expect(el.classList.contains('sej-scroll-dragging')).toBe(false);
+    drag.dispose();
+  });
+
   it('未超过阈值或纵向手势不拖动', () => {
     const drag = setup();
     el.scrollLeft = 100;

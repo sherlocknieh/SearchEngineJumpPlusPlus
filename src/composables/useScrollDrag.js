@@ -1,8 +1,8 @@
 /**
  * 跳转条类别区的横向拖动滚动。
  *
- * 桌面端按住左键横向拖动、触屏横向滑动都可滚动；纵向手势仍留给页面，
- * 拖动结束后短暂抑制 click，避免误触类别菜单。
+ * 桌面端按住左键横向拖动，并在结束后短暂抑制 click，避免误触类别菜单；
+ * 触屏与触控笔不接管，交给浏览器原生 overflow 滚动，从而保留惯性滑动。
  */
 export function useScrollDrag({ scrollEl, threshold = 6 }) {
   let dragState = null;
@@ -28,7 +28,8 @@ export function useScrollDrag({ scrollEl, threshold = 6 }) {
   }
 
   function onScrollPointerDown(e) {
-    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    // 触屏/触控笔交给浏览器原生滚动，才有松开后继续滑的惯性
+    if (e.pointerType !== 'mouse' || e.button !== 0) return;
     suppressClickUntil = 0;
     const el = scrollEl.value;
     if (!el || el.scrollWidth <= el.clientWidth) return;
@@ -61,8 +62,8 @@ export function useScrollDrag({ scrollEl, threshold = 6 }) {
       el.classList.add('sej-scroll-dragging');
     }
 
-    // 监听器是 passive 的：横向拖动由 .sej-scroll 的 touch-action: pan-y
-    // 与 user-select: none 保证，无需在这里阻止默认行为
+    // 监听器是 passive 的：鼠标横向拖动由 user-select: none 保证，
+    // 无需在这里阻止默认行为
     el.scrollLeft = state.startLeft - dx;
     scheduleScrollHints();
   }

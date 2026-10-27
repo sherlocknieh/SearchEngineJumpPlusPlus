@@ -70,8 +70,15 @@ function hitTestBridge() {
   );
 }
 
-function isPointerInside() {
-  return hitTest(triggerEl.value) || hitTest(listEl.value) || hitTestBridge();
+// 指针是否仍在触发项/菜单范围内。
+// 有事件路径时要求触发项或菜单确实在路径中，避免被滚动按钮等浮层遮住时
+// 仍按几何位置误判为“还在面板内”，导致移开后菜单不关闭。
+function isPointerInside(path) {
+  const trigger = triggerEl.value;
+  const list = listEl.value;
+  const overTrigger = hitTest(trigger) && (!path || path.includes(trigger));
+  const overList = hitTest(list) && (!path || path.includes(list));
+  return overTrigger || overList || hitTestBridge();
 }
 
 // 指针是否真正落在触发项上。
@@ -134,8 +141,8 @@ async function show() {
   active.value = true;
 }
 
-function scheduleHide() {
-  if (pinned.value || isPointerInside()) return;
+function scheduleHide(path) {
+  if (pinned.value || isPointerInside(path)) return;
   hide();
 }
 
@@ -214,10 +221,10 @@ function onDocMouseMove(e, path) {
     return;
   }
 
-  if (pinned.value || isPointerInside()) {
+  if (pinned.value || isPointerInside(path)) {
     active.value = true;
   } else {
-    scheduleHide();
+    scheduleHide(path);
   }
 }
 

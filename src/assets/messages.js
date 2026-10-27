@@ -116,6 +116,8 @@ export const messages = {
     'config.export': '导出',
 
     'jump.searchAll': '一键搜索全部：{name}',
+    'bar.scrollLeft': '向左滚动',
+    'bar.scrollRight': '向右滚动',
 
     'favicon.noRequestApi': '缺少 GM 请求接口',
     'favicon.networkError': '网络错误',
@@ -248,6 +250,8 @@ export const messages = {
     'config.export': 'Export',
 
     'jump.searchAll': 'Search all: {name}',
+    'bar.scrollLeft': 'Scroll left',
+    'bar.scrollRight': 'Scroll right',
 
     'favicon.noRequestApi': 'GM request API unavailable',
     'favicon.networkError': 'Network error',
