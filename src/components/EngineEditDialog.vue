@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { faviconFromUrl, hostFromUrl, titleFromUrl } from '../core/engineUrl.js';
+import { faviconFromUrl, hostFromUrl, titleFromUrl, withProtocol } from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
@@ -100,7 +100,7 @@ onMounted(() => urlInput.value?.focus());
 
 function submit() {
   if (props.busy) return;
-  const url = form.url.indexOf('://') === -1 ? 'https://' + form.url : form.url;
+  const url = withProtocol(form.url);
   const favicon = form.favicon.trim() || props.resolveIcon(form.url);
   emit('submit', {
     name: form.name,

@@ -6,6 +6,7 @@
  */
 import { ref } from 'vue';
 import { embedFavicon, resolveFavicon } from '../core/favicon.js';
+import { siteOrigin } from '../core/engineUrl.js';
 import { showToast, ui } from '../stores/ui.js';
 import { t } from '../assets/i18n.js';
 
@@ -56,20 +57,11 @@ export function useEngineIcons({ draft, scheduleAutoSave, isDisposed }) {
   }
 
   function getICON(olink) {
-    const link = olink || '';
-    let protocol;
-    let host;
-    if (link.indexOf('://') !== -1) {
-      protocol = link.split('://')[0] || 'https';
-      host = link.split('://')[1].split('/')[0];
-    } else {
-      protocol = 'https';
-      host = link.split('/')[0];
-    }
-    const siteURL = protocol + '://' + host;
+    const siteURL = siteOrigin(olink);
     const iconSetting = ui.iconSource;
     // 非数字时视为自定义地址模板，%s 会替换为站点地址；否则用站点自带的 /favicon.ico
     const template = isNaN(iconSetting) ? iconSetting : '';
+    if (!template && !siteURL) return '';
     return (template || siteURL + '/favicon.ico').replace('%s', siteURL);
   }
 

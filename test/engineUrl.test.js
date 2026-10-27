@@ -3,8 +3,32 @@ import {
   faviconFromUrl,
   hostFromUrl,
   registrableDomain,
+  siteOrigin,
   titleFromUrl,
+  withProtocol,
 } from '../src/core/engineUrl.js';
+
+describe('withProtocol', () => {
+  it('补全缺失的协议并保留已有协议', () => {
+    expect(withProtocol('example.com/a')).toBe('https://example.com/a');
+    expect(withProtocol('http://example.com')).toBe('http://example.com');
+    expect(withProtocol('  example.com  ')).toBe('https://example.com');
+    expect(withProtocol('')).toBe('');
+    expect(withProtocol(null)).toBe('');
+  });
+});
+
+describe('siteOrigin', () => {
+  it('返回协议、主机与端口', () => {
+    expect(siteOrigin('example.com/search?q=1')).toBe('https://example.com');
+    expect(siteOrigin('http://sub.example.com:8080/x')).toBe('http://sub.example.com:8080');
+  });
+
+  it('无法解析时返回空串', () => {
+    expect(siteOrigin('')).toBe('');
+    expect(siteOrigin('http://')).toBe('');
+  });
+});
 
 describe('titleFromUrl', () => {
   it('取可注册域名并首字母大写', () => {

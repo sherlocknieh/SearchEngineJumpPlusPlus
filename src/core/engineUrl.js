@@ -18,14 +18,42 @@ const SECOND_LEVEL_SUFFIXES = new Set([
   'adm',
 ]);
 
+/** 补全协议；空值返回空串 */
+export function withProtocol(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value) return '';
+  return value.includes('://') ? value : `https://${value}`;
+}
+
 function parseHost(raw) {
-  const value = String(raw || '').trim();
+  const value = withProtocol(raw);
   if (!value) return '';
   try {
-    return new URL(value.includes('://') ? value : `https://${value}`).hostname.toLowerCase();
+    return new URL(value).hostname.toLowerCase();
   } catch {
     return '';
   }
+}
+
+/**
+ * 取站点 origin（协议 + 主机 + 端口）。
+ * 用于生成 /favicon.ico 地址或自定义图标模板的替换值。
+ */
+export function siteOrigin(raw) {
+  const value = withProtocol(raw);
+  if (!value) return '';
+  try {
+    return new URL(value).origin;
+  } catch {
+    return '';
+  }
+}
+
+// 常见二级后缀组合（如 example.com.cn）需要多取一段作为主域名
+function secondLevelSuffixLength(parts) {
+  const last = parts[parts.length - 1] || '';
+  const secondLast = (parts[parts.length - 2] || '').toLowerCase();
+  return last.length === 2 && SECOND_LEVEL_SUFFIXES.has(secondLast) ? 2 : 1;
 }
 
 /** 从链接推断引擎名称，如 zh.wikipedia.org -> Wikipedia */
@@ -35,24 +63,20 @@ export function titleFromUrl(raw) {
   if (/^\d+(\.\d+){3}$/.test(host)) return host;
   if (!host.includes('.')) return '';
   const parts = host.split('.').filter(Boolean);
-  const last = parts[parts.length - 1] || '';
-  const secondLast = (parts[parts.length - 2] || '').toLowerCase();
-  const suffixLength = last.length === 2 && SECOND_LEVEL_SUFFIXES.has(secondLast) ? 2 : 1;
-  const label = parts[parts.length - suffixLength - 1] || parts[0];
+  const label = parts[parts.length - secondLevelSuffixLength(parts) - 1] || parts[0];
   return label ? label.charAt(0).toUpperCase() + label.slice(1) : '';
 }
 
 /** 从链接推断图标地址（默认 /favicon.ico） */
 export function faviconFromUrl(raw) {
-  const value = String(raw || '').trim();
-  if (!value) return '';
+  const origin = siteOrigin(raw);
+  if (!origin) return '';
   try {
-    const url = new URL(value.includes('://') ? value : `https://${value}`);
-    if (!url.hostname.includes('.')) return '';
-    return `${url.origin}/favicon.ico`;
+    if (!new URL(origin).hostname.includes('.')) return '';
   } catch {
     return '';
   }
+  return `${origin}/favicon.ico`;
 }
 
 /**
@@ -70,10 +94,7 @@ export function registrableDomain(raw) {
 
   const parts = host.split('.').filter(Boolean);
   if (parts.length <= 2) return parts.join('.');
-  const last = parts[parts.length - 1] || '';
-  const secondLast = (parts[parts.length - 2] || '').toLowerCase();
-  const suffixLength = last.length === 2 && SECOND_LEVEL_SUFFIXES.has(secondLast) ? 2 : 1;
-  return parts.slice(-(suffixLength + 1)).join('.');
+  return parts.slice(-(secondLevelSuffixLength(parts) + 1)).join('.');
 }
 
 /** 站点主机名（保留子域，去掉 www.） */

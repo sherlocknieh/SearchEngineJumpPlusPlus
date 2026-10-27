@@ -196,6 +196,17 @@ describe('useEngineIcons.getICON', () => {
     expect(getICON('https://example.com/search?q=1')).toBe('https://example.com/favicon.ico');
   });
 
+  it('无协议时补全 https，并保留端口', () => {
+    const { getICON } = useEngineIcons({
+      draft: createDraft(),
+      scheduleAutoSave: vi.fn(),
+      isDisposed: () => false,
+    });
+    ui.iconSource = 0;
+    expect(getICON('example.com:8080/search?q=1')).toBe('https://example.com:8080/favicon.ico');
+    expect(getICON('')).toBe('');
+  });
+
   it('支持自定义 %s 模板', () => {
     const { getICON } = useEngineIcons({
       draft: createDraft(),
