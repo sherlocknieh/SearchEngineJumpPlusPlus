@@ -418,15 +418,4 @@ onBeforeUnmount(() => {
     opacity: 1;
   }
 }
-
-@keyframes iqxinsejopen {
-  0% {
-    transform: scale(0.01, 0.01);
-    opacity: 0;
-  }
-  100% {
-    transform: scale(1, 1);
-    opacity: 1;
-  }
-}
 </style>

@@ -251,6 +251,9 @@ const { startDrag, dispose: disposePanelDrag } = usePanelDrag({
   layerStyle,
 });
 
+// 本组件以「挂载即打开」为契约：显示与否由 App.vue 的 v-if 控制。
+// 挂载时开启这些全局副作用，卸载时（遮罩淡出后）还原；若改成常驻挂载，
+// 页面加载时就会锁住 body 滚动并预载图标，因此不要在外层去掉 v-if。
 onMounted(() => {
   document.body.style.overflow = 'hidden';
   document.addEventListener('keydown', onKeydown);
