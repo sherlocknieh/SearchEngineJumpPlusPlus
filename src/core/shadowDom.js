@@ -1,4 +1,4 @@
-import { getCSPNonce } from './csp.js';
+import { getCSPNonce, resetCSPNonce } from './csp.js';
 
 // 开发脚本(server:)与正式版可能同时注入同一页面，用不同的宿主 id 共存
 export const INSTANCE_ROLE = import.meta.env.DEV ? 'dev' : 'prod';
@@ -117,6 +117,7 @@ export function reset() {
   injectedStyles.clear();
   stackSheet = null;
   stackSheetText = '';
+  resetCSPNonce();
 }
 
 export function getInstanceHosts() {
