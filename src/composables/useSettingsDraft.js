@@ -6,6 +6,7 @@
  */
 import { computed, reactive } from 'vue';
 import { OPTION_KEYS, serializeConfig } from '../core/configSchema.js';
+import { cloneValue } from '../core/storageBackend.js';
 import { localizeCategoryName } from '../assets/i18n.js';
 
 /**
@@ -19,7 +20,7 @@ export function useSettingsDraft({ settings }) {
   const nextId = () => uid++;
 
   function makeDraft() {
-    const raw = JSON.parse(JSON.stringify(source.value));
+    const raw = cloneValue(source.value);
     const d = {};
     for (const key of OPTION_KEYS) d[key] = raw[key];
     d.categories = raw.engineCategories.map(([name, key, enabled]) => ({

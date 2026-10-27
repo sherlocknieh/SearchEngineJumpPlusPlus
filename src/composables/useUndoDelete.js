@@ -3,6 +3,7 @@
  * 只保留最近 20 条记录，撤销会插回原分类/原索引。
  */
 import { localizeCategoryName, localizeEngineName, t } from '../assets/i18n.js';
+import { cloneValue } from '../core/storageBackend.js';
 import { showToast } from '../stores/ui.js';
 
 const UNDO_DURATION = 5000;
@@ -73,7 +74,7 @@ export function useUndoDelete({ draft, scheduleAutoSave, isDialogOpen, closeCate
       {
         type: 'category',
         index,
-        item: JSON.parse(JSON.stringify(category)),
+        item: cloneValue(category),
       },
       t('category.label', { name: displayCategoryName(category) }),
     );
@@ -90,7 +91,7 @@ export function useUndoDelete({ draft, scheduleAutoSave, isDialogOpen, closeCate
         type: 'engine',
         categoryKey: category.key,
         index: ei,
-        item: JSON.parse(JSON.stringify(engine)),
+        item: cloneValue(engine),
       },
       t('engine.label', { name: localizeEngineName(engine.name) }),
     );

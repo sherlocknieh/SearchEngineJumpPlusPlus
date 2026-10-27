@@ -10,6 +10,7 @@
  */
 import { ref } from 'vue';
 import { showToast } from '../stores/ui.js';
+import { cloneValue } from '../core/storageBackend.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
 import { createDragAnimator } from './drag/dragAnimation.js';
 import { createDragAutoScroll } from './drag/dragAutoScroll.js';
@@ -258,7 +259,7 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     const targetCi = copyTargetCi.value;
     const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
     const targetKey = draft.categories[targetCi]?.key;
-    const copy = source ? { ...JSON.parse(JSON.stringify(source)), _id: nextId() } : null;
+    const copy = source ? { ...cloneValue(source), _id: nextId() } : null;
     // 途中经过其他条目时可能已临时换位，复刻时恢复原有排序
     if (dragSnapshot) {
       restoreOrder(dragSnapshot);

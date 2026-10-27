@@ -4,6 +4,7 @@
 import { reactive } from 'vue';
 import { matchRule } from '../data/matchRule.js';
 import { getValue, setValue, isSameValue } from '../core/storage.js';
+import { cloneValue } from '../core/storageBackend.js';
 import { createDefaultConfig, normalizeConfig } from '../core/configSchema.js';
 import { isPlainObject } from '../core/configData.js';
 import { setLanguagePreference } from '../assets/i18n.js';
@@ -54,7 +55,7 @@ export class Settings {
   // 应用到
   applyNormalized(normalized) {
     // 先复制一份，避免修改原始数据
-    const plain = JSON.parse(JSON.stringify(normalized));
+    const plain = cloneValue(normalized);
     // 合并有效字段
     for (const key of Object.keys(this.settingData)) {
       if (!Object.prototype.hasOwnProperty.call(plain, key)) {

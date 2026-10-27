@@ -16,6 +16,16 @@ describe('createDefaultConfig', () => {
     expect(b.engineCategories).toHaveLength(a.engineCategories.length - 1);
   });
 
+  it('默认引擎为深拷贝，修改不会污染后续默认值', () => {
+    const a = createDefaultConfig();
+    const [key] = Object.keys(a.engineList);
+    const originalName = a.engineList[key][0].name;
+
+    a.engineList[key][0].name = 'mutated';
+
+    expect(createDefaultConfig().engineList[key][0].name).toBe(originalName);
+  });
+
   it('包含全部选项与默认引擎', () => {
     const config = createDefaultConfig();
     for (const key of OPTION_KEYS) expect(config).toHaveProperty(key);

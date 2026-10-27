@@ -34,8 +34,13 @@ export function createDefaultConfig() {
     language: 'auto',
     // [名称, 键名, 是否在跳转条中显示]
     engineCategories: defaultConfig.engineCategories.map((entry) => entry.slice()),
-    // 默认引擎列表；从 engines.json 导入
-    engineList: defaultConfig.engineList,
+    // 默认引擎列表；逐项复制，避免调用方修改时污染导入的默认数据
+    engineList: Object.fromEntries(
+      Object.entries(defaultConfig.engineList).map(([key, engines]) => [
+        key,
+        engines.map((engine) => ({ ...engine })),
+      ]),
+    ),
   };
 }
 
