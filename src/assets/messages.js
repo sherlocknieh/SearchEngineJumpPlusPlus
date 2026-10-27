@@ -11,8 +11,7 @@ export const messages = {
     'common.name': '名称',
     'common.required': '必填',
     'common.optional': '选填',
-    'common.enabled': '启用',
-    'common.hidden': '隐藏',
+
     'common.show': '显示',
     'common.hide': '隐藏',
     'common.undo': '撤销',
@@ -140,8 +139,6 @@ export const messages = {
     'common.name': 'Name',
     'common.required': 'Required',
     'common.optional': 'Optional',
-    'common.enabled': 'Enabled',
-    'common.hidden': 'Hidden',
     'common.show': 'Show',
     'common.hide': 'Hide',
     'common.undo': 'Undo',

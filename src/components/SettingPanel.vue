@@ -3,7 +3,7 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { OPTION_KEYS } from '../core/configSchema.js';
 import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
-import { closeSettingPanel, showToast } from '../stores/ui.js';
+import { closeSettingPanel } from '../stores/ui.js';
 import { setLanguagePreference, t } from '../assets/i18n.js';
 import { addStyle } from '../core/shadowDom.js';
 import { useAutoSave } from '../composables/useAutoSave.js';
@@ -174,15 +174,13 @@ const {
 });
 
 function onToggleCategory(ci) {
-  const enabled = toggleCategory(ci);
+  toggleCategory(ci);
   scheduleAutoSave();
-  showToast(enabled ? t('common.enabled') : t('common.hidden'));
 }
 
 function onToggleEngine(ci, ei) {
-  const enabled = toggleEngine(ci, ei);
+  toggleEngine(ci, ei);
   scheduleAutoSave();
-  showToast(enabled ? t('common.enabled') : t('common.hidden'));
 }
 
 function updateOption(key, value) {

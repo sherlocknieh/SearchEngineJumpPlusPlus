@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useAutoSave } from '../src/composables/useAutoSave.js';
 import { t } from '../src/assets/i18n.js';
-import { ui } from '../src/stores/ui.js';
+import { showToast, ui } from '../src/stores/ui.js';
 
 function setup({ delay = 500 } = {}) {
   const unchanged = { fixedTop: false, engineList: {} };
@@ -32,6 +32,8 @@ describe('useAutoSave', () => {
   });
 
   afterEach(() => {
+    // 让残留的 toast 计时器走完，复位提示状态
+    vi.advanceTimersByTime(20000);
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
@@ -64,6 +66,18 @@ describe('useAutoSave', () => {
     vi.advanceTimersByTime(500);
     expect(ui.toastVisible).toBe(true);
     expect(ui.toastText).toBe(t('toast.autoSaved'));
+    api.dispose();
+  });
+
+  it('自动保存提示不会覆盖「撤销」等带操作的提示', () => {
+    const onClick = vi.fn();
+    showToast('已删除', 5000, { label: '撤销', onClick });
+    const { api, setBuilt } = setup();
+    setBuilt({ fixedTop: true, engineList: {} });
+    api.scheduleAutoSave();
+    vi.advanceTimersByTime(500);
+    expect(ui.toastText).toBe('已删除');
+    expect(ui.toastActionLabel).toBe('撤销');
     api.dispose();
   });
 

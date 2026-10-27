@@ -25,7 +25,8 @@ export function useAutoSave({ buildResult, getCurrent, settings, delay = 500 }) 
   let settingsChanged = false;
 
   function notifySaved() {
-    showToast(t('toast.autoSaved'));
+    // 最低优先级：不覆盖「撤销」等带操作按钮的提示
+    showToast(t('toast.autoSaved'), 1500, null, { priority: -1 });
   }
 
   function cancelAutoSave() {
