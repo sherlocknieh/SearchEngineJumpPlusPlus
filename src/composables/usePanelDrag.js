@@ -15,8 +15,11 @@ export function usePanelDrag({ layerEl, maskEl, layerStyle }) {
     const mask = maskEl.value;
     const scrollLeft = mask ? mask.scrollLeft : 0;
     const scrollTop = mask ? mask.scrollTop : 0;
-    const maxLeft = scrollLeft + Math.max(0, window.innerWidth - el.offsetWidth);
-    const maxTop = scrollTop + Math.max(0, window.innerHeight - el.offsetHeight);
+    // 遮罩已按实际可视高度收缩，用它而不是 innerHeight 作为拖动边界
+    const viewWidth = mask ? mask.clientWidth : window.innerWidth;
+    const viewHeight = mask ? mask.clientHeight : window.innerHeight;
+    const maxLeft = scrollLeft + Math.max(0, viewWidth - el.offsetWidth);
+    const maxTop = scrollTop + Math.max(0, viewHeight - el.offsetHeight);
     layerStyle.value = {
       left: Math.min(Math.max(e.clientX - dragOffset.x + scrollLeft, scrollLeft), maxLeft) + 'px',
       top: Math.min(Math.max(e.clientY - dragOffset.y + scrollTop, scrollTop), maxTop) + 'px',

@@ -53,6 +53,26 @@ let closeTimer = null;
 let closed = false;
 // 面板关闭后不再回写自动内嵌图标的结果
 let disposed = false;
+let viewportListenersBound = false;
+
+// 移动端地址栏/工具栏会动态改变可视高度，vh 只是最大视口；
+// 用实际可视高度约束面板，避免上下两端溢出到浏览器界面之外
+function syncPanelViewportHeight() {
+  const mask = maskEl.value;
+  if (!mask) return;
+  const height = window.visualViewport?.height || window.innerHeight;
+  if (height > 0) mask.style.setProperty('--sej-viewport-h', `${height}px`);
+}
+
+function bindViewportHeightListeners(bind) {
+  if (bind === viewportListenersBound) return;
+  viewportListenersBound = bind;
+  const method = bind ? 'addEventListener' : 'removeEventListener';
+  window[method]('resize', syncPanelViewportHeight);
+  window[method]('orientationchange', syncPanelViewportHeight);
+  window.visualViewport?.[method]('resize', syncPanelViewportHeight);
+  window.visualViewport?.[method]('scroll', syncPanelViewportHeight);
+}
 
 const {
   saving,
@@ -255,6 +275,8 @@ onMounted(() => {
   document.body.style.overflow = 'hidden';
   document.addEventListener('keydown', onKeydown);
   window.addEventListener('blur', onWindowBlur);
+  syncPanelViewportHeight();
+  bindViewportHeightListeners(true);
   nextTick(() => {
     maskVisible.value = true;
     // 打开设置时静默内嵌一次远程图标，省去单独的操作按钮
@@ -271,6 +293,7 @@ onBeforeUnmount(() => {
   document.body.style.overflow = 'auto';
   document.removeEventListener('keydown', onKeydown);
   window.removeEventListener('blur', onWindowBlur);
+  bindViewportHeightListeners(false);
   clearTimeout(closeTimer);
   disposePanelDrag();
   // 未保存的语言选择不带到面板外

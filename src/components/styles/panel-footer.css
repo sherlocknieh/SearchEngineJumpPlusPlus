@@ -240,10 +240,11 @@
   #btnEle .sej-config-box .sej-config-open {
     padding-left: 8px;
   }
+  #settingLayerMask {
+    /* 窄屏收紧外边距，给小屏让出可用空间 */
+    --sej-mask-pad: 8px;
+  }
   #settingLayer {
     --sej-panel-pad-x: 12px;
-    min-width: calc(100vw - 16px);
-    max-width: calc(100vw - 16px);
-    max-height: calc(100vh - 16px);
   }
 }

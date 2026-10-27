@@ -1,15 +1,21 @@
 #settingLayerMask {
+  --sej-mask-pad: 20px;
   display: none;
   justify-content: center;
   align-items: center;
   position: fixed;
   inset: 0;
+  /* 移动端地址栏/工具栏会压缩可视区域：遮罩贴合实际可视高度，
+     面板才能在其中居中，而不是一部分藏到浏览器界面下 */
+  bottom: auto;
+  height: 100vh;
+  height: 100dvh;
+  height: var(--sej-viewport-h, 100vh);
   background-color: rgba(16, 18, 22, 0.42);
   backdrop-filter: blur(12px);
   z-index: 200000000;
   overflow: auto;
   font-family: var(--sej-font-family);
-  min-height: 100%;
   font-size: 14px;
   transition: opacity 0.15s ease-out;
   opacity: 0;
@@ -17,7 +23,7 @@
   user-select: none;
   -moz-user-select: none;
   touch-action: manipulation;
-  padding: 20px;
+  padding: var(--sej-mask-pad);
   box-sizing: border-box;
   color: var(--font-color-qxin);
 }
@@ -35,9 +41,14 @@
   box-shadow: var(--sej-panel-shadow);
   position: absolute;
   width: auto;
-  min-width: min(720px, calc(100vw - 32px));
-  max-width: min(960px, calc(100vw - 32px));
-  max-height: calc(100vh - 48px);
+  /* 绝对定位时遮罩的内边距不参与定位，宽度/高度需自行扣掉 */
+  min-width: min(720px, calc(100% - var(--sej-mask-pad) * 2));
+  max-width: min(960px, calc(100% - var(--sej-mask-pad) * 2));
+  /* 移动端浏览器工具栏会占去部分可视高度：vh 只是最大视口，
+     依次用 dvh 与脚本测量的实际视口高度兜底，避免面板上下被裁掉 */
+  max-height: calc(100vh - var(--sej-mask-pad) * 2);
+  max-height: calc(100dvh - var(--sej-mask-pad) * 2);
+  max-height: calc(var(--sej-viewport-h, 100vh) - var(--sej-mask-pad) * 2);
   margin: 0;
   overflow: visible;
   animation: sej-panel-in 0.16s ease-out;
