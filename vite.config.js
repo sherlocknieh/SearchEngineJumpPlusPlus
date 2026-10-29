@@ -21,7 +21,7 @@ export default defineConfig({
       userscript: {
         name: 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.10.29.3',
+        version: '2026.10.29.4',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': 'Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。',

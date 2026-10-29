@@ -3,6 +3,7 @@
  * 只新增内容，不删除也不覆盖现有引擎，便于从其他站点/用户导入备份。
  */
 import { readConfig } from './configSchema.js';
+import { normalizeEngineAction } from './configData.js';
 
 /**
  * 引擎去重键：忽略首尾空白、协议/域名大小写与末尾斜杠，
@@ -17,6 +18,14 @@ export function engineUrlKey(url) {
       (match, scheme = '', host) => scheme.toLowerCase() + host.toLowerCase(),
     )
     .replace(/\/+$/, '');
+}
+
+/**
+ * 引擎在合并导入时的身份：动作引擎按动作类型去重，搜索类引擎按链接去重。
+ */
+export function engineKey(engine) {
+  const action = normalizeEngineAction(engine?.action);
+  return action ? `action:${action}` : engineUrlKey(engine?.url);
 }
 
 /** 分类名比较键：忽略首尾空白与大小写 */
@@ -54,12 +63,12 @@ export function mergeIntoCategories(categories, imported, createId) {
       categories.find((category) => categoryNameKey(category.name) === categoryNameKey(name));
 
     const seen = new Set(
-      (target ? target.engines : []).map((engine) => engineUrlKey(engine.url)).filter(Boolean),
+      (target ? target.engines : []).map((engine) => engineKey(engine)).filter(Boolean),
     );
     const additions = [];
     for (const engine of engines) {
-      const urlKey = engineUrlKey(engine.url);
-      // 没有链接或已存在相同链接时跳过，避免重复条目
+      const urlKey = engineKey(engine);
+      // 没有链接/动作或已存在相同条目时跳过，避免重复
       if (!urlKey || seen.has(urlKey)) {
         stats.skipped += 1;
         continue;

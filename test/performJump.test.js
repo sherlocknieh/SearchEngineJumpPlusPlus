@@ -5,7 +5,12 @@ const { openInTab } = vi.hoisted(() => ({ openInTab: vi.fn() }));
 
 vi.mock('$', () => ({ GM_openInTab: openInTab }));
 
-import { openAllEngines, performJump } from '../src/core/jump.js';
+import {
+  isActionEngine,
+  openAllEngines,
+  performEngineAction,
+  performJump,
+} from '../src/core/jump.js';
 
 describe('performJump', () => {
   beforeEach(() => {
@@ -53,5 +58,60 @@ describe('openAllEngines', () => {
       'https://a.test/?q=k',
       'https://c.test/?q=k',
     ]);
+  });
+});
+
+describe('动作引擎', () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    openInTab.mockReset();
+    writeText.mockClear();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText },
+      configurable: true,
+    });
+  });
+
+  it('识别 copy/open 动作', () => {
+    expect(isActionEngine({ action: 'copy' })).toBe(true);
+    expect(isActionEngine({ action: 'open' })).toBe(true);
+    expect(isActionEngine({ action: 'unknown' })).toBe(false);
+    expect(isActionEngine({ url: 'https://a.test' })).toBe(false);
+  });
+
+  it('复制当前关键词而不打开页面', async () => {
+    expect(await performEngineAction({ action: 'copy' }, 'hello')).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('hello');
+    expect(openInTab).not.toHaveBeenCalled();
+  });
+
+  it('没有可复制内容时返回 false', async () => {
+    expect(await performEngineAction({ action: 'copy' }, '')).toBe(false);
+  });
+
+  it('把当前关键词当作链接打开', async () => {
+    expect(await performEngineAction({ action: 'open' }, 'example.com/a')).toBe(true);
+    expect(openInTab).toHaveBeenCalledWith('https://example.com/a', {
+      active: true,
+      insert: true,
+      setParent: true,
+    });
+  });
+
+  it('当前内容不是链接时不打开', async () => {
+    expect(await performEngineAction({ action: 'open' }, 'just words')).toBe(false);
+    expect(openInTab).not.toHaveBeenCalled();
+  });
+
+  it('performJump 对动作引擎直接返回已处理', () => {
+    expect(performJump({ action: 'copy' }, 'x', {})).toBe(true);
+    expect(openInTab).not.toHaveBeenCalled();
+  });
+
+  it('一键打开全部时跳过复制动作，只打开链接', () => {
+    openAllEngines([{ action: 'copy' }, { action: 'open' }], 'example.com', {}, null);
+    expect(writeText).not.toHaveBeenCalled();
+    expect(openInTab).toHaveBeenCalledTimes(1);
   });
 });

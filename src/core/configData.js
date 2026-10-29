@@ -7,6 +7,13 @@ export function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
+/** 非搜索类快捷动作：copy 复制当前内容，open 打开当前链接 */
+export const ENGINE_ACTIONS = ['copy', 'open'];
+
+export function normalizeEngineAction(value) {
+  return ENGINE_ACTIONS.includes(value) ? value : '';
+}
+
 // 规范化单个搜索引擎
 export function normalizeEngine(raw) {
   if (!isPlainObject(raw)) return null;
@@ -15,8 +22,10 @@ export function normalizeEngine(raw) {
   for (const key of ENGINE_STRINGS) {
     if (typeof raw[key] === 'string') engine[key] = raw[key];
   }
-  // url 是搜索跳转的必需字段，没有就视为无效引擎
-  if (!engine.url) return null;
+  const action = normalizeEngineAction(raw.action);
+  if (action) engine.action = action;
+  // 搜索类引擎必须有 url；动作引擎只需要名称
+  if (!engine.url && !action) return null;
   // 仅在新标签页以外的打开方式才记录，减少冗余字段
   if (raw.target === '_self') engine.target = '_self';
   // 只有明确为 true 才视为隐藏，其他值一律按显示处理

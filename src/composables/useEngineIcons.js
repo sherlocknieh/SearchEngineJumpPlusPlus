@@ -52,6 +52,8 @@ export function useEngineIcons({ draft, scheduleAutoSave, isDisposed }) {
 
   /** 保存引擎后调用：版本号 +1，并在缺少图标数据时后台获取 */
   function refreshIconInBackground(engine, url) {
+    // 动作引擎没有站点链接，也就没有可抓取的图标
+    if (engine.action) return;
     const token = bumpIconToken(engine._id);
     if (!engine.faviconData) loadFaviconInBackground(engine._id, url, token);
   }

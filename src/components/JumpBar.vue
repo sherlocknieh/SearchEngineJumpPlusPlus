@@ -12,8 +12,15 @@ import {
   resolveRuleStyle,
   applyStylish,
 } from '../core/applyRule.js';
-import { extractKeyword, performJump, openAllEngines } from '../core/jump.js';
+import {
+  extractKeyword,
+  performJump,
+  openAllEngines,
+  isActionEngine,
+  performEngineAction,
+} from '../core/jump.js';
 import { getSelectedText } from '../core/selection.js';
+import { showToast } from '../stores/ui.js';
 import { useFixedTop } from '../composables/useFixedTop.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
@@ -86,6 +93,8 @@ const categories = computed(() =>
       key,
       engines: (data.engineList[key] || []).filter((engine) => {
         if (engine.disable) return false;
+        // 动作引擎没有站点链接，不受“防止原地跳转”影响
+        if (engine.action) return true;
         if (data.HideTheSameLink && matchedRule?.url?.test(engine.url)) {
           return false;
         }
@@ -100,8 +109,18 @@ function getCurrentKeyword() {
   return extractKeyword(inputTarget);
 }
 
-function onJump(engine) {
-  performJump(engine, getCurrentKeyword(), data);
+async function onJump(engine) {
+  const keyword = getCurrentKeyword();
+  if (isActionEngine(engine)) {
+    const ok = await performEngineAction(engine, keyword);
+    if (ok) {
+      showToast(t(engine.action === 'copy' ? 'action.copied' : 'action.opened'));
+    } else {
+      showToast(t(engine.action === 'copy' ? 'action.copyFailed' : 'action.openFailed'));
+    }
+    return;
+  }
+  performJump(engine, keyword, data);
 }
 
 function onJumpAll(engines) {

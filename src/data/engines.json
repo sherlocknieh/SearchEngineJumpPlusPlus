@@ -12,6 +12,7 @@
     ["影视", "video", true],
     ["书籍", "books", true],
     ["工具", "tools", true],
+    ["快捷", "actions", true],
     ["资源", "download", true],
     ["资源+", "user1792802683546", false],
     ["国产AI", "user1792793110006", false]
@@ -138,6 +139,18 @@
         "url": "https://www.powerthesaurus.org/%s",
         "favicon": "https://www.powerthesaurus.org/favicon.ico",
         "faviconData": "data:image/webp;base64,UklGRtQCAABXRUJQVlA4WAoAAAAQAAAALwAALwAAQUxQSJEAAAABgBRJkiMpoRW0YFbQcmV1dZ54R8QESBIeokiP/x/Dbsj62KTZJs4mzsSZOBNn4lxxziPOV6gSHPVe6yshaMjMtYTGJOiwR73DCffqpH6UIxRXo97pE+75xGOWmJFgJniuLfMNz3vPBqloH3JjWWnEKY00FIbCUBgKK2WhxRk969bqTBJ0291dpeWjwN+PCfcAAFZQOCAcAgAA0A4AnQEqMAAwAD4xFIhDIiEKrVcAEAGCWwAnTLoQQ+S/hX+M3RP7AdmeKtNh0lfovxG9mf8A/ADqGNwB+oH6q+/r5EvsAf0n+zeq//h+sA8oL/d/6P4Ff3O9Hr//lQh8nXgpDdYHBAQSQQlTAHz5+zp4lwUQcOTaO684hjB7QAD+7tPf/ufS9q09vDGHug49vD//uq5Ftg9wSMupia9wRZ3d9/YJDbnA/3UpDQeXMspHXVVlZwQ4mKthce3fmzVXkRoDjTI3gRYS7tU0czqBbV9sQXcbssNvI/2Ov//Jwf/5Qe//8lDzlqz/NDtnfnk2UxTjjNFYB6B/ix08aGXo5QObwiP83XI9jLr7IS1wm1BkPcNkym4b49gSXLRkblMDAjiUMqrCL2vB0TXja5X1i/iTTOLqNhg5f15WHe79eOWEqjn6MlDQgkwZIMHz4N97v/t2JYs52xFxO3lilUlS4AmUoOcHB1fQtTb0vv47djehB41GatOTfmEcFS/kkKb2WATvikhjY/0gB6H45mzKfg1eKAdOpdxkrbMLEqLGq/9Gg13ydyrj63JvKQppmKSOjDLSi+9HkZlYo6teQUbVD8mZ02UelnlJCxGmeQz+B31d3oFwI6XyW2n7LAZvbeFysoBBQ//OSuPBu24Z4pZ4YLJ3nHD//aOjz6Zbo20ft4pT2Poz+ERGPXl+YJ2WFR1iL820nQAwTRUgAAAA"
+      }
+    ],
+    "actions": [
+      {
+        "name": "复制关键词",
+        "url": "",
+        "action": "copy"
+      },
+      {
+        "name": "打开链接",
+        "url": "",
+        "action": "open"
       }
     ],
     "download": [

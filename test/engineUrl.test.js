@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   faviconFromUrl,
   hostFromUrl,
+  normalizeKeywordUrl,
   registrableDomain,
   siteOrigin,
   titleFromUrl,
@@ -85,5 +86,28 @@ describe('hostFromUrl', () => {
   it('无主机名返回空串', () => {
     expect(hostFromUrl('')).toBe('');
     expect(hostFromUrl('http://')).toBe('');
+  });
+});
+
+describe('normalizeKeywordUrl', () => {
+  it('保留完整链接并补全缺失的协议', () => {
+    expect(normalizeKeywordUrl('https://example.com/a?b=1')).toBe('https://example.com/a?b=1');
+    expect(normalizeKeywordUrl('example.com/a')).toBe('https://example.com/a');
+    expect(normalizeKeywordUrl('localhost:8080/x')).toBe('');
+    expect(normalizeKeywordUrl('  example.com  ')).toBe('https://example.com/');
+  });
+
+  it('支持 mailto/tel 与 IP 地址', () => {
+    expect(normalizeKeywordUrl('mailto:a@example.com')).toBe('mailto:a@example.com');
+    expect(normalizeKeywordUrl('tel:+123456')).toBe('tel:+123456');
+    expect(normalizeKeywordUrl('192.168.1.1')).toBe('https://192.168.1.1/');
+  });
+
+  it('普通文本、空值与不支持的协议返回空串', () => {
+    expect(normalizeKeywordUrl('hello world')).toBe('');
+    expect(normalizeKeywordUrl('hello')).toBe('');
+    expect(normalizeKeywordUrl('')).toBe('');
+    expect(normalizeKeywordUrl(null)).toBe('');
+    expect(normalizeKeywordUrl('ftp://example.com/file')).toBe('');
   });
 });

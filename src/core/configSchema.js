@@ -6,7 +6,12 @@
  */
 import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
-import { isPlainObject, normalizeCategories, normalizeEngine } from './configData.js';
+import {
+  isPlainObject,
+  normalizeCategories,
+  normalizeEngine,
+  normalizeEngineAction,
+} from './configData.js';
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
 export const OPTION_KEYS = [
@@ -88,6 +93,8 @@ export function normalizeConfig(raw, defaults) {
 export function serializeEngine(raw) {
   if (!isPlainObject(raw)) return null;
   const engine = { name: raw.name, url: raw.url };
+  const action = normalizeEngineAction(raw.action);
+  if (action) engine.action = action;
   if (typeof raw.favicon === 'string') engine.favicon = raw.favicon;
   if (typeof raw.faviconData === 'string') engine.faviconData = raw.faviconData;
   if (raw.target === '_self') engine.target = '_self';

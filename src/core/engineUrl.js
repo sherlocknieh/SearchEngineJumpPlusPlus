@@ -103,3 +103,34 @@ export function hostFromUrl(raw) {
     .replace(/\.$/, '')
     .replace(/^www\./, '');
 }
+
+const LINK_SCHEME = /^[a-z][a-z\d+.-]*:/i;
+const SPECIAL_LINK_SCHEME = /^(mailto|tel):/i;
+
+/**
+ * 把选中文本/关键词整理成可打开的链接。
+ * 没有协议时补全 https://；空白、非链接文本与不支持的协议返回空串。
+ */
+export function normalizeKeywordUrl(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value || /\s/.test(value)) return '';
+  // mailto:/tel: 直接使用；其余按 http(s) 处理
+  const candidate = SPECIAL_LINK_SCHEME.test(value)
+    ? value
+    : LINK_SCHEME.test(value)
+      ? value
+      : `https://${value}`;
+  try {
+    const url = new URL(candidate);
+    if (/^https?:$/.test(url.protocol)) {
+      const host = url.hostname;
+      // 仅当主机名像域名、localhost 或 IP 时才视为链接，避免把普通单词当地址
+      if (!host.includes('.') && host !== 'localhost') return '';
+      return url.href;
+    }
+    if (/^(mailto|tel):$/.test(url.protocol)) return url.href;
+  } catch (e) {
+    return '';
+  }
+  return '';
+}

@@ -27,6 +27,9 @@ const form = reactive({
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
   target: props.initial.target === '_self' ? '_self' : '_blank',
+  // 空串表示普通搜索引擎，copy/open 表示非搜索动作
+  action:
+    props.initial.action === 'copy' || props.initial.action === 'open' ? props.initial.action : '',
 });
 
 const urlInput = ref(null);
@@ -86,6 +89,7 @@ function markFaviconEdited() {
 watch(
   () => form.url,
   () => {
+    if (form.action) return;
     if (!titleEdited.value || !form.name.trim()) {
       form.name = titleFromUrl(form.url);
     }
@@ -96,18 +100,35 @@ watch(
   },
 );
 
+// 切换为动作引擎时停止依赖链接的自动补全；切回搜索时恢复按空值自动补全
+watch(
+  () => form.action,
+  (action) => {
+    if (action) {
+      titleEdited.value = true;
+      faviconEdited.value = true;
+      clearSteps();
+      return;
+    }
+    titleEdited.value = Boolean(form.name.trim());
+    faviconEdited.value = Boolean(form.favicon.trim());
+  },
+);
+
 onMounted(() => urlInput.value?.focus());
 
 function submit() {
   if (props.busy) return;
-  const url = withProtocol(form.url);
-  const favicon = form.favicon.trim() || props.resolveIcon(form.url);
+  const action = form.action;
+  const url = action ? '' : withProtocol(form.url);
+  const favicon = action ? '' : form.favicon.trim() || props.resolveIcon(form.url);
   emit('submit', {
     name: form.name,
     url,
     favicon,
-    faviconData: resolveFaviconData(favicon),
+    faviconData: action ? '' : resolveFaviconData(favicon),
     target: form.target,
+    ...(action ? { action } : {}),
   });
 }
 </script>
@@ -124,6 +145,15 @@ function submit() {
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
     <label class="sej-field">
+      <span>{{ t('engine.action') }}</span>
+      <select v-model="form.action" :disabled="busy">
+        <option value="">{{ t('engine.actionSearch') }}</option>
+        <option value="copy">{{ t('engine.actionCopy') }}</option>
+        <option value="open">{{ t('engine.actionOpen') }}</option>
+      </select>
+    </label>
+    <p v-if="form.action" class="sej-field-hint">{{ t('engine.actionHint') }}</p>
+    <label v-if="!form.action" class="sej-field">
       <span>{{ t('engine.url') }}</span>
       <input
         ref="urlInput"
@@ -141,7 +171,7 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
-    <div class="sej-field">
+    <div v-if="!form.action" class="sej-field">
       <span>{{ t('engine.iconSrc') }}</span>
       <div class="sej-field-row">
         <input
@@ -211,7 +241,7 @@ function submit() {
         </a>
       </div>
     </div>
-    <div class="sej-field">
+    <div v-if="!form.action" class="sej-field">
       <span>{{ t('engine.iconData') }}</span>
       <div class="sej-data-line">
         <input
@@ -241,7 +271,7 @@ function submit() {
         @change="uploadFavicon"
       />
     </div>
-    <label class="sej-field">
+    <label v-if="!form.action || form.action === 'open'" class="sej-field">
       <span>{{ t('engine.target') }}</span>
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
         <option value="_blank">{{ t('engine.targetBlank') }}</option>

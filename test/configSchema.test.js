@@ -76,6 +76,26 @@ describe('normalizeConfig', () => {
     ]);
   });
 
+  it('保留动作引擎并允许没有链接', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['快捷', 'actions', true]],
+        engineList: {
+          actions: [
+            { name: '复制', action: 'copy' },
+            { name: '打开', action: 'open', url: 'https://ignored.test' },
+            { name: '未知动作', action: 'paste' },
+          ],
+        },
+      },
+      defaults,
+    );
+    expect(result.engineList.actions).toEqual([
+      { name: '复制', action: 'copy' },
+      { name: '打开', url: 'https://ignored.test', action: 'open' },
+    ]);
+  });
+
   it('缺少 engineList 时按分类键回退默认引擎', () => {
     const result = normalizeConfig({ engineCategories: [['搜索', 'web', true]] }, defaults);
     expect(result.engineList.web).toEqual(defaults.engineList.web);
@@ -99,6 +119,7 @@ describe('serializeConfig', () => {
           engines: [
             { _id: 1, name: 'A', url: 'https://a.test/?q=%s', favicon: 'x', disable: true },
             { _id: 2, name: 'B', url: '', target: '_blank' },
+            { _id: 3, name: 'C', url: '', action: 'copy' },
           ],
         },
       ],
@@ -113,6 +134,7 @@ describe('serializeConfig', () => {
       { name: 'A', url: 'https://a.test/?q=%s', favicon: 'x', disable: true },
       // 空 url 的条目在面板阶段仍保留，交由编辑弹窗校验
       { name: 'B', url: '' },
+      { name: 'C', url: '', action: 'copy' },
     ]);
     expect(config.engineList.cat[0]).not.toHaveProperty('_id');
   });

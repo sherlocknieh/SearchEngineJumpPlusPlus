@@ -1,4 +1,7 @@
 import { GM_openInTab } from '$';
+import { normalizeEngineAction } from './configData.js';
+import { normalizeKeywordUrl } from './engineUrl.js';
+import { copyText } from './clipboard.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -39,6 +42,35 @@ export function prepareJump(engine, keyword, { hideTheSameLink }) {
     type: 'get',
     url: targetURL ? targetURL.replaceAll('%s', encoded) : targetURL,
   };
+}
+
+/**
+ * 是否为非搜索类动作引擎（复制/打开链接）。
+ */
+export function isActionEngine(engine) {
+  return Boolean(normalizeEngineAction(engine?.action));
+}
+
+/**
+ * 执行动作引擎，返回是否成功处理。
+ * copy 复制当前关键词/划词内容；open 把当前内容当作链接打开。
+ */
+export async function performEngineAction(engine, keyword) {
+  const action = normalizeEngineAction(engine?.action);
+  if (action === 'copy') {
+    return copyText(keyword);
+  }
+  if (action === 'open') {
+    const url = normalizeKeywordUrl(keyword);
+    if (!url) return false;
+    if (shouldOpenInNewTab(engine)) {
+      if (!openInNewTab(url)) window.open(url, '_blank');
+    } else {
+      window.location.href = url;
+    }
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -85,6 +117,12 @@ export function submitPostForm(action, field, value, targetName) {
  * 是否新标签页由引擎的打开方式决定，forceNewTab 仅用于一键打开全部引擎。
  */
 export function performJump(engine, keyword, settingData, forceNewTab = false) {
+  // 动作引擎不拼接搜索 URL，直接执行复制/打开链接
+  if (isActionEngine(engine)) {
+    performEngineAction(engine, keyword);
+    return true;
+  }
+
   const result = prepareJump(engine, keyword, {
     hideTheSameLink: settingData.HideTheSameLink,
   });
@@ -114,6 +152,12 @@ export function performJump(engine, keyword, settingData, forceNewTab = false) {
 export function openAllEngines(engines, keyword, settingData, matchedRule) {
   for (const engine of engines) {
     if (engine.disable) continue;
+    // 动作引擎没有 URL，不参与“与当前站点相同”的判断；
+    // 批量打开时只执行打开链接，避免静默覆盖剪贴板
+    if (isActionEngine(engine)) {
+      if (engine.action !== 'copy') performEngineAction(engine, keyword);
+      continue;
+    }
     if (settingData?.HideTheSameLink && matchedRule?.url?.test(engine.url)) {
       continue;
     }

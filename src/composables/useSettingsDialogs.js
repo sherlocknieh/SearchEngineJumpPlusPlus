@@ -89,8 +89,8 @@ export function useSettingsDialogs({
   async function submitEngine(engine) {
     const ctx = engineDialog.value;
     if (!ctx || engineSaving.value) return;
-    if (!engine.name || !engine.url) {
-      alert(t('engine.required'));
+    if (!engine.name || (!engine.action && !engine.url)) {
+      alert(t(engine.action ? 'engine.requiredAction' : 'engine.required'));
       return;
     }
     engineSaving.value = true;
