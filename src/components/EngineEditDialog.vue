@@ -50,9 +50,10 @@ const siteHost = computed(() => hostFromUrl(form.url) || hostFromUrl(form.favico
 const {
   faviconFileInput,
   previewData,
-  previewUrl,
+  pickedUrl,
   previewLoading,
   previewSteps,
+  previewSize,
   dataIconLink,
   previewImage,
   canPreview,
@@ -126,6 +127,7 @@ function submit() {
 </script>
 
 <template>
+  <!-- 引擎编辑弹窗 -->
   <div
     id="newSearchBox"
     ref="rootEl"
@@ -133,11 +135,14 @@ function submit() {
     aria-modal="true"
     aria-labelledby="sej-engine-title"
   >
+    <!-- 弹窗标题 -->
     <div id="sej-engine-title" class="sej-dialog-title">
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
+    <!-- 引擎链接 -->
     <label v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.url') }}</span>
+      <!-- 链接输入框：自动补全协议并联动标题/图标 -->
       <input
         ref="urlInput"
         v-model="form.url"
@@ -145,8 +150,10 @@ function submit() {
         :disabled="busy"
       />
     </label>
+    <!-- 引擎名称 -->
     <label class="sej-field">
       <span>{{ t('engine.name') }}</span>
+      <!-- 名称输入框：手动修改后不再随链接自动填充 -->
       <input
         v-model="form.name"
         :placeholder="t('common.required')"
@@ -154,15 +161,19 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
+    <!-- 图标地址 -->
     <div v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.iconSrc') }}</span>
+      <!-- 图标地址输入行：输入框 + 获取按钮 -->
       <div class="sej-field-row">
+        <!-- 图标地址输入框：手动修改后不再随链接自动填充 -->
         <input
           v-model="form.favicon"
           :placeholder="t('common.optional')"
           :disabled="busy"
           @input="markFaviconEdited"
         />
+        <!-- 获取图标按钮：并行试探各来源，等待中或无可试探来源时禁用 -->
         <button
           type="button"
           class="sej-icon-preview-btn"
@@ -173,8 +184,10 @@ function submit() {
         </button>
       </div>
       <!-- 并行尝试的来源与结果；成功项可点选切换 -->
-      <!-- 缩略图显示实际图标；非当前项提示“点击选用”，当前项显示“已获取” -->
+      <!-- 缩略图显示实际图标；未点选的提示“选择此图标”，已点选的显示“已选择” -->
+      <!-- 图标来源列表容器：无试探结果时不渲染 -->
       <div v-if="previewSteps.length" class="sej-preview-steps">
+        <!-- 单个来源项：可点击/回车选用成功项 -->
         <div
           v-for="step in previewSteps"
           :key="step.url"
@@ -184,7 +197,7 @@ function submit() {
             'is-' + step.status,
             {
               'is-selectable': step.status === 'ok',
-              'is-active': step.status === 'ok' && step.url === previewUrl,
+              'is-active': step.status === 'ok' && step.url === pickedUrl,
             },
           ]"
           :role="step.status === 'ok' ? 'button' : undefined"
@@ -193,26 +206,37 @@ function submit() {
           @keydown.enter.prevent="chooseStep(step)"
           @keydown.space.prevent="chooseStep(step)"
         >
+          <!-- 成功项缩略图 -->
           <img
             v-if="step.status === 'ok' && step.data"
             class="sej-preview-thumb"
             :src="step.data"
             alt=""
           />
+          <!-- 非成功项占位圆点 -->
           <span v-else class="sej-preview-dot"></span>
+          <!-- 来源地址文本 -->
           <span class="sej-preview-url">{{ step.url }}</span>
+          <!-- 获取成功后的原始下载大小（未压缩） -->
+          <span v-if="step.status === 'ok' && step.size" class="sej-preview-size">{{
+            step.size
+          }}</span>
+          <!-- 失败原因 -->
           <span v-if="step.status === 'failed' && step.reason" class="sej-preview-state">{{
             step.reason
           }}</span>
+          <!-- 成功项选中状态角标 -->
           <span
             v-else-if="step.status === 'ok'"
             class="sej-preview-state sej-preview-icon"
-            :class="{ 'is-selected': step.url === previewUrl }"
-            :title="step.url !== previewUrl ? t('engine.stepUse') : t('engine.stepOk')"
+            :class="{ 'is-selected': step.url === pickedUrl }"
+            :title="step.url !== pickedUrl ? t('engine.stepUse') : t('engine.stepOk')"
             v-html="ICON_SELECT"
           ></span>
+          <!-- 进行中/待处理状态文本 -->
           <span v-else class="sej-preview-state">{{ t(STEP_STATUS_TEXT[step.status]) }}</span>
         </div>
+        <!-- 外链：无结果时去图标提取工具手工取图 -->
         <a
           v-if="extractorUrl"
           class="sej-preview-extractor"
@@ -224,9 +248,18 @@ function submit() {
         </a>
       </div>
     </div>
+    <!-- 图标数据 -->
     <div v-if="!initialAction" class="sej-field">
-      <span>{{ t('engine.iconData') }}</span>
+      <!-- 字段名：附带压缩后的存储体积 -->
+      <span>
+        {{ t('engine.iconData') }}
+        <em v-if="previewSize" class="sej-icon-size"
+          >{{ previewSize }} {{ t('engine.iconDataCompressed') }}</em
+        >
+      </span>
+      <!-- 图标数据输入行：输入框 + 上传按钮 -->
       <div class="sej-data-line">
+        <!-- 图标数据输入框：支持直接粘贴 data URI -->
         <input
           v-model="previewData"
           class="sej-data-input"
@@ -234,6 +267,7 @@ function submit() {
           :disabled="busy"
           @input="markDataEdited"
         />
+        <!-- 上传按钮：已有图标时显示缩略图 -->
         <button
           type="button"
           class="sej-icon-preview-btn"
@@ -242,10 +276,13 @@ function submit() {
           :title="previewImage ? t('engine.uploadReplace') : t('engine.upload')"
           @click="pickFaviconFile"
         >
+          <!-- 当前图标缩略图 -->
           <img v-if="previewImage" class="sej-icon-preview" :src="dataIconLink" alt="" />
+          <!-- 无图标时的按钮文字 -->
           <template v-else>{{ t('engine.upload') }}</template>
         </button>
       </div>
+      <!-- 隐藏的文件选择框：由上传按钮触发 -->
       <input
         ref="faviconFileInput"
         class="sej-file-input"
@@ -254,14 +291,19 @@ function submit() {
         @change="uploadFavicon"
       />
     </div>
+    <!-- 打开方式 -->
     <label v-if="!initialAction || initialAction === 'open'" class="sej-field">
+      <!-- 字段名 -->
       <span>{{ t('engine.target') }}</span>
+      <!-- 打开方式下拉：新标签页 / 当前页 -->
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
         <option value="_blank">{{ t('engine.targetBlank') }}</option>
         <option value="_self">{{ t('engine.targetSelf') }}</option>
       </select>
     </label>
+    <!-- 底部操作按钮 -->
     <div class="sej-dialog-actions">
+      <!-- 删除按钮：仅编辑已有引擎时显示 -->
       <button
         v-if="mode === 'edit'"
         type="button"
@@ -271,9 +313,11 @@ function submit() {
       >
         {{ t('common.delete') }}
       </button>
+      <!-- 取消按钮：放弃修改并关闭弹窗 -->
       <button class="addItemBoxBtn iqxin-closeBtn" :disabled="busy" @click="$emit('cancel')">
         {{ t('common.cancel') }}
       </button>
+      <!-- 确认按钮：提交表单，忙碌时显示“获取中” -->
       <button class="addItemBoxBtn iqxin-enterBtn" :disabled="busy" @click="submit">
         {{ busy ? t('engine.fetching') : t('common.confirm') }}
       </button>

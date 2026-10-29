@@ -141,6 +141,21 @@
   opacity: 0.7;
 }
 
+/* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */
+.sej-preview-size {
+  flex: 0 0 auto;
+  opacity: 0.55;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 图标数据字段名旁的当前图标存储体积（转码后） */
+.sej-icon-size {
+  margin-left: 4px;
+  font-style: normal;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.55;
+}
+
 .sej-preview-state.sej-preview-icon {
   display: inline-flex;
   align-items: center;

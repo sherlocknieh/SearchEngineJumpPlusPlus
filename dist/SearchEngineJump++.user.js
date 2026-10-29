@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.10.29.1641
+// @version            2026.10.29.1826
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5803,6 +5803,7 @@
 			"engine.name": "标题",
 			"engine.iconSrc": "图标来源",
 			"engine.iconData": "图标数据",
+			"engine.iconDataCompressed": "(已压缩)",
 			"engine.iconDataPlaceholder": "选填，可粘贴 data:image/... 链接",
 			"engine.fetchIcon": "获取图标",
 			"engine.refetch": "重新获取",
@@ -5928,6 +5929,7 @@
 			"engine.name": "Title",
 			"engine.iconSrc": "Icon source",
 			"engine.iconData": "Icon data",
+			"engine.iconDataCompressed": " (compressed)",
 			"engine.iconDataPlaceholder": "Optional; paste a data:image/... URL",
 			"engine.fetchIcon": "Fetch icon",
 			"engine.refetch": "Fetch again",
@@ -6961,6 +6963,7 @@
 	var MAX_ICON_BYTES = 65536;
 	var COMPRESS_START_SIZE = 64;
 	var COMPRESS_MIN_SIZE = 16;
+	var WEBP_QUALITY = .9;
 	var EXTENSION_MIME = {
 		".ico": "image/x-icon",
 		".png": "image/png",
@@ -6996,6 +6999,19 @@
 		const base64 = dataUrl.slice(comma + 1);
 		const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
 		return Math.floor(base64.length * 3 / 4) - padding;
+	}
+	function trimDecimal(value) {
+		return value.toFixed(1).replace(/\.0$/, "");
+	}
+	function dataUrlStorageBytes(dataUrl) {
+		return /^data:/i.test(dataUrl) ? dataUrl.length : Infinity;
+	}
+	function formatIconSize(bytes) {
+		if (!Number.isFinite(bytes) || bytes <= 0) return "";
+		if (bytes < 1024) return `${Math.round(bytes)} B`;
+		const kb = bytes / 1024;
+		if (kb < 1024) return `${trimDecimal(kb)} KB`;
+		return `${trimDecimal(kb / 1024)} MB`;
 	}
 	function loadImageElement(blob) {
 		return new Promise((resolve) => {
@@ -7068,6 +7084,32 @@
 			return "";
 		} catch (e) {
 			console.warn("[SEJ] 图标压缩失败:", e);
+			return "";
+		} finally {
+			release?.();
+		}
+	}
+	async function toWebpIcon(buffer, mime) {
+		if (mime === "image/webp" || mime === "image/gif" || mime === "image/svg+xml") return "";
+		if (!supportsWebp()) return "";
+		const decoded = await decodeIcon(buffer, mime);
+		if (!decoded) return "";
+		const { image, release } = decoded;
+		try {
+			const width = image.naturalWidth || image.width || 0;
+			const height = image.naturalHeight || image.height || 0;
+			if (!width || !height) return "";
+			const canvas = document.createElement("canvas");
+			canvas.width = width;
+			canvas.height = height;
+			const ctx = canvas.getContext("2d");
+			if (!ctx) return "";
+			ctx.drawImage(image, 0, 0, width, height);
+			const dataUrl = canvas.toDataURL("image/webp", WEBP_QUALITY);
+			if (!dataUrl.startsWith("data:image/webp")) return "";
+			return dataUrlBytes(dataUrl) < buffer.byteLength ? dataUrl : "";
+		} catch (e) {
+			console.warn("[SEJ] 图标转码失败:", e);
 			return "";
 		} finally {
 			release?.();
@@ -7166,12 +7208,15 @@
 				};
 				return {
 					data: compressed,
-					reason: ""
+					reason: "",
+					bytes: buffer.byteLength
 				};
 			}
+			const original = `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
 			return {
-				data: `data:${mime};base64,${arrayBufferToBase64(buffer)}`,
-				reason: ""
+				data: await toWebpIcon(buffer, mime) || original,
+				reason: "",
+				bytes: buffer.byteLength
 			};
 		} catch (e) {
 			console.warn("[SEJ] 图标转换失败:", source, e);
@@ -9196,6 +9241,7 @@
 	function useEngineIconPreview({ form, siteHost, initialFavicon, initialFaviconData, isBusy }) {
 		const previewData = ref("");
 		const previewUrl = ref("");
+		const pickedUrl = ref("");
 		const previewLoading = ref(false);
 		const previewFailed = ref(false);
 		const previewSteps = ref([]);
@@ -9206,10 +9252,12 @@
 		const faviconFileInput = ref(null);
 		const dataIconLink = computed(() => previewData.value.trim());
 		const previewImage = computed(() => /^data:image\//i.test(dataIconLink.value));
+		const previewSize = computed(() => formatIconSize(dataUrlStorageBytes(dataIconLink.value)));
 		const canPreview = computed(() => Boolean(siteHost.value) || /^(https?:\/\/|data:)/i.test(form.favicon.trim()));
+		const hasFetched = computed(() => previewSteps.value.some((step) => step.status === "ok"));
 		const previewLabel = computed(() => {
 			if (previewLoading.value) return t("engine.cancelFetch");
-			if (previewFailed.value || previewImage.value) return t("engine.refetch");
+			if (previewFailed.value || previewImage.value || hasFetched.value) return t("engine.refetch");
 			return t("engine.fetchIcon");
 		});
 		const extractorUrl = computed(() => {
@@ -9228,14 +9276,17 @@
 		function setManualPreviewData(value) {
 			previewData.value = value;
 			previewUrl.value = value ? "manual" : "";
+			pickedUrl.value = "";
 			dataEdited.value = Boolean(value);
 		}
 		function markDataEdited() {
 			dataEdited.value = true;
+			pickedUrl.value = "";
 			previewUrl.value = previewData.value.trim() ? "manual" : "";
 		}
 		watch(() => form.favicon, (value) => {
 			if (internalUpdates > 0) return;
+			pickedUrl.value = "";
 			previewToken++;
 			const url = value.trim();
 			previewLoading.value = false;
@@ -9245,8 +9296,9 @@
 				setPreviewData(url, url);
 				return;
 			}
-			if (previewCache.has(url)) {
-				setPreviewData(previewCache.get(url), url);
+			const cached = previewCache.get(url);
+			if (cached) {
+				setPreviewData(cached.data, url);
 				return;
 			}
 			if (url === initialFavicon && initialFaviconData) setPreviewData(initialFaviconData, url);
@@ -9261,7 +9313,11 @@
 		}
 		async function applyPreview(step, data) {
 			step.status = "ok";
-			previewCache.set(step.url, data);
+			pickedUrl.value = step.url;
+			previewCache.set(step.url, {
+				data,
+				bytes: step.rawSize
+			});
 			if (form.favicon.trim() !== step.url) {
 				internalUpdates++;
 				form.favicon = step.url;
@@ -9272,7 +9328,7 @@
 		}
 		async function chooseStep(step) {
 			if (isBusy() || step.status !== "ok" || !step.data) return;
-			if (step.url === previewUrl.value) return;
+			if (step.url === pickedUrl.value) return;
 			await applyPreview(step, step.data);
 		}
 		async function previewIcon() {
@@ -9297,6 +9353,7 @@
 			const host = siteHost.value;
 			if (host) {
 				const domain = registrableDomain(host);
+				addCandidate(faviconFromUrl(host));
 				if (domain !== host) addCandidate(faviconFromUrl(domain));
 				addCandidate(`https://a.favicon.im/${host}`);
 				if (domain !== host) addCandidate(`https://a.favicon.im/${domain}`);
@@ -9308,31 +9365,45 @@
 			previewSteps.value = candidates.map((item) => ({
 				...item,
 				status: "pending",
-				data: ""
+				data: "",
+				rawSize: 0,
+				size: ""
 			}));
-			let applied = false;
+			const moveTo = (step, index) => {
+				const list = previewSteps.value;
+				const from = list.indexOf(step);
+				if (from === -1) return;
+				list.splice(from, 1);
+				list.splice(Math.min(index, list.length), 0, step);
+			};
+			const okEnd = (step) => previewSteps.value.filter((item) => item !== step && item.status === "ok").length;
 			const settle = async (step) => {
-				if (previewCache.has(step.url)) {
-					step.data = previewCache.get(step.url);
+				const cached = previewCache.get(step.url);
+				if (cached) {
+					step.data = cached.data;
+					step.rawSize = cached.bytes;
 					step.status = "ok";
 				} else {
 					step.status = "loading";
-					const { data, reason } = await resolveFavicon(step.url);
+					const { data, reason, bytes } = await resolveFavicon(step.url);
 					if (token !== previewToken) return;
 					if (data) {
 						step.data = data;
+						step.rawSize = bytes || 0;
 						step.status = "ok";
-						previewCache.set(step.url, data);
+						previewCache.set(step.url, {
+							data,
+							bytes: step.rawSize
+						});
 					} else {
 						step.reason = reason;
 						step.status = "failed";
+						moveTo(step, previewSteps.value.length);
 						return;
 					}
 				}
-				if (!applied) {
-					applied = true;
-					await applyPreview(step, step.data);
-				}
+				step.size = formatIconSize(step.rawSize);
+				moveTo(step, okEnd(step));
 			};
 			await Promise.all(previewSteps.value.map(settle));
 			if (token !== previewToken) return;
@@ -9372,11 +9443,13 @@
 			faviconFileInput,
 			previewData,
 			previewUrl,
+			pickedUrl,
 			previewLoading,
 			previewFailed,
 			previewSteps,
 			dataIconLink,
 			previewImage,
+			previewSize,
 			canPreview,
 			previewLabel,
 			extractorUrl,
@@ -9390,7 +9463,7 @@
 			resolveFaviconData
 		};
 	}
-	var EngineEditDialog_default = ".sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition:\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover{\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  /* 链接源文本允许光标选择/复制 */\n  cursor: text;\n  -webkit-user-select: text;\n  user-select: text;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  color: var(--sej-success);\n  opacity: 0.6;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */\n.sej-preview-icon svg path {\n  opacity: 0;\n}\n\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  opacity: 1;\n}\n\n/* 已选用：绿色圆圈内显示勾 */\n.sej-preview-icon.is-selected {\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  opacity: 1;\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n";
+	var EngineEditDialog_default = ".sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition:\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover{\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  /* 链接源文本允许光标选择/复制 */\n  cursor: text;\n  -webkit-user-select: text;\n  user-select: text;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n/* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */\n.sej-preview-size {\n  flex: 0 0 auto;\n  opacity: 0.55;\n  font-variant-numeric: tabular-nums;\n}\n\n/* 图标数据字段名旁的当前图标存储体积（转码后） */\n.sej-icon-size {\n  margin-left: 4px;\n  font-style: normal;\n  font-variant-numeric: tabular-nums;\n  opacity: 0.55;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  color: var(--sej-success);\n  opacity: 0.6;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */\n.sej-preview-icon svg path {\n  opacity: 0;\n}\n\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  opacity: 1;\n}\n\n/* 已选用：绿色圆圈内显示勾 */\n.sej-preview-icon.is-selected {\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  opacity: 1;\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n";
 	var _hoisted_1$6 = {
 		id: "sej-engine-title",
 		class: "sej-dialog-title"
@@ -9428,33 +9501,41 @@
 	var _hoisted_14$2 = { class: "sej-preview-url" };
 	var _hoisted_15$2 = {
 		key: 2,
+		class: "sej-preview-size"
+	};
+	var _hoisted_16$1 = {
+		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_16$1 = ["title"];
-	var _hoisted_17 = {
-		key: 4,
+	var _hoisted_17 = ["title"];
+	var _hoisted_18 = {
+		key: 5,
 		class: "sej-preview-state"
 	};
-	var _hoisted_18 = ["href"];
-	var _hoisted_19 = {
+	var _hoisted_19 = ["href"];
+	var _hoisted_20 = {
 		key: 2,
 		class: "sej-field"
 	};
-	var _hoisted_20 = { class: "sej-data-line" };
-	var _hoisted_21 = ["placeholder", "disabled"];
-	var _hoisted_22 = ["disabled", "title"];
-	var _hoisted_23 = ["src"];
-	var _hoisted_24 = {
+	var _hoisted_21 = {
+		key: 0,
+		class: "sej-icon-size"
+	};
+	var _hoisted_22 = { class: "sej-data-line" };
+	var _hoisted_23 = ["placeholder", "disabled"];
+	var _hoisted_24 = ["disabled", "title"];
+	var _hoisted_25 = ["src"];
+	var _hoisted_26 = {
 		key: 3,
 		class: "sej-field"
 	};
-	var _hoisted_25 = ["disabled"];
-	var _hoisted_26 = { value: "_blank" };
-	var _hoisted_27 = { value: "_self" };
-	var _hoisted_28 = { class: "sej-dialog-actions" };
-	var _hoisted_29 = ["disabled"];
-	var _hoisted_30 = ["disabled"];
+	var _hoisted_27 = ["disabled"];
+	var _hoisted_28 = { value: "_blank" };
+	var _hoisted_29 = { value: "_self" };
+	var _hoisted_30 = { class: "sej-dialog-actions" };
 	var _hoisted_31 = ["disabled"];
+	var _hoisted_32 = ["disabled"];
+	var _hoisted_33 = ["disabled"];
 	var ICON_SELECT = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>";
 	var _sfc_main$8 = {
 		__name: "EngineEditDialog",
@@ -9502,7 +9583,7 @@
 				}
 			});
 			const initialFavicon = (props.initial.favicon || "").trim();
-			const { faviconFileInput, previewData, previewUrl, previewLoading, previewSteps, dataIconLink, previewImage, canPreview, previewLabel, extractorUrl, STEP_STATUS_TEXT, clearSteps, markDataEdited, chooseStep, previewIcon, pickFaviconFile, uploadFavicon, resolveFaviconData } = useEngineIconPreview({
+			const { faviconFileInput, previewData, pickedUrl, previewLoading, previewSteps, previewSize, dataIconLink, previewImage, canPreview, previewLabel, extractorUrl, STEP_STATUS_TEXT, clearSteps, markDataEdited, chooseStep, previewIcon, pickFaviconFile, uploadFavicon, resolveFaviconData } = useEngineIconPreview({
 				form,
 				siteHost: computed(() => hostFromUrl(form.url) || hostFromUrl(form.favicon)),
 				initialFavicon,
@@ -9585,7 +9666,7 @@
 								title: step.url,
 								class: normalizeClass(["sej-preview-step", ["is-" + step.status, {
 									"is-selectable": step.status === "ok",
-									"is-active": step.status === "ok" && step.url === unref(previewUrl)
+									"is-active": step.status === "ok" && step.url === unref(pickedUrl)
 								}]]),
 								role: step.status === "ok" ? "button" : void 0,
 								tabindex: step.status === "ok" ? 0 : void 0,
@@ -9599,12 +9680,13 @@
 									alt: ""
 								}, null, 8, _hoisted_12$2)) : (openBlock(), createElementBlock("span", _hoisted_13$2)),
 								createBaseVNode("span", _hoisted_14$2, toDisplayString(step.url), 1),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
-									key: 3,
-									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(previewUrl) }]),
-									title: step.url !== unref(previewUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
+								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+									key: 4,
+									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
+									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_16$1)) : (openBlock(), createElementBlock("span", _hoisted_17, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -9612,17 +9694,17 @@
 							href: unref(extractorUrl),
 							target: "_blank",
 							rel: "noopener"
-						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_18)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19)) : createCommentVNode("", true)])) : createCommentVNode("", true)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_19, [
-						createBaseVNode("span", null, toDisplayString(unref(t)("engine.iconData")), 1),
-						createBaseVNode("div", _hoisted_20, [withDirectives(createBaseVNode("input", {
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20, [
+						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
+						createBaseVNode("div", _hoisted_22, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => isRef(previewData) ? previewData.value = $event : null),
 							class: "sej-data-input",
 							placeholder: unref(t)("engine.iconDataPlaceholder"),
 							disabled: __props.busy,
 							onInput: _cache[5] || (_cache[5] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args))
-						}, null, 40, _hoisted_21), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
+						}, null, 40, _hoisted_23), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
 							type: "button",
 							class: normalizeClass(["sej-icon-preview-btn", { "sej-has-icon": unref(previewImage) }]),
 							disabled: __props.busy,
@@ -9633,7 +9715,7 @@
 							class: "sej-icon-preview",
 							src: unref(dataIconLink),
 							alt: ""
-						}, null, 8, _hoisted_23)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(unref(t)("engine.upload")), 1)], 64))], 10, _hoisted_22)]),
+						}, null, 8, _hoisted_25)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(unref(t)("engine.upload")), 1)], 64))], 10, _hoisted_24)]),
 						createBaseVNode("input", {
 							ref_key: "faviconFileInput",
 							ref: faviconFileInput,
@@ -9643,29 +9725,29 @@
 							onChange: _cache[7] || (_cache[7] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
 						}, null, 544)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) || unref(initialAction) === "open" ? (openBlock(), createElementBlock("label", _hoisted_24, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
+					!unref(initialAction) || unref(initialAction) === "open" ? (openBlock(), createElementBlock("label", _hoisted_26, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
 						id: "iqxin-newTarget",
 						"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => form.target = $event),
 						disabled: __props.busy
-					}, [createBaseVNode("option", _hoisted_26, toDisplayString(unref(t)("engine.targetBlank")), 1), createBaseVNode("option", _hoisted_27, toDisplayString(unref(t)("engine.targetSelf")), 1)], 8, _hoisted_25), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
-					createBaseVNode("div", _hoisted_28, [
+					}, [createBaseVNode("option", _hoisted_28, toDisplayString(unref(t)("engine.targetBlank")), 1), createBaseVNode("option", _hoisted_29, toDisplayString(unref(t)("engine.targetSelf")), 1)], 8, _hoisted_27), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
+					createBaseVNode("div", _hoisted_30, [
 						__props.mode === "edit" ? (openBlock(), createElementBlock("button", {
 							key: 0,
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
 							onClick: _cache[9] || (_cache[9] = ($event) => _ctx.$emit("delete"))
-						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_29)) : createCommentVNode("", true),
+						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_31)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
 							onClick: _cache[10] || (_cache[10] = ($event) => _ctx.$emit("cancel"))
-						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_30),
+						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_32),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",
 							disabled: __props.busy,
 							onClick: submit
-						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_31)
+						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_33)
 					])
 				], 512);
 			};

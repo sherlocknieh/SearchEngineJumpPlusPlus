@@ -14,6 +14,11 @@ const MAX_ICON_BYTES = 64 * 1024;
 const COMPRESS_START_SIZE = 64;
 /** 压缩时继续缩小的尺寸下限，缩到该值仍超限则判为压缩失败 */
 const COMPRESS_MIN_SIZE = 16;
+/**
+ * 未超限图标转码 WebP 时的质量参数。
+ * 保持原像素尺寸、只换编码格式，0.9 在图标这种小图上几乎无可见损失。
+ */
+const WEBP_QUALITY = 0.9;
 
 const EXTENSION_MIME = {
   '.ico': 'image/x-icon',
@@ -53,13 +58,41 @@ function arrayBufferToBase64(buffer) {
 /**
  * 由 data URL 反推解码后的字节数，用于判断压缩结果是否已降到上限内。
  * base64 每 4 个字符表示 3 字节，末尾的 = / == 只是填充，需要扣除。
+ * 非 data URL（如普通 http 链接）返回 Infinity，调用方需自行判断。
  */
-function dataUrlBytes(dataUrl) {
+export function dataUrlBytes(dataUrl) {
   const comma = dataUrl.indexOf(',');
   if (comma === -1) return Infinity;
   const base64 = dataUrl.slice(comma + 1);
   const padding = base64.endsWith('==') ? 2 : base64.endsWith('=') ? 1 : 0;
   return Math.floor((base64.length * 3) / 4) - padding;
+}
+
+/** 保留一位小数，整数时不显示 .0 */
+function trimDecimal(value) {
+  return value.toFixed(1).replace(/\.0$/, '');
+}
+
+/**
+ * data URL 实际占用的存储体积（字节）。
+ * data URL 由 MIME 与 base64 组成，全是 ASCII，字符数即字节数；
+ * base64 会让体积约为原图的 4/3，因此该值比原图字节数更接近 GM 存储占用。
+ * 非 data URL 返回 Infinity，调用方需自行判断。
+ */
+export function dataUrlStorageBytes(dataUrl) {
+  return /^data:/i.test(dataUrl) ? dataUrl.length : Infinity;
+}
+
+/**
+ * 图标体积文案：1KB 以内显示 B，1MB 以内显示 KB，其余显示 MB。
+ * 传入 Infinity（如非 data URL）或非法值时返回空串，由调用方决定是否展示。
+ */
+export function formatIconSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return '';
+  if (bytes < 1024) return `${Math.round(bytes)} B`;
+  const kb = bytes / 1024;
+  if (kb < 1024) return `${trimDecimal(kb)} KB`;
+  return `${trimDecimal(kb / 1024)} MB`;
 }
 
 /**
@@ -179,6 +212,44 @@ async function compressIcon(buffer, mime) {
 }
 
 /**
+ * 把未超限图标转码成同尺寸 WebP，用于进一步缩小存储体积。
+ * 只有确实比原始文件更小时才返回 data URL，否则返回空串。
+ *
+ * 跳过的情况：
+ * - 已是 WebP：再转没有收益；
+ * - GIF：canvas 会丢掉动画；
+ * - SVG：转成位图会失去矢量特性，且 SVG 本身通常很小。
+ */
+export async function toWebpIcon(buffer, mime) {
+  if (mime === 'image/webp' || mime === 'image/gif' || mime === 'image/svg+xml') return '';
+  if (!supportsWebp()) return '';
+  const decoded = await decodeIcon(buffer, mime);
+  if (!decoded) return '';
+  const { image, release } = decoded;
+  try {
+    // 按原始像素尺寸绘制，不缩放，保证“同质量”只换编码
+    const width = image.naturalWidth || image.width || 0;
+    const height = image.naturalHeight || image.height || 0;
+    if (!width || !height) return '';
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return '';
+    ctx.drawImage(image, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/webp', WEBP_QUALITY);
+    // 不支持 WebP 的浏览器会静默回退成 PNG，用 MIME 判断
+    if (!dataUrl.startsWith('data:image/webp')) return '';
+    return dataUrlBytes(dataUrl) < buffer.byteLength ? dataUrl : '';
+  } catch (e) {
+    console.warn('[SEJ] 图标转码失败:', e);
+    return '';
+  } finally {
+    release?.();
+  }
+}
+
+/**
  * 兼容只提供 GM.* 命名空间的管理器（如 Greasemonkey 4）。
  */
 function getRequestFn() {
@@ -241,9 +312,10 @@ export function getFaviconSrc(engine) {
 }
 
 /**
- * 抓取并转换图标，返回 { data, reason }；data 为空表示失败，reason 为失败原因。
- * 抓取阶段不限制响应大小，只有超过 MAX_ICON_BYTES 的图片才会先压缩再内嵌，
- * 未超限的图片按原格式直接转成 data URL，避免不必要的画质损失。
+ * 抓取并转换图标，返回 { data, reason, bytes }：data 为空表示失败，reason 为失败原因，
+ * bytes 为下载到的原始字节数（未压缩，仅成功时有值）。
+ * 抓取阶段不限制响应大小：超过 MAX_ICON_BYTES 的图片会先缩小压缩再内嵌；
+ * 未超限的图片则尝试按原尺寸转码 WebP，只有确实更小才采用，否则保留原格式。
  */
 export async function resolveFavicon(url) {
   const source = typeof url === 'string' ? url.trim() : '';
@@ -283,12 +355,12 @@ export async function resolveFavicon(url) {
       if (!compressed) {
         return { data: '', reason: t('favicon.compressFailed') };
       }
-      return { data: compressed, reason: '' };
+      return { data: compressed, reason: '', bytes: buffer.byteLength };
     }
-    return {
-      data: `data:${mime};base64,${arrayBufferToBase64(buffer)}`,
-      reason: '',
-    };
+    const original = `data:${mime};base64,${arrayBufferToBase64(buffer)}`;
+    // 未超限时也顺手转一次 WebP：同尺寸同观感，通常能再省一部分存储
+    const webp = await toWebpIcon(buffer, mime);
+    return { data: webp || original, reason: '', bytes: buffer.byteLength };
   } catch (e) {
     console.warn('[SEJ] 图标转换失败:', source, e);
     return { data: '', reason: t('favicon.convertFailed') };
