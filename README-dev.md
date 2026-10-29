@@ -20,16 +20,25 @@
 
 - 打包构建与发布
 
+  本仓库按「每次提交即发布」执行。版本号由 `scripts/release.mjs` 按系统日期时间
+  自动生成 (`YYYY.MM.DD.HHmm`), 无需手工修改; 同一分钟内重复发布或系统时间回拨时,
+  会顺延到更大的分钟, 保证版本号始终递增。
+
   ```bash
-  # 每次提交都先到 vite.config.js 中修改版本号 (YYYY.MM.DD.N), 然后执行:
-  pnpm lint && pnpm test
-  pnpm build
+  # 一键发布: 升版本号 -> lint -> test -> build -> commit -> tag
+  pnpm release "feat: 本次改动说明"
+
+  # 发布并推送分支与标签到 origin
+  pnpm release "fix: 本次改动说明" --push
+
+  # 只预览将要使用的版本号, 不做任何修改
+  pnpm release --dry-run
   ```
 
-  构建完成后, 会在 `dist` 目录下找到生成的脚本文件。
+  发布成功后, 源码、`vite.config.js` 中的版本号与 `dist/SearchEngineJump++.user.js`
+  在同一个提交里, 并附带 `vYYYY.MM.DD.HHmm` 标签。
 
-  本仓库按「每次提交即发布」执行: 源码、版本号与 `dist` 产物放在同一个提交里,
-  提交信息注明发布版本号, 再打 `vYYYY.MM.DD.N` 标签并推送分支与标签。
+  单独执行 `pnpm build` 只重新构建产物, 不会改动版本号, 仅供调试或本地验证使用。
 
 - 代码检查与测试
   ```bash
