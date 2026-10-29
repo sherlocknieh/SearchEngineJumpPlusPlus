@@ -4,6 +4,8 @@
  * 面板绝对定位在遮罩内，拖动时需补偿遮罩自身的滚动偏移，
  * 并限制在可视区域内，避免触屏拖出屏幕后无法找回。
  */
+const CAPTURE = { capture: true };
+
 export function usePanelDrag({ layerEl, maskEl, layerStyle }) {
   let dragOffset = { x: 0, y: 0 };
   let dragPointerId = null;
@@ -31,9 +33,9 @@ export function usePanelDrag({ layerEl, maskEl, layerStyle }) {
   function stopDrag(e) {
     if (e && dragPointerId != null && e.pointerId !== dragPointerId) return;
     dragPointerId = null;
-    document.removeEventListener('pointermove', onDragMove);
-    document.removeEventListener('pointerup', stopDrag);
-    document.removeEventListener('pointercancel', stopDrag);
+    document.removeEventListener('pointermove', onDragMove, CAPTURE);
+    document.removeEventListener('pointerup', stopDrag, CAPTURE);
+    document.removeEventListener('pointercancel', stopDrag, CAPTURE);
   }
 
   function startDrag(e) {
@@ -45,9 +47,10 @@ export function usePanelDrag({ layerEl, maskEl, layerStyle }) {
     const rect = el.getBoundingClientRect();
     dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
     dragPointerId = e.pointerId;
-    document.addEventListener('pointermove', onDragMove);
-    document.addEventListener('pointerup', stopDrag);
-    document.addEventListener('pointercancel', stopDrag);
+    // 捕获阶段：面板根节点会在冒泡阶段截断事件，拖动不能被隔断
+    document.addEventListener('pointermove', onDragMove, CAPTURE);
+    document.addEventListener('pointerup', stopDrag, CAPTURE);
+    document.addEventListener('pointercancel', stopDrag, CAPTURE);
   }
 
   function dispose() {

@@ -17,6 +17,7 @@ import { useUndoDelete } from '../composables/useUndoDelete.js';
 import { useSettingsDialogs } from '../composables/useSettingsDialogs.js';
 import { useSettingsDraft } from '../composables/useSettingsDraft.js';
 import { useRemoteSettingsSync } from '../composables/useRemoteSettingsSync.js';
+import { useEventIsolation } from '../composables/useEventIsolation.js';
 import settingPanelStyles from './settingPanelStyles.js';
 import EngineEditDialog from './EngineEditDialog.vue';
 import CategoryEditDialog from './CategoryEditDialog.vue';
@@ -269,12 +270,16 @@ const { startDrag, dispose: disposePanelDrag } = usePanelDrag({
   layerStyle,
 });
 
+// 面板事件不再冒泡到页面，避免触发搜索引擎自己的全局监听器
+useEventIsolation(maskEl);
+
 // 本组件以「挂载即打开」为契约：显示与否由 App.vue 的 v-if 控制。
 // 挂载时开启这些全局副作用，卸载时（遮罩淡出后）还原；若改成常驻挂载，
 // 页面加载时就会锁住 body 滚动并预载图标，因此不要在外层去掉 v-if。
 onMounted(() => {
   document.body.style.overflow = 'hidden';
-  document.addEventListener('keydown', onKeydown);
+  // 捕获阶段：面板根节点会截断冒泡，撤销快捷键仍需生效
+  document.addEventListener('keydown', onKeydown, true);
   window.addEventListener('blur', onWindowBlur);
   syncPanelViewportHeight();
   bindViewportHeightListeners(true);
@@ -292,7 +297,7 @@ onBeforeUnmount(() => {
   disposeAutoSave();
   disposeDragSort();
   document.body.style.overflow = 'auto';
-  document.removeEventListener('keydown', onKeydown);
+  document.removeEventListener('keydown', onKeydown, true);
   window.removeEventListener('blur', onWindowBlur);
   bindViewportHeightListeners(false);
   clearTimeout(closeTimer);
@@ -343,7 +348,7 @@ onBeforeUnmount(() => {
           :drag-ctx="dragCtx"
           :copy-target-ci="copyTargetCi"
           :display-name="displayCategoryName(category)"
-          :locked="isBuiltinCategory(category)"
+          :hide-delete="isBuiltinCategory(category)"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"
           @delete-category="deleteCategory"

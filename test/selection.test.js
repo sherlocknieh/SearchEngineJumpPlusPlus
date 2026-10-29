@@ -68,6 +68,21 @@ describe('getSelectedText', () => {
     );
   });
 
+  it('忽略脚本面板 Shadow DOM 内的选区', () => {
+    const anchorNode = {
+      getRootNode: () => ({ host: { matches: () => true } }),
+    };
+    const ownUiDoc = {
+      activeElement: null,
+      getSelection: () => ({
+        isCollapsed: false,
+        anchorNode,
+        toString: () => 'https://a.test/favicon.ico',
+      }),
+    };
+    expect(getSelectedText({ doc: ownUiDoc })).toBe('');
+  });
+
   it('可编辑区域回退到文档选区', () => {
     const editable = { nodeType: 1, tagName: 'DIV', isContentEditable: true };
     expect(getSelectedText({ includeInput: true, doc: doc(editable, 'editable text') })).toBe(

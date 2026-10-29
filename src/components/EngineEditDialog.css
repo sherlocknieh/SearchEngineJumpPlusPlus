@@ -81,8 +81,7 @@
   cursor: pointer;
 }
 
-.sej-preview-step.is-selectable:hover,
-.sej-preview-step.is-active {
+.sej-preview-step.is-selectable:hover{
   background: var(--sej-surface-hover);
 }
 
@@ -131,6 +130,10 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* 链接源文本允许光标选择/复制 */
+  cursor: text;
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 .sej-preview-state {
@@ -141,25 +144,26 @@
 .sej-preview-state.sej-preview-icon {
   display: inline-flex;
   align-items: center;
-  opacity: 0.45;
-  transition:
-    opacity 0.12s ease-out,
-    color 0.12s ease-out;
+  color: var(--sej-success);
+  opacity: 0.6;
+  transition: opacity 0.12s ease-out;
 }
 
 .sej-preview-icon svg {
   display: block;
 }
 
-/* 未选用：空心圆勾，悬停时提示可点击 */
+/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */
+.sej-preview-icon svg path {
+  opacity: 0;
+}
+
 .sej-preview-step.is-selectable:hover .sej-preview-icon {
-  color: var(--sej-accent);
   opacity: 1;
 }
 
-/* 已选用：实心圆勾，与未选用状态区分明显 */
+/* 已选用：绿色圆圈内显示勾 */
 .sej-preview-icon.is-selected {
-  color: var(--sej-accent);
   opacity: 1;
 }
 
@@ -168,6 +172,7 @@
 }
 
 .sej-preview-icon.is-selected svg path {
+  opacity: 1;
   stroke: var(--sej-accent-contrast);
 }
 

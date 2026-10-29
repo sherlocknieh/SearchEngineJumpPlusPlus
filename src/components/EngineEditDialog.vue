@@ -18,18 +18,19 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel', 'delete']);
 
-// 图标选择状态：未选用为空心圆勾，已选用为实心圆勾
+// 图标选择状态：未选用为绿色空心圆，已选用为绿底白勾
 const ICON_SELECT =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>';
+
+// 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
+const initialAction =
+  props.initial.action === 'copy' || props.initial.action === 'open' ? props.initial.action : '';
 
 const form = reactive({
   name: props.initial.name || '',
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
   target: props.initial.target === '_self' ? '_self' : '_blank',
-  // 空串表示普通搜索引擎，copy/open 表示非搜索动作
-  action:
-    props.initial.action === 'copy' || props.initial.action === 'open' ? props.initial.action : '',
 });
 
 const urlInput = ref(null);
@@ -77,6 +78,13 @@ const {
 const titleEdited = ref(Boolean((props.initial.name || '').trim()));
 const faviconEdited = ref(Boolean((props.initial.favicon || '').trim()));
 
+// 链接源文本可被光标选中：存在选区时不触发切换，避免拖选误切换图标
+function chooseStepFromClick(step) {
+  const selection = typeof window !== 'undefined' ? window.getSelection() : null;
+  if (selection && !selection.isCollapsed && selection.toString().trim()) return;
+  chooseStep(step);
+}
+
 function markTitleEdited() {
   titleEdited.value = true;
 }
@@ -89,7 +97,6 @@ function markFaviconEdited() {
 watch(
   () => form.url,
   () => {
-    if (form.action) return;
     if (!titleEdited.value || !form.name.trim()) {
       form.name = titleFromUrl(form.url);
     }
@@ -100,26 +107,11 @@ watch(
   },
 );
 
-// 切换为动作引擎时停止依赖链接的自动补全；切回搜索时恢复按空值自动补全
-watch(
-  () => form.action,
-  (action) => {
-    if (action) {
-      titleEdited.value = true;
-      faviconEdited.value = true;
-      clearSteps();
-      return;
-    }
-    titleEdited.value = Boolean(form.name.trim());
-    faviconEdited.value = Boolean(form.favicon.trim());
-  },
-);
-
 onMounted(() => urlInput.value?.focus());
 
 function submit() {
   if (props.busy) return;
-  const action = form.action;
+  const action = initialAction;
   const url = action ? '' : withProtocol(form.url);
   const favicon = action ? '' : form.favicon.trim() || props.resolveIcon(form.url);
   emit('submit', {
@@ -144,16 +136,7 @@ function submit() {
     <div id="sej-engine-title" class="sej-dialog-title">
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
-    <label class="sej-field">
-      <span>{{ t('engine.action') }}</span>
-      <select v-model="form.action" :disabled="busy">
-        <option value="">{{ t('engine.actionSearch') }}</option>
-        <option value="copy">{{ t('engine.actionCopy') }}</option>
-        <option value="open">{{ t('engine.actionOpen') }}</option>
-      </select>
-    </label>
-    <p v-if="form.action" class="sej-field-hint">{{ t('engine.actionHint') }}</p>
-    <label v-if="!form.action" class="sej-field">
+    <label v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.url') }}</span>
       <input
         ref="urlInput"
@@ -171,7 +154,7 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
-    <div v-if="!form.action" class="sej-field">
+    <div v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.iconSrc') }}</span>
       <div class="sej-field-row">
         <input
@@ -206,7 +189,7 @@ function submit() {
           ]"
           :role="step.status === 'ok' ? 'button' : undefined"
           :tabindex="step.status === 'ok' ? 0 : undefined"
-          @click="chooseStep(step)"
+          @click="chooseStepFromClick(step)"
           @keydown.enter.prevent="chooseStep(step)"
           @keydown.space.prevent="chooseStep(step)"
         >
@@ -241,7 +224,7 @@ function submit() {
         </a>
       </div>
     </div>
-    <div v-if="!form.action" class="sej-field">
+    <div v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.iconData') }}</span>
       <div class="sej-data-line">
         <input
@@ -271,7 +254,7 @@ function submit() {
         @change="uploadFavicon"
       />
     </div>
-    <label v-if="!form.action || form.action === 'open'" class="sej-field">
+    <label v-if="!initialAction || initialAction === 'open'" class="sej-field">
       <span>{{ t('engine.target') }}</span>
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
         <option value="_blank">{{ t('engine.targetBlank') }}</option>

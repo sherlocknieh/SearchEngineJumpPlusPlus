@@ -11,13 +11,15 @@
 import { ref } from 'vue';
 import { showToast } from '../stores/ui.js';
 import { cloneValue } from '../core/storageBackend.js';
-import { isBuiltinCategory } from '../core/configData.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
 import { createDragAnimator } from './drag/dragAnimation.js';
 import { createDragAutoScroll } from './drag/dragAutoScroll.js';
 import { createDragGeometry } from './drag/dragGeometry.js';
 import { createDragGhost } from './drag/dragGhost.js';
 import { applyOrder, captureOrder } from './drag/dragOrder.js';
+
+// 面板根节点在冒泡阶段截断事件，内部拖动监听器统一走捕获阶段
+const CAPTURE = { capture: true };
 
 const DRAG_THRESHOLD = 4;
 // 触屏：长按启动拖动，轻微移动仍视为点击/滚动
@@ -92,9 +94,10 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
       activated: !touch,
       started: false,
     };
-    document.addEventListener('pointermove', onDragPointerMove);
-    document.addEventListener('pointerup', onDragPointerUp);
-    document.addEventListener('pointercancel', onDragPointerCancel);
+    // 捕获阶段：面板根节点会在冒泡阶段截断事件，拖动不能被隔断
+    document.addEventListener('pointermove', onDragPointerMove, CAPTURE);
+    document.addEventListener('pointerup', onDragPointerUp, CAPTURE);
+    document.addEventListener('pointercancel', onDragPointerCancel, CAPTURE);
 
     if (touch) {
       pressTimer = setTimeout(() => {
@@ -123,10 +126,11 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   }
 
   function blockTouchScroll(block) {
-    document.removeEventListener('touchmove', onBlockTouchMove);
+    document.removeEventListener('touchmove', onBlockTouchMove, CAPTURE);
     if (block) {
       document.addEventListener('touchmove', onBlockTouchMove, {
         passive: false,
+        capture: true,
       });
     }
   }
@@ -153,9 +157,9 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
   }
 
   function detachDragListeners() {
-    document.removeEventListener('pointermove', onDragPointerMove);
-    document.removeEventListener('pointerup', onDragPointerUp);
-    document.removeEventListener('pointercancel', onDragPointerCancel);
+    document.removeEventListener('pointermove', onDragPointerMove, CAPTURE);
+    document.removeEventListener('pointerup', onDragPointerUp, CAPTURE);
+    document.removeEventListener('pointercancel', onDragPointerCancel, CAPTURE);
     blockTouchScroll(false);
   }
 
@@ -163,8 +167,6 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     const p = pressCtx;
     const category = draft.categories[p.ci];
     if (!category) return false;
-    // 快捷动作条目固定留在内置分类中，只允许分类整体移动
-    if (p.type === 'engine' && isBuiltinCategory(category)) return false;
     const item = p.type === 'category' ? category : category.engines[p.ei];
     if (!item) return false;
 
@@ -252,8 +254,6 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
       return;
     }
 
-    // 内置分类不接受其他分类的引擎拖入
-    if (isBuiltinCategory(draft.categories[ci])) return;
     const card = categoryCards()[ci];
     if (card) moveEngineTo(ci, engineInsertIndex(card, y));
   }
@@ -262,7 +262,6 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     const ctx = dragCtx.value;
     if (!ctx || ctx.type !== 'engine') return;
     const targetCi = copyTargetCi.value;
-    if (isBuiltinCategory(draft.categories[targetCi])) return;
     const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
     const targetKey = draft.categories[targetCi]?.key;
     const copy = source ? { ...cloneValue(source), _id: nextId() } : null;

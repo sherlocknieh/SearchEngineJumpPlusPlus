@@ -5,6 +5,8 @@
  * selectionStart/selectionEnd；contenteditable 的选区仍属于文档选区。
  */
 
+import { HOST_SELECTOR } from './shadowDom.js';
+
 /** 输入框/可编辑区域：其中的选区默认不参与划词搜索 */
 export function isEditableElement(el) {
   if (!el || el.nodeType !== 1) return false;
@@ -19,6 +21,15 @@ export function getElementSelectionText(el) {
   if (!el || !isEditableElement(el)) return '';
   if (typeof el.selectionStart !== 'number' || typeof el.selectionEnd !== 'number') return '';
   return String(el.value ?? '').slice(el.selectionStart, el.selectionEnd);
+}
+
+/** 选区是否落在脚本自己的 Shadow DOM（设置面板、跳转条）里 */
+function isOwnUiSelection(selection) {
+  const node = selection?.anchorNode;
+  const root = node?.getRootNode?.();
+  const host = root?.host;
+  if (!host || typeof host.matches !== 'function') return false;
+  return host.matches(HOST_SELECTOR);
 }
 
 /**
@@ -37,5 +48,7 @@ export function getSelectedText({ includeInput = false, doc = document } = {}) {
 
   const selection = typeof doc.getSelection === 'function' ? doc.getSelection() : null;
   if (!selection || selection.isCollapsed) return '';
+  // 面板内的选文属于本地操作，不能当成页面的划词
+  if (isOwnUiSelection(selection)) return '';
   return selection.toString();
 }
