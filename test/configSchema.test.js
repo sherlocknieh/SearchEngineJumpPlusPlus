@@ -30,7 +30,7 @@ describe('createDefaultConfig', () => {
     const config = createDefaultConfig();
     for (const key of OPTION_KEYS) expect(config).toHaveProperty(key);
     expect(Object.keys(config.engineList).length).toBeGreaterThan(0);
-    expect(config.engineCategories[0]).toEqual(['快捷', 'actions', true]);
+    expect(config.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
   });
 });
 
@@ -105,7 +105,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0]).toEqual(['快捷', 'actions', true]);
+    expect(result.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
   });
 
@@ -113,7 +113,7 @@ describe('normalizeConfig', () => {
     const result = normalizeConfig(
       {
         engineCategories: [
-          ['快捷', 'actions', false],
+          ['功能', 'actions', false],
           ['搜索', 'web', true],
         ],
         engineList: {
@@ -123,7 +123,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0]).toEqual(['快捷', 'actions', false]);
+    expect(result.engineCategories[0]).toEqual(['功能', 'actions', false]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
       { name: '打开链接', url: '', action: 'open' },

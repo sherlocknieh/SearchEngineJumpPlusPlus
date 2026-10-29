@@ -100,7 +100,11 @@ function ensureBuiltinActions(categories, engineList) {
     const defaultCategory = defaultConfig.engineCategories.find(
       ([, key]) => key === BUILTIN_CATEGORY_KEY,
     );
-    categories.unshift([defaultCategory?.[0] || BUILTIN_CATEGORY_KEY, BUILTIN_CATEGORY_KEY, true]);
+    categories.unshift([
+      defaultCategory?.[0] || BUILTIN_CATEGORY_KEY,
+      BUILTIN_CATEGORY_KEY,
+      defaultCategory?.[2] ?? true,
+    ]);
   }
 
   const engines = engineList[BUILTIN_CATEGORY_KEY] || [];

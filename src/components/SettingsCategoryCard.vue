@@ -3,14 +3,14 @@ import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
 import { COPY, EYE, EYE_OFF, PENCIL, TRASH } from '../assets/icons.js';
 
-const props = defineProps({
+defineProps({
   category: { type: Object, required: true },
   ci: { type: Number, required: true },
   dragCtx: { type: Object, default: null },
   copyTargetCi: { type: Number, default: null },
   displayName: { type: String, required: true },
-  // 内置分类（快捷动作）：只能移动和隐藏，不能改名、删除或添加条目
-  locked: { type: Boolean, default: false },
+  // 内置分类（快捷动作）：只隐藏删除按钮，其余编辑操作保持可用
+  hideDelete: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -23,14 +23,6 @@ const emit = defineEmits([
   'delete-engine',
   'drag-start',
 ]);
-
-function openCategory() {
-  if (!props.locked) emit('open-category', props.ci);
-}
-
-function openEngine(ei) {
-  if (!props.locked) emit('edit-engine', props.ci, ei);
-}
 </script>
 
 <template>
@@ -39,6 +31,7 @@ function openEngine(ei) {
     class="iqxin-items"
     :class="{
       'sej-category-hidden': !category.enabled,
+      'sej-no-delete': hideDelete,
       'sej-drag-placeholder': dragCtx?.type === 'category' && dragCtx.key === category.key,
     }"
     :data-sej-drag-el="'category-' + category._id"
@@ -48,12 +41,12 @@ function openEngine(ei) {
       class="sejtitle drag"
       :data-xin="category.enabled ? 1 : -1"
       :data-iqxintitle="category.key"
-      :title="locked ? null : t('settings.editCategory', { name: displayName })"
+      :title="t('settings.editCategory', { name: displayName })"
       @pointerdown="emit('drag-start', $event, 'category', ci)"
-      @click.stop="openCategory"
+      @click.stop="emit('open-category', ci)"
     >
       <span class="iqxin-pointer-events">{{ displayName }}</span>
-      <span v-if="!locked" class="sej-hover-edit" v-html="PENCIL"></span>
+      <span class="sej-hover-edit" v-html="PENCIL"></span>
       <span
         class="iqxin-set-toggle"
         :class="{ 'iqxin-set-hidden': !category.enabled }"
@@ -62,7 +55,7 @@ function openEngine(ei) {
         v-html="category.enabled ? EYE : EYE_OFF"
       ></span>
       <span
-        v-if="!locked"
+        v-if="!hideDelete"
         class="sej-hover-delete"
         :title="t('settings.deleteCategory')"
         @pointerdown.stop
@@ -82,9 +75,9 @@ function openEngine(ei) {
         :class="{
           'sej-drag-placeholder': dragCtx?.type === 'engine' && dragCtx.key === engine._id,
         }"
-        :title="locked ? null : t('settings.editEngine', { name: localizeEngineName(engine.name) })"
+        :title="t('settings.editEngine', { name: localizeEngineName(engine.name) })"
         @pointerdown="emit('drag-start', $event, 'engine', ci, ei)"
-        @click.stop="openEngine(ei)"
+        @click.stop="emit('edit-engine', ci, ei)"
       >
         <span
           class="sej-engine"
@@ -97,7 +90,7 @@ function openEngine(ei) {
           <img class="sej-engine-icon" :src="getFaviconSrc(engine)" alt="" />
           <span>{{ localizeEngineName(engine.name) }}</span>
         </span>
-        <span v-if="!locked" class="sej-hover-edit" v-html="PENCIL"></span>
+        <span class="sej-hover-edit" v-html="PENCIL"></span>
         <span
           class="iqxin-set-toggle"
           :class="{ 'iqxin-set-hidden': engine.disable }"
@@ -106,7 +99,7 @@ function openEngine(ei) {
           v-html="engine.disable ? EYE_OFF : EYE"
         ></span>
         <span
-          v-if="!locked"
+          v-if="!hideDelete"
           class="sej-hover-delete"
           :title="t('settings.deleteEngine')"
           @pointerdown.stop
@@ -114,9 +107,8 @@ function openEngine(ei) {
           v-html="TRASH"
         ></span>
       </span>
-      <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口。内置分类没有添加入口 -->
+      <!-- 添加搜索引擎按钮；拖动已有引擎悬浮时变为复制入口 -->
       <span
-        v-if="!locked"
         class="iqxin-additem"
         :class="{ 'sej-copy-target': copyTargetCi === ci }"
         @click.stop="emit('add-engine', ci)"

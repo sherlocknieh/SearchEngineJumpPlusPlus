@@ -100,7 +100,7 @@
   background: var(--sej-surface-hover);
 }
 
-/* 悬浮操作：右侧依次为编辑、删除、显隐按钮 */
+/* 悬浮操作：右侧依次为编辑、删除、显隐按钮；没有删除按钮时编辑顺位到删除的位置 */
 .sej-hover-edit,
 .sej-hover-delete {
   position: absolute;
@@ -134,6 +134,10 @@
   padding: 3px;
   border-radius: 6px;
   cursor: pointer;
+}
+
+.sej-no-delete .sej-hover-edit {
+  right: 30px;
 }
 
 .sej-hover-edit svg,

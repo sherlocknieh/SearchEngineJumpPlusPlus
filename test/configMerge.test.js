@@ -113,7 +113,7 @@ describe('动作引擎合并', () => {
     let id = 0;
     const categories = [
       {
-        name: '快捷',
+        name: '功能',
         key: 'actions',
         enabled: true,
         engines: [{ name: '复制', url: '', action: 'copy' }],
@@ -122,7 +122,7 @@ describe('动作引擎合并', () => {
     const stats = mergeIntoCategories(
       categories,
       {
-        engineCategories: [['快捷', 'actions', true]],
+        engineCategories: [['功能', 'actions', true]],
         engineList: {
           actions: [
             { name: '复制2', action: 'copy' },

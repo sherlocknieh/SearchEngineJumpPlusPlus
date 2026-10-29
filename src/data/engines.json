@@ -7,15 +7,15 @@
   "selectSearchInInput": false,
   "center": false,
   "engineCategories": [
-    ["快捷", "actions", true],
+    ["功能", "actions", false],
     ["搜索", "web", true],
-    ["AI", "user1792793062676", true],
+    ["AI", "ai", true],
     ["影视", "video", true],
     ["书籍", "books", true],
     ["工具", "tools", true],
     ["资源", "download", true],
-    ["资源+", "user1792802683546", false],
-    ["国产AI", "user1792793110006", false]
+    ["资源+", "download+", false],
+    ["国产AI", "ai+", false]
   ],
   "engineList": {
     "web": [
@@ -32,7 +32,7 @@
         "faviconData": "data:image/webp;base64,UklGRo4CAABXRUJQVlA4WAoAAAAQAAAAHwAAHwAAQUxQSL8AAAABgGJt27LoXcJ3/hVgC3CyQ+WQiLAJTSRrLIXkjLSpPtnd0fiMfN/Li+aImABaUev8O7+cOIBz/7KA6tJQXdr30rALuA+zS/oCrlJLaQHAYWgJqX/AoRKjLw2+3GJNHY6VlM2AihQdGq7EVFMHtxSRyrb/heSoPML7MpKXAPAi5upCO4fipBmNEYwt4uYMyTuY5yEWvWk+wN0jfmP8PH+cgTnK0ILWCPwjFy0cHHFGZZIM3pm6Fsla5ct/3SStNgBWUDggqAEAABALAJ0BKiAAIAA+MRaIQyIhIRQFVCADBLYATplCQWfQPxV5M/VzmAygTgr+9/ZRkAPMB+wH6zey7/SesA/UDgAP1a9Jj9nfgP/Yj9hvaApUtSsd1KfokgirJLOS2D9mZhAA/vHdxmo11qFWedw8Jr8wqIlmzCnyf+n05SnYaumGtcapII/+Uhf6TKgnrFpef/m4Ipm38ePbs+2azZixVBZP4+TiGAV4/1mML//0FW4E0reWhN29bz/kAncjub92w2g5+rUS9IVYL/8dvmJikQD6p2+Rxf5htZa1wGzEj/vANqsQbQQ6VSVwTt063WPvC5Zpftw+c0ELpcOYeyOIaKn6jWVZZi4ghl6BTH5DCe9LB/xkUnw6B5u/PKnjFNf//6jr+2rYd+LXu5KunOtp4et+I20AOrn7+h+asxWej9Ko6s1gMPJmmbFUu9EhYQ27hS/1CCOZ9Hs3I4cfMU2cSA5RAKiOlzHPUtAY7CwyhgdtPW9l8LEBnVVyKu4OySQAB3/X5NsfSgQBXSxxu/dZyMYzxhn/7UMfP3u2BVZ3VCoCHvypJkmgAAA="
       }
     ],
-    "user1792793062676": [
+    "ai": [
       {
         "name": "DeepSeek",
         "url": "https://chat.deepseek.com/?q=%s&autosend=1",
@@ -143,7 +143,7 @@
     ],
     "actions": [
       {
-        "name": "复制关键词",
+        "name": "复制",
         "url": "",
         "action": "copy"
       },
@@ -185,7 +185,7 @@
         "faviconData": "data:image/webp;base64,UklGRgIBAABXRUJQVlA4IPYAAADwBQCdASoQABAAAMASJaQAM4E8a+WaeJc4A1zX9V/FXmQP8r7gH8V/kn9s/Nn+0miLk2t/7fncAAD+/sye/fci+/8fTBLAQjuf5lazKFFgL/+xg/pzRJNIlF2XQRRQ20QehZmA/rl1/rYX7DPGKi4Ntn//P5/Hj8LKgvPFQ9/s/qiX94v/+Ykwp//eGDcJ9v8soxi6IVkd6avPHWhh+YC//wY71Hs4z/J28nRv/4F/MmBEJ0qE3Pery/CzoJu2BB/8oBzH/Vhf/1ddSp83lYY8P0tv7rC+WhCQI49ZA5qx5qHuyNv87m+KG/bqvkTFkVP/MLWqBAA="
       }
     ],
-    "user1792802683546": [
+    "download+": [
       {
         "name": "BTSearch",
         "url": "https://www.btsearch.love/search?keyword=%s",
@@ -211,7 +211,7 @@
         "faviconData": "data:image/webp;base64,UklGRvoBAABXRUJQVlA4WAoAAAAQAAAADwAADwAAQUxQSPUAAAANgGTbtmlnX73Ytm3bdo21pAVpgFqTmku2bdu2k6duREQAoIzLKoiBqmo6AG4S8n9kSH9s3TdeZB3Msvi9uzRZ2mzzLGy7/iemmQ4NdRVA0E5LbXbro3DPn0QlAJO06bnG22XDKHnY2goATP+u/eIWjN2hvl0EMODQ3AleT5zB8bxXihX7ezHR4ER5t/b+6+l7J8wv1R8vRr/njj5xg0uHsrVL4a++6/J7TAPLzWeeNbMwJ9xcWPzfbmQ51YcS4AH6qK2kvc39F1p5mxJAmz2zIvi9HFDibCn099V7Jw5oH2ezxzKFTlxsBQCoX8/P3yqIkSEFAABWUDgg3gAAABAEAJ0BKhAAEAAAwBIlsAJ0ugH4AKEA3iXygCmMeOjJmM0WCE9koYxgAP79NOCrWSxWoEX2XjcfTQD4DNsgIJuRyrBBuvkziaw+y43NdMlcmRsDAW/M3hDR+JpPxKS06/Z8RvbMKCZbT2YtHhw9G7kQMVFfk31D6Y/cGBjG2xgo4RQTSd/1cfDmu4kukmNfNhzx+luw/+TPUOkv/fgTX9Ln/6z1s41YhYXt9dSzkHs/W9U/3jJ3/eN1vv/G3Q/iTc9P/5oYPaOLoJdaK2DUD4QchG/xajwxrjhwyfIAAA=="
       }
     ],
-    "user1792793110006": [
+    "ai+": [
       {
         "name": "Kimi",
         "url": "https://www.kimi.com/?q=%s",

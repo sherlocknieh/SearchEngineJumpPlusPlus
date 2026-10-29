@@ -255,8 +255,9 @@ function unpin() {
 }
 
 function onTriggerClick() {
+  // 图标出现（已固定）后，整个分类触发项都是一键搜索的触发区域
   if (pinned.value) {
-    unpin();
+    onTriggerAction();
     return;
   }
   pin();
@@ -275,10 +276,16 @@ function onHoverLeave() {
   scheduleHide();
 }
 
-// 常驻后标题图标会变成“在新标签打开”图标，点击它执行一键搜索全部分类
+// 常驻后标题图标会变成“在新标签打开”图标；
+// 此时点击分类触发项的任意位置都会执行一键搜索全部分类
 function onTriggerAction() {
   unpin();
   emit('jumpAll');
+}
+
+function onTriggerKeydown() {
+  // 面板展开时回车/空格执行一键搜索，收起时作为普通触发键展开
+  onTriggerClick();
 }
 
 function onEngineJump(engine) {
@@ -351,30 +358,32 @@ onBeforeUnmount(() => {
       class="sej-engine sej-drop-list-trigger"
       :class="{ 'sej-drop-list-trigger-shown': active }"
       :style="{ anchorName: anchorId }"
+      role="button"
+      tabindex="0"
       aria-haspopup="true"
       :aria-expanded="shown"
+      :title="pinned ? t('jump.searchAll', { name }) : null"
       @click.prevent.stop="onTriggerClick"
+      @keydown.enter.prevent="onTriggerKeydown"
+      @keydown.space.prevent="onTriggerKeydown"
     >
-      <span
-        v-if="pinned"
-        class="sej-category-search-icon"
-        role="button"
-        tabindex="0"
-        :title="t('jump.searchAll', { name })"
-        :aria-label="t('jump.searchAll', { name })"
-        @click.stop.prevent="onTriggerAction"
-        @keydown.enter.stop.prevent="onTriggerAction"
-        @keydown.space.stop.prevent="onTriggerAction"
-      >
-        <svg viewBox="0 0 16 16" aria-hidden="true">
-          <path
-            d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
-          />
-          <path d="M9.6 2.6h3.8v3.8" />
-          <path d="M13.4 2.6 8.6 7.4" />
-        </svg>
+      <!--
+        固定 16×16 的图标槽：图标与一键搜索图标互换时文字位置不变。
+        开启分类图标时始终保留槽位，即使当前分类没有可用图标；
+        关闭图标时只在需要显示一键搜索图标时出现，避免所有分类都缩进。
+      -->
+      <span v-if="showIcon || pinned" class="sej-category-icon">
+        <span v-if="pinned" class="sej-category-search-icon" aria-hidden="true">
+          <svg viewBox="0 0 16 16" aria-hidden="true">
+            <path
+              d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
+            />
+            <path d="M9.6 2.6h3.8v3.8" />
+            <path d="M13.4 2.6 8.6 7.4" />
+          </svg>
+        </span>
+        <img v-else-if="firstIconSrc" class="sej-category-icon-img" :src="firstIconSrc" alt="" />
       </span>
-      <img v-else-if="firstIconSrc" class="sej-engine-icon" :src="firstIconSrc" alt="" />
       <span>{{ name }}</span>
     </a>
 
@@ -417,45 +426,49 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
+/*
+ * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。
+ * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。
+ */
+.sej-category-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: 0 0 auto;
+  pointer-events: none;
+}
+
+.sej-category-icon-img {
+  display: block;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  object-fit: cover;
+}
+
+/* 一键搜索图标只是状态展示，所有操作都由所在的分类触发项承担 */
 .sej-category-search-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  /* 24px 点击区域，负边距抵消多出的宽度，避免固定前后触发项宽度变化 */
-  width: 24px;
-  height: 24px;
-  margin: 0 -4px;
-  flex: 0 0 auto;
-  border-radius: 4px;
+  width: 16px;
+  height: 16px;
   color: var(--font-color-qxin);
-  cursor: pointer;
-  transition:
-    background-color 0.08s ease-out,
-    color 0.08s ease-out;
 }
 
 .sej-category-search-icon svg {
+  display: block;
   width: 14px;
   height: 14px;
+  margin: 0;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
-}
-
-.sej-category-search-icon:hover {
-  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));
-  color: var(--sej-accent, #4285f4);
-}
-
-.sej-category-search-icon:active {
-  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));
-}
-
-.sej-category-search-icon:focus-visible {
-  outline: 2px solid var(--sej-accent, #4285f4);
-  outline-offset: -2px;
 }
 
 .sej-engine.sej-drop-list-trigger-shown {
