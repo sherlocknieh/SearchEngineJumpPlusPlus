@@ -26,10 +26,11 @@ describe('createDefaultConfig', () => {
     expect(createDefaultConfig().engineList[key][0].name).toBe(originalName);
   });
 
-  it('包含全部选项与默认引擎', () => {
+  it('包含全部选项与默认引擎，快捷动作排在首位', () => {
     const config = createDefaultConfig();
     for (const key of OPTION_KEYS) expect(config).toHaveProperty(key);
     expect(Object.keys(config.engineList).length).toBeGreaterThan(0);
+    expect(config.engineCategories[0]).toEqual(['快捷', 'actions', true]);
   });
 });
 
@@ -104,7 +105,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories).toContainEqual(['快捷', 'actions', true]);
+    expect(result.engineCategories[0]).toEqual(['快捷', 'actions', true]);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
   });
 

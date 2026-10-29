@@ -7,12 +7,12 @@
   "selectSearchInInput": false,
   "center": false,
   "engineCategories": [
+    ["快捷", "actions", true],
     ["搜索", "web", true],
     ["AI", "user1792793062676", true],
     ["影视", "video", true],
     ["书籍", "books", true],
     ["工具", "tools", true],
-    ["快捷", "actions", true],
     ["资源", "download", true],
     ["资源+", "user1792802683546", false],
     ["国产AI", "user1792793110006", false]
