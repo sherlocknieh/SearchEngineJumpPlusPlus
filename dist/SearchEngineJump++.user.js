@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.10.29.1547
+// @version            2026.10.29.1637
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6086,6 +6086,10 @@
 		return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 	}
 	var ENGINE_ACTIONS = ["copy", "open"];
+	var BUILTIN_CATEGORY_KEY = "actions";
+	function isBuiltinCategory(category) {
+		return category?.key === BUILTIN_CATEGORY_KEY;
+	}
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
@@ -6158,9 +6162,24 @@
 		const rawList = isPlainObject(data.engineList) ? data.engineList : null;
 		const engineList = {};
 		for (const [, key] of categories) engineList[key] = (rawList ? Array.isArray(rawList[key]) ? rawList[key] : [] : defaults.engineList[key] || []).map(normalizeEngine).filter(Boolean);
+		ensureBuiltinActions(categories, engineList);
 		settings.engineCategories = categories;
 		settings.engineList = engineList;
 		return settings;
+	}
+	function ensureBuiltinActions(categories, engineList) {
+		if (!categories.some(([, key]) => key === "actions")) {
+			const defaultCategory = engines_default.engineCategories.find(([, key]) => key === BUILTIN_CATEGORY_KEY);
+			categories.push([
+				defaultCategory?.[0] || "actions",
+				BUILTIN_CATEGORY_KEY,
+				true
+			]);
+		}
+		const engines = engineList["actions"] || [];
+		const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
+		for (const engine of engines_default.engineList["actions"] || []) if (!presentActions.has(engine.action)) engines.push({ ...engine });
+		engineList[BUILTIN_CATEGORY_KEY] = engines;
 	}
 	function serializeEngine(raw) {
 		if (!isPlainObject(raw)) return null;
@@ -8331,6 +8350,7 @@
 			const p = pressCtx;
 			const category = draft.categories[p.ci];
 			if (!category) return false;
+			if (p.type === "engine" && isBuiltinCategory(category)) return false;
 			const item = p.type === "category" ? category : category.engines[p.ei];
 			if (!item) return false;
 			const rect = p.sourceEl.getBoundingClientRect();
@@ -8398,6 +8418,7 @@
 				moveCategoryTo(ci);
 				return;
 			}
+			if (isBuiltinCategory(draft.categories[ci])) return;
 			const card = categoryCards()[ci];
 			if (card) moveEngineTo(ci, engineInsertIndex(card, y));
 		}
@@ -8405,6 +8426,7 @@
 			const ctx = dragCtx.value;
 			if (!ctx || ctx.type !== "engine") return;
 			const targetCi = copyTargetCi.value;
+			if (isBuiltinCategory(draft.categories[targetCi])) return;
 			const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
 			const targetKey = draft.categories[targetCi]?.key;
 			const copy = source ? {
@@ -8887,7 +8909,7 @@
 		}
 		function deleteCategory(index) {
 			const category = draft.categories[index];
-			if (!category) return;
+			if (!category || isBuiltinCategory(category)) return;
 			notifyDeleted({
 				type: "category",
 				index,
@@ -8898,7 +8920,8 @@
 		}
 		function deleteEngine(ci, ei) {
 			const category = draft.categories[ci];
-			const engine = category?.engines?.[ei];
+			if (!category || isBuiltinCategory(category)) return;
+			const engine = category.engines?.[ei];
 			if (!engine) return;
 			notifyDeleted({
 				type: "engine",
@@ -8919,6 +8942,7 @@
 	function useSettingsDialogs({ draft, nextId, categoryDialog, engineDialog, engineSaving, scheduleAutoSave, deleteCategory, deleteEngine, refreshIconInBackground, consumeClickSuppression }) {
 		function openCategoryDialog(index) {
 			if (consumeClickSuppression()) return;
+			if (isBuiltinCategory(draft.categories[index])) return;
 			categoryDialog.value = { index };
 		}
 		function submitCategory(name) {
@@ -8944,6 +8968,7 @@
 			deleteCategory(ctx.index);
 		}
 		function addEngine(ci) {
+			if (isBuiltinCategory(draft.categories[ci])) return;
 			engineDialog.value = {
 				mode: "add",
 				ci,
@@ -8952,6 +8977,7 @@
 		}
 		function editEngine(ci, ei) {
 			if (consumeClickSuppression()) return;
+			if (isBuiltinCategory(draft.categories[ci])) return;
 			engineDialog.value = {
 				mode: "edit",
 				ci,
@@ -9926,6 +9952,10 @@
 			displayName: {
 				type: String,
 				required: true
+			},
+			locked: {
+				type: Boolean,
+				default: false
 			}
 		},
 		emits: [
@@ -9939,7 +9969,14 @@
 			"drag-start"
 		],
 		setup(__props, { emit: __emit }) {
+			const props = __props;
 			const emit = __emit;
+			function openCategory() {
+				if (!props.locked) emit("open-category", props.ci);
+			}
+			function openEngine(ei) {
+				if (!props.locked) emit("edit-engine", props.ci, ei);
+			}
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("div", {
 					id: __props.category.key,
@@ -9952,28 +9989,30 @@
 					class: "sejtitle drag",
 					"data-xin": __props.category.enabled ? 1 : -1,
 					"data-iqxintitle": __props.category.key,
-					title: unref(t)("settings.editCategory", { name: __props.displayName }),
+					title: __props.locked ? null : unref(t)("settings.editCategory", { name: __props.displayName }),
 					onPointerdown: _cache[3] || (_cache[3] = ($event) => emit("drag-start", $event, "category", __props.ci)),
-					onClick: _cache[4] || (_cache[4] = withModifiers(($event) => emit("open-category", __props.ci), ["stop"]))
+					onClick: withModifiers(openCategory, ["stop"])
 				}, [
 					createBaseVNode("span", _hoisted_3$3, toDisplayString(__props.displayName), 1),
-					createBaseVNode("span", {
+					!__props.locked ? (openBlock(), createElementBlock("span", {
+						key: 0,
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
-					}, null, 8, _hoisted_4$3),
+					}, null, 8, _hoisted_4$3)) : createCommentVNode("", true),
 					createBaseVNode("span", {
 						class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": !__props.category.enabled }]),
 						title: __props.category.enabled ? unref(t)("common.hide") : unref(t)("common.show"),
 						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle-category", __props.ci), ["stop"])),
 						innerHTML: __props.category.enabled ? unref(EYE) : unref(EYE_OFF)
 					}, null, 10, _hoisted_5$3),
-					createBaseVNode("span", {
+					!__props.locked ? (openBlock(), createElementBlock("span", {
+						key: 1,
 						class: "sej-hover-delete",
 						title: unref(t)("settings.deleteCategory"),
 						onPointerdown: _cache[1] || (_cache[1] = withModifiers(() => {}, ["stop"])),
 						onClick: _cache[2] || (_cache[2] = withModifiers(($event) => emit("delete-category", __props.ci), ["stop"])),
 						innerHTML: unref(TRASH)
-					}, null, 40, _hoisted_6$2)
+					}, null, 40, _hoisted_6$2)) : createCommentVNode("", true)
 				], 40, _hoisted_2$3), createBaseVNode("div", {
 					class: "sejcon",
 					"data-sej-drag-el": "list-" + __props.category._id
@@ -9982,9 +10021,9 @@
 						key: engine._id,
 						class: normalizeClass(["drag", { "sej-drag-placeholder": __props.dragCtx?.type === "engine" && __props.dragCtx.key === engine._id }]),
 						"data-sej-drag-el": "engine-" + engine._id,
-						title: unref(t)("settings.editEngine", { name: unref(localizeEngineName)(engine.name) }),
+						title: __props.locked ? null : unref(t)("settings.editEngine", { name: unref(localizeEngineName)(engine.name) }),
 						onPointerdown: ($event) => emit("drag-start", $event, "engine", __props.ci, ei),
-						onClick: withModifiers(($event) => emit("edit-engine", __props.ci, ei), ["stop"])
+						onClick: withModifiers(($event) => openEngine(ei), ["stop"])
 					}, [
 						createBaseVNode("span", {
 							class: "sej-engine",
@@ -9998,32 +10037,35 @@
 							src: unref(getFaviconSrc)(engine),
 							alt: ""
 						}, null, 8, _hoisted_10$2), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_9$2),
-						createBaseVNode("span", {
+						!__props.locked ? (openBlock(), createElementBlock("span", {
+							key: 0,
 							class: "sej-hover-edit",
 							innerHTML: unref(PENCIL)
-						}, null, 8, _hoisted_11$2),
+						}, null, 8, _hoisted_11$2)) : createCommentVNode("", true),
 						createBaseVNode("span", {
 							class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": engine.disable }]),
 							title: engine.disable ? unref(t)("common.show") : unref(t)("common.hide"),
 							onClick: withModifiers(($event) => emit("toggle-engine", __props.ci, ei), ["stop"]),
 							innerHTML: engine.disable ? unref(EYE_OFF) : unref(EYE)
 						}, null, 10, _hoisted_12$1),
-						createBaseVNode("span", {
+						!__props.locked ? (openBlock(), createElementBlock("span", {
+							key: 1,
 							class: "sej-hover-delete",
 							title: unref(t)("settings.deleteEngine"),
-							onPointerdown: _cache[5] || (_cache[5] = withModifiers(() => {}, ["stop"])),
+							onPointerdown: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"])),
 							onClick: withModifiers(($event) => emit("delete-engine", __props.ci, ei), ["stop"]),
 							innerHTML: unref(TRASH)
-						}, null, 40, _hoisted_13$1)
+						}, null, 40, _hoisted_13$1)) : createCommentVNode("", true)
 					], 42, _hoisted_8$2);
-				}), 128)), createBaseVNode("span", {
+				}), 128)), !__props.locked ? (openBlock(), createElementBlock("span", {
+					key: 0,
 					class: normalizeClass(["iqxin-additem", { "sej-copy-target": __props.copyTargetCi === __props.ci }]),
-					onClick: _cache[6] || (_cache[6] = withModifiers(($event) => emit("add-engine", __props.ci), ["stop"]))
+					onClick: _cache[5] || (_cache[5] = withModifiers(($event) => emit("add-engine", __props.ci), ["stop"]))
 				}, [__props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", {
 					key: 0,
 					class: "sej-copy-icon",
 					innerHTML: unref(COPY)
-				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
+				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)) : createCommentVNode("", true)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
 			};
 		}
 	};
@@ -10477,6 +10519,7 @@
 							"drag-ctx": unref(dragCtx),
 							"copy-target-ci": unref(copyTargetCi),
 							"display-name": unref(displayCategoryName)(category),
+							locked: unref(isBuiltinCategory)(category),
 							onToggleCategory,
 							onOpenCategory: unref(openCategoryDialog),
 							onDeleteCategory: unref(deleteCategory),
@@ -10491,6 +10534,7 @@
 							"drag-ctx",
 							"copy-target-ci",
 							"display-name",
+							"locked",
 							"onOpenCategory",
 							"onDeleteCategory",
 							"onAddEngine",

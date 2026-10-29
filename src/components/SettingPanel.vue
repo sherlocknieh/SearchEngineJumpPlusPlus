@@ -1,6 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { OPTION_KEYS } from '../core/configSchema.js';
+import { isBuiltinCategory } from '../core/configData.js';
 import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { closeSettingPanel } from '../stores/ui.js';
@@ -342,6 +343,7 @@ onBeforeUnmount(() => {
           :drag-ctx="dragCtx"
           :copy-target-ci="copyTargetCi"
           :display-name="displayCategoryName(category)"
+          :locked="isBuiltinCategory(category)"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"
           @delete-category="deleteCategory"

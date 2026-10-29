@@ -96,6 +96,39 @@ describe('normalizeConfig', () => {
     ]);
   });
 
+  it('始终补回内置快捷动作分类与动作', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['搜索', 'web', true]],
+        engineList: { web: [{ name: 'A', url: 'https://a.test' }] },
+      },
+      defaults,
+    );
+    expect(result.engineCategories).toContainEqual(['快捷', 'actions', true]);
+    expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
+  });
+
+  it('保留内置分类的隐藏状态与自定义名称，只补缺失动作', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [
+          ['快捷', 'actions', false],
+          ['搜索', 'web', true],
+        ],
+        engineList: {
+          actions: [{ name: '我的复制', action: 'copy', disable: true }],
+          web: [],
+        },
+      },
+      defaults,
+    );
+    expect(result.engineCategories[0]).toEqual(['快捷', 'actions', false]);
+    expect(result.engineList.actions).toEqual([
+      { name: '我的复制', action: 'copy', disable: true },
+      { name: '打开链接', url: '', action: 'open' },
+    ]);
+  });
+
   it('缺少 engineList 时按分类键回退默认引擎', () => {
     const result = normalizeConfig({ engineCategories: [['搜索', 'web', true]] }, defaults);
     expect(result.engineList.web).toEqual(defaults.engineList.web);

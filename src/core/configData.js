@@ -10,6 +10,13 @@ export function isPlainObject(value) {
 /** 非搜索类快捷动作：copy 复制当前内容，open 打开当前链接 */
 export const ENGINE_ACTIONS = ['copy', 'open'];
 
+/** 内置的快捷动作分类键名：始终存在，只能移动和隐藏 */
+export const BUILTIN_CATEGORY_KEY = 'actions';
+
+export function isBuiltinCategory(category) {
+  return category?.key === BUILTIN_CATEGORY_KEY;
+}
+
 export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }

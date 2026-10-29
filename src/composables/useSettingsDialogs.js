@@ -5,6 +5,7 @@
  * 「是否有弹窗打开」，把状态留在面板外壳里可以避免循环依赖。
  */
 import { t } from '../assets/i18n.js';
+import { isBuiltinCategory } from '../core/configData.js';
 
 /**
  * @param {object} options
@@ -33,6 +34,8 @@ export function useSettingsDialogs({
 }) {
   function openCategoryDialog(index) {
     if (consumeClickSuppression()) return;
+    // 内置快捷动作分类不允许改名
+    if (isBuiltinCategory(draft.categories[index])) return;
     categoryDialog.value = { index };
   }
 
@@ -62,11 +65,14 @@ export function useSettingsDialogs({
   }
 
   function addEngine(ci) {
+    // 内置快捷动作分类没有添加入口
+    if (isBuiltinCategory(draft.categories[ci])) return;
     engineDialog.value = { mode: 'add', ci, initial: {} };
   }
 
   function editEngine(ci, ei) {
     if (consumeClickSuppression()) return;
+    if (isBuiltinCategory(draft.categories[ci])) return;
     engineDialog.value = {
       mode: 'edit',
       ci,

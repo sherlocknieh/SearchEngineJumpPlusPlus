@@ -11,6 +11,7 @@
 import { ref } from 'vue';
 import { showToast } from '../stores/ui.js';
 import { cloneValue } from '../core/storageBackend.js';
+import { isBuiltinCategory } from '../core/configData.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
 import { createDragAnimator } from './drag/dragAnimation.js';
 import { createDragAutoScroll } from './drag/dragAutoScroll.js';
@@ -162,6 +163,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     const p = pressCtx;
     const category = draft.categories[p.ci];
     if (!category) return false;
+    // 快捷动作条目固定留在内置分类中，只允许分类整体移动
+    if (p.type === 'engine' && isBuiltinCategory(category)) return false;
     const item = p.type === 'category' ? category : category.engines[p.ei];
     if (!item) return false;
 
@@ -249,6 +252,8 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
       return;
     }
 
+    // 内置分类不接受其他分类的引擎拖入
+    if (isBuiltinCategory(draft.categories[ci])) return;
     const card = categoryCards()[ci];
     if (card) moveEngineTo(ci, engineInsertIndex(card, y));
   }
@@ -257,6 +262,7 @@ export function useDragSort({ draft, layerEl, nextId, scheduleAutoSave }) {
     const ctx = dragCtx.value;
     if (!ctx || ctx.type !== 'engine') return;
     const targetCi = copyTargetCi.value;
+    if (isBuiltinCategory(draft.categories[targetCi])) return;
     const source = draft.categories[ctx.ci]?.engines?.[ctx.ei];
     const targetKey = draft.categories[targetCi]?.key;
     const copy = source ? { ...cloneValue(source), _id: nextId() } : null;

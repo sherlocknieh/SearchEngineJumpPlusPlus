@@ -7,6 +7,7 @@
 import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
 import {
+  BUILTIN_CATEGORY_KEY,
   isPlainObject,
   normalizeCategories,
   normalizeEngine,
@@ -81,9 +82,33 @@ export function normalizeConfig(raw, defaults) {
     engineList[key] = engines.map(normalizeEngine).filter(Boolean);
   }
 
+  // 内置快捷动作分类始终存在：旧配置缺少时补回，分类被删除时重新创建；
+  // 内置动作也按 action 补齐，避免手工改配置或旧数据丢失快捷入口
+  ensureBuiltinActions(categories, engineList);
+
   settings.engineCategories = categories;
   settings.engineList = engineList;
   return settings;
+}
+
+/**
+ * 保证内置的快捷动作分类与动作引擎存在。
+ * 只补缺失项，不改变用户已有的排序、隐藏状态与自定义图标。
+ */
+function ensureBuiltinActions(categories, engineList) {
+  if (!categories.some(([, key]) => key === BUILTIN_CATEGORY_KEY)) {
+    const defaultCategory = defaultConfig.engineCategories.find(
+      ([, key]) => key === BUILTIN_CATEGORY_KEY,
+    );
+    categories.push([defaultCategory?.[0] || BUILTIN_CATEGORY_KEY, BUILTIN_CATEGORY_KEY, true]);
+  }
+
+  const engines = engineList[BUILTIN_CATEGORY_KEY] || [];
+  const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
+  for (const engine of defaultConfig.engineList[BUILTIN_CATEGORY_KEY] || []) {
+    if (!presentActions.has(engine.action)) engines.push({ ...engine });
+  }
+  engineList[BUILTIN_CATEGORY_KEY] = engines;
 }
 
 /**

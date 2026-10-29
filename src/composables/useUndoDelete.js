@@ -4,6 +4,7 @@
  */
 import { localizeCategoryName, localizeEngineName, t } from '../assets/i18n.js';
 import { cloneValue } from '../core/storageBackend.js';
+import { isBuiltinCategory } from '../core/configData.js';
 import { showToast } from '../stores/ui.js';
 
 const UNDO_DURATION = 5000;
@@ -69,7 +70,8 @@ export function useUndoDelete({ draft, scheduleAutoSave, isDialogOpen, closeCate
 
   function deleteCategory(index) {
     const category = draft.categories[index];
-    if (!category) return;
+    // 内置快捷动作分类不能删除
+    if (!category || isBuiltinCategory(category)) return;
     notifyDeleted(
       {
         type: 'category',
@@ -84,7 +86,9 @@ export function useUndoDelete({ draft, scheduleAutoSave, isDialogOpen, closeCate
 
   function deleteEngine(ci, ei) {
     const category = draft.categories[ci];
-    const engine = category?.engines?.[ei];
+    // 内置分类内的动作同样不能删除
+    if (!category || isBuiltinCategory(category)) return;
+    const engine = category.engines?.[ei];
     if (!engine) return;
     notifyDeleted(
       {
