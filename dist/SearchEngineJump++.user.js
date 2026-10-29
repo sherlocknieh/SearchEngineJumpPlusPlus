@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.10.29.1
+// @version            2026.10.29.2
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5077,7 +5077,8 @@
     `,
 			patches: {
 				narrowFullWidth: true,
-				constrainToViewport: true
+				constrainToViewport: true,
+				alignTo: ".b_scopebar"
 			}
 		},
 		{
@@ -6431,12 +6432,19 @@
 		el.style.setProperty("translate", `${delta}px 0`, "important");
 		el.dataset.sejCentered = "1";
 	}
-	function useFixedTop({ containerEl, isSelectSearch, inlineStyleBlocked, sitePatches, matchedRule, getResolvedStyle, getHost, getStackOffset, updateScrollHints, getInsertTarget, getInputTarget }) {
+	function useFixedTop({ containerEl, isSelectSearch, inlineStyleBlocked, sitePatches, matchedRule, getResolvedStyle, getHost, getStackOffset, updateScrollHints, getInsertTarget, getInputTarget, forceCenter = false }) {
 		let originalContainerDistanceTop = 0;
 		let headerBottomCache = null;
 		let scrollRaf = 0;
 		let fixedTopTimers = [];
 		let constrainTimers = [];
+		function getAlignLeft(alignTo) {
+			if (!alignTo) return null;
+			const target = typeof alignTo === "string" ? document.querySelector(alignTo) : alignTo();
+			if (!(target instanceof Element)) return null;
+			const rect = target.getBoundingClientRect();
+			return rect.width > 0 ? rect.left : null;
+		}
 		function constrainBarToViewport() {
 			const el = containerEl.value;
 			if (!el || isSelectSearch.value) return;
@@ -6444,8 +6452,9 @@
 			if (getHost().style.position === "fixed") return;
 			const { vw, narrow, viewLeft, viewWidth } = getViewportMetrics();
 			const { constrainToViewport, narrowFullWidth, narrowMaxWidthInPixels } = sitePatches;
+			const alignTo = forceCenter ? null : sitePatches.alignTo;
 			el.classList.toggle("sej-mobile-centered", narrow);
-			if (!narrow && !constrainToViewport && !narrowFullWidth) return;
+			if (!narrow && !constrainToViewport && !narrowFullWidth && !alignTo) return;
 			[
 				"max-width",
 				"margin-left",
@@ -6470,11 +6479,14 @@
 				});
 				return;
 			}
-			if (!constrainToViewport || rect.left >= gap && rect.right <= vw - gap) return;
+			const alignLeft = getAlignLeft(alignTo);
+			if (!alignLeft && !constrainToViewport) return;
+			if (!alignLeft && rect.left >= gap && rect.right <= vw - gap) return;
 			el.style.left = "auto";
 			rect = el.getBoundingClientRect();
 			const maxLeft = Math.max(gap, vw - gap - rect.width);
-			el.style.marginLeft = `${Math.round(Math.min(Math.max(rect.left, gap), maxLeft) - rect.left)}px`;
+			const desiredLeft = alignLeft ?? rect.left;
+			el.style.marginLeft = `${Math.round(Math.min(Math.max(desiredLeft, gap), maxLeft) - rect.left)}px`;
 		}
 		function getFixedHeaderBottom(barLeft, barWidth) {
 			let bottom = 0;
@@ -7414,7 +7426,8 @@
 				getStackOffset,
 				updateScrollHints,
 				getInsertTarget: () => insertTarget,
-				getInputTarget: () => inputTarget
+				getInputTarget: () => inputTarget,
+				forceCenter: Boolean(data.center)
 			});
 			let inputTarget = null;
 			let insertTarget = null;
