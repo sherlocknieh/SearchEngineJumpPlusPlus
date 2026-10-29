@@ -467,9 +467,9 @@ onBeforeUnmount(() => {
 }
 
 /*
- * 圆形箭头按钮：点击滚动一屏。
+ * 箭头滚动按钮：点击滚动一屏。
  * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时
- * 不会先掠过底下的分类/引擎条目；可见的圆形与箭头由伪元素绘制。
+ * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。
  */
 #sej-container .sej-scroll-hint {
   position: absolute;
@@ -479,14 +479,14 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 10px;
   min-width: 0;
   min-height: 0;
-  margin: 0;
+  margin-left: 4px;
   padding: 0;
   box-sizing: border-box;
   appearance: none;
-  color: var(--sej-accent);
+  color: var(--font-color-qxin);
   background: none;
   border: 0;
   font: inherit;
@@ -499,33 +499,19 @@ onBeforeUnmount(() => {
   transition: opacity 0.16s ease-out;
 }
 
-/* 可见的圆形底 */
-#sej-container .sej-scroll-hint::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  width: 22px;
-  height: 22px;
-  margin: auto;
-  box-sizing: border-box;
-  border-radius: 50%;
-  background: var(--sej-bar-bg, var(--background-color-qxin));
-  border: 1px solid var(--border-color-sej);
-  box-shadow: 0 2px 6px hsla(0, 0%, 0%, 0.22);
-  transition:
-    box-shadow 0.08s ease-out,
-    transform 0.08s ease-out;
-}
-
+/* 箭头本体 */
 #sej-container .sej-scroll-hint::after {
   content: '';
   position: relative;
   z-index: 1;
-  width: 6px;
-  height: 6px;
+  width: 7px;
+  height: 7px;
   border-top: 2px solid currentColor;
   border-right: 2px solid currentColor;
   border-radius: 1px;
+  opacity: 0.45;
+  transition: opacity 0.12s ease-out;
+  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));
 }
 
 #sej-container .sej-scroll-hint-left {
@@ -546,21 +532,18 @@ onBeforeUnmount(() => {
   transform: rotate(45deg);
 }
 
-#sej-container .sej-scroll-hint:hover::before {
-  box-shadow: 0 2px 10px hsla(0, 0%, 0%, 0.32);
+#sej-container .sej-scroll-hint:hover::after {
+  opacity: 0.8;
+  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));
 }
 
-#sej-container .sej-scroll-hint:active::before {
-  transform: scale(0.92);
+#sej-container .sej-scroll-hint:active::after {
+  opacity: 1;
 }
 
 #sej-container .sej-scroll-hint:focus-visible {
-  outline: none;
-}
-
-#sej-container .sej-scroll-hint:focus-visible::before {
   outline: 2px solid var(--sej-accent);
-  outline-offset: 1px;
+  outline-offset: -2px;
 }
 
 #sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,
