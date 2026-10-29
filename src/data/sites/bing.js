@@ -20,6 +20,8 @@ export default [
       // 页面内容容器可能比视口更宽，窄屏下占满宽度并按视口校正位置
       narrowFullWidth: true,
       constrainToViewport: true,
+      // 导航条随视口收窄从 160px 退到 18px，跳转条跟随它的左边缘
+      alignTo: '.b_scopebar',
     },
   },
   {

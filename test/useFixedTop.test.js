@@ -26,7 +26,7 @@ function createBar(left, width) {
   return el;
 }
 
-function setup({ vw, left, width, patches = {} }) {
+function setup({ vw, left, width, patches = {}, forceCenter = false }) {
   setViewportWidth(vw);
   const host = document.createElement('div');
   const containerEl = ref(createBar(left, width));
@@ -42,6 +42,7 @@ function setup({ vw, left, width, patches = {} }) {
     updateScrollHints: () => {},
     getInsertTarget: () => null,
     getInputTarget: () => null,
+    forceCenter,
   });
   return { api, host, el: containerEl.value };
 }
@@ -128,5 +129,109 @@ describe('useFixedTop constrainBarToViewport', () => {
 
     expect(el.style.getPropertyValue('translate')).toBe('');
     expect(el.dataset.sejCentered).toBeUndefined();
+  });
+});
+
+describe('useFixedTop alignTo', () => {
+  function createNav(left, width = 600) {
+    const nav = document.createElement('nav');
+    nav.className = 'b_scopebar';
+    nav.getBoundingClientRect = () => ({
+      left,
+      right: left + width,
+      width,
+      top: 0,
+      bottom: 0,
+      height: 0,
+      x: left,
+      y: 0,
+    });
+    document.body.appendChild(nav);
+    return nav;
+  }
+
+  it('桌面端跟随对齐元素的左边缘', () => {
+    createNav(18);
+    const { api, el } = setup({
+      vw: 900,
+      left: 0,
+      width: 100,
+      patches: { alignTo: '.b_scopebar' },
+    });
+
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('margin-left')).toBe('18px');
+  });
+
+  it('对齐元素随视口改变位置后重新对齐', () => {
+    const nav = createNav(160);
+    const { api, el } = setup({
+      vw: 900,
+      left: 0,
+      width: 100,
+      patches: { alignTo: '.b_scopebar' },
+    });
+    api.constrainBarToViewport();
+    expect(el.style.getPropertyValue('margin-left')).toBe('160px');
+
+    nav.getBoundingClientRect = () => ({
+      left: 18,
+      right: 618,
+      width: 600,
+      top: 0,
+      bottom: 0,
+      height: 0,
+      x: 18,
+      y: 0,
+    });
+    setViewportWidth(700);
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('margin-left')).toBe('18px');
+  });
+
+  it('对齐元素超出视口时收敛到视口边界', () => {
+    createNav(2000);
+    const { api, el } = setup({
+      vw: 900,
+      left: 0,
+      width: 100,
+      patches: { alignTo: '.b_scopebar' },
+    });
+
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('margin-left')).toBe('796px');
+  });
+
+  it('开启强制居中时不跟随对齐元素', () => {
+    createNav(18);
+    const { api, el } = setup({
+      vw: 900,
+      left: 0,
+      width: 100,
+      patches: { alignTo: '.b_scopebar' },
+      forceCenter: true,
+    });
+
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('margin-left')).toBe('');
+    expect(el.style.getPropertyValue('left')).toBe('');
+  });
+
+  it('对齐元素不存在时保持站点布局', () => {
+    const { api, el } = setup({
+      vw: 900,
+      left: 0,
+      width: 100,
+      patches: { alignTo: '.b_scopebar' },
+    });
+
+    api.constrainBarToViewport();
+
+    expect(el.style.getPropertyValue('margin-left')).toBe('');
+    expect(el.style.getPropertyValue('left')).toBe('');
   });
 });

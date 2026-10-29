@@ -70,6 +70,7 @@ const {
   updateScrollHints,
   getInsertTarget: () => insertTarget,
   getInputTarget: () => inputTarget,
+  forceCenter: Boolean(data.center),
 });
 
 let inputTarget = null;
