@@ -13,14 +13,15 @@
   ```bash
   pnpm dev
   pnpm dev --host
-  ```
 
-  浏览器打开 `http://localhost:5173` 可实时查看效果。
-  使用 `--host` 将开发环境开放到外部网络，实现远程调试。
+  # 浏览器打开 `http://localhost:5173` 可实时查看效果。
+  # 使用 `--host` 将开发环境开放到外部网络，实现远程调试。
+  ```
 
 - 打包构建
 
   ```bash
+  # 每次更新后, 先到 vite.config.js 中修改版本号, 然后执行:
   pnpm build
   ```
 
