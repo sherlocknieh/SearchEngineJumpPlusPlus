@@ -1,8 +1,11 @@
+const WHEEL_LINE_HEIGHT = 16;
+
 /**
- * 跳转条类别区的横向拖动滚动。
+ * 跳转条类别区的横向滚动交互。
  *
  * 桌面端按住左键横向拖动，并在结束后短暂抑制 click，避免误触类别菜单；
  * 触屏与触控笔不接管，交给浏览器原生 overflow 滚动，从而保留惯性滑动。
+ * 鼠标滚轮同样可以横向滚动类别区，见 onScrollWheel。
  */
 export function useScrollDrag({ scrollEl, threshold = 6 }) {
   let dragState = null;
@@ -86,6 +89,29 @@ export function useScrollDrag({ scrollEl, threshold = 6 }) {
     e.stopPropagation();
   }
 
+  /**
+   * 实现鼠标滚轮横向滚动类别区:
+   * .sej-scroll 只开了 overflow-x, 纵向滚轮量在元素上无处消费会直接滚走页面,
+   * 溢出时把滚轮量转成横向位移; 已到两端则放行, 让页面继续滚动而不是"吃掉"滚轮。
+   */
+  function onScrollWheel(e) {
+    const el = scrollEl.value;
+    // Ctrl/Cmd + 滚轮是缩放, 不拦截
+    if (!el || e.ctrlKey || e.metaKey) return;
+    const maxScroll = el.scrollWidth - el.clientWidth;
+    if (maxScroll <= 0) return;
+    // 触控板的横向手势 deltaX 更大, 直接用它的方向
+    const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+    if (!raw) return;
+    const unit =
+      e.deltaMode === 1 ? WHEEL_LINE_HEIGHT : e.deltaMode === 2 ? el.clientWidth : 1;
+    const next = Math.min(maxScroll, Math.max(0, el.scrollLeft + raw * unit));
+    if (next === el.scrollLeft) return;
+    e.preventDefault();
+    el.scrollLeft = next;
+    scheduleScrollHints();
+  }
+
   function dispose() {
     dragState = null;
     scrollEl.value?.classList.remove('sej-scroll-dragging');
@@ -99,6 +125,7 @@ export function useScrollDrag({ scrollEl, threshold = 6 }) {
     onWindowPointerMove,
     endScrollDrag,
     onScrollClickCapture,
+    onScrollWheel,
     dispose,
   };
 }

@@ -52,6 +52,7 @@ const {
   onWindowPointerMove,
   endScrollDrag,
   onScrollClickCapture,
+  onScrollWheel,
   dispose: disposeScrollDrag,
 } = useScrollDrag({ scrollEl });
 
@@ -177,6 +178,11 @@ function scrollBar(direction) {
 function onBarPointerDown(e) {
   cancelScrollAnim();
   onScrollPointerDown(e);
+}
+
+function onBarWheel(e) {
+  cancelScrollAnim();
+  onScrollWheel(e);
 }
 
 function initSelectSearch() {
@@ -320,14 +326,13 @@ onBeforeUnmount(() => {
     :class="[containerClass, { selectSearch: isSelectSearch, 'sej-select-visible': barVisible }]"
     :aria-hidden="isSelectSearch && !barVisible ? 'true' : undefined"
   >
-    <div class="sej-scroll-viewport">
+    <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
         ref="scrollEl"
         class="sej-scroll"
         @pointerdown="onBarPointerDown"
         @click.capture="onScrollClickCapture"
         @dragstart.prevent
-        @wheel.passive="cancelScrollAnim"
         @scroll.passive="updateScrollHints"
       >
         <template v-for="category in categories" :key="category.key">
@@ -438,7 +443,7 @@ onBeforeUnmount(() => {
   overscroll-behavior-x: contain;
   -webkit-overflow-scrolling: touch;
   /*
-   * 不显示滚动条：桌面端用鼠标拖动，触屏不拦截手势，
+   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，
    * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。
    */
   scrollbar-width: none;

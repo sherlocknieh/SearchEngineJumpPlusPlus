@@ -156,6 +156,67 @@ describe('useScrollDrag', () => {
     expect(el.classList.contains('sej-scroll-more-right')).toBe(false);
     drag.dispose();
   });
+
+  it('滚轮纵向滚动量转成横向滚动', () => {
+    const drag = setup();
+    const event = { deltaX: 0, deltaY: 60, deltaMode: 0, preventDefault: vi.fn() };
+    drag.onScrollWheel(event);
+
+    expect(el.scrollLeft).toBe(60);
+    expect(event.preventDefault).toHaveBeenCalledTimes(1);
+    drag.dispose();
+  });
+
+  it('行模式的滚轮按行高换算', () => {
+    const drag = setup();
+    drag.onScrollWheel({ deltaX: 0, deltaY: 3, deltaMode: 1, preventDefault: vi.fn() });
+
+    expect(el.scrollLeft).toBe(48);
+    drag.dispose();
+  });
+
+  it('到两端后放行滚轮, 不拦截页面滚动', () => {
+    const drag = setup();
+    el.scrollLeft = 0;
+    const up = { deltaX: 0, deltaY: -60, deltaMode: 0, preventDefault: vi.fn() };
+    drag.onScrollWheel(up);
+    expect(el.scrollLeft).toBe(0);
+    expect(up.preventDefault).not.toHaveBeenCalled();
+
+    el.scrollLeft = 300;
+    const down = { deltaX: 0, deltaY: 60, deltaMode: 0, preventDefault: vi.fn() };
+    drag.onScrollWheel(down);
+    expect(el.scrollLeft).toBe(300);
+    expect(down.preventDefault).not.toHaveBeenCalled();
+    drag.dispose();
+  });
+
+  it('内容不溢出时不接管滚轮', () => {
+    const drag = setup();
+    Object.defineProperty(el, 'scrollWidth', { value: 200, configurable: true });
+    const event = { deltaX: 0, deltaY: 60, deltaMode: 0, preventDefault: vi.fn() };
+    drag.onScrollWheel(event);
+
+    expect(el.scrollLeft).toBe(0);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    drag.dispose();
+  });
+
+  it('Ctrl 缩放时不接管滚轮', () => {
+    const drag = setup();
+    const event = {
+      deltaX: 0,
+      deltaY: 60,
+      deltaMode: 0,
+      ctrlKey: true,
+      preventDefault: vi.fn(),
+    };
+    drag.onScrollWheel(event);
+
+    expect(el.scrollLeft).toBe(0);
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    drag.dispose();
+  });
 });
 
 describe('useStackSync', () => {
