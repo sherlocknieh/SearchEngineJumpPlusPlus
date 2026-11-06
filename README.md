@@ -11,6 +11,7 @@
 安装地址:
 
 - https://github.com/sherlocknieh/SearchEngineJumpPlusPlus/raw/main/dist/SearchEngineJump++.user.js
+- https://greasyfork.org/zh-CN/scripts/602191-searchenginejump
 
 ## 新版效果
 
