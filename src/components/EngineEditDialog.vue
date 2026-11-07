@@ -36,12 +36,17 @@ const form = reactive({
 const urlInput = ref(null);
 const rootEl = ref(null);
 
+// 取消关闭：保存中不允许中断，Escape 与点击弹窗外共用同一入口
+function cancel() {
+  if (props.busy) return;
+  emit('cancel');
+}
+
 useModalA11y({
   containerEl: rootEl,
   initialFocus: urlInput,
-  onClose: () => {
-    if (!props.busy) emit('cancel');
-  },
+  closeOnOutsideClick: true,
+  onClose: cancel,
 });
 
 const initialFavicon = (props.initial.favicon || '').trim();

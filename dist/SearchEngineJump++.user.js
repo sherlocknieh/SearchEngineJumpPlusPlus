@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.04.1846
+// @version            2026.11.08.0127
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -159,7 +159,7 @@
 		}
 		return res.trim();
 	}
-	var isSpecialBooleanAttr = makeMap(`itemscope,allowfullscreen,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`);
+	var isSpecialBooleanAttr = makeMap(`itemscope,allowfullscreen,disablepictureinpicture,disableremoteplayback,formnovalidate,ismap,nomodule,novalidate,playsinline,readonly`);
 	function includeBooleanAttr(value) {
 		return !!value || value === "";
 	}
@@ -1474,7 +1474,7 @@
 		if (isFunction(fn)) {
 			const res = callWithErrorHandling(fn, instance, type, args);
 			if (res && isPromise(res)) res.catch((err) => {
-				handleError(err, instance, type);
+				handleError(err, instance, type, void 0, true);
 			});
 			return res;
 		}
@@ -1484,7 +1484,7 @@
 			return values;
 		}
 	}
-	function handleError(err, instance, type, throwInDev = true) {
+	function handleError(err, instance, type, throwInDev = true, isAsyncError = false) {
 		const contextVNode = instance ? instance.vnode : null;
 		const { errorHandler, throwUnhandledErrorInProduction } = instance && instance.appContext.config || EMPTY_OBJ;
 		if (instance) {
@@ -1493,7 +1493,7 @@
 			const errorInfo = `https://vuejs.org/error-reference/#runtime-${type}`;
 			while (cur) {
 				const errorCapturedHooks = cur.ec;
-				if (errorCapturedHooks) {
+				if (errorCapturedHooks && !cur.isUnmounted && (!isAsyncError || cur.scope.active)) {
 					for (let i = 0; i < errorCapturedHooks.length; i++) if (errorCapturedHooks[i](err, exposedInstance, errorInfo) === false) return;
 				}
 				cur = cur.parent;
@@ -1697,18 +1697,35 @@
 		return vnode;
 	}
 	function invokeDirectiveHook(vnode, prevVNode, instance, name) {
-		const bindings = vnode.dirs;
+		let hookVNode = vnode;
+		if (name === "beforeMount") vnode._mount = vnode;
+		else if (name === "beforeUpdate") {
+			const mount = prevVNode && prevVNode._mount;
+			if (mount) {
+				mount._latest = vnode;
+				vnode._mount = mount;
+			}
+		} else if (name === "mounted") {
+			const latest = vnode._latest;
+			vnode._mount = vnode._latest = void 0;
+			if (latest) {
+				hookVNode = latest;
+				latest._mount = void 0;
+			}
+		}
+		const bindings = hookVNode.dirs;
 		const oldBindings = prevVNode && prevVNode.dirs;
 		for (let i = 0; i < bindings.length; i++) {
-			const binding = bindings[i];
+			let binding = bindings[i];
 			if (oldBindings) binding.oldValue = oldBindings[i].value;
+			else if (name === "mounted" && binding.oldValue !== void 0) binding = extend({}, binding, { oldValue: void 0 });
 			let hook = binding.dir[name];
 			if (hook) {
 				pauseTracking();
 				callWithAsyncErrorHandling(hook, instance, 8, [
 					vnode.el,
 					binding,
-					vnode,
+					hookVNode,
 					prevVNode
 				]);
 				resetTracking();
@@ -2051,8 +2068,14 @@
 			const subTree = vnode.component.subTree;
 			setTransitionHooks(isTeleport(subTree.type) ? getInnerChild$1(subTree) || subTree : subTree, hooks);
 		} else if (vnode.shapeFlag & 128) {
-			vnode.ssContent.transition = hooks.clone(vnode.ssContent);
-			vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
+			const suspense = vnode.suspense;
+			if (suspense) {
+				const branch = suspense.isHydrating ? suspense.pendingBranch : suspense.activeBranch;
+				if (branch) setTransitionHooks(branch, hooks.clone(branch));
+			} else {
+				vnode.ssContent.transition = hooks.clone(vnode.ssContent);
+				vnode.ssFallback.transition = hooks.clone(vnode.ssFallback);
+			}
 		} else {
 			vnode.transition = hooks;
 			if (vnode.type === Fragment && isArray(vnode.children)) {
@@ -2195,9 +2218,8 @@
 	}
 	function injectToKeepAliveRoot(hook, type, target, keepAliveRoot) {
 		const injected = injectHook(type, hook, keepAliveRoot, true);
-		onUnmounted(() => {
-			remove(keepAliveRoot[type], injected);
-		}, target);
+		const removal = injectHook("um", () => remove(keepAliveRoot[type], injected), target);
+		removal.flags = 16;
 	}
 	function injectHook(type, hook, target = currentInstance, prepend = false) {
 		if (target) {
@@ -3183,6 +3205,7 @@
 			if (dirs) invokeDirectiveHook(vnode, null, parentComponent, "beforeMount");
 			const needCallTransitionHooks = needTransition(parentSuspense, transition);
 			if (needCallTransitionHooks) transition.beforeEnter(el);
+			else if (transition && !transition.persisted) el[deferredEnterKey] = true;
 			hostInsert(el, container, anchor);
 			if ((vnodeHook = props && props.onVnodeMounted) || needCallTransitionHooks || dirs) queuePostRenderEffect(() => {
 				try {
@@ -3364,16 +3387,20 @@
 				} else {
 					let { next, bu, u, parent, vnode } = instance;
 					{
-						const nonHydratedAsyncRoot = locateNonHydratedAsyncRoot(instance);
-						if (nonHydratedAsyncRoot) {
+						const unresolvedAsyncRoot = locateUnresolvedAsyncRoot(instance);
+						if (unresolvedAsyncRoot) {
 							if (next) {
 								next.el = vnode.el;
 								updateComponentPreRender(instance, next, optimized);
 							}
-							nonHydratedAsyncRoot.asyncDep.then(() => {
-								queuePostRenderEffect(() => {
-									if (!instance.isUnmounted) update();
-								}, parentSuspense);
+							unresolvedAsyncRoot.asyncDep.then(() => {
+								const retry = () => {
+									if (instance.job.flags & 8) return;
+									if (parentSuspense && parentSuspense.pendingBranch) queuePostRenderEffect(retry, parentSuspense);
+									else update();
+								};
+								retry.flags = 48;
+								queuePostRenderEffect(retry, parentSuspense);
 							});
 							return;
 						}
@@ -3391,7 +3418,7 @@
 					const nextTree = renderComponentRoot(instance);
 					const prevTree = instance.subTree;
 					instance.subTree = nextTree;
-					patch(prevTree, nextTree, hostParentNode(prevTree.el), getNextHostNode(prevTree), instance, parentSuspense, namespace);
+					patch(prevTree, nextTree, hostParentNode(prevTree.el || resolveAsyncComponentPlaceholder(prevTree)), getNextHostNode(prevTree), instance, parentSuspense, namespace);
 					next.el = nextTree.el;
 					if (originNext === null) updateHOCHostEl(instance, nextTree.el);
 					if (u) queuePostRenderEffect(u, parentSuspense);
@@ -3604,10 +3631,7 @@
 				resetTracking();
 			}
 			if (cacheIndex != null && (!vnode.ctx || vnode.ctx === parentComponent)) parentComponent.renderCache[cacheIndex] = void 0;
-			if (shapeFlag & 256) {
-				parentComponent.ctx.deactivate(vnode);
-				return;
-			}
+			if (shapeFlag & 256 && parentComponent.ctx.deactivate(vnode)) return;
 			const shouldInvokeDirs = shapeFlag & 1 && dirs;
 			const shouldInvokeVnodeHook = !isAsyncWrapper(vnode);
 			let vnodeHook;
@@ -3676,14 +3700,16 @@
 			if (job) {
 				job.flags |= 8;
 				unmount(subTree, instance, parentSuspense, doRemove);
-			} else if (instance.vnode.el && subTree) {
+			} else if (subTree) {
 				subTree.transition = instance.vnode.transition;
 				unmount(subTree, instance, parentSuspense, doRemove);
 			}
 			if (um) queuePostRenderEffect(um, parentSuspense);
-			queuePostRenderEffect(() => {
+			const markUnmounted = () => {
 				instance.isUnmounted = true;
-			}, parentSuspense);
+			};
+			markUnmounted.flags = 16;
+			queuePostRenderEffect(markUnmounted, parentSuspense);
 		};
 		const unmountChildren = (children, parentComponent, parentSuspense, doRemove = false, optimized = false, start = 0) => {
 			for (let i = start; i < children.length; i++) unmount(children[i], parentComponent, parentSuspense, doRemove, optimized);
@@ -3794,11 +3820,11 @@
 		}
 		return result;
 	}
-	function locateNonHydratedAsyncRoot(instance) {
+	function locateUnresolvedAsyncRoot(instance) {
 		const subComponent = instance.subTree.component;
 		if (subComponent) {
 			if (subComponent.asyncDep && !subComponent.asyncResolved) return subComponent;
-			else return locateNonHydratedAsyncRoot(subComponent);
+			else return locateUnresolvedAsyncRoot(subComponent);
 		}
 	}
 	function invalidateMount(hooks) {
@@ -3808,9 +3834,12 @@
 		if (anchorVnode.placeholder) return anchorVnode.placeholder;
 		const instance = anchorVnode.component;
 		if (instance) return resolveAsyncComponentPlaceholder(instance.subTree);
+		const suspense = anchorVnode.suspense;
+		if (suspense && suspense.activeBranch) return resolveAsyncComponentPlaceholder(suspense.activeBranch);
 		return null;
 	}
 	var isSuspense = (type) => type.__isSuspense;
+	var deferredEnterKey = Symbol("_deferredEnter");
 	function queueEffectWithSuspense(fn, suspense) {
 		if (suspense && suspense.pendingBranch) {
 			if (isArray(fn)) suspense.effects.push(...fn);
@@ -3928,7 +3957,8 @@
 	}
 	function guardReactiveProps(props) {
 		if (!props) return null;
-		return isProxy(props) || isInternalObject(props) ? extend({}, props) : props;
+		if (isProxy(props)) return extend({}, props);
+		return isInternalObject(props) ? extend({}, props[rawAttrsKey] || props) : props;
 	}
 	function cloneVNode(vnode, extraProps, mergeRef = false, cloneTransition = false) {
 		const { props, ref, patchFlag, children, transition } = vnode;
@@ -4195,7 +4225,8 @@
 						setInSSRSetupState(false);
 					}
 				}).catch((e) => {
-					handleError(e, instance, 0);
+					handleError(e, instance, 0, void 0, true);
+					instance.ssrRender = (_, push) => push("<!---->");
 				});
 				else instance.asyncDep = setupResult;
 			} else handleSetupResult(instance, setupResult, isSSR);
@@ -4222,9 +4253,10 @@
 			}
 		}
 	}
+	var rawAttrsKey = Symbol();
 	var attrsProxyHandlers = { get(target, key) {
 		track(target, "get", "");
-		return target[key];
+		return key === rawAttrsKey ? target : target[key];
 	} };
 	function createSetupContext(instance) {
 		const expose = (exposed) => {
@@ -4255,7 +4287,7 @@
 	var computed = (getterOrOptions, debugOptions) => {
 		return computed$1(getterOrOptions, debugOptions, isInSSRComponentSetup);
 	};
-	var version$1 = "3.5.44";
+	var version$1 = "3.5.45";
 	var policy = void 0;
 	var tt = typeof window !== "undefined" && window.trustedTypes;
 	if (tt) try {
@@ -4657,17 +4689,17 @@
 			});
 			el[assignKey] = getModelAssigner(vnode);
 		},
-		mounted(el, { value }) {
-			setSelected(el, value);
+		mounted(el, { value, modifiers: { number } }) {
+			setSelected(el, value, number);
 		},
 		beforeUpdate(el, { value }, vnode) {
 			el._modelValue = value;
 			el[assignKey] = getModelAssigner(vnode);
 		},
-		updated(el, { value }) {
+		updated(el, { value, modifiers: { number } }) {
 			const pending = el._pendingValue;
 			el._pendingValue = void 0;
-			if (!pending || pending[0] !== el.multiple || !isSameSelectValue(value, pending[1], pending[0])) setSelected(el, value);
+			if (!pending || pending[0] !== el.multiple || !isSameSelectValue(value, pending[1], pending[0])) setSelected(el, value, number);
 		}
 	};
 	function isSameSelectValue(value, assignedValue, multiple) {
@@ -4680,7 +4712,7 @@
 		}
 		return false;
 	}
-	function setSelected(el, value) {
+	function setSelected(el, value, number = false) {
 		const isMultiple = el.multiple;
 		const isArrayValue = isArray(value);
 		if (isMultiple && !isArrayValue && !isSet(value)) return;
@@ -4692,7 +4724,7 @@
 					const optionType = typeof optionValue;
 					if (optionType === "string" || optionType === "number") option.selected = value.some((v) => String(v) === String(optionValue));
 					else option.selected = looseIndexOf(value, optionValue) > -1;
-				} else option.selected = value.has(optionValue);
+				} else option.selected = value.has(optionValue) || number && typeof optionValue === "string" && value.has(looseToNumber(optionValue));
 			} else if (looseEqual(getValue$1(option), value)) {
 				if (el.selectedIndex !== i) el.selectedIndex = i;
 				return;
@@ -5295,14 +5327,12 @@
       margin: 10px auto 0px;
       width: 1000px !important;
       z-index: 19;
-      background: #fff;
       box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);
     `,
 		style_ZhihuChenglinz: `
       margin: 10px auto 0px;
       width: 654px;
       z-index: 19;
-      background: #fff;
       box-shadow: 0 1px 3px 0 rgba(0,34,77,.05);
     `,
 		stylish: ".TopSearch.Card{margin:30px auto;}"
@@ -8626,7 +8656,7 @@
 		const style = getComputedStyle(el);
 		return style.display !== "none" && style.visibility !== "hidden";
 	}
-	function useModalA11y({ containerEl, onClose, initialFocus }) {
+	function useModalA11y({ containerEl, onClose, initialFocus, closeOnOutsideClick = false }) {
 		let container = null;
 		let previousFocus = null;
 		function focusableElements() {
@@ -8662,17 +8692,26 @@
 				first.focus();
 			}
 		}
+		function onDocumentClick(e) {
+			if (!container) return;
+			const path = e.composedPath?.();
+			if (path ? path.includes(container) : container.contains(e.target)) return;
+			e.stopPropagation();
+			onClose?.();
+		}
 		onMounted(async () => {
 			container = containerEl.value;
 			previousFocus = document.activeElement;
 			if (!container) return;
 			if (!container.hasAttribute("tabindex")) container.setAttribute("tabindex", "-1");
 			container.addEventListener("keydown", onKeydown);
+			if (closeOnOutsideClick) document.addEventListener("click", onDocumentClick, true);
 			await nextTick();
 			(initialFocus?.value || focusableElements()[0] || container)?.focus?.();
 		});
 		onBeforeUnmount(() => {
 			container?.removeEventListener("keydown", onKeydown);
+			document.removeEventListener("click", onDocumentClick, true);
 			if (previousFocus?.isConnected && typeof previousFocus.focus === "function") previousFocus.focus();
 		});
 	}
@@ -9596,12 +9635,15 @@
 			});
 			const urlInput = ref(null);
 			const rootEl = ref(null);
+			function cancel() {
+				if (props.busy) return;
+				emit("cancel");
+			}
 			useModalA11y({
 				containerEl: rootEl,
 				initialFocus: urlInput,
-				onClose: () => {
-					if (!props.busy) emit("cancel");
-				}
+				closeOnOutsideClick: true,
+				onClose: cancel
 			});
 			const initialFavicon = (props.initial.favicon || "").trim();
 			const { faviconFileInput, previewData, pickedUrl, previewLoading, previewSteps, previewSize, dataIconLink, previewImage, canPreview, previewLabel, extractorUrl, STEP_STATUS_TEXT, clearSteps, markDataEdited, chooseStep, previewIcon, pickFaviconFile, uploadFavicon, resolveFaviconData } = useEngineIconPreview({

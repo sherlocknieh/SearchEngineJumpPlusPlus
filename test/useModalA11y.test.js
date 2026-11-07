@@ -18,8 +18,26 @@ const Dialog = defineComponent({
   },
 });
 
+const OutsideCloseDialog = defineComponent({
+  props: { onClose: { type: Function, required: true } },
+  setup(props) {
+    const rootEl = ref(null);
+    useModalA11y({
+      containerEl: rootEl,
+      closeOnOutsideClick: true,
+      onClose: () => props.onClose(),
+    });
+    return () =>
+      h('div', { ref: rootEl, role: 'dialog' }, [h('button', { id: 'inside' }, 'inside')]);
+  },
+});
+
 function fire(el, key, options = {}) {
   el.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, ...options }));
+}
+
+function click(el) {
+  el.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 }
 
 describe('useModalA11y', () => {
@@ -78,5 +96,53 @@ describe('useModalA11y', () => {
     wrapper.unmount();
     expect(document.activeElement).toBe(outside);
     outside.remove();
+  });
+
+  it('默认不因点击外部关闭', async () => {
+    const onClose = vi.fn();
+    const wrapper = mount(Dialog, { props: { onClose }, attachTo: document.body });
+    await nextTick();
+    await nextTick();
+
+    click(document.body);
+    expect(onClose).not.toHaveBeenCalled();
+
+    wrapper.unmount();
+  });
+
+  it('启用后点击外部关闭，并拦截这次点击不落到背后控件', async () => {
+    const onClose = vi.fn();
+    const behind = document.createElement('button');
+    const behindHandler = vi.fn();
+    behind.addEventListener('click', behindHandler);
+    document.body.appendChild(behind);
+
+    const wrapper = mount(OutsideCloseDialog, { props: { onClose }, attachTo: document.body });
+    await nextTick();
+    await nextTick();
+
+    click(behind);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(behindHandler).not.toHaveBeenCalled();
+
+    behind.remove();
+    wrapper.unmount();
+  });
+
+  it('点击弹窗内部不关闭且事件正常冒泡', async () => {
+    const onClose = vi.fn();
+    const wrapper = mount(OutsideCloseDialog, { props: { onClose }, attachTo: document.body });
+    await nextTick();
+    await nextTick();
+
+    const inside = wrapper.find('#inside');
+    const insideHandler = vi.fn();
+    inside.element.addEventListener('click', insideHandler);
+    click(inside.element);
+
+    expect(insideHandler).toHaveBeenCalledTimes(1);
+    expect(onClose).not.toHaveBeenCalled();
+
+    wrapper.unmount();
   });
 });
