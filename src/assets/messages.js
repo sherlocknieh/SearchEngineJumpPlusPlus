@@ -68,6 +68,8 @@ export const messages = {
     'toast.mergedSkipped': '跳过 {count} 个重复项',
     'toast.mergeNothing': '导入内容中没有可合并的新引擎',
     'toast.syncedFromOtherPages': 'SearchEngineJump: 已从其他页面同步配置',
+    'toast.searchTemplateApplied': '已自动把链接中的关键词替换为 %s',
+    'toast.searchTemplateManual': '未能识别关键词，请手动把链接中的关键词替换为 %s',
 
     'category.title': '编辑分类',
     'category.delete': '删除分类',
@@ -208,6 +210,8 @@ export const messages = {
     'toast.mergedSkipped': '{count} duplicates skipped',
     'toast.mergeNothing': 'No new engines found in the imported config',
     'toast.syncedFromOtherPages': 'SearchEngineJump: Settings synced from another page',
+    'toast.searchTemplateApplied': 'Keyword in the link was replaced with %s',
+    'toast.searchTemplateManual': 'Could not detect the keyword; replace it in the link with %s',
 
     'category.title': 'Edit category',
     'category.delete': 'Delete category',

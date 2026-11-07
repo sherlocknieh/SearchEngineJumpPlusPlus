@@ -104,6 +104,231 @@ export function hostFromUrl(raw) {
     .replace(/^www\./, '');
 }
 
+// ---------------------------------------------------------------------------
+// 搜索链接 -> 关键词占位符模板
+//
+// 关键词内容无法预判：可能是中文、表情、编码后的符号，甚至是看起来像参数的文本，
+// 所以只按「站点 + 参数名 / 路径位置」识别，识别不出来就保持原样。
+//
+// 默认引擎列表里出现过的关键词参数：
+//   q            Google / Bing / GitHub / 知乎 / 豆瓣 / Trakt / DeepSeek / ChatGPT / Gemini ...
+//   wd           Baidu
+//   word         Baidu 移动端
+//   query        Sogou
+//   keyword      B站 / 人人影视 / 动漫花园 / BTSearch / SkrBT
+//   key          孔夫子旧书
+//   w            金山词霸
+//   search       RARBG / TorrentGalaxy / Wikipedia(index.php)
+//   search_query YouTube
+// 关键词写在路径里的：Wikipedia /wiki/<kw>、Z-Library /s/<kw>、SubHD /search/<kw>、
+// 1337x /search/<kw>/1/、海盗湾与 EZTV /search/<kw>、类义词典 /<kw>
+// ---------------------------------------------------------------------------
+
+// 通用关键词参数（仅在路径本身像搜索页时使用）
+const GENERIC_KEYWORD_PARAMS = [
+  'q',
+  'query',
+  'keyword',
+  'word',
+  'wd',
+  'search',
+  'search_query',
+  'searchterm',
+  'search_term',
+  'kw',
+  'key',
+  'k',
+  'text',
+];
+
+const GENERIC_SEARCH_PATH = /^\/(?:search|results?|web|find|word)\b/i;
+
+// 站点专属规则：参数名有歧义（如 q）时再限定路径，避免误伤普通页面的同名参数
+const SITE_RULES = [
+  { host: /(^|\.)google\.[^/]+$/i, path: /^\/search\b/i, params: ['q'] },
+  {
+    host: /(^|\.)bing\.com$/i,
+    path: /^\/(?:search|images\/search|dict\/search)\b/i,
+    params: ['q'],
+  },
+  { host: /(^|\.)baidu\.com$/i, path: /^\/(?:s|baidu)\b/i, params: ['wd', 'word'] },
+  { host: /(^|\.)sogou\.com$/i, params: ['query', 'keyword'] },
+  { host: /(^|\.)so\.com$/i, params: ['q'] },
+  { host: /(^|\.)yandex\.[^/]+$/i, params: ['text'] },
+  { host: /(^|\.)duckduckgo\.com$/i, params: ['q'] },
+  { host: /^search\.bilibili\.com$/i, params: ['keyword'] },
+  { host: /(^|\.)youtube\.com$/i, path: /^\/results\b/i, params: ['search_query'] },
+  { host: /^github\.com$/i, path: /^\/search\b/i, params: ['q'] },
+  { host: /(^|\.)zhihu\.com$/i, path: /^\/search\b/i, params: ['q'] },
+  { host: /^zhida\.zhihu\.com$/i, params: ['q'] },
+  { host: /(^|\.)douban\.com$/i, path: /^\/search\b/i, params: ['q'] },
+  { host: /(^|\.)stackoverflow\.com$/i, path: /^\/search\b/i, params: ['q'] },
+  { host: /(^|\.)wikipedia\.org$/i, path: /^\/w\/index\.php$/i, params: ['search'] },
+  { host: /(^|\.)iciba\.com$/i, path: /^\/word\b/i, params: ['w'] },
+  { host: /(^|\.)dict\.cn$/i, params: ['q'] },
+  { host: /(^|\.)youdao\.com$/i, path: /^\/search\b/i, params: ['q'] },
+  { host: /(^|\.)trakt\.tv$/i, params: ['q'] },
+  { host: /(^|\.)kongfz\.com$/i, params: ['key'] },
+  { host: /(^|\.)yyets\.click$/i, params: ['keyword'] },
+  { host: /(^|\.)dmhy\.org$/i, params: ['keyword'] },
+  { host: /(^|\.)rargb\.to$/i, params: ['search'] },
+  { host: /(^|\.)btsearch\.love$/i, params: ['keyword'] },
+  { host: /(^|\.)skrbtso\.top$/i, params: ['keyword'] },
+  { host: /(^|\.)torrentgalaxy\.[^/]+$/i, params: ['search'] },
+  {
+    host: /(^|\.)(?:chatgpt\.com|grok\.com|kimi\.com|doubao\.com|qianwen\.com|chatglm\.cn|minimax\.cn)$/i,
+    params: ['q'],
+  },
+  { host: /^chat\.deepseek\.com$/i, params: ['q'] },
+  { host: /^gemini\.google\.com$/i, params: ['q'] },
+];
+
+// 关键词位于路径中的站点：命中后整段替换为 %s
+const PATH_RULES = [
+  { host: /(^|\.)wikipedia\.org$/i, match: /^\/wiki\/[^/]+\/?$/i, to: () => '/wiki/%s' },
+  { host: /(^|\.)z-lib\.[^/]+$/i, match: /^\/s\/[^/]+\/?$/i, to: () => '/s/%s' },
+  { host: /(^|\.)subhd\.tv$/i, match: /^\/search\/[^/]+\/?$/i, to: () => '/search/%s' },
+  { host: /(^|\.)1337x\.to$/i, match: /^\/search\/[^/]+\/1\/?$/i, to: () => '/search/%s/1/' },
+  { host: /(^|\.)thepiratebay\.org$/i, match: /^\/search\/[^/]+/i, to: () => '/search/%s' },
+  { host: /(^|\.)eztvx\.to$/i, match: /^\/search\/[^/]+\/?$/i, to: () => '/search/%s' },
+  { host: /(^|\.)powerthesaurus\.org$/i, match: /^\/[^/]+\/?$/i, to: () => '/%s' },
+];
+
+function decodeParamName(raw) {
+  try {
+    return decodeURIComponent(raw.replace(/\+/g, ' '));
+  } catch {
+    return raw;
+  }
+}
+
+function pickKeywordParam(params, names) {
+  const present = new Set();
+  for (const key of params.keys()) present.add(key.toLowerCase());
+  for (const name of names) {
+    if (present.has(name)) return name;
+  }
+  return '';
+}
+
+function findKeywordParam(url) {
+  const host = url.hostname.toLowerCase();
+  for (const rule of SITE_RULES) {
+    if (!rule.host.test(host)) continue;
+    if (rule.path && !rule.path.test(url.pathname)) continue;
+    const key = pickKeywordParam(url.searchParams, rule.params);
+    if (key) return key;
+  }
+  if (GENERIC_SEARCH_PATH.test(url.pathname)) {
+    return pickKeywordParam(url.searchParams, GENERIC_KEYWORD_PARAMS);
+  }
+  return '';
+}
+
+// 拆成「?之前」「查询串」「#之后」三段，替换时保留原始写法不做归一化
+function splitUrlText(value) {
+  let rest = value;
+  let hash = '';
+  const hashIndex = rest.indexOf('#');
+  if (hashIndex !== -1) {
+    hash = rest.slice(hashIndex);
+    rest = rest.slice(0, hashIndex);
+  }
+  let query = '';
+  const queryIndex = rest.indexOf('?');
+  if (queryIndex !== -1) {
+    query = rest.slice(queryIndex + 1);
+    rest = rest.slice(0, queryIndex);
+  }
+  return { base: rest, query, hash };
+}
+
+function replaceQueryValue(value, key) {
+  const { base, query, hash } = splitUrlText(value);
+  const parts = query.split('&');
+  for (let i = 0; i < parts.length; i += 1) {
+    const eq = parts[i].indexOf('=');
+    const rawKey = eq === -1 ? parts[i] : parts[i].slice(0, eq);
+    if (decodeParamName(rawKey).toLowerCase() === key) {
+      parts[i] = `${rawKey}=%s`;
+      return `${base}?${parts.join('&')}${hash}`;
+    }
+  }
+  return value;
+}
+
+function replacePathValue(url) {
+  for (const rule of PATH_RULES) {
+    if (!rule.host.test(url.hostname)) continue;
+    if (!rule.match.test(url.pathname)) continue;
+    return `${url.origin}${rule.to()}${url.search}${url.hash}`;
+  }
+  return '';
+}
+
+// 路径里可能藏着关键词的写法：/search/<关键词>、/s/<关键词> 等
+const PATH_KEYWORD_PREFIX = /^\/(?:search|s|results?|find|word)\/[^/]+/i;
+
+function looksLikeSearch(url) {
+  if (GENERIC_SEARCH_PATH.test(url.pathname)) return true;
+  if (PATH_KEYWORD_PREFIX.test(url.pathname)) return true;
+  return /^(?:search|dict|zhida)\./i.test(url.hostname);
+}
+
+/**
+ * 看得出是搜索链接、但关键词不在支持的位置：hash 路由、未知参数名、路径里的关键词。
+ * 这类「特殊模式」没法保证替换正确，交给用户手动改成 %s。
+ */
+function needsManualTemplate(url) {
+  // 例如 https://music.163.com/#/search/m/?s=关键词
+  if (/#[^?]*\?/.test(url.hash) && /search/i.test(url.hash)) return true;
+  // 首页上的跟踪参数不算搜索链接
+  if (url.pathname === '/' || url.pathname === '') return false;
+  if (!looksLikeSearch(url)) return false;
+  // 路径像搜索页，却没有可识别的关键词参数
+  if (url.searchParams.size > 0) return true;
+  return PATH_KEYWORD_PREFIX.test(url.pathname);
+}
+
+/**
+ * 分析搜索链接并给出处理结果。
+ * @returns {{ url: string, status: 'ready' | 'replaced' | 'manual' | 'plain' }}
+ *   ready    已是模板（含 %s / $post$），无需处理
+ *   replaced 本次成功把关键词替换成 %s
+ *   manual   像搜索链接但认不出关键词，需要用户手动替换
+ *   plain    普通链接，保持原样
+ */
+export function analyzeSearchUrl(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value) return { url: value, status: 'plain' };
+  if (value.includes('%s') || value.includes('$post$')) {
+    return { url: value, status: 'ready' };
+  }
+
+  let url;
+  try {
+    url = new URL(withProtocol(value));
+  } catch {
+    return { url: value, status: 'plain' };
+  }
+  if (!/^https?:$/.test(url.protocol)) return { url: value, status: 'plain' };
+
+  const key = findKeywordParam(url);
+  if (key) return { url: replaceQueryValue(value, key), status: 'replaced' };
+  const pathTemplate = replacePathValue(url);
+  if (pathTemplate) return { url: pathTemplate, status: 'replaced' };
+  if (needsManualTemplate(url)) return { url: value, status: 'manual' };
+  return { url: value, status: 'plain' };
+}
+
+/**
+ * 把搜索链接里的关键词替换成 %s 占位符。
+ * 识别不到搜索特征时原样返回，避免破坏普通链接；已是模板的链接不再处理。
+ */
+export function searchTemplateFromUrl(raw) {
+  return analyzeSearchUrl(raw).url;
+}
+
 const LINK_SCHEME = /^[a-z][a-z\d+.-]*:/i;
 const SPECIAL_LINK_SCHEME = /^(mailto|tel):/i;
 

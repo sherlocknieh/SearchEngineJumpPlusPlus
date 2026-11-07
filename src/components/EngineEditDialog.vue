@@ -1,7 +1,14 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
-import { faviconFromUrl, hostFromUrl, titleFromUrl, withProtocol } from '../core/engineUrl.js';
+import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import {
+  analyzeSearchUrl,
+  faviconFromUrl,
+  hostFromUrl,
+  titleFromUrl,
+  withProtocol,
+} from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
+import { showToast } from '../stores/ui.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle } from '../core/shadowDom.js';
@@ -100,6 +107,27 @@ function markFaviconEdited() {
   clearSteps();
 }
 
+// 已经提醒过「需手动替换」的链接，避免粘贴后失焦时重复提示
+let manualHintUrl = '';
+
+// 把链接里的关键词换成 %s：用户复制来的关键词内容无法预判，只按站点与参数名识别，
+// 识别不出搜索特征时保持原样
+function applySearchTemplate() {
+  const result = analyzeSearchUrl(form.url);
+  if (result.url !== form.url) form.url = result.url;
+  if (result.status === 'replaced') {
+    showToast(t('toast.searchTemplateApplied'));
+  } else if (result.status === 'manual' && result.url !== manualHintUrl) {
+    manualHintUrl = result.url;
+    showToast(t('toast.searchTemplateManual'), 4000);
+  }
+}
+
+function onUrlPaste() {
+  // 粘贴的文本由浏览器写入输入框后才触发 input/v-model，等这次更新完成再解析
+  nextTick(applySearchTemplate);
+}
+
 watch(
   () => form.url,
   () => {
@@ -153,6 +181,8 @@ function submit() {
         v-model="form.url"
         :placeholder="t('common.required')"
         :disabled="busy"
+        @paste="onUrlPaste"
+        @blur="applySearchTemplate"
       />
     </label>
     <!-- 引擎名称 -->

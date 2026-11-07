@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
+import engines from '../src/data/engines.json';
 import {
+  analyzeSearchUrl,
   faviconFromUrl,
   hostFromUrl,
   normalizeKeywordUrl,
   registrableDomain,
+  searchTemplateFromUrl,
   siteOrigin,
   titleFromUrl,
   withProtocol,
@@ -109,5 +112,139 @@ describe('normalizeKeywordUrl', () => {
     expect(normalizeKeywordUrl('')).toBe('');
     expect(normalizeKeywordUrl(null)).toBe('');
     expect(normalizeKeywordUrl('ftp://example.com/file')).toBe('');
+  });
+});
+
+describe('searchTemplateFromUrl', () => {
+  it('把常见搜索参数替换为占位符，并保留其他参数', () => {
+    expect(searchTemplateFromUrl('https://www.google.com/search?q=天气')).toBe(
+      'https://www.google.com/search?q=%s',
+    );
+    expect(searchTemplateFromUrl('https://cn.bing.com/search?q=%E5%A4%A9%E6%B0%94&form=QBLH')).toBe(
+      'https://cn.bing.com/search?q=%s&form=QBLH',
+    );
+    expect(searchTemplateFromUrl('https://www.baidu.com/s?wd=a%26b&ie=utf-8')).toBe(
+      'https://www.baidu.com/s?wd=%s&ie=utf-8',
+    );
+    expect(searchTemplateFromUrl('https://www.sogou.com/web?query=hello+world')).toBe(
+      'https://www.sogou.com/web?query=%s',
+    );
+    expect(
+      searchTemplateFromUrl('https://www.youtube.com/results?search_query=%F0%9F%98%80&sp=1'),
+    ).toBe('https://www.youtube.com/results?search_query=%s&sp=1');
+    expect(searchTemplateFromUrl('https://github.com/search?q=abc&type=repositories')).toBe(
+      'https://github.com/search?q=%s&type=repositories',
+    );
+    expect(searchTemplateFromUrl('https://www.zhihu.com/search?type=content&q=x')).toBe(
+      'https://www.zhihu.com/search?type=content&q=%s',
+    );
+  });
+
+  it('关键词写在路径里的站点替换对应路径段', () => {
+    expect(searchTemplateFromUrl('https://zh.wikipedia.org/wiki/%E5%A4%A9%E6%B0%94')).toBe(
+      'https://zh.wikipedia.org/wiki/%s',
+    );
+    expect(searchTemplateFromUrl('https://www.1337x.to/search/cat/1/')).toBe(
+      'https://www.1337x.to/search/%s/1/',
+    );
+    expect(searchTemplateFromUrl('https://subhd.tv/search/cat')).toBe('https://subhd.tv/search/%s');
+    expect(searchTemplateFromUrl('https://www.powerthesaurus.org/happy')).toBe(
+      'https://www.powerthesaurus.org/%s',
+    );
+  });
+
+  it('未收录的站点在搜索路径下也按参数名识别', () => {
+    expect(searchTemplateFromUrl('https://search.example.com/search?q=abc')).toBe(
+      'https://search.example.com/search?q=%s',
+    );
+  });
+
+  it('参数名大小写、空值与锚点都保持原样', () => {
+    expect(searchTemplateFromUrl('https://www.google.com/search?Q=abc')).toBe(
+      'https://www.google.com/search?Q=%s',
+    );
+    expect(searchTemplateFromUrl('https://www.google.com/search?q=')).toBe(
+      'https://www.google.com/search?q=%s',
+    );
+    expect(searchTemplateFromUrl('https://www.google.com/search?q=abc#frag')).toBe(
+      'https://www.google.com/search?q=%s#frag',
+    );
+  });
+
+  it('缺少协议时按原样返回，不额外补协议', () => {
+    expect(searchTemplateFromUrl('www.google.com/search?q=abc')).toBe('www.google.com/search?q=%s');
+  });
+
+  it('已是模板或不是搜索链接时保持原样', () => {
+    expect(searchTemplateFromUrl('https://www.google.com/search?q=%s')).toBe(
+      'https://www.google.com/search?q=%s',
+    );
+    // Google 跳转链接的 q 不是关键词
+    expect(searchTemplateFromUrl('https://www.google.com/url?q=https%3A%2F%2Fexample.com')).toBe(
+      'https://www.google.com/url?q=https%3A%2F%2Fexample.com',
+    );
+    // 普通页面的 q 参数不当作关键词
+    expect(searchTemplateFromUrl('https://example.com/article?q=hello')).toBe(
+      'https://example.com/article?q=hello',
+    );
+    expect(searchTemplateFromUrl('')).toBe('');
+    expect(searchTemplateFromUrl(null)).toBe('');
+    expect(searchTemplateFromUrl('mailto:a@example.com')).toBe('mailto:a@example.com');
+    expect(searchTemplateFromUrl('not a url')).toBe('not a url');
+  });
+});
+
+describe('analyzeSearchUrl', () => {
+  it('成功替换时返回 replaced', () => {
+    expect(analyzeSearchUrl('https://www.google.com/search?q=天气')).toEqual({
+      url: 'https://www.google.com/search?q=%s',
+      status: 'replaced',
+    });
+  });
+
+  it('已是模板或特殊写法时返回 ready', () => {
+    expect(analyzeSearchUrl('https://www.google.com/search?q=%s').status).toBe('ready');
+    expect(analyzeSearchUrl('https://example.com/search$post$q').status).toBe('ready');
+  });
+
+  it('搜索特征明显但认不出关键词时返回 manual', () => {
+    // hash 路由
+    expect(analyzeSearchUrl('https://music.163.com/#/search/m/?s=%E5%A4%A9%E6%B0%94').status).toBe(
+      'manual',
+    );
+    // 路径像搜索页，参数名不认识
+    expect(analyzeSearchUrl('https://search.example.com/search?foo=1').status).toBe('manual');
+    // 关键词写在路径里，但站点不在已知规则中
+    expect(analyzeSearchUrl('https://example.com/search/cats').status).toBe('manual');
+  });
+
+  it('普通链接与首页不提示手动替换', () => {
+    expect(analyzeSearchUrl('https://example.com/article?q=hello').status).toBe('plain');
+    expect(analyzeSearchUrl('https://www.google.com/?hl=zh').status).toBe('plain');
+    expect(analyzeSearchUrl('https://www.google.com/url?q=https%3A%2F%2Fexample.com').status).toBe(
+      'plain',
+    );
+    expect(analyzeSearchUrl('').status).toBe('plain');
+  });
+});
+
+describe('默认引擎链接可被自动解析', () => {
+  // 覆盖中英文、空格、&/=、emoji、百分号与看起来像参数的关键词
+  const keywords = ['天气', 'hello world', 'a&b=c', '😀', '100%', '%s', 'q=1&x=2', 'a+b'];
+  // 模板首尾空白与结尾的 ? 不参与比较
+  const normalize = (value) => value.trim().replace(/\?$/, '');
+
+  it('把关键词代回模板后仍解析回同一模板', () => {
+    for (const list of Object.values(engines.engineList)) {
+      for (const engine of list) {
+        if (!engine.url || !engine.url.includes('%s')) continue;
+        for (const keyword of keywords) {
+          const concrete = engine.url.replaceAll('%s', encodeURIComponent(keyword));
+          expect(normalize(searchTemplateFromUrl(concrete)), engine.name).toBe(
+            normalize(engine.url),
+          );
+        }
+      }
+    }
   });
 });
