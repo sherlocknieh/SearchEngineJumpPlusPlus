@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onMounted, reactive, ref, watch } from 'vue';
 import {
   analyzeSearchUrl,
   faviconFromUrl,
@@ -107,11 +107,11 @@ function markFaviconEdited() {
   clearSteps();
 }
 
-// 已经提醒过「需手动替换」的链接，避免粘贴后失焦时重复提示
+// 已经提醒过「需手动替换」的链接，避免同一链接反复失焦时重复提示
 let manualHintUrl = '';
 
-// 把链接里的关键词换成 %s：用户复制来的关键词内容无法预判，只按站点与参数名识别，
-// 识别不出搜索特征时保持原样
+// 输入框失焦时把链接里的关键词换成 %s：用户复制来的关键词内容无法预判，
+// 只按站点与参数名识别，识别不出搜索特征时保持原样
 function applySearchTemplate() {
   const result = analyzeSearchUrl(form.url);
   if (result.url !== form.url) form.url = result.url;
@@ -121,11 +121,6 @@ function applySearchTemplate() {
     manualHintUrl = result.url;
     showToast(t('toast.searchTemplateManual'), 4000);
   }
-}
-
-function onUrlPaste() {
-  // 粘贴的文本由浏览器写入输入框后才触发 input/v-model，等这次更新完成再解析
-  nextTick(applySearchTemplate);
 }
 
 watch(
@@ -175,13 +170,12 @@ function submit() {
     <!-- 引擎链接 -->
     <label v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.url') }}</span>
-      <!-- 链接输入框：自动补全协议并联动标题/图标 -->
+      <!-- 链接输入框：联动标题/图标，失焦时才把关键词替换成 %s -->
       <input
         ref="urlInput"
         v-model="form.url"
         :placeholder="t('common.required')"
         :disabled="busy"
-        @paste="onUrlPaste"
         @blur="applySearchTemplate"
       />
     </label>

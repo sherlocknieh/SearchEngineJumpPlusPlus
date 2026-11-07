@@ -79,7 +79,7 @@ src/main.js                 只做装配
     `ready`（已是 `%s`/`$post$`）、`replaced`（本次替换成功）、`manual`（像搜索链接但认不出关键词）、`plain`（普通链接）
   - `searchTemplateFromUrl()` = `analyzeSearchUrl().url`
   - 识别顺序：站点规则（`SITE_RULES`）→ 通用搜索路径 + 参数名 → 路径规则（`PATH_RULES`）
-- `components/EngineEditDialog.vue`：粘贴后 `nextTick` 与失焦时套用，Toast 提示（`stores/ui.js showToast`）
+- `components/EngineEditDialog.vue`：仅在链接输入框失焦时套用，Toast 提示（`stores/ui.js showToast`）
 - 回归用例在 `test/engineUrl.test.js`，含「默认引擎模板往返解析」批量检查；新增默认引擎若解析不出会失败
 
 ## 图标
