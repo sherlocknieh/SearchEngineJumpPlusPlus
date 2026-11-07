@@ -107,18 +107,14 @@ function markFaviconEdited() {
   clearSteps();
 }
 
-// 已经提醒过「需手动替换」的链接，避免同一链接反复失焦时重复提示
-let manualHintUrl = '';
-
 // 输入框失焦时把链接里的关键词换成 %s：用户复制来的关键词内容无法预判，
-// 只按站点与参数名识别，识别不出搜索特征时保持原样
+// 只按站点与参数名识别；替换成功或认不出关键词都提示用户
 function applySearchTemplate() {
   const result = analyzeSearchUrl(form.url);
   if (result.url !== form.url) form.url = result.url;
   if (result.status === 'replaced') {
     showToast(t('toast.searchTemplateApplied'));
-  } else if (result.status === 'manual' && result.url !== manualHintUrl) {
-    manualHintUrl = result.url;
+  } else if (result.status === 'manual') {
     showToast(t('toast.searchTemplateManual'), 4000);
   }
 }

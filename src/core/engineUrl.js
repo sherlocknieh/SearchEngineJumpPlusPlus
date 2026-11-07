@@ -266,37 +266,13 @@ function replacePathValue(url) {
   return '';
 }
 
-// 路径里可能藏着关键词的写法：/search/<关键词>、/s/<关键词> 等
-const PATH_KEYWORD_PREFIX = /^\/(?:search|s|results?|find|word)\/[^/]+/i;
-
-function looksLikeSearch(url) {
-  if (GENERIC_SEARCH_PATH.test(url.pathname)) return true;
-  if (PATH_KEYWORD_PREFIX.test(url.pathname)) return true;
-  return /^(?:search|dict|zhida)\./i.test(url.hostname);
-}
-
-/**
- * 看得出是搜索链接、但关键词不在支持的位置：hash 路由、未知参数名、路径里的关键词。
- * 这类「特殊模式」没法保证替换正确，交给用户手动改成 %s。
- */
-function needsManualTemplate(url) {
-  // 例如 https://music.163.com/#/search/m/?s=关键词
-  if (/#[^?]*\?/.test(url.hash) && /search/i.test(url.hash)) return true;
-  // 首页上的跟踪参数不算搜索链接
-  if (url.pathname === '/' || url.pathname === '') return false;
-  if (!looksLikeSearch(url)) return false;
-  // 路径像搜索页，却没有可识别的关键词参数
-  if (url.searchParams.size > 0) return true;
-  return PATH_KEYWORD_PREFIX.test(url.pathname);
-}
-
 /**
  * 分析搜索链接并给出处理结果。
  * @returns {{ url: string, status: 'ready' | 'replaced' | 'manual' | 'plain' }}
  *   ready    已是模板（含 %s / $post$），无需处理
  *   replaced 本次成功把关键词替换成 %s
- *   manual   像搜索链接但认不出关键词，需要用户手动替换
- *   plain    普通链接，保持原样
+ *   manual   没能自动替换（特殊模式、普通链接、非法链接），提醒用户手动替换
+ *   plain    空输入，不提示
  */
 export function analyzeSearchUrl(raw) {
   const value = String(raw ?? '').trim();
@@ -309,16 +285,16 @@ export function analyzeSearchUrl(raw) {
   try {
     url = new URL(withProtocol(value));
   } catch {
-    return { url: value, status: 'plain' };
+    return { url: value, status: 'manual' };
   }
-  if (!/^https?:$/.test(url.protocol)) return { url: value, status: 'plain' };
+  if (!/^https?:$/.test(url.protocol)) return { url: value, status: 'manual' };
 
   const key = findKeywordParam(url);
   if (key) return { url: replaceQueryValue(value, key), status: 'replaced' };
   const pathTemplate = replacePathValue(url);
   if (pathTemplate) return { url: pathTemplate, status: 'replaced' };
-  if (needsManualTemplate(url)) return { url: value, status: 'manual' };
-  return { url: value, status: 'plain' };
+  // 认不出关键词时一律提醒手动替换，包括普通页面、首页与特殊模式
+  return { url: value, status: 'manual' };
 }
 
 /**

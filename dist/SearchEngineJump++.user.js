@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.08.0152
+// @version            2026.11.08.0222
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6696,19 +6696,6 @@
 		}
 		return "";
 	}
-	var PATH_KEYWORD_PREFIX = /^\/(?:search|s|results?|find|word)\/[^/]+/i;
-	function looksLikeSearch(url) {
-		if (GENERIC_SEARCH_PATH.test(url.pathname)) return true;
-		if (PATH_KEYWORD_PREFIX.test(url.pathname)) return true;
-		return /^(?:search|dict|zhida)\./i.test(url.hostname);
-	}
-	function needsManualTemplate(url) {
-		if (/#[^?]*\?/.test(url.hash) && /search/i.test(url.hash)) return true;
-		if (url.pathname === "/" || url.pathname === "") return false;
-		if (!looksLikeSearch(url)) return false;
-		if (url.searchParams.size > 0) return true;
-		return PATH_KEYWORD_PREFIX.test(url.pathname);
-	}
 	function analyzeSearchUrl(raw) {
 		const value = String(raw ?? "").trim();
 		if (!value) return {
@@ -6725,12 +6712,12 @@
 		} catch {
 			return {
 				url: value,
-				status: "plain"
+				status: "manual"
 			};
 		}
 		if (!/^https?:$/.test(url.protocol)) return {
 			url: value,
-			status: "plain"
+			status: "manual"
 		};
 		const key = findKeywordParam(url);
 		if (key) return {
@@ -6742,13 +6729,9 @@
 			url: pathTemplate,
 			status: "replaced"
 		};
-		if (needsManualTemplate(url)) return {
-			url: value,
-			status: "manual"
-		};
 		return {
 			url: value,
-			status: "plain"
+			status: "manual"
 		};
 	}
 	var LINK_SCHEME = /^[a-z][a-z\d+.-]*:/i;
@@ -9335,9 +9318,10 @@
 		}
 		function deleteEngine(ci, ei) {
 			const category = draft.categories[ci];
-			if (!category || isBuiltinCategory(category)) return;
+			if (!category) return;
 			const engine = category.engines?.[ei];
 			if (!engine) return;
+			if (isBuiltinCategory(category) && engine.action) return;
 			notifyDeleted({
 				type: "engine",
 				categoryKey: category.key,
@@ -9726,6 +9710,7 @@
 			}
 			if (!candidates.length) return;
 			const token = ++previewToken;
+			const autoPick = !dataEdited.value && !/^data:image\//i.test(previewData.value.trim());
 			previewFailed.value = false;
 			previewLoading.value = true;
 			previewSteps.value = candidates.map((item) => ({
@@ -9770,6 +9755,7 @@
 				}
 				step.size = formatIconSize(step.rawSize);
 				moveTo(step, okEnd(step));
+				if (autoPick && !pickedUrl.value) await applyPreview(step, step.data);
 			};
 			await Promise.all(previewSteps.value.map(settle));
 			if (token !== previewToken) return;
@@ -9973,18 +9959,11 @@
 				faviconEdited.value = true;
 				clearSteps();
 			}
-			let manualHintUrl = "";
 			function applySearchTemplate() {
 				const result = analyzeSearchUrl(form.url);
 				if (result.url !== form.url) form.url = result.url;
 				if (result.status === "replaced") showToast(t("toast.searchTemplateApplied"));
-				else if (result.status === "manual" && result.url !== manualHintUrl) {
-					manualHintUrl = result.url;
-					showToast(t("toast.searchTemplateManual"), 4e3);
-				}
-			}
-			function onUrlPaste() {
-				nextTick(applySearchTemplate);
+				else if (result.status === "manual") showToast(t("toast.searchTemplateManual"), 4e3);
 			}
 			watch(() => form.url, () => {
 				if (!titleEdited.value || !form.name.trim()) form.name = titleFromUrl(form.url);
@@ -10022,7 +10001,6 @@
 						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => form.url = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
-						onPaste: onUrlPaste,
 						onBlur: applySearchTemplate
 					}, null, 40, _hoisted_3$6), [[vModelText, form.url]])])) : createCommentVNode("", true),
 					createBaseVNode("label", _hoisted_4$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
@@ -10115,7 +10093,7 @@
 						disabled: __props.busy
 					}, [createBaseVNode("option", _hoisted_28, toDisplayString(unref(t)("engine.targetBlank")), 1), createBaseVNode("option", _hoisted_29, toDisplayString(unref(t)("engine.targetSelf")), 1)], 8, _hoisted_27), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
 					createBaseVNode("div", _hoisted_30, [
-						__props.mode === "edit" ? (openBlock(), createElementBlock("button", {
+						__props.mode === "edit" && !unref(initialAction) ? (openBlock(), createElementBlock("button", {
 							key: 0,
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
@@ -10451,12 +10429,11 @@
 					id: __props.category.key,
 					class: normalizeClass(["iqxin-items", {
 						"sej-category-hidden": !__props.category.enabled,
-						"sej-no-delete": __props.hideDelete,
 						"sej-drag-placeholder": __props.dragCtx?.type === "category" && __props.dragCtx.key === __props.category.key
 					}]),
 					"data-sej-drag-el": "category-" + __props.category._id
 				}, [createBaseVNode("div", {
-					class: "sejtitle drag",
+					class: normalizeClass(["sejtitle drag", { "sej-no-delete": __props.hideDelete }]),
 					"data-xin": __props.category.enabled ? 1 : -1,
 					"data-iqxintitle": __props.category.key,
 					title: unref(t)("settings.editCategory", { name: __props.displayName }),
@@ -10482,13 +10459,16 @@
 						onClick: _cache[2] || (_cache[2] = withModifiers(($event) => emit("delete-category", __props.ci), ["stop"])),
 						innerHTML: unref(TRASH)
 					}, null, 40, _hoisted_6$2)) : createCommentVNode("", true)
-				], 40, _hoisted_2$3), createBaseVNode("div", {
+				], 42, _hoisted_2$3), createBaseVNode("div", {
 					class: "sejcon",
 					"data-sej-drag-el": "list-" + __props.category._id
 				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.category.engines, (engine, ei) => {
 					return openBlock(), createElementBlock("span", {
 						key: engine._id,
-						class: normalizeClass(["drag", { "sej-drag-placeholder": __props.dragCtx?.type === "engine" && __props.dragCtx.key === engine._id }]),
+						class: normalizeClass(["drag", {
+							"sej-drag-placeholder": __props.dragCtx?.type === "engine" && __props.dragCtx.key === engine._id,
+							"sej-no-delete": __props.hideDelete && Boolean(engine.action)
+						}]),
 						"data-sej-drag-el": "engine-" + engine._id,
 						title: unref(t)("settings.editEngine", { name: unref(localizeEngineName)(engine.name) }),
 						onPointerdown: ($event) => emit("drag-start", $event, "engine", __props.ci, ei),
@@ -10516,7 +10496,7 @@
 							onClick: withModifiers(($event) => emit("toggle-engine", __props.ci, ei), ["stop"]),
 							innerHTML: engine.disable ? unref(EYE_OFF) : unref(EYE)
 						}, null, 10, _hoisted_12$1),
-						!__props.hideDelete ? (openBlock(), createElementBlock("span", {
+						!__props.hideDelete || !engine.action ? (openBlock(), createElementBlock("span", {
 							key: 0,
 							class: "sej-hover-delete",
 							title: unref(t)("settings.deleteEngine"),

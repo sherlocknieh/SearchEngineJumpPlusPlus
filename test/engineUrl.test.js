@@ -218,13 +218,21 @@ describe('analyzeSearchUrl', () => {
     expect(analyzeSearchUrl('https://example.com/search/cats').status).toBe('manual');
   });
 
-  it('普通链接与首页不提示手动替换', () => {
-    expect(analyzeSearchUrl('https://example.com/article?q=hello').status).toBe('plain');
-    expect(analyzeSearchUrl('https://www.google.com/?hl=zh').status).toBe('plain');
+  it('认不出关键词的链接一律返回 manual，提醒手动替换', () => {
+    expect(analyzeSearchUrl('https://example.com/article?q=hello').status).toBe('manual');
+    expect(analyzeSearchUrl('https://www.google.com/?hl=zh').status).toBe('manual');
+    expect(analyzeSearchUrl('https://www.youtube.com/watch?v=abc').status).toBe('manual');
+    expect(analyzeSearchUrl('https://github.com/foo/bar?tab=readme').status).toBe('manual');
     expect(analyzeSearchUrl('https://www.google.com/url?q=https%3A%2F%2Fexample.com').status).toBe(
-      'plain',
+      'manual',
     );
+    expect(analyzeSearchUrl('not a url').status).toBe('manual');
+    expect(analyzeSearchUrl('mailto:a@example.com').status).toBe('manual');
+  });
+
+  it('空输入返回 plain，不提示', () => {
     expect(analyzeSearchUrl('').status).toBe('plain');
+    expect(analyzeSearchUrl('   ').status).toBe('plain');
   });
 });
 

@@ -76,7 +76,7 @@ src/main.js                 只做装配
 - `core/engineUrl.js`
   - URL 推断：`withProtocol` / `titleFromUrl` / `faviconFromUrl` / `hostFromUrl` / `registrableDomain` / `normalizeKeywordUrl`
   - 模板解析：`analyzeSearchUrl(raw)` → `{ url, status }`，`status`：
-    `ready`（已是 `%s`/`$post$`）、`replaced`（本次替换成功）、`manual`（像搜索链接但认不出关键词）、`plain`（普通链接）
+    `ready`（已是 `%s`/`$post$`）、`replaced`（本次替换成功）、`manual`（未能自动替换，提示手动）、`plain`（空输入）
   - `searchTemplateFromUrl()` = `analyzeSearchUrl().url`
   - 识别顺序：站点规则（`SITE_RULES`）→ 通用搜索路径 + 参数名 → 路径规则（`PATH_RULES`）
 - `components/EngineEditDialog.vue`：仅在链接输入框失焦时套用，Toast 提示（`stores/ui.js showToast`）
