@@ -1,0 +1,1624 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SearchEngineJump++ · demo</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #06070a; overflow: hidden; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+  'use strict';
+
+  /* ============================================================
+   * 场景契约：DUR / FPS / render(t) / READY
+   * 所有坐标写在 1920×1080 的设计空间里，render 开头统一套 U 变换，
+   * 因此 720p / 1080p / 4K 只是同一份布局的缩放。
+   * ============================================================ */
+  const DUR = 21;
+  const FPS = 30;
+
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d', { alpha: false });
+
+  const SANS = '"Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif';
+  const MONO = '"DejaVu Sans Mono", "SF Mono", monospace';
+
+  const INK = '#eef1f7';
+  const DIM = '#8b93a7';
+  const CYAN = '#2fe0c4';
+  const VIOLET = '#8b7bff';
+
+  let W = 0, H = 0, U = 1, OX = 0, OY = 0;
+
+  /* ---------- 数学与缓动 ---------- */
+  const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+  const lerp = (a, b, p) => a + (b - a) * p;
+  const easeOutQuint = (p) => 1 - Math.pow(1 - clamp(p), 5);
+  const easeOutExpo = (p) => (p >= 1 ? 1 : 1 - Math.pow(2, -10 * clamp(p)));
+  const easeInOutCubic = (p) => (p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2);
+  const easeOutBack = (p) => { const c = 1.6; return 1 + (c + 1) * Math.pow(p - 1, 3) + c * Math.pow(p - 1, 2); };
+
+  /* 带种子的 PRNG：全片不使用 Math.random() */
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return () => {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* 段落可见度：进入 a..b，两端淡入淡出 */
+  function seg(t, a, b, fin = 0.35, fout = 0.35) {
+    return Math.min(fin > 0 ? clamp((t - a) / fin) : 1, fout > 0 ? clamp((b - t) / fout) : 1);
+  }
+
+  /* 打字机：返回已输入的字符数 */
+  function typedCount(t, start, per, len) {
+    return Math.min(len, Math.max(0, Math.floor((t - start) / per)));
+  }
+
+  /* 沿关键帧移动，段内用 easeInOutCubic */
+  function pathAt(t, keys) {
+    if (t <= keys[0][0]) return { x: keys[0][1], y: keys[0][2] };
+    for (let i = 1; i < keys.length; i++) {
+      const [t1, x1, y1] = keys[i];
+      const [t0, x0, y0] = keys[i - 1];
+      if (t <= t1) {
+        const p = easeInOutCubic((t - t0) / Math.max(0.001, t1 - t0));
+        return { x: lerp(x0, x1, p), y: lerp(y0, y1, p) };
+      }
+    }
+    const last = keys[keys.length - 1];
+    return { x: last[1], y: last[2] };
+  }
+
+  /* ---------- 画布 ---------- */
+  let noisePat = null;
+
+  function resize() {
+    W = Math.max(1, innerWidth);
+    H = Math.max(1, innerHeight);
+    cv.width = Math.round(W);
+    cv.height = Math.round(H);
+    U = H / 1080;
+    OX = (W - 1920 * U) / 2;
+    OY = (H - 1080 * U) / 2;
+
+    const nc = document.createElement('canvas');
+    nc.width = 160; nc.height = 160;
+    const nctx = nc.getContext('2d');
+    const img = nctx.createImageData(160, 160);
+    const r = mulberry32(20261108);
+    for (let i = 0; i < img.data.length; i += 4) {
+      const v = Math.floor(r() * 255);
+      img.data[i] = v; img.data[i + 1] = v; img.data[i + 2] = v; img.data[i + 3] = 255;
+    }
+    nctx.putImageData(img, 0, 0);
+    noisePat = ctx.createPattern(nc, 'repeat');
+  }
+
+  /* ---------- 绘图原语 ---------- */
+  function rr(x, y, w, h, r) {
+    const rad = Math.min(r, Math.min(Math.abs(w), Math.abs(h)) / 2);
+    ctx.beginPath();
+    ctx.moveTo(x + rad, y);
+    ctx.arcTo(x + w, y, x + w, y + h, rad);
+    ctx.arcTo(x + w, y + h, x, y + h, rad);
+    ctx.arcTo(x, y + h, x, y, rad);
+    ctx.arcTo(x, y, x + w, y, rad);
+    ctx.closePath();
+  }
+
+  function line(x1, y1, x2, y2) {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+  }
+
+  function txt(s, x, y, size, weight, color, align = 'left', font = SANS) {
+    ctx.font = `${weight} ${size}px ${font}`;
+    ctx.fillStyle = color;
+    ctx.textAlign = align;
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s, x, y);
+    return ctx.measureText(s).width;
+  }
+
+  function shadow(color, blur, oy) {
+    ctx.shadowColor = color;
+    ctx.shadowBlur = blur;
+    ctx.shadowOffsetY = oy;
+  }
+  function noShadow() {
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
+  /* 细线图标：全部用 stroke 画，避免依赖外部图标 */
+  function glyph(kind, cx, cy, s, color, lw = 1.7) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.fillStyle = color;
+    ctx.lineWidth = lw;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    const a = s / 2;
+
+    if (kind === 'search') {
+      ctx.beginPath();
+      ctx.arc(cx - 1.2, cy - 1.2, a * 0.62, 0, Math.PI * 2);
+      ctx.stroke();
+      line(cx + a * 0.42, cy + a * 0.42, cx + a * 0.92, cy + a * 0.92);
+    } else if (kind === 'ai') {
+      // 四角星：用二次曲线做内凹
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - a);
+      ctx.quadraticCurveTo(cx + a * 0.16, cy - a * 0.16, cx + a, cy);
+      ctx.quadraticCurveTo(cx + a * 0.16, cy + a * 0.16, cx, cy + a);
+      ctx.quadraticCurveTo(cx - a * 0.16, cy + a * 0.16, cx - a, cy);
+      ctx.quadraticCurveTo(cx - a * 0.16, cy - a * 0.16, cx, cy - a);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + a * 1.02, cy - a * 0.98, a * 0.20, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (kind === 'film') {
+      rr(cx - a, cy - a * 0.72, s, s * 0.72, 2.4);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(cx - a * 0.18, cy - a * 0.34);
+      ctx.lineTo(cx + a * 0.38, cy);
+      ctx.lineTo(cx - a * 0.18, cy + a * 0.34);
+      ctx.closePath();
+      ctx.fill();
+    } else if (kind === 'book') {
+      ctx.beginPath();
+      ctx.moveTo(cx, cy - a * 0.72);
+      ctx.quadraticCurveTo(cx - a * 0.55, cy - a, cx - a, cy - a * 0.68);
+      ctx.lineTo(cx - a, cy + a * 0.7);
+      ctx.quadraticCurveTo(cx - a * 0.55, cy + a * 0.38, cx, cy + a * 0.66);
+      ctx.quadraticCurveTo(cx + a * 0.55, cy + a * 0.38, cx + a, cy + a * 0.7);
+      ctx.lineTo(cx + a, cy - a * 0.68);
+      ctx.quadraticCurveTo(cx + a * 0.55, cy - a, cx, cy - a * 0.72);
+      ctx.stroke();
+      line(cx, cy - a * 0.68, cx, cy + a * 0.62);
+    } else if (kind === 'tool') {
+      ctx.beginPath();
+      ctx.moveTo(cx - a * 0.72, cy + a * 0.72);
+      ctx.lineTo(cx + a * 0.18, cy - a * 0.18);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx + a * 0.52, cy - a * 0.52, a * 0.42, Math.PI * 0.55, Math.PI * 1.85);
+      ctx.stroke();
+    } else if (kind === 'res') {
+      ctx.beginPath();
+      ctx.moveTo(cx - a * 0.9, cy + a * 0.42);
+      ctx.quadraticCurveTo(cx - a * 1.0, cy - a * 0.32, cx - a * 0.34, cy - a * 0.38);
+      ctx.quadraticCurveTo(cx - a * 0.1, cy - a * 1.02, cx + a * 0.48, cy - a * 0.5);
+      ctx.quadraticCurveTo(cx + a * 1.0, cy - a * 0.42, cx + a * 0.92, cy + a * 0.42);
+      ctx.stroke();
+      line(cx, cy + a * 0.06, cx, cy + a * 0.86);
+      line(cx - a * 0.34, cy + a * 0.54, cx, cy + a * 0.9);
+      line(cx + a * 0.34, cy + a * 0.54, cx, cy + a * 0.9);
+    } else if (kind === 'gear') {
+      ctx.beginPath();
+      ctx.arc(cx, cy, a * 0.42, 0, Math.PI * 2);
+      ctx.stroke();
+      for (let i = 0; i < 8; i++) {
+        const ang = (i / 8) * Math.PI * 2;
+        line(
+          cx + Math.cos(ang) * a * 0.66, cy + Math.sin(ang) * a * 0.66,
+          cx + Math.cos(ang) * a * 0.96, cy + Math.sin(ang) * a * 0.96,
+        );
+      }
+    } else if (kind === 'eye') {
+      ctx.beginPath();
+      ctx.moveTo(cx - a * 0.92, cy);
+      ctx.quadraticCurveTo(cx, cy - a * 0.86, cx + a * 0.92, cy);
+      ctx.quadraticCurveTo(cx, cy + a * 0.86, cx - a * 0.92, cy);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy, a * 0.30, 0, Math.PI * 2);
+      ctx.stroke();
+    } else if (kind === 'plus') {
+      line(cx - a * 0.62, cy, cx + a * 0.62, cy);
+      line(cx, cy - a * 0.62, cx, cy + a * 0.62);
+    } else if (kind === 'x') {
+      line(cx - a * 0.55, cy - a * 0.55, cx + a * 0.55, cy + a * 0.55);
+      line(cx + a * 0.55, cy - a * 0.55, cx - a * 0.55, cy + a * 0.55);
+    } else if (kind === 'check') {
+      ctx.beginPath();
+      ctx.moveTo(cx - a * 0.62, cy + a * 0.02);
+      ctx.lineTo(cx - a * 0.16, cy + a * 0.48);
+      ctx.lineTo(cx + a * 0.66, cy - a * 0.5);
+      ctx.stroke();
+    } else if (kind === 'lock') {
+      rr(cx - a * 0.62, cy - a * 0.12, a * 1.24, a * 0.92, 1.6);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(cx, cy - a * 0.12, a * 0.38, Math.PI, 0);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  /* 一键搜索（外链箭头）图标：分类常驻后替换分类图标 */
+  function oneClickIcon(cx, cy, s, color) {
+    const a = s / 2;
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.7;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.beginPath();
+    ctx.moveTo(cx - a * 0.82, cy - a * 0.40);
+    ctx.lineTo(cx - a * 0.82, cy + a * 0.82);
+    ctx.lineTo(cx + a * 0.52, cy + a * 0.82);
+    ctx.lineTo(cx + a * 0.52, cy + a * 0.10);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + a * 0.06, cy + a * 0.62);
+    ctx.lineTo(cx + a * 0.92, cy - a * 0.62);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + a * 0.30, cy - a * 0.72);
+    ctx.lineTo(cx + a * 0.94, cy - a * 0.66);
+    ctx.lineTo(cx + a * 0.90, cy - a * 0.02);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- 品牌与引擎图标 ---------- */
+  const ENGINES = [
+    { key: 'deepseek', name: 'DeepSeek', color: '#4d6bfe', mark: 'D' },
+    { key: 'chatgpt', name: 'ChatGPT', color: '#0f9d76', mark: '◎' },
+    { key: 'gemini', name: 'Gemini', color: '#4285f4', mark: '✦' },
+    { key: 'grok', name: 'Grok', color: '#1b1d24', mark: 'x' },
+  ];
+
+  /* 引擎图标：圆角方块 + 白色标记，16px 下依然可辨 */
+  function engineIcon(key, cx, cy, size) {
+    const e = ENGINES.find((v) => v.key === key) || ENGINES[0];
+    const h = size / 2;
+    const g = ctx.createLinearGradient(cx - h, cy - h, cx + h, cy + h);
+    g.addColorStop(0, e.color);
+    g.addColorStop(1, shade(e.color, -28));
+    ctx.fillStyle = g;
+    rr(cx - h, cy - h, size, size, size * 0.28);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${size * 0.62}px ${SANS}`;
+    ctx.fillText(e.mark, cx, cy + size * 0.02);
+    ctx.textAlign = 'left';
+  }
+
+  function shade(hex, amt) {
+    const n = parseInt(hex.slice(1), 16);
+    const r = clamp(((n >> 16) & 255) + amt, 0, 255);
+    const g = clamp(((n >> 8) & 255) + amt, 0, 255);
+    const b = clamp((n & 255) + amt, 0, 255);
+    return `rgb(${r|0},${g|0},${b|0})`;
+  }
+
+  /* 设置面板里的引擎图标：按名字散列取色，首字作为标记，避免整屏同一个字母 */
+  const MINI_COLORS = ['#4285f4', '#ea4335', '#fbbc05', '#34a853', '#7c5cff', '#0aa5a5', '#e08b2d', '#e05a6d', '#2b7de9'];
+
+  function miniIcon(name, cx, cy, size) {
+    let h = 7;
+    for (const ch of name) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+    const color = MINI_COLORS[h % MINI_COLORS.length];
+    const mark = /^[A-Za-z]/.test(name) ? name[0].toUpperCase() : name[0];
+    const half = size / 2;
+    const g = ctx.createLinearGradient(cx - half, cy - half, cx + half, cy + half);
+    g.addColorStop(0, color);
+    g.addColorStop(1, shade(color, -26));
+    ctx.fillStyle = g;
+    rr(cx - half, cy - half, size, size, size * 0.28);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `700 ${size * 0.58}px ${SANS}`;
+    ctx.fillText(mark, cx, cy + size * 0.03);
+    ctx.textAlign = 'left';
+  }
+
+  function googleIcon(cx, cy, size) {
+    const s = size * 0.42;
+    const colors = ['#4285f4', '#ea4335', '#fbbc05', '#34a853'];
+    const pts = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = colors[i];
+      ctx.beginPath();
+      ctx.arc(cx + pts[i][0] * s * 0.5, cy + pts[i][1] * s * 0.5, s * 0.40, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  /* ---------- 版面常量（1920×1080 设计空间） ---------- */
+  const wx = 232, wy = 112, ww = 1456, wh = 800;   // 浏览器窗口
+  const py = wy + 44;                              // 页面内容起点
+  const BAR_X = wx + 150, BAR_Y = py + 160;        // 跳转条
+  const KW = '量子计算';
+
+  const BAR_DEFS = [
+    { k: 'search', label: '搜索', color: '#1a73e8' },
+    { k: 'ai', label: 'AI', color: '#7c5cff' },
+    { k: 'film', label: '影视', color: '#0aa5a5' },
+    { k: 'book', label: '书籍', color: '#e08b2d' },
+    { k: 'tool', label: '工具', color: '#e05a6d' },
+    { k: 'res', label: '资源', color: '#2b7de9' },
+  ];
+
+  /* 跳转条布局：宽度由文字实测决定，缓存一次即可 */
+  let barCache = null;
+  function barLayout() {
+    if (barCache) return barCache;
+    ctx.save();
+    ctx.font = `500 15px ${SANS}`;
+    let x = BAR_X + 8;
+    const items = [];
+    BAR_DEFS.forEach((d) => {
+      const tw = ctx.measureText(d.label).width;
+      const wItem = 13 + 16 + 7 + tw + 13;
+      items.push({ ...d, x, y: BAR_Y, w: wItem, h: 44, cx: x + wItem / 2, cy: BAR_Y + 22, tw });
+      x += wItem + 6;
+    });
+    const gearW = 40;
+    const gear = { x: x - 3, y: BAR_Y, w: gearW, h: 44, cx: x - 3 + gearW / 2, cy: BAR_Y + 22 };
+    x += gearW + 5;
+    ctx.restore();
+    barCache = { items, gear, x0: BAR_X, w: x - BAR_X, y: BAR_Y, h: 44 };
+    return barCache;
+  }
+
+  /* ============================================================
+   * 背景
+   * ============================================================ */
+  function drawBg(t) {
+    const g = ctx.createLinearGradient(0, 0, 1920, 1080);
+    g.addColorStop(0, '#07090e');
+    g.addColorStop(0.55, '#080a11');
+    g.addColorStop(1, '#0b0813');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 1920, 1080);
+
+    const glow = (x, y, r, col) => {
+      const rg = ctx.createRadialGradient(x, y, 0, x, y, r);
+      rg.addColorStop(0, col);
+      rg.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = rg;
+      ctx.fillRect(x - r, y - r, r * 2, r * 2);
+    };
+    glow(430, 150, 640, 'rgba(47,224,196,0.075)');
+    glow(1500, 940, 620, 'rgba(139,123,255,0.095)');
+
+    const step = 96;
+    const off = (t * 6) % step;
+    ctx.strokeStyle = 'rgba(255,255,255,0.038)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = -step + off; x < 1920 + step; x += step) { ctx.moveTo(x, 0); ctx.lineTo(x, 1080); }
+    for (let y = -step + off; y < 1080 + step; y += step) { ctx.moveTo(0, y); ctx.lineTo(1920, y); }
+    ctx.stroke();
+  }
+
+  function drawGrain(t) {
+    if (!noisePat || window.__NO_GRAIN__) return;
+    const r = mulberry32(Math.floor((t * FPS) / 2) * 7919 + 7);
+    ctx.save();
+    ctx.globalAlpha = 0.02;
+    ctx.translate(-r() * 160, -r() * 160);
+    ctx.fillStyle = noisePat;
+    ctx.fillRect(0, 0, 2080, 1240);
+    ctx.restore();
+  }
+
+  /* ============================================================
+   * 开场：标题 + 分类碎片拼成跳转条
+   * ============================================================ */
+  function drawIntro(t) {
+    const a = seg(t, 0.0, 1.42, 0.01, 0.34);
+    if (a <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = a;
+
+    const titleP = easeOutQuint(clamp(t / 0.8));
+    ctx.globalAlpha = a * titleP;
+    txt('SearchEngineJump++', 960, 470 + (1 - titleP) * 22, 76, 700, INK, 'center');
+    txt('搜索引擎快捷跳转++', 960, 536 + (1 - titleP) * 16, 24, 400, DIM, 'center');
+
+    // 六个分类碎片从中心散开、落进同一条胶囊
+    const L = barLayout();
+    const barW = L.w;
+    const bx = 960 - barW / 2;
+    const by = 632;
+    const assemble = easeOutQuint(clamp((t - 0.30) / 0.85));
+
+    ctx.save();
+    ctx.globalAlpha = a * clamp((t - 0.22) / 0.3);
+    ctx.fillStyle = 'rgba(255,255,255,0.055)';
+    shadow('rgba(0,0,0,0.45)', 30, 14);
+    rr(bx, by, barW, 48, 14);
+    ctx.fill();
+    noShadow();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 1;
+    rr(bx, by, barW, 48, 14);
+    ctx.stroke();
+    ctx.restore();
+
+    L.items.forEach((it, i) => {
+      const p = easeOutBack(clamp((t - 0.32 - i * 0.055) / 0.55));
+      // 用相对跳转条左端的局部坐标，才能落进这条居中的胶囊里
+      const localX = it.x - BAR_X;
+      const targetX = bx + localX;
+      const dx = (1 - p) * (960 - (targetX + it.w / 2)) * 0.9;
+      const dy = (1 - p) * (500 - by) * 0.3;
+      const alpha = clamp((t - 0.30 - i * 0.055) / 0.25);
+      if (alpha <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = a * alpha;
+      const left = targetX + dx;
+      const cy = by + 24 + dy;
+      glyph(it.k, left + 21, cy, 16, it.color, 1.7);
+      ctx.font = `500 15px ${SANS}`;
+      ctx.fillStyle = INK;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(it.label, left + 36, cy);
+      ctx.restore();
+    });
+
+    // 齿轮
+    ctx.save();
+    ctx.globalAlpha = a * clamp((t - 0.72) / 0.3);
+    glyph('gear', bx + (L.gear.cx - BAR_X), by + 24, 16, '#a9b0c2', 1.5);
+    ctx.restore();
+
+    // 副标题
+    const p2 = clamp((t - 0.9) / 0.6);
+    if (p2 > 0) {
+      ctx.save();
+      ctx.globalAlpha = a * p2;
+      txt('两个每天都会用到的细节', 960, 744, 17, 400, 'rgba(139,147,167,0.85)', 'center');
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  /* ============================================================
+   * 浏览器窗口
+   * ============================================================ */
+  function windowRise(t) {
+    return easeOutQuint(clamp((t - 1.15) / 0.85));
+  }
+
+  function drawBrowser(t) {
+    const rise = windowRise(t);
+    if (rise <= 0) return;
+    const yOff = (1 - rise) * 46;
+    // 与外部传入的 alpha 相乘，片尾才能整体淡出
+    const baseAlpha = ctx.globalAlpha;
+
+    ctx.save();
+    ctx.globalAlpha = baseAlpha * rise;
+    ctx.translate(0, yOff);
+
+    // 投影
+    shadow('rgba(0,0,0,0.55)', 70, 34);
+    ctx.fillStyle = '#f1f3f4';
+    rr(wx, wy, ww, wh, 16);
+    ctx.fill();
+    noShadow();
+
+    // 顶栏
+    ctx.fillStyle = '#eef0f3';
+    rr(wx, wy, ww, 44, 16);
+    ctx.fill();
+    ctx.fillStyle = '#eef0f3';
+    ctx.fillRect(wx, wy + 30, ww, 14);
+
+    ['#ff5f57', '#febc2e', '#28c840'].forEach((c, i) => {
+      ctx.fillStyle = c;
+      ctx.beginPath();
+      ctx.arc(wx + 26 + i * 19, wy + 22, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 地址栏
+    ctx.fillStyle = '#ffffff';
+    rr(wx + 118, wy + 9, 720, 26, 13);
+    ctx.fill();
+    ctx.strokeStyle = '#dfe2e7';
+    ctx.lineWidth = 1;
+    rr(wx + 118, wy + 9, 720, 26, 13);
+    ctx.stroke();
+    glyph('lock', wx + 136, wy + 22, 12, '#8a919e', 1.4);
+    txt('www.bing.com/search?q=' + KW, wx + 152, wy + 22, 12, 400, '#5f6368', 'left');
+
+    // 页面内容
+    ctx.save();
+    rr(wx, py, ww, wh - 44, 0);
+    ctx.clip();
+    drawBingPage(t);
+    drawActOne(t);
+    drawActTwo(t);
+    ctx.restore();
+
+    // 底部分隔
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 1;
+    rr(wx, wy, ww, wh, 16);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* ---------- 必应结果页（示意） ---------- */
+  function drawBingPage(t) {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(wx, py, ww, wh - 44);
+
+    // 顶栏 logo + 搜索框
+    const logoX = wx + 84, logoY = py + 58;
+    const sq = 9;
+    const cols = ['#f25022', '#7fba00', '#00a4ef', '#ffb900'];
+    [[0, 0], [1, 0], [0, 1], [1, 1]].forEach(([i, j], k) => {
+      ctx.fillStyle = cols[k];
+      ctx.fillRect(logoX + i * (sq + 2), logoY - sq + j * (sq + 2), sq, sq);
+    });
+
+    const sbX = wx + 130, sbY = py + 30, sbW = 800, sbH = 56;
+    ctx.save();
+    shadow('rgba(32,33,36,0.10)', 10, 2);
+    ctx.fillStyle = '#fff';
+    rr(sbX, sbY, sbW, sbH, 28);
+    ctx.fill();
+    noShadow();
+    ctx.strokeStyle = '#dfe3e8';
+    ctx.lineWidth = 1;
+    rr(sbX, sbY, sbW, sbH, 28);
+    ctx.stroke();
+    ctx.restore();
+
+    glyph('search', sbX + 32, sbY + 27, 18, '#7b8494', 1.8);
+
+    // 关键词逐字输入
+    const n = typedCount(t, 2.42, 0.14, KW.length);
+    const kwShown = KW.slice(0, n);
+    if (n > 0) {
+      txt(kwShown, sbX + 58, sbY + 29, 18, 400, '#202124', 'left');
+    } else {
+      txt('输入关键词', sbX + 58, sbY + 29, 18, 400, '#9aa0a6', 'left');
+    }
+    // 输入光标
+    if (t < 3.6) {
+      const caretOn = n < KW.length || Math.sin(t * 9) > -0.2;
+      if (caretOn) {
+        const cw = n > 0 ? ctx.measureText(kwShown).width : 0;
+        ctx.fillStyle = '#202124';
+        ctx.fillRect(sbX + 58 + cw + 1.5, sbY + 17, 1.8, 24);
+      }
+    }
+
+    // 右侧工具图标
+    glyph('ai', sbX + sbW - 46, sbY + 28, 15, '#6b7280', 1.5);
+    glyph('search', sbX + sbW - 76, sbY + 28, 15, '#6b7280', 1.5);
+
+    // 用户头像
+    ctx.fillStyle = '#e8eaed';
+    ctx.beginPath();
+    ctx.arc(wx + 1372, py + 58, 17, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#9aa0a6';
+    ctx.beginPath();
+    ctx.arc(wx + 1372, py + 52, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(wx + 1372, py + 74, 10, Math.PI, 0);
+    ctx.fill();
+
+    // 标签行
+    const tabs = ['全部', 'WEB', 'AI 模式', '图片', '视频', '地图', '资讯', '更多'];
+    let tx = wx + 150;
+    ctx.font = `500 15px ${SANS}`;
+    tabs.forEach((label, i) => {
+      const active = i === 0;
+      txt(label, tx, py + 132, 15, active ? 700 : 400, active ? '#202124' : '#696d75', 'left');
+      if (active) {
+        ctx.fillStyle = '#1a73e8';
+        ctx.fillRect(tx, py + 145, ctx.measureText(label).width, 3);
+      }
+      tx += ctx.measureText(label).width + 34;
+    });
+    ctx.strokeStyle = '#eceff3';
+    ctx.lineWidth = 1;
+    line(wx, py + 149, wx + ww, py + 149);
+
+    // 结果区：先骨架屏，再换成真实结果
+    const rp = easeOutQuint(clamp((t - 3.15) / 0.5));
+    if (rp < 1 && t > 1.8) {
+      ctx.save();
+      ctx.globalAlpha = 1 - rp;
+      drawSkeleton(t);
+      ctx.restore();
+    }
+    if (rp > 0) {
+      ctx.save();
+      ctx.globalAlpha = rp;
+      drawResults();
+      ctx.restore();
+    }
+  }
+
+  /* 加载中的骨架屏：避免窗口刚落地时页面一片空白 */
+  function drawSkeleton(t) {
+    const x = wx + 150;
+    const pulse = 0.5 + 0.5 * Math.sin(t * 3.4);
+    for (let i = 0; i < 3; i++) {
+      const y = py + 212 + i * 128;
+      ctx.fillStyle = `rgba(170,180,198,${0.12 + 0.10 * pulse})`;
+      rr(x, y, 108, 9, 4); ctx.fill();
+      ctx.fillStyle = `rgba(170,180,198,${0.18 + 0.14 * pulse})`;
+      rr(x, y + 20, 420 + (i % 2) * 70, 16, 5); ctx.fill();
+      ctx.fillStyle = `rgba(185,193,208,${0.14 + 0.10 * pulse})`;
+      rr(x, y + 47, 520, 9, 4); ctx.fill();
+      rr(x, y + 65, 380 + (i % 2) * 60, 9, 4); ctx.fill();
+    }
+    // 右侧推荐位
+    ctx.fillStyle = `rgba(170,180,198,${0.14 + 0.10 * pulse})`;
+    rr(wx + 950, py + 212, 160, 16, 5); ctx.fill();
+    for (let k = 0; k < 2; k++) {
+      rr(wx + 950, py + 262 + k * 62, 430, 50, 25); ctx.fill();
+    }
+  }
+
+  function drawResults() {
+    const x = wx + 150;
+    let y = py + 214;
+    const items = [
+      { site: 'zh.wikipedia.org › wiki', title: '量子计算 - 维基百科', l1: '量子计算是利用量子力学现象进行运算的计算方式，', l2: '基本单位是量子比特（qubit）。' },
+      { site: 'www.zhihu.com › topic', title: '量子计算入门：从量子比特到量子霸权', l1: '一次讲清楚叠加、纠缠与量子门，以及为什么量子计算机', l2: '在特定问题上能远超经典计算机。' },
+      { site: 'www.nature.com › articles', title: 'Quantum computing reaches a new milestone', l1: 'Researchers report improved error correction with logical', l2: 'qubits, a key step toward fault tolerance.' },
+    ];
+    items.forEach((it) => {
+      txt(it.site, x, y, 12, 400, '#4d5156', 'left');
+      txt(it.title, x, y + 26, 20, 500, '#1a0dab', 'left');
+      txt(it.l1, x, y + 52, 14, 400, '#4d5156', 'left');
+      txt(it.l2, x, y + 73, 14, 400, '#4d5156', 'left');
+      y += 128;
+    });
+
+    // 右侧「深入了解」
+    const rx = wx + 950;
+    txt('深入了解 ' + KW, rx, py + 214, 20, 600, '#202124', 'left');
+    ['量子计算的发明者', '量子计算是什么意思'].forEach((s, i) => {
+      const by = py + 262 + i * 62;
+      ctx.fillStyle = '#fff';
+      rr(rx, by, 430, 50, 25);
+      ctx.fill();
+      ctx.strokeStyle = '#e3e6eb';
+      ctx.lineWidth = 1;
+      rr(rx, by, 430, 50, 25);
+      ctx.stroke();
+      glyph('search', rx + 30, by + 25, 16, '#5f6368', 1.6);
+      txt(s, rx + 52, by + 25, 15, 400, '#3c4043', 'left');
+    });
+  }
+
+  /* ============================================================
+   * 第一幕：跳转条 / 分类面板 / 一键多开
+   * ============================================================ */
+  function actOneAlpha(t) {
+    return seg(t, 1.9, 9.95, 0.5, 0.0) * (1 - clamp((t - 9.45) / 0.5));
+  }
+
+  function drawActOne(t) {
+    const a = actOneAlpha(t);
+    if (a <= 0) return;
+    const L = barLayout();
+
+    // 跳转条落下
+    const drop = easeOutQuint(clamp((t - 3.45) / 0.55));
+    if (drop > 0) {
+      ctx.save();
+      ctx.globalAlpha = a * drop;
+      ctx.translate(0, (1 - drop) * -24);
+
+      // 胶囊
+      ctx.save();
+      shadow('rgba(15,23,42,0.14)', 22, 8);
+      ctx.fillStyle = '#ffffff';
+      rr(BAR_X, BAR_Y, L.w, 44, 13);
+      ctx.fill();
+      ctx.restore();
+      ctx.strokeStyle = '#e4e8ee';
+      ctx.lineWidth = 1;
+      rr(BAR_X, BAR_Y, L.w, 44, 13);
+      ctx.stroke();
+
+      // 分类项
+      L.items.forEach((it, i) => {
+        const ip = easeOutQuint(clamp((t - 3.52 - i * 0.05) / 0.3));
+        if (ip <= 0) return;
+        const isAI = it.k === 'ai';
+        const active = isAI && t > 4.88 && t < 6.06;
+        const pinned = isAI && pinProgress(t) > 0.02;
+
+        ctx.save();
+        ctx.globalAlpha = a * drop * ip;
+        if (active) {
+          ctx.fillStyle = '#eef1f5';
+          rr(it.x, BAR_Y + 5, it.w, 34, 8);
+          ctx.fill();
+        }
+
+        // 图标槽：常驻后换成「一键搜索」
+        const ic = it.x + 13 + 8;
+        if (pinned) {
+          const pp = pinProgress(t);
+          ctx.globalAlpha = a * drop * ip * (1 - pp);
+          glyph(it.k, ic, BAR_Y + 22, 16, it.color, 1.7);
+          ctx.globalAlpha = a * drop * ip * pp;
+          oneClickIcon(ic, BAR_Y + 22, 16, '#1a73e8');
+        } else {
+          glyph(it.k, ic, BAR_Y + 22, 16, it.color, 1.7);
+        }
+
+        ctx.globalAlpha = a * drop * ip;
+        ctx.font = `500 15px ${SANS}`;
+        ctx.fillStyle = active ? '#1f2937' : '#3c4043';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(it.label, it.x + 36, BAR_Y + 22);
+        ctx.restore();
+
+        // 分隔线
+        if (i < L.items.length - 1) {
+          ctx.save();
+          ctx.globalAlpha = a * drop * 0.7;
+          ctx.strokeStyle = '#edf0f4';
+          ctx.lineWidth = 1;
+          line(it.x + it.w + 3, BAR_Y + 13, it.x + it.w + 3, BAR_Y + 31);
+          ctx.restore();
+        }
+      });
+
+      // 齿轮
+      ctx.save();
+      ctx.globalAlpha = a * drop;
+      glyph('gear', L.gear.cx, BAR_Y + 22, 16, '#6b7280', 1.5);
+      ctx.restore();
+
+      ctx.restore();
+    }
+
+    // 分类下拉面板
+    const dp = clamp((t - 4.9) / 0.16) * (1 - clamp((t - 5.98) / 0.12));
+    if (dp > 0) drawDropdown(t, L, a * dp);
+
+    // 一键多开的标签页
+    drawFlyingTabs(t, a);
+  }
+
+  /* 常驻状态：4.88 进入，6.0 退出 */
+  function pinProgress(t) {
+    const inP = clamp((t - 4.88) / 0.16);
+    const outP = 1 - clamp((t - 6.0) / 0.14);
+    return Math.min(inP, outP);
+  }
+
+  function drawDropdown(t, L, alpha) {
+    const ai = L.items.find((i) => i.k === 'ai');
+    const dw = 204, rowH = 34, pad = 6;
+    const dx = clamp(ai.cx - dw / 2, 8, 1920 - dw - 8);
+    const dy = BAR_Y + 48;
+    const open = easeOutQuint(clamp((t - 4.9) / 0.2));
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.translate(0, (1 - open) * -6);
+
+    ctx.save();
+    shadow('rgba(15,23,42,0.18)', 26, 10);
+    ctx.fillStyle = '#ffffff';
+    rr(dx, dy, dw, pad * 2 + rowH * ENGINES.length, 13);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = '#e4e8ee';
+    ctx.lineWidth = 1;
+    rr(dx, dy, dw, pad * 2 + rowH * ENGINES.length, 13);
+    ctx.stroke();
+
+    ENGINES.forEach((e, i) => {
+      const rp = easeOutQuint(clamp((t - 4.96 - i * 0.04) / 0.22));
+      if (rp <= 0) return;
+      const rx = dx + pad, ry = dy + pad + i * rowH;
+      ctx.save();
+      ctx.globalAlpha = alpha * rp;
+      if (i === 0 && t > 5.35 && t < 5.95) {
+        ctx.fillStyle = '#f1f4f8';
+        rr(rx, ry, dw - pad * 2, rowH, 8);
+        ctx.fill();
+      }
+      engineIcon(e.key, rx + 20, ry + rowH / 2, 17);
+      txt(e.name, rx + 38, ry + rowH / 2 + 0.5, 14, 400, '#2b2f36', 'left');
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+
+  /* 四个引擎标签页从跳转条下方飞出 */
+  function drawFlyingTabs(t, alpha) {
+    const cw = 300, ch = 190, gap = 26;
+    const total = cw * 4 + gap * 3;
+    const x0 = wx + (ww - total) / 2;
+    const yTarget = py + 236;
+
+    ENGINES.forEach((e, i) => {
+      const p = clamp((t - 6.02 - i * 0.13) / 0.58);
+      if (p <= 0) return;
+      const ep = easeOutBack(p);
+      // 起点聚在跳转条中心，展开到各自槽位
+      const startX = BAR_X + 250;
+      const x = lerp(startX - cw / 2, x0 + i * (cw + gap), ep);
+      const y = lerp(BAR_Y + 20, yTarget, ep);
+      const s = lerp(0.86, 1, ep);
+
+      ctx.save();
+      ctx.globalAlpha = alpha * clamp(p * 2.2);
+      ctx.translate(x + cw / 2, y + ch / 2);
+      ctx.scale(s, s);
+      ctx.translate(-cw / 2, -ch / 2);
+
+      // 卡片
+      ctx.save();
+      shadow('rgba(15,23,42,0.20)', 26, 10);
+      ctx.fillStyle = '#ffffff';
+      rr(0, 0, cw, ch, 13);
+      ctx.fill();
+      ctx.restore();
+
+      // 标签栏
+      ctx.save();
+      rr(0, 0, cw, ch, 13);
+      ctx.clip();
+      ctx.fillStyle = '#f5f6f8';
+      ctx.fillRect(0, 0, cw, 40);
+      ctx.restore();
+      engineIcon(e.key, 20, 20, 16);
+      txt(e.name, 36, 21, 13, 500, '#2f333a', 'left');
+      ctx.fillStyle = e.color;
+      ctx.globalAlpha = alpha * clamp(p * 2.2) * 0.9;
+      ctx.fillRect(0, 38, cw * clamp((t - 6.1 - i * 0.13) / 1.1), 2);
+
+      // 内容
+      ctx.save();
+      ctx.globalAlpha = alpha * clamp(p * 2.2);
+      txt(KW, 20, 68, 21, 700, '#1f2430', 'left');
+      // 搜索中骨架线
+      const sh = clamp((t - 6.5 - i * 0.13) / 0.9);
+      const pulse = 0.55 + 0.45 * Math.sin(t * 5 + i);
+      for (let k = 0; k < 4; k++) {
+        const lw = [230, 200, 244, 160][k] * (0.4 + 0.6 * sh);
+        ctx.fillStyle = `rgba(120,130,150,${0.16 * pulse * sh})`;
+        rr(20, 96 + k * 20, lw, 8, 4);
+        ctx.fill();
+      }
+      txt('正在检索…', 20, ch - 22, 12, 400, 'rgba(120,130,150,' + (0.9 * clamp((t - 6.3) / 0.5)) + ')', 'left');
+      ctx.restore();
+
+      // 新标签页角标
+      ctx.fillStyle = 'rgba(26,115,232,0.10)';
+      rr(cw - 92, 12, 78, 18, 9);
+      ctx.fill();
+      txt('新标签页', cw - 53, 21.5, 10, 500, '#1a73e8', 'center');
+
+      ctx.restore();
+    });
+
+    // 汇总提示
+    const sumP = clamp((t - 6.9) / 0.45) * (1 - clamp((t - 9.2) / 0.4));
+    if (sumP > 0) {
+      ctx.save();
+      ctx.globalAlpha = alpha * sumP;
+      const label = '4 个引擎同时打开';
+      ctx.font = `600 15px ${SANS}`;
+      const tw = ctx.measureText(label).width;
+      const bw = tw + 54;
+      const bx = wx + ww / 2 - bw / 2;
+      const by = yTarget + ch + 22;
+      ctx.fillStyle = 'rgba(26,115,232,0.08)';
+      rr(bx, by, bw, 34, 17);
+      ctx.fill();
+      glyph('check', bx + 20, by + 17, 14, '#1a73e8', 2);
+      txt(label, bx + 34, by + 17.5, 15, 600, '#1a73e8', 'left');
+      ctx.restore();
+    }
+  }
+
+  /* ============================================================
+   * 第二幕：设置面板 + 链接自动解析
+   * ============================================================ */
+  function drawActTwo(t) {
+    const mask = clamp((t - 10.2) / 0.7);
+    if (mask <= 0) return;
+
+    ctx.save();
+    ctx.globalAlpha = mask;
+    ctx.fillStyle = 'rgba(243,245,248,0.84)';
+    ctx.fillRect(wx, py, ww, wh - 44);
+    // 背景残留的模糊块，暗示底下还有搜索结果
+    const rnd = mulberry32(77);
+    for (let i = 0; i < 14; i++) {
+      const bx = wx + 150 + (i % 4) * 310 + rnd() * 40;
+      const by = py + 120 + Math.floor(i / 4) * 148;
+      const bw = 180 + rnd() * 80;
+      ctx.fillStyle = 'rgba(190,198,212,0.30)';
+      rr(bx, by, bw, 12, 6);
+      ctx.fill();
+    }
+    ctx.restore();
+
+    const inP = easeOutQuint(clamp((t - 10.55) / 0.65));
+    if (inP <= 0) return;
+
+    // ---- 设置面板 ----
+    const px = wx + 56, pyy = wy + 58, pw = ww - 112, ph = wh - 116;
+    ctx.save();
+    ctx.globalAlpha = mask * inP;
+    ctx.translate(0, (1 - inP) * 18);
+
+    ctx.save();
+    shadow('rgba(15,23,42,0.22)', 48, 20);
+    ctx.fillStyle = '#ffffff';
+    rr(px, pyy, pw, ph, 16);
+    ctx.fill();
+    ctx.restore();
+
+    txt('搜索跳转设置', px + 28, pyy + 34, 20, 600, '#1f2430', 'left');
+    // 关闭按钮
+    ctx.fillStyle = '#f2f4f7';
+    ctx.beginPath();
+    ctx.arc(px + pw - 34, pyy + 32, 15, 0, Math.PI * 2);
+    ctx.fill();
+    glyph('x', px + pw - 34, pyy + 32, 13, '#6b7280', 1.6);
+
+    drawSettingsGrid(t, px, pyy, pw, ph);
+    ctx.restore();
+
+    // ---- 添加引擎弹窗 ----
+    const dlg = clamp((t - 11.25) / 0.5) * (1 - clamp((t - 16.98) / 0.18));
+    if (dlg > 0) drawDialog(t, dlg, mask);
+
+    // ---- Toast ----
+    const toast = seg(t, 14.85, 17.05, 0.22, 0.3);
+    if (toast > 0) drawToast(t, toast, mask);
+  }
+
+  /* 设置面板里的分类卡片：只画外观，用于交代“这是一个设置面板” */
+  function drawSettingsGrid(t, px, pyy, pw, ph) {
+    const cols = 4;
+    const gapX = 16, gapY = 18;
+    const cardW = (pw - 56 - gapX * (cols - 1)) / cols;
+    const cardH = 286;
+    const x0 = px + 28, y0 = pyy + 68;
+
+    const cards = [
+      { name: '搜索', engines: ['Bing', '百度', 'DuckDuckGo'] },
+      { name: 'AI', engines: ['DeepSeek', 'ChatGPT', 'Gemini', 'Grok'] },
+      { name: '影视', engines: ['B站', 'Trakt', '豆瓣电影', 'YouTube'] },
+      { name: '书籍', engines: ['Z-Library', '豆瓣读书', '孔夫子旧书'] },
+      { name: '工具', engines: ['金山词霸', 'Github', '知乎', 'Wikipedia', '类义词典'] },
+      { name: '资源', engines: ['人人影视', '动漫花园', 'RARBG', '1337x'] },
+      { name: '资源+', engines: ['BTSearch', 'SkrBT', 'EZTV', 'TorrentGalaxy'] },
+      { name: '国产AI', engines: ['Kimi', '豆包', '智谱GLM', '阿里千问'] },
+    ];
+
+    const newRow = clamp((t - 17.35) / 0.35);
+
+    cards.forEach((card, i) => {
+      const cx = x0 + (i % cols) * (cardW + gapX);
+      const cy = y0 + Math.floor(i / cols) * (cardH + gapY);
+
+      ctx.fillStyle = '#f7f8fa';
+      rr(cx, cy, cardW, cardH, 12);
+      ctx.fill();
+      ctx.strokeStyle = '#e8ebf0';
+      ctx.lineWidth = 1;
+      rr(cx, cy, cardW, cardH, 12);
+      ctx.stroke();
+
+      txt(card.name, cx + 14, cy + 24, 13, 600, '#333941', 'left');
+      glyph('eye', cx + cardW - 20, cy + 24, 13, '#b6bcc8', 1.4);
+
+      let ry = cy + 50;
+      // 第一张卡片顶部插入新引擎：老行整体下移一行，新行从上方滑入
+      const items = card.engines.slice();
+      if (i === 0 && newRow > 0) {
+        const sh = easeOutQuint(newRow);
+        items.forEach((name, k) => drawEngineRow(cx, ry + k * 34 + 34 * sh, cardW, name, false));
+        drawEngineRow(cx, ry - 12 * (1 - sh), cardW, 'Google', true, newRow, clamp(newRow * 1.8));
+      } else {
+        items.forEach((name, k) => drawEngineRow(cx, ry + k * 34, cardW, name, false));
+      }
+
+      // 底部虚线加号
+      const plusY = cy + cardH - 44;
+      ctx.save();
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = '#d7dce5';
+      ctx.lineWidth = 1;
+      rr(cx + 12, plusY, cardW - 24, 30, 8);
+      ctx.stroke();
+      ctx.restore();
+      glyph('plus', cx + cardW / 2, plusY + 15, 12, '#b6bcc8', 1.5);
+    });
+  }
+
+  function drawEngineRow(cx, y, cardW, name, highlight, hp = 0, alpha = 1) {
+    if (y < 0) return;
+    ctx.save();
+    ctx.globalAlpha *= alpha;
+    const h = 30;
+    if (highlight) {
+      const sweep = clamp(hp * 1.4);
+      ctx.save();
+      ctx.fillStyle = `rgba(26,115,232,${0.10 * (1 - clamp((hp - 0.55) / 0.45))})`;
+      rr(cx + 8, y - 2, cardW - 16, h, 7);
+      ctx.fill();
+      ctx.restore();
+      if (sweep < 1) {
+        ctx.save();
+        ctx.beginPath();
+        rr(cx + 8, y - 2, cardW - 16, h, 7);
+        ctx.clip();
+        const sx = cx + 8 + (cardW - 16) * sweep;
+        const g = ctx.createLinearGradient(sx - 40, 0, sx + 40, 0);
+        g.addColorStop(0, 'rgba(26,115,232,0)');
+        g.addColorStop(0.5, 'rgba(26,115,232,0.22)');
+        g.addColorStop(1, 'rgba(26,115,232,0)');
+        ctx.fillStyle = g;
+        ctx.fillRect(cx + 8, y - 2, cardW - 16, h);
+        ctx.restore();
+      }
+    }
+    if (name === 'Google') googleIcon(cx + 24, y + 13, 16);
+    else miniIcon(name, cx + 24, y + 13, 16);
+    txt(name, cx + 42, y + 14, 12.5, 400, highlight ? '#1a73e8' : '#3a4048', 'left');
+    ctx.restore();
+  }
+
+  /* ---------- 弹窗：添加搜索引擎 ---------- */
+  function drawDialog(t, alpha, sceneAlpha) {
+    const dw = 680, dh = 420;
+    const dx = wx + (ww - dw) / 2;
+    const dy = wy + 230;
+    const open = easeOutBack(alpha);
+
+    ctx.save();
+    ctx.globalAlpha = sceneAlpha;
+    // 遮罩
+    ctx.fillStyle = `rgba(28,32,40,${0.28 * alpha})`;
+    ctx.fillRect(wx, py, ww, wh - 44);
+
+    ctx.globalAlpha = sceneAlpha * Math.min(1, alpha * 1.6);
+    ctx.translate(dx + dw / 2, dy + dh / 2);
+    ctx.scale(lerp(0.955, 1, open), lerp(0.955, 1, open));
+    ctx.translate(-dw / 2, -dh / 2);
+
+    ctx.save();
+    shadow('rgba(15,23,42,0.30)', 48, 20);
+    ctx.fillStyle = '#ffffff';
+    rr(0, 0, dw, dh, 16);
+    ctx.fill();
+    ctx.restore();
+
+    txt('添加搜索引擎', 26, 32, 18, 600, '#1f2430', 'left');
+    glyph('x', dw - 28, 32, 14, '#9aa1ad', 1.6);
+
+    // 标题
+    txt('标题', 26, 74, 12, 500, '#6b7280', 'left');
+    const nameBoxY = 86;
+    ctx.fillStyle = '#fff';
+    rr(26, nameBoxY, dw - 52, 40, 9);
+    ctx.fill();
+    ctx.strokeStyle = '#dfe3ea';
+    ctx.lineWidth = 1;
+    rr(26, nameBoxY, dw - 52, 40, 9);
+    ctx.stroke();
+
+    // 标题由链接自动识别后逐字填入
+    const nameN = typedCount(t, 15.32, 0.085, 6);
+    if (nameN > 0) {
+      txt('Google'.slice(0, nameN), 38, nameBoxY + 21, 14, 400, '#2b3038', 'left');
+    }
+
+    // 链接
+    txt('链接', 26, 148, 12, 500, '#6b7280', 'left');
+    const urlY = 160;
+    const urlW = dw - 52;
+    const urlFocus = t > 11.95 && t < 17.0;
+    ctx.fillStyle = '#fff';
+    rr(26, urlY, urlW, 42, 9);
+    ctx.fill();
+    ctx.strokeStyle = urlFocus ? '#1a73e8' : '#dfe3ea';
+    ctx.lineWidth = urlFocus ? 1.6 : 1;
+    rr(26, urlY, urlW, 42, 9);
+    ctx.stroke();
+    if (urlFocus) {
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha * 0.14;
+      ctx.strokeStyle = '#1a73e8';
+      ctx.lineWidth = 4;
+      rr(26, urlY, urlW, 42, 9);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawUrlContent(t, 38, urlY + 21, urlW - 24, sceneAlpha);
+
+    // 图标来源
+    txt('图标来源', 26, 232, 12, 500, '#6b7280', 'left');
+    const iconP = easeOutQuint(clamp((t - 15.95) / 0.45));
+    if (iconP > 0) {
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha * iconP;
+      ctx.translate(0, (1 - iconP) * 6);
+      ctx.fillStyle = '#f7f8fa';
+      rr(26, 244, urlW, 58, 10);
+      ctx.fill();
+      ctx.strokeStyle = '#e8ebf0';
+      ctx.lineWidth = 1;
+      rr(26, 244, urlW, 58, 10);
+      ctx.stroke();
+
+      // 图标预览方块
+      ctx.save();
+      shadow('rgba(15,23,42,0.12)', 8, 2);
+      ctx.fillStyle = '#fff';
+      rr(38, 252, 42, 42, 10);
+      ctx.fill();
+      ctx.restore();
+      googleIcon(59, 273, 26);
+
+      txt('www.google.com', 94, 266, 13, 500, '#2f333a', 'left');
+      txt('已从 favicon 自动获取', 94, 285, 11, 400, '#8b93a3', 'left');
+
+      ctx.fillStyle = '#eef2ff';
+      rr(dw - 138, 260, 98, 28, 14);
+      ctx.fill();
+      txt('重新获取', dw - 89, 274.5, 11, 500, '#3b5bdb', 'center');
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha;
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = '#e2e6ee';
+      ctx.lineWidth = 1;
+      rr(26, 244, urlW, 58, 10);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 自动识别角标
+    const tagP = clamp((t - 15.55) / 0.4);
+    if (tagP > 0) {
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha * tagP;
+      ctx.translate(0, (1 - easeOutQuint(tagP)) * 4);
+      ctx.fillStyle = 'rgba(47,224,196,0.14)';
+      rr(dw - 154, 74, 128, 22, 11);
+      ctx.fill();
+      glyph('check', dw - 140, 85, 11, '#12a58c', 2);
+      txt('标题自动识别', dw - 126, 85.5, 10.5, 600, '#12a58c', 'left');
+      ctx.restore();
+    }
+
+    // 底部按钮
+    const saveHover = t > 16.55 && t < 17.0;
+    const saveP = clamp((t - 16.98) / 0.12);
+    ctx.save();
+    ctx.globalAlpha = sceneAlpha;
+    ctx.fillStyle = '#f2f4f7';
+    rr(dw - 214, dh - 62, 82, 38, 9);
+    ctx.fill();
+    txt('取消', dw - 173, dh - 42.5, 13, 500, '#4d5563', 'center');
+
+    ctx.fillStyle = saveHover ? '#1559c9' : '#1a73e8';
+    rr(dw - 118, dh - 62, 92, 38, 9);
+    ctx.fill();
+    if (saveP > 0) {
+      ctx.fillStyle = `rgba(255,255,255,${0.35 * (1 - saveP)})`;
+      rr(dw - 118, dh - 62, 92, 38, 9);
+      ctx.fill();
+    }
+    txt('保存', dw - 72, dh - 42.5, 13, 600, '#ffffff', 'center');
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  /* 链接输入框内容：打字 → 关键词高亮 → 变成 %s */
+  const URL_PREFIX = 'https://www.google.com/search?q=';
+  const URL_KW = '关键词';
+  const URL_START = 12.1;      // 开始打字
+  const URL_PER = 0.045;       // 每字符间隔
+  const MORPH = 14.22;         // 关键词开始变形
+
+  function drawUrlContent(t, x, cy, maxW, sceneAlpha) {
+    const full = URL_PREFIX + URL_KW;
+    const n = typedCount(t, URL_START, URL_PER, full.length);
+    const prefixN = Math.min(n, URL_PREFIX.length);
+    const kwN = Math.max(0, n - URL_PREFIX.length);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = `400 14px ${MONO}`;
+    ctx.fillStyle = '#2b3038';
+    const prefixShown = URL_PREFIX.slice(0, prefixN);
+    ctx.fillText(prefixShown, x, cy);
+    let cx = x + ctx.measureText(prefixShown).width;
+
+    // 关键词部分
+    const morph = clamp((t - MORPH) / 0.62);
+    const kwText = URL_KW.slice(0, kwN);
+    const kwW = ctx.measureText(URL_KW).width;
+
+    if (kwN > 0 && morph < 1) {
+      const a = 1 - morph;
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha * a;
+      // 高亮底色
+      ctx.fillStyle = 'rgba(251,188,5,0.26)';
+      rr(cx - 2, cy - 10, ctx.measureText(kwText).width + 4, 20, 4);
+      ctx.fill();
+      ctx.fillStyle = '#8a5a00';
+      ctx.fillText(kwText, cx, cy);
+      ctx.restore();
+    }
+    if (morph > 0) {
+      const mp = easeOutBack(morph);
+      ctx.save();
+      ctx.globalAlpha = sceneAlpha * clamp(morph * 1.6);
+      ctx.translate(cx + kwW / 2, cy);
+      ctx.scale(lerp(1.45, 1, mp), lerp(1.45, 1, mp));
+      ctx.font = `700 14px ${MONO}`;
+      ctx.fillStyle = '#0e9f86';
+      ctx.textAlign = 'center';
+      ctx.fillText('%s', 0, 0);
+      ctx.restore();
+    }
+
+    // 输入光标
+    if (t > URL_START - 0.1 && t < 14.25) {
+      if (Math.sin(t * 10) > 0.1) {
+        const shown = URL_PREFIX.slice(0, prefixN) + (kwN > 0 ? URL_KW.slice(0, kwN) : '');
+        ctx.font = `400 14px ${MONO}`;
+        const w = ctx.measureText(shown).width;
+        ctx.fillStyle = '#1a73e8';
+        ctx.fillRect(x + w + 1.5, cy - 10, 1.6, 20);
+      }
+    }
+  }
+
+  /* %s 落位时的一次性闪光：位置按链接前缀实测，不按弹窗中心猜 */
+  function drawMorphFlash(t) {
+    const p = clamp((t - MORPH - 0.35) / 0.5);
+    if (p <= 0 || p >= 1) return;
+    const dw = 680;
+    const dx = wx + (ww - dw) / 2;
+    ctx.save();
+    ctx.font = `400 14px ${MONO}`;
+    const cx = dx + 38 + ctx.measureText(URL_PREFIX).width + ctx.measureText(URL_KW).width / 2;
+    const cy = wy + 230 + 160 + 21;
+    ctx.globalAlpha = (1 - p) * 0.5;
+    ctx.strokeStyle = CYAN;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 12 + p * 46, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  /* ---------- Toast ---------- */
+  function drawToast(t, alpha, sceneAlpha) {
+    const msg = '已自动把链接中的关键词替换为 %s';
+    ctx.save();
+    ctx.font = `500 13px ${SANS}`;
+    const tw = ctx.measureText(msg).width;
+    const bw = tw + 66, bh = 40;
+    const bx = wx + ww / 2 - bw / 2;
+    const by = py + 650;
+    const rise = easeOutQuint(clamp((t - 14.85) / 0.3));
+
+    ctx.globalAlpha = sceneAlpha * alpha;
+    ctx.translate(0, (1 - rise) * 10);
+    ctx.save();
+    shadow('rgba(0,0,0,0.28)', 26, 10);
+    ctx.fillStyle = 'rgba(24,27,34,0.94)';
+    rr(bx, by, bw, bh, 20);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.fillStyle = 'rgba(47,224,196,0.18)';
+    ctx.beginPath();
+    ctx.arc(bx + 24, by + bh / 2, 11, 0, Math.PI * 2);
+    ctx.fill();
+    glyph('check', bx + 24, by + bh / 2, 12, CYAN, 2);
+    txt(msg, bx + 42, by + bh / 2 + 0.5, 13, 500, '#e9edf4', 'left');
+    ctx.restore();
+  }
+
+  /* ============================================================
+   * 光标 / 点击 / 字幕
+   * ============================================================ */
+  function drawCursorShape(x, y, press) {
+    const s = 1 + press * 0.12;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(s, s);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(0, 19);
+    ctx.lineTo(5, 14.5);
+    ctx.lineTo(8.4, 21.5);
+    ctx.lineTo(12, 19.8);
+    ctx.lineTo(8.7, 13);
+    ctx.lineTo(15, 12.2);
+    ctx.closePath();
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(20,24,32,0.9)';
+    ctx.lineWidth = 1.4;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function ripple(x, y, p) {
+    if (p < 0 || p > 1) return;
+    ctx.save();
+    ctx.globalAlpha = (1 - p) * 0.55;
+    ctx.strokeStyle = '#1a73e8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 4 + p * 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCursor(t, alpha) {
+    // 第一幕：选分类、点一下、再点一键搜索
+    if (t > 4.0 && t < 6.9) {
+      const L = barLayout();
+      const ai = L.items.find((i) => i.k === 'ai');
+      const pos = pathAt(t, [
+        [4.0, 1180, 760],
+        [4.72, ai.cx - 2, ai.cy - 4],
+        [5.34, ai.cx + 6, ai.cy + 6],
+        [5.86, ai.cx - 2, ai.cy - 4],
+        [6.42, 1080, 300],
+      ]);
+      const press = Math.max(
+        1 - Math.abs(t - 4.9) / 0.1,
+        1 - Math.abs(t - 5.9) / 0.1,
+        0,
+      );
+      ripple(ai.cx, ai.cy, (t - 4.9) / 0.45);
+      ripple(ai.cx, ai.cy, (t - 5.9) / 0.45);
+      ctx.save();
+      ctx.globalAlpha = alpha * clamp((t - 4.0) / 0.25) * (1 - clamp((t - 6.55) / 0.35));
+      drawCursorShape(pos.x, pos.y, press);
+      ctx.restore();
+    }
+
+    // 第二幕：点链接框、打字跟随、点保存
+    if (t > 11.5 && t < 17.35) {
+      const dw = 680, dh = 420;
+      const dx = wx + (ww - dw) / 2;
+      const dy = wy + 230;
+      const fieldX = dx + 38, fieldY = dy + 181;
+      const saveX = dx + dw - 72, saveY = dy + dh - 42.5;
+
+      // 打字时跟随光标
+      let typingPos = null;
+      const n = typedCount(t, URL_START, URL_PER, (URL_PREFIX + URL_KW).length);
+      if (t >= 12.05 && t <= 14.3) {
+        const shown = (URL_PREFIX + URL_KW).slice(0, n);
+        ctx.font = `400 14px ${MONO}`;
+        typingPos = { x: fieldX + ctx.measureText(shown).width + 4, y: fieldY };
+      }
+
+      const pos = typingPos || pathAt(t, [
+        [11.5, 1520, 800],
+        [12.0, fieldX + 300, fieldY],
+        [13.9, fieldX + 300, fieldY],
+        [14.5, fieldX + 470, fieldY + 26],
+        [16.55, saveX - 8, saveY - 2],
+        [17.1, saveX - 2, saveY],
+        [17.35, 1500, 780],
+      ]);
+      const press = Math.max(1 - Math.abs(t - 12.05) / 0.09, 1 - Math.abs(t - 16.72) / 0.09, 0);
+      ripple(fieldX + 300, fieldY, (t - 12.05) / 0.45);
+      ripple(saveX, saveY, (t - 16.72) / 0.45);
+      ctx.save();
+      ctx.globalAlpha = alpha * clamp((t - 11.5) / 0.3) * (1 - clamp((t - 17.2) / 0.25));
+      drawCursorShape(pos.x, pos.y, press);
+      ctx.restore();
+    }
+  }
+
+  /* 左下角讲解字幕 */
+  function drawCaption(t) {
+    const caps = [
+      { a: 2.1, b: 6.1, no: '01 / 跳转条', title: '一个关键词，整条引擎栏跟着来' },
+      { a: 6.05, b: 10.05, no: '01 / 跳转条', title: '分类里的四个引擎，一起打开' },
+      { a: 10.5, b: 14.5, no: '02 / 引擎链接', title: '粘贴一条搜索链接' },
+      { a: 14.55, b: 17.35, no: '02 / 引擎链接', title: '关键词自动补成 %s' },
+      { a: 17.45, b: 19.35, no: '02 / 引擎链接', title: '保存后直接进跳转条' },
+    ];
+    caps.forEach((c) => {
+      const a = seg(t, c.a, c.b, 0.32, 0.22);
+      if (a <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = a;
+      const rise = (1 - easeOutQuint(clamp((t - c.a) / 0.4))) * 10;
+      // 竖条
+      ctx.fillStyle = CYAN;
+      const barH = 40;
+      rr(232, 966 + rise, 3, barH, 1.5);
+      ctx.fill();
+      ctx.font = `500 12px ${MONO}`;
+      ctx.fillStyle = CYAN;
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(c.no, 250, 962 + rise);
+      txt(c.title, 250, 990 + rise, 25, 600, INK, 'left');
+      ctx.restore();
+    });
+
+    // 品牌水印
+    const wm = clamp((t - 1.6) / 0.8);
+    if (wm > 0) {
+      ctx.save();
+      ctx.globalAlpha = wm * 0.9;
+      const g = ctx.createLinearGradient(232, 0, 262, 0);
+      g.addColorStop(0, CYAN);
+      g.addColorStop(1, VIOLET);
+      ctx.fillStyle = g;
+      rr(232, 66, 24, 24, 7);
+      ctx.fill();
+      glyph('search', 244, 78, 13, '#06080c', 2);
+      txt('SearchEngineJump++', 266, 78, 14, 600, 'rgba(238,241,247,0.72)', 'left');
+      ctx.restore();
+    }
+  }
+
+  /* 片尾：名字 + 安装地址 */
+  function drawEnd(t) {
+    const p = seg(t, 19.45, 21.01, 0.55, 0.0);
+    if (p <= 0) return;
+    ctx.save();
+    ctx.globalAlpha = p;
+    ctx.fillStyle = `rgba(6,7,10,${p})`;
+    ctx.fillRect(0, 0, 1920, 1080);
+
+    const rise = (1 - easeOutQuint(clamp((t - 19.45) / 0.7))) * 18;
+    ctx.globalAlpha = p;
+    const g = ctx.createLinearGradient(860, 0, 1060, 0);
+    g.addColorStop(0, CYAN);
+    g.addColorStop(1, VIOLET);
+    ctx.fillStyle = g;
+    rr(936, 402 + rise, 48, 48, 13);
+    ctx.fill();
+    glyph('search', 960, 426 + rise, 26, '#06080c', 2.4);
+
+    txt('SearchEngineJump++', 960, 508 + rise, 52, 700, INK, 'center');
+    txt('在你的搜索页，少点几次', 960, 560 + rise, 20, 400, DIM, 'center');
+
+    ctx.fillStyle = 'rgba(255,255,255,0.06)';
+    rr(760, 612 + rise, 400, 46, 23);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+    ctx.lineWidth = 1;
+    rr(760, 612 + rise, 400, 46, 23);
+    ctx.stroke();
+    txt('greasyfork.org/zh-CN/scripts/602191', 960, 636 + rise, 13, 400, 'rgba(180,188,204,0.9)', 'center', MONO);
+    ctx.restore();
+  }
+
+  /* ============================================================
+   * 主渲染：只依赖 t
+   * ============================================================ */
+  function render(t) {
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.fillStyle = '#06070a';
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.setTransform(U, 0, 0, U, OX, OY);
+
+    drawBg(t);
+
+    // 整窗在片尾淡出
+    const out = 1 - clamp((t - 19.2) / 0.55);
+    drawIntro(t);
+    if (out > 0.001) {
+      ctx.save();
+      ctx.globalAlpha = out;
+      drawBrowser(t);
+      drawMorphFlash(t);
+      ctx.restore();
+    }
+
+    drawCursor(t, out);
+
+    const capOut = 1 - clamp((t - 19.35) / 0.3);
+    ctx.save();
+    ctx.globalAlpha = capOut;
+    drawCaption(t);
+    ctx.restore();
+
+    drawEnd(t);
+    drawGrain(t);
+
+    // 最终暗角
+    const vg = ctx.createRadialGradient(960, 540, 380, 960, 540, 1180);
+    vg.addColorStop(0, 'rgba(0,0,0,0)');
+    vg.addColorStop(0.7, 'rgba(0,0,0,0.16)');
+    vg.addColorStop(1, 'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, 1920, 1080);
+  }
+
+  window.DUR = DUR;
+  window.FPS = FPS;
+  window.EV = [
+    { t: 0.4, type: 'intro' },
+    { t: 4.9, type: 'click' },
+    { t: 5.9, type: 'click' },
+    { t: 6.05, type: 'pop' },
+    { t: 12.1, type: 'type' },
+    { t: 14.6, type: 'resolve' },
+    { t: 16.72, type: 'click' },
+    { t: 19.45, type: 'end' },
+  ];
+  window.render = render;
+  window.READY = false;
+
+  resize();
+  addEventListener('resize', () => { resize(); barCache = null; });
+
+  const ready = (document.fonts && document.fonts.ready) ? document.fonts.ready : Promise.resolve();
+  ready.then(() => {
+    barCache = null;
+    window.READY = true;
+  });
+
+  if (location.hash === '#preview') {
+    const t0 = performance.now();
+    const loop = () => {
+      render(((performance.now() - t0) / 1000) % DUR);
+      requestAnimationFrame(loop);
+    };
+    ready.then(loop);
+  }
+})();
+</script>
+</body>
+</html>
