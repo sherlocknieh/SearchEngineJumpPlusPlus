@@ -31,7 +31,6 @@ const emit = defineEmits([
     class="iqxin-items"
     :class="{
       'sej-category-hidden': !category.enabled,
-      'sej-no-delete': hideDelete,
       'sej-drag-placeholder': dragCtx?.type === 'category' && dragCtx.key === category.key,
     }"
     :data-sej-drag-el="'category-' + category._id"
@@ -39,6 +38,7 @@ const emit = defineEmits([
     <!-- 类别标题 -->
     <div
       class="sejtitle drag"
+      :class="{ 'sej-no-delete': hideDelete }"
       :data-xin="category.enabled ? 1 : -1"
       :data-iqxintitle="category.key"
       :title="t('settings.editCategory', { name: displayName })"
@@ -74,6 +74,7 @@ const emit = defineEmits([
         :data-sej-drag-el="'engine-' + engine._id"
         :class="{
           'sej-drag-placeholder': dragCtx?.type === 'engine' && dragCtx.key === engine._id,
+          'sej-no-delete': hideDelete && Boolean(engine.action),
         }"
         :title="t('settings.editEngine', { name: localizeEngineName(engine.name) })"
         @pointerdown="emit('drag-start', $event, 'engine', ci, ei)"
@@ -99,7 +100,7 @@ const emit = defineEmits([
           v-html="engine.disable ? EYE_OFF : EYE"
         ></span>
         <span
-          v-if="!hideDelete"
+          v-if="!hideDelete || !engine.action"
           class="sej-hover-delete"
           :title="t('settings.deleteEngine')"
           @pointerdown.stop

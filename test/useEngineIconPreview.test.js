@@ -83,7 +83,7 @@ describe('useEngineIconPreview 结果呈现', () => {
     resolveFavicon.mockReset();
   });
 
-  it('获取成功后不自动采用，等用户点选', async () => {
+  it('没有 data:image 图标时自动采用首个成功来源', async () => {
     resolveFavicon.mockResolvedValue({ data: ICON, reason: '', bytes: 5734 });
     const { api, form } = setup({
       url: 'https://www.1337x.to/search/%s/1/',
@@ -92,13 +92,28 @@ describe('useEngineIconPreview 结果呈现', () => {
 
     await api.previewIcon();
 
-    expect(api.previewData.value).toBe('');
-    expect(api.previewSize.value).toBe('');
-    expect(api.previewUrl.value).toBe('');
-    // 图标地址保持用户填写的内容，不被自动改写
-    expect(form.favicon).toBe('https://a.favicon.im/1337x.to');
-    // 全部成功项都可点选
+    // 首个成功来源写入图标数据，同时保留全部成功项供切换
+    expect(api.previewData.value).toBe(ICON);
+    expect(api.previewSize.value).toBe('26 B');
+    expect(api.previewUrl.value).toBe(api.pickedUrl.value);
+    expect(api.pickedUrl.value).not.toBe('');
+    expect(form.favicon).toBe(api.pickedUrl.value);
     expect(api.previewSteps.value.every((step) => step.status === 'ok')).toBe(true);
+  });
+
+  it('已有 data:image 缓存时不自动改写图标', async () => {
+    resolveFavicon.mockResolvedValue({ data: ICON, reason: '', bytes: 5734 });
+    const { api, form } = setup({
+      url: 'https://www.1337x.to/search/%s/1/',
+      favicon: 'https://a.favicon.im/1337x.to',
+      faviconData: 'data:image/png;base64,BB==',
+    });
+
+    await api.previewIcon();
+
+    expect(api.previewData.value).toBe('data:image/png;base64,BB==');
+    expect(api.pickedUrl.value).toBe('');
+    expect(form.favicon).toBe('https://a.favicon.im/1337x.to');
   });
 
   it('成功项按返回先后排序，失败项排在其后', async () => {

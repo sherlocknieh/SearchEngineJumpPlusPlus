@@ -157,6 +157,37 @@ describe('useUndoDelete', () => {
     expect(scheduleAutoSave).toHaveBeenCalledTimes(2);
   });
 
+  it('内置功能分类里的自定义引擎可删除，内置快捷动作仍受保护', () => {
+    const draft = reactive({
+      categories: [
+        {
+          _id: 1,
+          name: '功能',
+          key: 'actions',
+          enabled: true,
+          engines: [
+            { _id: 2, name: '复制', action: 'copy' },
+            { _id: 3, name: '自建', url: 'https://a.test' },
+          ],
+        },
+      ],
+    });
+    const { deleteEngine } = useUndoDelete({
+      draft,
+      scheduleAutoSave: vi.fn(),
+      isDialogOpen: () => false,
+      closeCategoryDialog: vi.fn(),
+    });
+
+    // 内置快捷动作删了也会被配置规范化补回，直接拒绝
+    deleteEngine(0, 0);
+    expect(draft.categories[0].engines).toHaveLength(2);
+
+    // 用户添加的搜索引擎应能正常删除
+    deleteEngine(0, 1);
+    expect(draft.categories[0].engines.map((engine) => engine.name)).toEqual(['复制']);
+  });
+
   it('弹窗打开时拒绝撤销但保留记录', () => {
     const draft = createDraft();
     let dialogOpen = false;

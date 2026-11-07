@@ -332,9 +332,9 @@ function submit() {
     </label>
     <!-- 底部操作按钮 -->
     <div class="sej-dialog-actions">
-      <!-- 删除按钮：仅编辑已有引擎时显示 -->
+      <!-- 删除按钮：仅编辑普通引擎时显示，内置快捷动作会被自动补回，不提供删除 -->
       <button
-        v-if="mode === 'edit'"
+        v-if="mode === 'edit' && !initialAction"
         type="button"
         class="addItemBoxBtn sej-dialog-danger"
         :disabled="busy"

@@ -179,7 +179,8 @@ export function useEngineIconPreview({
    * - 正在获取时再次点击视为取消；
    * - 构造候选（当前地址、主机名与可注册域名的 favicon.ico、完整主机名 /
    *   可注册域名的公共图标服务）并去重；
-   * - 所有候选并行请求，成功的来源全部保留供点选，不自动采用；
+   * - 所有候选并行请求，成功的来源全部保留供点选；
+   * - 当前没有 data:image 图标时自动采用首个成功来源，已有图标则只列出候选；
    * - 任一来源成功即上浮到成功组末尾，失败项沉底，无需等整批结束。
    */
   async function previewIcon() {
@@ -223,6 +224,9 @@ export function useEngineIconPreview({
     if (!candidates.length) return;
 
     const token = ++previewToken;
+    // 本轮开始前没有可用的 data:image 图标（新建引擎或旧数据只存了图标地址）时，
+    // 首个成功来源自动选中，省去“获取图标”后再点一次来源；手填过图标数据则不打扰
+    const autoPick = !dataEdited.value && !/^data:image\//i.test(previewData.value.trim());
     previewFailed.value = false;
     previewLoading.value = true;
     previewSteps.value = candidates.map((item) => ({
@@ -274,6 +278,8 @@ export function useEngineIconPreview({
       step.size = formatIconSize(step.rawSize);
       // 一拿到结果就上浮：已成功项保持先后次序，未完成项依次后移
       moveTo(step, okEnd(step));
+      // 没有已内嵌图标时直接采用第一个成功来源；其余成功项仍保留供手动切换
+      if (autoPick && !pickedUrl.value) await applyPreview(step, step.data);
     };
 
     await Promise.all(previewSteps.value.map(settle));
