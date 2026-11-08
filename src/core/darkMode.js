@@ -46,8 +46,11 @@ export function isDarkMode() {
   if (hint !== null) return hint;
 
   try {
+    // "light dark" 表示亮暗都支持、由系统决定, 不是"当前是暗色";
+    // 只有单独写死 dark 的站点才算暗色, 其余留给背景色与媒体查询判断
     const colorScheme = getComputedStyle(document.documentElement).colorScheme;
-    if (colorScheme && colorScheme.split(/\s+/).includes('dark')) return true;
+    const schemes = colorScheme ? colorScheme.split(/\s+/) : [];
+    if (schemes.includes('dark') && !schemes.includes('light')) return true;
   } catch (e) {
     // ignore
   }

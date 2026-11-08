@@ -11,7 +11,9 @@ function clearThemeHints() {
     el.removeAttribute('data-color-mode');
     el.removeAttribute('theme');
     el.className = '';
+    el.style.colorScheme = '';
   }
+  document.body.style.backgroundColor = '';
 }
 
 const originalMatchMedia = window.matchMedia;
@@ -44,6 +46,24 @@ describe('isDarkMode', () => {
 
     document.documentElement.className = 'theme-light';
     expect(isDarkMode()).toBe(false);
+  });
+
+  it('color-scheme 为 light dark 时按背景色与系统偏好判断', () => {
+    document.documentElement.style.colorScheme = 'light dark';
+
+    document.body.style.backgroundColor = 'rgb(245, 246, 246)';
+    window.matchMedia = vi.fn(() => ({ matches: true }));
+    expect(isDarkMode()).toBe(false);
+
+    document.body.style.backgroundColor = 'rgb(27, 27, 27)';
+    expect(isDarkMode()).toBe(true);
+  });
+
+  it('color-scheme 只声明 dark 时判为暗色', () => {
+    document.documentElement.style.colorScheme = 'dark';
+    document.body.style.backgroundColor = 'rgb(245, 246, 246)';
+    window.matchMedia = vi.fn(() => ({ matches: false }));
+    expect(isDarkMode()).toBe(true);
   });
 
   it('没有主题提示时回退到 prefers-color-scheme', () => {
