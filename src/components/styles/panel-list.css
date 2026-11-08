@@ -1,13 +1,17 @@
 /* 列表滚动容器：内容可能很长，滚动条贴住面板内边缘 */
 #sej-settings-body {
-  display: flex;
+  /* 列数随可用宽度自动增减：滚动条变宽或面板变窄时不会挤出空列 */
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   flex: 1 1 auto;
-  flex-wrap: wrap;
-  align-content: flex-start;
+  align-content: start;
   gap: 10px;
   min-height: 0;
   overflow-y: auto;
   overflow-x: hidden;
+  /* 宿主页的滚动条样式会穿透 Shadow DOM 继承进来，显式复位保住自定义滚动条宽度 */
+  scrollbar-width: auto;
+  scrollbar-color: auto;
   /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */
   margin-top: 0;
   margin-right: calc(var(--sej-panel-pad-x) * -1);
@@ -175,12 +179,10 @@
   vertical-align: middle;
 }
 
-/* 窄屏下类别卡片占满可用宽度 */
+/* 窄屏下类别卡片收窄一档，仍占满可用宽度 */
 @media (max-width: 560px) {
-  .iqxin-items {
-    flex: 1 1 160px;
-    width: auto;
-    max-width: none;
+  #sej-settings-body {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   }
 }
 
