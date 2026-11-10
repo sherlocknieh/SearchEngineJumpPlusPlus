@@ -244,8 +244,15 @@ function submit() {
           />
           <!-- 非成功项占位圆点 -->
           <span v-else class="sej-preview-dot"></span>
-          <!-- 来源地址文本 -->
-          <span class="sej-preview-url">{{ step.url }}</span>
+          <!-- 来源地址：新标签页打开，不触发整行选用 -->
+          <a
+            class="sej-preview-url"
+            :href="step.url"
+            target="_blank"
+            rel="noopener"
+            @click.stop
+            >{{ step.url }}</a
+          >
           <!-- 获取成功后的原始下载大小（未压缩） -->
           <span v-if="step.status === 'ok' && step.size" class="sej-preview-size">{{
             step.size

@@ -124,16 +124,23 @@
   opacity: 0.6;
 }
 
+/* 来源地址本身是链接：新标签页打开，不影响整行选用 */
 .sej-preview-url {
   flex: 1 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  /* 链接源文本允许光标选择/复制 */
-  cursor: text;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  /* 链接地址允许光标选择/复制 */
   -webkit-user-select: text;
   user-select: text;
+}
+
+.sej-preview-url:hover {
+  text-decoration: underline;
 }
 
 .sej-preview-state {

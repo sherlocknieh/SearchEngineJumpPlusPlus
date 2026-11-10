@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.10.1701
+// @version            2026.11.10.1747
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -9840,7 +9840,7 @@
 			resolveFaviconData
 		};
 	}
-	var EngineEditDialog_default = ".sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition:\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover{\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  /* 链接源文本允许光标选择/复制 */\n  cursor: text;\n  -webkit-user-select: text;\n  user-select: text;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n/* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */\n.sej-preview-size {\n  flex: 0 0 auto;\n  opacity: 0.55;\n  font-variant-numeric: tabular-nums;\n}\n\n/* 图标数据字段名旁的当前图标存储体积（转码后） */\n.sej-icon-size {\n  margin-left: 4px;\n  font-style: normal;\n  font-variant-numeric: tabular-nums;\n  opacity: 0.55;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  color: var(--sej-success);\n  opacity: 0.6;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */\n.sej-preview-icon svg path {\n  opacity: 0;\n}\n\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  opacity: 1;\n}\n\n/* 已选用：绿色圆圈内显示勾 */\n.sej-preview-icon.is-selected {\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  opacity: 1;\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n";
+	var EngineEditDialog_default = ".sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition:\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  padding: 6px 8px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover{\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n/* 来源地址本身是链接：新标签页打开，不影响整行选用 */\n.sej-preview-url {\n  flex: 1 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n  /* 链接地址允许光标选择/复制 */\n  -webkit-user-select: text;\n  user-select: text;\n}\n\n.sej-preview-url:hover {\n  text-decoration: underline;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  opacity: 0.7;\n}\n\n/* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */\n.sej-preview-size {\n  flex: 0 0 auto;\n  opacity: 0.55;\n  font-variant-numeric: tabular-nums;\n}\n\n/* 图标数据字段名旁的当前图标存储体积（转码后） */\n.sej-icon-size {\n  margin-left: 4px;\n  font-style: normal;\n  font-variant-numeric: tabular-nums;\n  opacity: 0.55;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  color: var(--sej-success);\n  opacity: 0.6;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */\n.sej-preview-icon svg path {\n  opacity: 0;\n}\n\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  opacity: 1;\n}\n\n/* 已选用：绿色圆圈内显示勾 */\n.sej-preview-icon.is-selected {\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  opacity: 1;\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin-top: 2px;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n";
 	var _hoisted_1$6 = {
 		id: "sej-engine-title",
 		class: "sej-dialog-title"
@@ -9875,7 +9875,7 @@
 		key: 1,
 		class: "sej-preview-dot"
 	};
-	var _hoisted_14$2 = { class: "sej-preview-url" };
+	var _hoisted_14$2 = ["href"];
 	var _hoisted_15$2 = {
 		key: 2,
 		class: "sej-preview-size"
@@ -10067,7 +10067,13 @@
 									src: step.data,
 									alt: ""
 								}, null, 8, _hoisted_12$2)) : (openBlock(), createElementBlock("span", _hoisted_13$2)),
-								createBaseVNode("span", _hoisted_14$2, toDisplayString(step.url), 1),
+								createBaseVNode("a", {
+									class: "sej-preview-url",
+									href: step.url,
+									target: "_blank",
+									rel: "noopener",
+									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
+								}, toDisplayString(step.url), 9, _hoisted_14$2),
 								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
 								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
@@ -10087,17 +10093,17 @@
 					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20, [
 						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
 						createBaseVNode("div", _hoisted_22, [withDirectives(createBaseVNode("input", {
-							"onUpdate:modelValue": _cache[4] || (_cache[4] = ($event) => isRef(previewData) ? previewData.value = $event : null),
+							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => isRef(previewData) ? previewData.value = $event : null),
 							class: "sej-data-input",
 							placeholder: unref(t)("engine.iconDataPlaceholder"),
 							disabled: __props.busy,
-							onInput: _cache[5] || (_cache[5] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args))
+							onInput: _cache[6] || (_cache[6] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args))
 						}, null, 40, _hoisted_23), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
 							type: "button",
 							class: normalizeClass(["sej-icon-preview-btn", { "sej-has-icon": unref(previewImage) }]),
 							disabled: __props.busy,
 							title: unref(previewImage) ? unref(t)("engine.uploadReplace") : unref(t)("engine.upload"),
-							onClick: _cache[6] || (_cache[6] = (...args) => unref(pickFaviconFile) && unref(pickFaviconFile)(...args))
+							onClick: _cache[7] || (_cache[7] = (...args) => unref(pickFaviconFile) && unref(pickFaviconFile)(...args))
 						}, [unref(previewImage) ? (openBlock(), createElementBlock("img", {
 							key: 0,
 							class: "sej-icon-preview",
@@ -10110,12 +10116,12 @@
 							class: "sej-file-input",
 							type: "file",
 							accept: "image/*,.ico",
-							onChange: _cache[7] || (_cache[7] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
+							onChange: _cache[8] || (_cache[8] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
 						}, null, 544)
 					])) : createCommentVNode("", true),
 					!unref(initialAction) || unref(initialAction) === "open" ? (openBlock(), createElementBlock("label", _hoisted_26, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
 						id: "iqxin-newTarget",
-						"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => form.target = $event),
+						"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => form.target = $event),
 						disabled: __props.busy
 					}, [
 						createBaseVNode("option", {
@@ -10131,12 +10137,12 @@
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
-							onClick: _cache[9] || (_cache[9] = ($event) => _ctx.$emit("delete"))
+							onClick: _cache[10] || (_cache[10] = ($event) => _ctx.$emit("delete"))
 						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_32)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
-							onClick: _cache[10] || (_cache[10] = ($event) => _ctx.$emit("cancel"))
+							onClick: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("cancel"))
 						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_33),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",
