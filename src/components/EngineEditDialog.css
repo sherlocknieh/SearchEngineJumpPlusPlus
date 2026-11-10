@@ -56,12 +56,11 @@
   min-width: 0;
 }
 
-/* 图标获取来源列表 */
+/* 图标获取来源列表：容器不留白，行内元素自行控制左右间距 */
 .sej-preview-steps {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  padding: 6px 8px;
   border-radius: 8px;
   background: var(--sej-surface-2);
   font-size: 12px;
@@ -71,6 +70,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
+  padding: 3px 8px;
   line-height: 18px;
   color: var(--font-color-qxin);
   border-radius: 4px;
@@ -208,7 +208,7 @@
 
 .sej-preview-extractor {
   align-self: flex-start;
-  margin-top: 2px;
+  margin: 2px 8px 0;
   color: var(--sej-accent);
   font-size: 12px;
   text-decoration: none;
