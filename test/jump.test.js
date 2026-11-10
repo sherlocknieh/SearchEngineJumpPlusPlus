@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   extractKeyword,
   encodeKeyword,
+  isSameSiteUrl,
   prepareJump,
   shouldOpenInNewTab,
 } from '../src/core/jump.js';
@@ -76,8 +77,34 @@ describe('shouldOpenInNewTab', () => {
     expect(shouldOpenInNewTab({ target: '_self' }, true)).toBe(true);
   });
 
-  it('默认新标签页，_self 例外', () => {
+  it('未配置打开方式时默认新标签页（当前页未知）', () => {
     expect(shouldOpenInNewTab({})).toBe(true);
     expect(shouldOpenInNewTab({ target: '_self' })).toBe(false);
+  });
+
+  it('本站链接原地跳转，其他站点新标签页', () => {
+    const href = 'https://www.a.test/search?q=x';
+    expect(shouldOpenInNewTab({ url: 'https://a.test/?q=%s' }, false, href)).toBe(false);
+    expect(shouldOpenInNewTab({ url: 'https://m.a.test/?q=%s' }, false, href)).toBe(false);
+    expect(shouldOpenInNewTab({ url: 'https://b.test/?q=%s' }, false, href)).toBe(true);
+  });
+
+  it('显式打开方式优先于本站判定', () => {
+    const href = 'https://a.test/search?q=x';
+    expect(shouldOpenInNewTab({ url: 'https://a.test/?q=%s', target: '_blank' }, false, href)).toBe(
+      true,
+    );
+    expect(shouldOpenInNewTab({ url: 'https://b.test/?q=%s', target: '_self' }, false, href)).toBe(
+      false,
+    );
+  });
+});
+
+describe('isSameSiteUrl', () => {
+  it('按可注册域名比较，忽略子域与协议', () => {
+    expect(isSameSiteUrl('https://www.a.test/x', 'http://a.test/y')).toBe(true);
+    expect(isSameSiteUrl('https://m.a.test/x', 'https://a.test/y')).toBe(true);
+    expect(isSameSiteUrl('https://b.test/x', 'https://a.test/y')).toBe(false);
+    expect(isSameSiteUrl('', 'https://a.test/y')).toBe(false);
   });
 });

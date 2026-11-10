@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.08.1934
+// @version            2026.11.10.1701
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5851,6 +5851,8 @@
 			"engine.upload": "本地上传",
 			"engine.uploadReplace": "本地上传（替换当前图标）",
 			"engine.target": "打开方式",
+			"engine.targetAuto": "默认",
+			"engine.targetAutoTip": "本站链接在当前页跳转，其他站点新标签页打开",
 			"engine.targetBlank": "新标签页打开",
 			"engine.targetSelf": "当前页打开",
 			"engine.selectImage": "请选择图片文件",
@@ -5979,6 +5981,8 @@
 			"engine.upload": "Upload",
 			"engine.uploadReplace": "Upload (replace current icon)",
 			"engine.target": "Open in",
+			"engine.targetAuto": "Default",
+			"engine.targetAutoTip": "Same-site links open in the current tab, others in a new tab",
 			"engine.targetBlank": "New tab",
 			"engine.targetSelf": "Current tab",
 			"engine.selectImage": "Please select an image file",
@@ -6119,6 +6123,10 @@
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
+	var ENGINE_TARGETS = ["_blank", "_self"];
+	function normalizeEngineTarget(value) {
+		return ENGINE_TARGETS.includes(value) ? value : "";
+	}
 	function normalizeEngine(raw) {
 		if (!isPlainObject(raw)) return null;
 		const engine = {};
@@ -6131,7 +6139,8 @@
 		const action = normalizeEngineAction(raw.action);
 		if (action) engine.action = action;
 		if (!engine.url && !action) return null;
-		if (raw.target === "_self") engine.target = "_self";
+		const target = normalizeEngineTarget(raw.target);
+		if (target) engine.target = target;
 		if (raw.disable === true) engine.disable = true;
 		return engine;
 	}
@@ -6217,7 +6226,8 @@
 		if (action) engine.action = action;
 		if (typeof raw.favicon === "string") engine.favicon = raw.favicon;
 		if (typeof raw.faviconData === "string") engine.faviconData = raw.faviconData;
-		if (raw.target === "_self") engine.target = "_self";
+		const target = normalizeEngineTarget(raw.target);
+		if (target) engine.target = target;
 		if (raw.disable === true) engine.disable = true;
 		return engine;
 	}
@@ -6841,8 +6851,19 @@
 		}
 		return false;
 	}
-	function shouldOpenInNewTab(engine, forceNewTab = false) {
-		return Boolean(forceNewTab || engine.target !== "_self");
+	function currentHref() {
+		return typeof window !== "undefined" ? window.location.href : "";
+	}
+	function isSameSiteUrl(url, href = currentHref()) {
+		const targetDomain = registrableDomain(hostFromUrl(url));
+		const pageDomain = registrableDomain(hostFromUrl(href));
+		return Boolean(targetDomain) && targetDomain === pageDomain;
+	}
+	function shouldOpenInNewTab(engine, forceNewTab = false, href = currentHref()) {
+		if (forceNewTab) return true;
+		if (engine.target === "_blank") return true;
+		if (engine.target === "_self") return false;
+		return !isSameSiteUrl(engine.url, href);
 	}
 	function openInNewTab(url) {
 		if (!url) return false;
@@ -6883,7 +6904,11 @@
 			return true;
 		}
 		const result = prepareJump(engine, keyword, { hideTheSameLink: settingData.HideTheSameLink });
-		const newTab = shouldOpenInNewTab(engine, forceNewTab);
+		const jumpUrl = result.type === "post" ? result.action : result.url;
+		const newTab = shouldOpenInNewTab({
+			...engine,
+			url: jumpUrl
+		}, forceNewTab);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
 			return true;
@@ -9882,12 +9907,13 @@
 		class: "sej-field"
 	};
 	var _hoisted_27 = ["disabled"];
-	var _hoisted_28 = { value: "_blank" };
-	var _hoisted_29 = { value: "_self" };
-	var _hoisted_30 = { class: "sej-dialog-actions" };
-	var _hoisted_31 = ["disabled"];
+	var _hoisted_28 = ["title"];
+	var _hoisted_29 = { value: "_blank" };
+	var _hoisted_30 = { value: "_self" };
+	var _hoisted_31 = { class: "sej-dialog-actions" };
 	var _hoisted_32 = ["disabled"];
 	var _hoisted_33 = ["disabled"];
+	var _hoisted_34 = ["disabled"];
 	var ICON_SELECT = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>";
 	var _sfc_main$8 = {
 		__name: "EngineEditDialog",
@@ -9923,7 +9949,7 @@
 				name: props.initial.name || "",
 				url: props.initial.url || "",
 				favicon: props.initial.favicon || "",
-				target: props.initial.target === "_self" ? "_self" : "_blank"
+				target: props.initial.target === "_self" || props.initial.target === "_blank" ? props.initial.target : ""
 			});
 			const urlInput = ref(null);
 			const rootEl = ref(null);
@@ -10091,25 +10117,32 @@
 						id: "iqxin-newTarget",
 						"onUpdate:modelValue": _cache[8] || (_cache[8] = ($event) => form.target = $event),
 						disabled: __props.busy
-					}, [createBaseVNode("option", _hoisted_28, toDisplayString(unref(t)("engine.targetBlank")), 1), createBaseVNode("option", _hoisted_29, toDisplayString(unref(t)("engine.targetSelf")), 1)], 8, _hoisted_27), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
-					createBaseVNode("div", _hoisted_30, [
+					}, [
+						createBaseVNode("option", {
+							value: "",
+							title: unref(t)("engine.targetAutoTip")
+						}, toDisplayString(unref(t)("engine.targetAuto")), 9, _hoisted_28),
+						createBaseVNode("option", _hoisted_29, toDisplayString(unref(t)("engine.targetBlank")), 1),
+						createBaseVNode("option", _hoisted_30, toDisplayString(unref(t)("engine.targetSelf")), 1)
+					], 8, _hoisted_27), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
+					createBaseVNode("div", _hoisted_31, [
 						__props.mode === "edit" && !unref(initialAction) ? (openBlock(), createElementBlock("button", {
 							key: 0,
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
 							onClick: _cache[9] || (_cache[9] = ($event) => _ctx.$emit("delete"))
-						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_31)) : createCommentVNode("", true),
+						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_32)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
 							onClick: _cache[10] || (_cache[10] = ($event) => _ctx.$emit("cancel"))
-						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_32),
+						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_33),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",
 							disabled: __props.busy,
 							onClick: submit
-						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_33)
+						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_34)
 					])
 				], 512);
 			};

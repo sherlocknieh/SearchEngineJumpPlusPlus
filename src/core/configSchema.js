@@ -12,6 +12,7 @@ import {
   normalizeCategories,
   normalizeEngine,
   normalizeEngineAction,
+  normalizeEngineTarget,
 } from './configData.js';
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
@@ -126,7 +127,9 @@ export function serializeEngine(raw) {
   if (action) engine.action = action;
   if (typeof raw.favicon === 'string') engine.favicon = raw.favicon;
   if (typeof raw.faviconData === 'string') engine.faviconData = raw.faviconData;
-  if (raw.target === '_self') engine.target = '_self';
+  // 保存显式选择的打开方式，未选择时保持默认行为
+  const target = normalizeEngineTarget(raw.target);
+  if (target) engine.target = target;
   if (raw.disable === true) engine.disable = true;
   return engine;
 }

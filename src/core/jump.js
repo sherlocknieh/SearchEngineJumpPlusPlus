@@ -1,6 +1,6 @@
 import { GM_openInTab } from '$';
 import { normalizeEngineAction } from './configData.js';
-import { normalizeKeywordUrl } from './engineUrl.js';
+import { normalizeKeywordUrl, hostFromUrl, registrableDomain } from './engineUrl.js';
 import { copyText } from './clipboard.js';
 
 export function extractKeyword(inputTarget) {
@@ -74,10 +74,32 @@ export async function performEngineAction(engine, keyword) {
 }
 
 /**
+ * 当前页面地址；非浏览器环境（测试）下为空，便于按默认方式处理。
+ */
+function currentHref() {
+  return typeof window !== 'undefined' ? window.location.href : '';
+}
+
+/**
+ * 引擎链接与当前页面是否同站（可注册域名相同）。
+ * 同站跳转直接复用当前页面，避免堆出同一站点的多个标签页。
+ */
+export function isSameSiteUrl(url, href = currentHref()) {
+  const targetDomain = registrableDomain(hostFromUrl(url));
+  const pageDomain = registrableDomain(hostFromUrl(href));
+  return Boolean(targetDomain) && targetDomain === pageDomain;
+}
+
+/**
  * @param {boolean} forceNewTab 批量打开多个引擎时必须强制新标签页，否则会互相覆盖
  */
-export function shouldOpenInNewTab(engine, forceNewTab = false) {
-  return Boolean(forceNewTab || engine.target !== '_self');
+export function shouldOpenInNewTab(engine, forceNewTab = false, href = currentHref()) {
+  if (forceNewTab) return true;
+  // 引擎显式配置了打开方式时以配置为准
+  if (engine.target === '_blank') return true;
+  if (engine.target === '_self') return false;
+  // 未配置时：本站链接原地跳转，其余站点开新标签页
+  return !isSameSiteUrl(engine.url, href);
 }
 
 export function openInNewTab(url) {
@@ -126,7 +148,9 @@ export function performJump(engine, keyword, settingData, forceNewTab = false) {
   const result = prepareJump(engine, keyword, {
     hideTheSameLink: settingData.HideTheSameLink,
   });
-  const newTab = shouldOpenInNewTab(engine, forceNewTab);
+  // 用实际跳转地址判断是否同站，表单目标只有 action 部分
+  const jumpUrl = result.type === 'post' ? result.action : result.url;
+  const newTab = shouldOpenInNewTab({ ...engine, url: jumpUrl }, forceNewTab);
 
   if (result.type === 'post') {
     submitPostForm(result.action, result.field, result.value, newTab ? '_blank' : '_top');

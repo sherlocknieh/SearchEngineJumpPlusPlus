@@ -59,6 +59,8 @@ src/main.js                 只做装配
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
   - `performJump` / `openAllEngines`；`HideTheSameLink` 时过滤当前站点规则
+  - 打开方式：引擎未显式配置 `target` 时，链接与当前页面同站（`isSameSiteUrl`）则原地跳转，
+    其他站点新标签页；`target: '_blank' | '_self'` 优先于该默认；批量打开始终强制新标签页
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 

@@ -21,6 +21,13 @@ export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }
 
+/** 打开方式：_blank 强制新标签页，_self 强制当前页；未设置时跟随站点默认 */
+export const ENGINE_TARGETS = ['_blank', '_self'];
+
+export function normalizeEngineTarget(value) {
+  return ENGINE_TARGETS.includes(value) ? value : '';
+}
+
 // 规范化单个搜索引擎
 export function normalizeEngine(raw) {
   if (!isPlainObject(raw)) return null;
@@ -33,8 +40,9 @@ export function normalizeEngine(raw) {
   if (action) engine.action = action;
   // 搜索类引擎必须有 url；动作引擎只需要名称
   if (!engine.url && !action) return null;
-  // 仅在新标签页以外的打开方式才记录，减少冗余字段
-  if (raw.target === '_self') engine.target = '_self';
+  // 记录显式选择的打开方式，未选择时不写字段，跳转时再按站点决定
+  const target = normalizeEngineTarget(raw.target);
+  if (target) engine.target = target;
   // 只有明确为 true 才视为隐藏，其他值一律按显示处理
   if (raw.disable === true) engine.disable = true;
 

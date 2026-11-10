@@ -167,7 +167,7 @@ describe('serializeConfig', () => {
     expect(config.engineList.cat).toEqual([
       { name: 'A', url: 'https://a.test/?q=%s', favicon: 'x', disable: true },
       // 空 url 的条目在面板阶段仍保留，交由编辑弹窗校验
-      { name: 'B', url: '' },
+      { name: 'B', url: '', target: '_blank' },
       { name: 'C', url: '', action: 'copy' },
     ]);
     expect(config.engineList.cat[0]).not.toHaveProperty('_id');
