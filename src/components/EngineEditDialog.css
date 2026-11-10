@@ -124,9 +124,9 @@
   opacity: 0.6;
 }
 
-/* 来源地址本身是链接：新标签页打开，不影响整行选用 */
+/* 来源地址本身是链接：只占文字宽度，其后的空白仍归整行，点击即选用 */
 .sej-preview-url {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
