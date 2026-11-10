@@ -145,14 +145,22 @@
 
 .sej-preview-state {
   flex: 0 0 auto;
+  /* 链接只占文字宽度，剩余空白由尾部元素吸收，大小与状态保持居右 */
+  margin-left: auto;
   opacity: 0.7;
 }
 
 /* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */
 .sej-preview-size {
   flex: 0 0 auto;
+  margin-left: auto;
   opacity: 0.55;
   font-variant-numeric: tabular-nums;
+}
+
+/* 大小与状态同时出现时由大小项吸收空白，避免两者之间被撑开 */
+.sej-preview-size + .sej-preview-state {
+  margin-left: 0;
 }
 
 /* 图标数据字段名旁的当前图标存储体积（转码后） */
