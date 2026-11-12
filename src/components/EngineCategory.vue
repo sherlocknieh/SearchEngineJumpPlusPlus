@@ -53,6 +53,11 @@ const pointer = { x: -1, y: -1 };
 // 标记为抑制状态，等指针离开触发项再恢复悬停展开
 let hoverSuppressed = false;
 
+// 指针斜向移动、高速掠过或事件抖动时，可能有一两帧落在触发项与面板之外，
+// 立即收起会让面板在穿过间隙时莫名消失；给一段宽限时间，期间落回就取消收起
+const HIDE_DELAY_MS = 120;
+let hideTimer = 0;
+
 function hitTest(el) {
   if (!el) return false;
   const rect = el.getBoundingClientRect();
@@ -211,6 +216,7 @@ function isDragScrolling() {
 
 async function show() {
   if (isDragScrolling()) return;
+  cancelHide();
   if (shown.value) {
     active.value = true;
     return;
@@ -227,12 +233,28 @@ async function show() {
   active.value = true;
 }
 
+function cancelHide() {
+  if (!hideTimer) return;
+  clearTimeout(hideTimer);
+  hideTimer = 0;
+}
+
 function scheduleHide(path) {
-  if (pinned.value || isPointerInside(path)) return;
-  hide();
+  if (pinned.value || isPointerInside(path)) {
+    cancelHide();
+    return;
+  }
+  if (hideTimer) return;
+  hideTimer = setTimeout(() => {
+    hideTimer = 0;
+    // 宽限期内指针可能已落回触发项或面板
+    if (pinned.value || isPointerInside()) return;
+    hide();
+  }, HIDE_DELAY_MS);
 }
 
 function hide() {
+  cancelHide();
   if (openCategory === hide) openCategory = null;
   active.value = false;
   shown.value = false;
@@ -316,6 +338,7 @@ function onDocMouseMove(e, path) {
   }
 
   if (pinned.value || isPointerInside(path)) {
+    cancelHide();
     active.value = true;
   } else {
     scheduleHide(path);
@@ -342,6 +365,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (openCategory === hide) openCategory = null;
+  cancelHide();
   unsubscribePointer?.();
   unsubscribePointer = null;
   scrollEl?.removeEventListener('scroll', onScrollArea);
@@ -405,8 +429,8 @@ onBeforeUnmount(() => {
           animation: 'none',
           zIndex: 100000000,
         }"
-        @mouseenter="show"
-        @mouseleave="scheduleHide"
+        @mouseenter="show()"
+        @mouseleave="scheduleHide()"
       >
         <EngineItem
           v-for="engine in engines"

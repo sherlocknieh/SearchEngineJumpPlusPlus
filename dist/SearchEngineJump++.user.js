@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.10.1756
+// @version            2026.11.12.1611
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7731,6 +7731,8 @@
 				y: -1
 			};
 			let hoverSuppressed = false;
+			const HIDE_DELAY_MS = 120;
+			let hideTimer = 0;
 			function hitTest(el) {
 				if (!el) return false;
 				const rect = el.getBoundingClientRect();
@@ -7833,6 +7835,7 @@
 			}
 			async function show() {
 				if (isDragScrolling()) return;
+				cancelHide();
 				if (shown.value) {
 					active.value = true;
 					return;
@@ -7847,11 +7850,25 @@
 				measureAndPosition();
 				active.value = true;
 			}
+			function cancelHide() {
+				if (!hideTimer) return;
+				clearTimeout(hideTimer);
+				hideTimer = 0;
+			}
 			function scheduleHide(path) {
-				if (pinned.value || isPointerInside(path)) return;
-				hide();
+				if (pinned.value || isPointerInside(path)) {
+					cancelHide();
+					return;
+				}
+				if (hideTimer) return;
+				hideTimer = setTimeout(() => {
+					hideTimer = 0;
+					if (pinned.value || isPointerInside()) return;
+					hide();
+				}, HIDE_DELAY_MS);
 			}
 			function hide() {
+				cancelHide();
 				if (openCategory === hide) openCategory = null;
 				active.value = false;
 				shown.value = false;
@@ -7911,8 +7928,10 @@
 					show();
 					return;
 				}
-				if (pinned.value || isPointerInside(path)) active.value = true;
-				else scheduleHide(path);
+				if (pinned.value || isPointerInside(path)) {
+					cancelHide();
+					active.value = true;
+				} else scheduleHide(path);
 			}
 			function onDocPointerDown(e) {
 				if (!pinned.value) return;
@@ -7931,6 +7950,7 @@
 			});
 			onBeforeUnmount(() => {
 				if (openCategory === hide) openCategory = null;
+				cancelHide();
 				unsubscribePointer?.();
 				unsubscribePointer = null;
 				scrollEl?.removeEventListener("scroll", onScrollArea);
@@ -7955,7 +7975,7 @@
 					title: pinned.value ? unref(t)("jump.searchAll", { name: __props.name }) : null,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
-				}, [__props.showIcon || pinned.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("span", _hoisted_3$8, [..._cache[0] || (_cache[0] = [createBaseVNode("svg", {
+				}, [__props.showIcon || pinned.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("span", _hoisted_3$8, [..._cache[2] || (_cache[2] = [createBaseVNode("svg", {
 					viewBox: "0 0 16 16",
 					"aria-hidden": "true"
 				}, [
@@ -7984,8 +8004,8 @@
 						animation: "none",
 						zIndex: 1e8
 					}),
-					onMouseenter: show,
-					onMouseleave: scheduleHide
+					onMouseenter: _cache[0] || (_cache[0] = ($event) => show()),
+					onMouseleave: _cache[1] || (_cache[1] = ($event) => scheduleHide())
 				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.engines, (engine) => {
 					return openBlock(), createBlock(_sfc_main$12, {
 						key: engine.name + engine.url,
