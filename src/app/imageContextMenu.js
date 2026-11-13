@@ -40,7 +40,7 @@ export function armImageContextMenu(ensureBoot) {
   function onPointerDown(e) {
     // 只处理主键/单指；右键走 onContextMenu，与原生菜单并存
     if (e.button !== 0 || !e.isPrimary) return;
-    if (!imageSearchEnabled()) return;
+    if (!hasImageEngines()) return;
 
     const hit = resolveImageHit(e.target);
     if (!hit) return;
@@ -72,9 +72,8 @@ export function armImageContextMenu(ensureBoot) {
     ensureBoot?.();
   }
 
-  function imageSearchEnabled() {
+  function hasImageEngines() {
     const settings = useSettings();
-    if (!settings.settingData?.imageSearch) return false;
     return getImageEngines(settings.settingData).length > 0;
   }
 
@@ -91,7 +90,7 @@ export function armImageContextMenu(ensureBoot) {
       return;
     }
     // 右键不拦截原生菜单：跳转条与系统菜单同时出现
-    if (!imageSearchEnabled()) return;
+    if (!hasImageEngines()) return;
     // 跳转条自身的右键交给浏览器，避免在浮层里再弹一次
     const path = e.composedPath?.() || [];
     if (path.some((node) => isOwnHostNode(node))) return;

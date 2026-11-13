@@ -43,9 +43,9 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(false);
   });
 
-  it('默认开启长按搜图，并内置搜图分类', () => {
+  it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
-    expect(config.imageSearch).toBe(true);
+    expect(config).not.toHaveProperty('imageSearch');
     // 搜图分类命名为「搜图」，紧跟「功能」分类
     expect(config.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
     expect(config.engineList.image.length).toBeGreaterThan(0);
@@ -170,13 +170,8 @@ describe('normalizeConfig', () => {
     expect(result.engineCategories).toEqual(defaults.engineCategories);
   });
 
-  it('长按搜图开关非法时回退默认值，并兼容旧的字符串模式', () => {
-    expect(normalizeConfig({ imageSearch: 'always' }, defaults).imageSearch).toBe(true);
-    expect(normalizeConfig({ imageSearch: false }, defaults).imageSearch).toBe(false);
-    // 旧配置：off 关闭，menu / alt 视为开启
-    expect(normalizeConfig({ imageSearch: 'off' }, defaults).imageSearch).toBe(false);
-    expect(normalizeConfig({ imageSearch: 'menu' }, defaults).imageSearch).toBe(true);
-    expect(normalizeConfig({ imageSearch: 'alt' }, defaults).imageSearch).toBe(true);
+  it('旧配置里的搜图开关被忽略', () => {
+    expect(normalizeConfig({ imageSearch: false }, defaults)).not.toHaveProperty('imageSearch');
   });
 
   it('旧配置缺少搜图分类时补回默认分类与引擎', () => {

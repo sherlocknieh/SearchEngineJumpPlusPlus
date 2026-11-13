@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0403
+// @version            2026.11.14.0411
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5823,8 +5823,6 @@
 			"settings.defaultOpenTargetTip": "引擎未单独设置打开方式时使用",
 			"settings.defaultOpenTargetBlank": "新标签页",
 			"settings.defaultOpenTargetSelf": "当前页",
-			"settings.imageSearch": "长按搜图",
-			"settings.imageSearchTip": "按住图片（手机长按）或右键时用「图片」分类的引擎搜索图片链接，支持背景图；右键不拦截原生菜单",
 			"settings.language": "语言",
 			"settings.languageAuto": "跟随浏览器",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
@@ -5956,8 +5954,6 @@
 			"settings.defaultOpenTargetTip": "Used when an engine has no open mode of its own",
 			"settings.defaultOpenTargetBlank": "New tab",
 			"settings.defaultOpenTargetSelf": "Current tab",
-			"settings.imageSearch": "Long-press search",
-			"settings.imageSearchTip": "Hold an image (long-press on phones) or right-click it to search its URL with the Image category engines; background images are supported and the native menu is kept",
 			"settings.language": "Language",
 			"settings.languageAuto": "Auto (browser)",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
@@ -6159,11 +6155,6 @@
 	function isBuiltinCategory(category) {
 		return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 	}
-	function normalizeImageSearch(value) {
-		if (typeof value === "boolean") return value;
-		if (typeof value === "string") return value !== "off";
-		return true;
-	}
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
@@ -6216,7 +6207,6 @@
 		"selectSearchInInput",
 		"selectionFollowPointer",
 		"defaultOpenTarget",
-		"imageSearch",
 		"language"
 	];
 	function createDefaultConfig() {
@@ -6226,7 +6216,6 @@
 			selectionFollowPointer: false,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
-			imageSearch: true,
 			language: "auto",
 			engineCategories: engines_default.engineCategories.map((entry) => entry.slice()),
 			engineList: Object.fromEntries(Object.entries(engines_default.engineList).map(([key, engines]) => [key, engines.map((engine) => ({ ...engine }))]))
@@ -6240,10 +6229,6 @@
 			if (key === "language") continue;
 			if (key === "defaultOpenTarget") {
 				settings[key] = normalizeDefaultOpenTarget(data[key] ?? defaults[key]);
-				continue;
-			}
-			if (key === "imageSearch") {
-				settings[key] = normalizeImageSearch(data[key] ?? defaults[key]);
 				continue;
 			}
 			settings[key] = typeof data[key] === "boolean" ? data[key] : defaults[key];
@@ -10164,8 +10149,8 @@
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17$1 = ["title"];
-	var _hoisted_18$1 = {
+	var _hoisted_17 = ["title"];
+	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -10360,7 +10345,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10971,11 +10956,9 @@
 	var _hoisted_11 = ["value"];
 	var _hoisted_12 = { value: "_blank" };
 	var _hoisted_13 = { value: "_self" };
-	var _hoisted_14 = ["title"];
-	var _hoisted_15 = ["checked"];
-	var _hoisted_16 = { id: "xin-language" };
-	var _hoisted_17 = ["value"];
-	var _hoisted_18 = { value: "auto" };
+	var _hoisted_14 = { id: "xin-language" };
+	var _hoisted_15 = ["value"];
+	var _hoisted_16 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11024,23 +11007,15 @@
 						value: __props.options.defaultOpenTarget,
 						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
 					}, [createBaseVNode("option", _hoisted_12, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_13, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_11)])], 8, _hoisted_10),
-					createBaseVNode("span", {
-						id: "xin-imageSearch",
-						title: unref(t)("settings.imageSearchTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.imageSearch")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.imageSearch,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
-					}, null, 40, _hoisted_15)])], 8, _hoisted_14),
-					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+					createBaseVNode("span", _hoisted_14, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_17)])])
+						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_15)])])
 				]);
 			};
 		}
@@ -11731,7 +11706,7 @@
 		}
 		function onPointerDown(e) {
 			if (e.button !== 0 || !e.isPrimary) return;
-			if (!imageSearchEnabled()) return;
+			if (!hasImageEngines()) return;
 			const hit = resolveImageHit(e.target);
 			if (!hit) return;
 			startX = e.clientX;
@@ -11756,10 +11731,8 @@
 			openImageSearch(imageUrl, element);
 			ensureBoot?.();
 		}
-		function imageSearchEnabled() {
-			const settings = useSettings();
-			if (!settings.settingData?.imageSearch) return false;
-			return getImageEngines(settings.settingData).length > 0;
+		function hasImageEngines() {
+			return getImageEngines(useSettings().settingData).length > 0;
 		}
 		function onSuppress(e) {
 			if (performance.now() > suppressUntil) return;
@@ -11771,7 +11744,7 @@
 				onSuppress(e);
 				return;
 			}
-			if (!imageSearchEnabled()) return;
+			if (!hasImageEngines()) return;
 			if ((e.composedPath?.() || []).some((node) => isOwnHostNode(node))) return;
 			const hit = resolveImageHit(e.target);
 			if (hit) showImageSearch(hit.url, hit.element);

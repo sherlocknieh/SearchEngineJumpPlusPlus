@@ -23,19 +23,6 @@ export function isBuiltinCategory(category) {
   return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 }
 
-/** 长按图片搜图默认开启：桌面按住鼠标、手机长按都能触发 */
-export const DEFAULT_IMAGE_SEARCH = true;
-
-/**
- * 长按搜图开关的规范化。
- * 兼容旧配置里的字符串模式：off 视为关闭，其余（menu / alt）视为开启。
- */
-export function normalizeImageSearch(value) {
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'string') return value !== 'off';
-  return DEFAULT_IMAGE_SEARCH;
-}
-
 export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }

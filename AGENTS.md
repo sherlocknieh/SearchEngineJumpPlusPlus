@@ -77,7 +77,7 @@ src/main.js                 只做装配
 - 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
   再向上 4 层找 `background-image`，忽略渐变与 `data:` 图）与 `isLongPressMove`（位移超阈值取消）
 - 引擎来源：内置「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；
-  `imageSearch` 关闭或没有可用引擎时不接管
+  没有可用引擎时不接管
 - 呈现：复用跳转条（`JumpBar` 的图片模式），`stores/imageSearch.js` 提供 `{ active, imageUrl }`；
   只显示「搜图」分类并忽略其隐藏状态，顶部缩略图用 `--sej-image-thumb`；
   点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
