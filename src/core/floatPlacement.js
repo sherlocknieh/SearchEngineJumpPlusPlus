@@ -3,7 +3,7 @@
  *
  * 跳转条与选区/图片的右上角对齐，并收进视口：
  * 上方放不下时改到下方，右侧放不下时向左对齐，始终留出最小边距。
- * 图片条优先放进图片内部左上角，图片尺寸不足时放到图片上方居中。
+ * 图片条优先放进图片内部顶部居中，图片尺寸不足时放到图片上方居中。
  */
 
 /** 跳转条与锚点矩形之间的间距 */
@@ -45,7 +45,7 @@ function centeredLeft(rect, barWidth, viewWidth, gap) {
 }
 
 /**
- * 把跳转条放进锚点矩形内部左上角。
+ * 把跳转条放进锚点矩形内部顶部居中。
  * 图片放不下时返回 null，调用方退回 placeAboveRect 的外部定位。
  *
  * @param {object} options
@@ -66,9 +66,7 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
   const rectHeight = Math.max(0, rect.bottom - rect.top);
   if (rectWidth < barWidth + gap * 2 || rectHeight < barHeight + gap * 2) return null;
 
-  // 左边缘与图片左侧留出间距，图片左侧超出视口时收进视口
-  const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
-  const left = Math.min(Math.max(rect.left + gap, gap), maxLeft);
+  const left = centeredLeft(rect, barWidth, viewWidth, gap);
 
   // 顶部与图片顶部留出间距，图片顶部超出视口时收进视口
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);

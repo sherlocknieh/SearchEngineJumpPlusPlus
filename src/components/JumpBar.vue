@@ -366,13 +366,15 @@ function syncFloatPlacement() {
   if (!bar || !rect) {
     containerEl.value?.classList.remove('sej-follow-anchor');
     containerEl.value?.classList.add('sej-top');
-    // 图标模式在顶部也按左边定位：图标钉在视口顶部居中，搜索条从它向右展开
+    // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中，
+    // 搜图条按展开后的整条居中，配合图标态的对称展开
     if (iconMode.value && bar) {
       const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
       const viewportWidth = document.documentElement.clientWidth;
+      const centerOffset = isImageSearch.value ? width / 2 : 15;
       const left = Math.max(
         PLACEMENT_GAP,
-        Math.min(viewportWidth / 2 - 15, viewportWidth - PLACEMENT_GAP - width),
+        Math.min(viewportWidth / 2 - centerOffset, viewportWidth - PLACEMENT_GAP - width),
       );
       floatStyle.value = {
         right: 'auto',
@@ -394,7 +396,7 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 图片条放进图片内部左上角，图片太小放不下时放到图片上方居中
+  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
   const imagePlacement = isImageSearch.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
@@ -720,6 +722,7 @@ onBeforeUnmount(() => {
         'sej-top': isFloat && !anchorRect,
         'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
+        'sej-image-search': isImageSearch,
         'sej-compact': compactBar,
         'sej-icon-mode': iconMode,
         'sej-icon-open': iconMode && iconExpanded,
@@ -889,6 +892,32 @@ onBeforeUnmount(() => {
 
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
+}
+
+/* 搜图条：收起时图标落在整条中心，展开时以中心为轴向两侧对称长大，展开后仍居中。
+   transform 与宽度使用同一缓动，两者合成后中心位置始终不变 */
+#sej-container.sej-image-search.sej-icon-mode {
+  transition:
+    width 0.16s ease-out,
+    transform 0.16s ease-out,
+    background-color 0.16s ease-out,
+    backdrop-filter 0.16s ease-out;
+}
+
+#sej-container.sej-image-search.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
+  transform: translateX(
+    calc((var(--sej-icon-open-width, var(--sej-icon-size)) - var(--sej-icon-size)) / 2)
+  );
+}
+
+#sej-container.sej-image-search.sej-icon-mode.sej-icon-open {
+  transform: none;
+}
+
+/* 图标钉在整条中心，展开过程中不随左右边缘移动 */
+#sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */
