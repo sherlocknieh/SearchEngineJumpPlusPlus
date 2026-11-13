@@ -79,21 +79,7 @@ onBeforeUnmount(() => {
     :style="position"
     @contextmenu.prevent
   >
-    <div class="sej-image-menu-head">
-      <img class="sej-image-menu-thumb" :src="imageSearch.imageUrl" alt="" />
-      <span>{{ t('imageSearch.title') }}</span>
-    </div>
-    <a
-      v-for="engine in engines"
-      :key="engine.name + engine.url"
-      class="sej-engine sej-image-menu-item"
-      role="menuitem"
-      @click.prevent.stop="onJump(engine)"
-    >
-      <img v-if="engine.icon" class="sej-engine-icon" :src="engine.icon" alt="" />
-      <span>{{ localizeEngineName(engine.name) }}</span>
-    </a>
-    <!-- 一键打开全部识图引擎；只有一个引擎时等同于上面的条目，无需重复 -->
+    <!-- 一键打开全部识图引擎；只有一个引擎时等同于下面的条目，无需重复 -->
     <a
       v-if="engines.length > 1"
       class="sej-engine sej-image-menu-item sej-image-menu-all"
@@ -110,6 +96,16 @@ onBeforeUnmount(() => {
         </svg>
       </span>
       <span>{{ t('imageSearch.searchAll') }}</span>
+    </a>
+    <a
+      v-for="engine in engines"
+      :key="engine.name + engine.url"
+      class="sej-engine sej-image-menu-item"
+      role="menuitem"
+      @click.prevent.stop="onJump(engine)"
+    >
+      <img v-if="engine.icon" class="sej-engine-icon" :src="engine.icon" alt="" />
+      <span>{{ localizeEngineName(engine.name) }}</span>
     </a>
   </div>
 </template>
@@ -140,24 +136,6 @@ onBeforeUnmount(() => {
   animation: sej-image-menu-in 0.1s ease-out;
 }
 
-#sej-image-menu .sej-image-menu-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 4px 8px 6px;
-  font-weight: 600;
-  opacity: 0.75;
-}
-
-#sej-image-menu .sej-image-menu-thumb {
-  width: 28px;
-  height: 28px;
-  flex: 0 0 auto;
-  object-fit: cover;
-  border-radius: 6px;
-  background: var(--sej-surface-2);
-}
-
 #sej-image-menu .sej-image-menu-item {
   display: flex;
   justify-content: flex-start;
@@ -173,16 +151,16 @@ onBeforeUnmount(() => {
   margin-top: 1px;
 }
 
-/* 一键搜索与单独引擎之间加分隔线，避免误点 */
+/* 一键搜索固定在顶部，与下面的单个引擎之间加分隔线，避免误点 */
 #sej-image-menu .sej-image-menu-all {
   position: relative;
-  margin-top: 5px;
+  margin-bottom: 5px;
 }
 
-#sej-image-menu .sej-image-menu-all::before {
+#sej-image-menu .sej-image-menu-all::after {
   content: '';
   position: absolute;
-  top: -3px;
+  bottom: -3px;
   left: 6px;
   right: 6px;
   height: 1px;

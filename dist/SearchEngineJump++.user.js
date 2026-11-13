@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2319
+// @version            2026.11.13.2322
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7754,7 +7754,7 @@
 		class: "sej-category-search-icon",
 		"aria-hidden": "true"
 	};
-	var _hoisted_4$9 = ["src"];
+	var _hoisted_4$8 = ["src"];
 	var pinnedCategory = null;
 	var openCategory = null;
 	var anchorSeq = 0;
@@ -8054,7 +8054,7 @@
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_4$9)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$10), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
+				}, null, 8, _hoisted_4$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$10), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
 					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
@@ -8106,7 +8106,7 @@
 	var _hoisted_1$8 = ["aria-hidden"];
 	var _hoisted_2$8 = { class: "sej-category-title" };
 	var _hoisted_3$8 = ["title", "aria-label"];
-	var _hoisted_4$8 = ["title", "aria-label"];
+	var _hoisted_4$7 = ["title", "aria-label"];
 	var PAGE_STEP_RATIO = .875;
 	var PAGE_SCROLL_DURATION = 150;
 	var _sfc_main$10 = {
@@ -8355,7 +8355,7 @@
 						title: unref(t)("bar.scrollRight"),
 						"aria-label": unref(t)("bar.scrollRight"),
 						onClick: _cache[4] || (_cache[4] = withModifiers(($event) => scrollBar(1), ["stop"]))
-					}, null, 8, _hoisted_4$8)
+					}, null, 8, _hoisted_4$7)
 				], 32), createVNode(_sfc_main$11)], 10, _hoisted_1$8)) : createCommentVNode("", true);
 			};
 		}
@@ -9930,8 +9930,8 @@
 		class: "sej-field"
 	};
 	var _hoisted_3$7 = ["placeholder", "disabled"];
-	var _hoisted_4$7 = { class: "sej-field" };
-	var _hoisted_5$7 = ["placeholder", "disabled"];
+	var _hoisted_4$6 = { class: "sej-field" };
+	var _hoisted_5$6 = ["placeholder", "disabled"];
 	var _hoisted_6$5 = {
 		key: 1,
 		class: "sej-field"
@@ -10109,12 +10109,12 @@
 						disabled: __props.busy,
 						onBlur: applySearchTemplate
 					}, null, 40, _hoisted_3$7), [[vModelText, form.url]])])) : createCommentVNode("", true),
-					createBaseVNode("label", _hoisted_4$7, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
+					createBaseVNode("label", _hoisted_4$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
 						"onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => form.name = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
 						onInput: markTitleEdited
-					}, null, 40, _hoisted_5$7), [[vModelText, form.name]])]),
+					}, null, 40, _hoisted_5$6), [[vModelText, form.name]])]),
 					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_6$5, [
 						createBaseVNode("span", null, toDisplayString(unref(t)("engine.iconSrc")), 1),
 						createBaseVNode("div", _hoisted_7$4, [withDirectives(createBaseVNode("input", {
@@ -10240,8 +10240,8 @@
 	};
 	var _hoisted_2$6 = { class: "sej-field" };
 	var _hoisted_3$6 = ["placeholder", "disabled"];
-	var _hoisted_4$6 = { class: "sej-dialog-actions" };
-	var _hoisted_5$6 = ["disabled"];
+	var _hoisted_4$5 = { class: "sej-dialog-actions" };
+	var _hoisted_5$5 = ["disabled"];
 	var _hoisted_6$4 = ["disabled"];
 	var _hoisted_7$3 = ["disabled"];
 	var _sfc_main$8 = {
@@ -10301,13 +10301,13 @@
 						disabled: __props.busy,
 						onKeydown: withKeys(submit, ["enter"])
 					}, null, 40, _hoisted_3$6), [[vModelText, value.value]])]),
-					createBaseVNode("div", _hoisted_4$6, [
+					createBaseVNode("div", _hoisted_4$5, [
 						createBaseVNode("button", {
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
 							onClick: _cache[1] || (_cache[1] = ($event) => _ctx.$emit("delete"))
-						}, toDisplayString(unref(t)("category.delete")), 9, _hoisted_5$6),
+						}, toDisplayString(unref(t)("category.delete")), 9, _hoisted_5$5),
 						createBaseVNode("button", {
 							type: "button",
 							class: "addItemBoxBtn iqxin-closeBtn",
@@ -10328,8 +10328,8 @@
 	var _hoisted_1$5 = ["aria-label"];
 	var _hoisted_2$5 = { class: "sej-config-textarea" };
 	var _hoisted_3$5 = { class: "sej-dialog-actions" };
-	var _hoisted_4$5 = ["title"];
-	var _hoisted_5$5 = {
+	var _hoisted_4$4 = ["title"];
+	var _hoisted_5$4 = {
 		key: 1,
 		class: "sej-import-mode"
 	};
@@ -10439,8 +10439,8 @@
 							name: "sej-import-mode",
 							value: "merge",
 							"onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => importMode.value = $event)
-						}, null, 512), [[vModelRadio, importMode.value]]), createTextVNode(" " + toDisplayString(unref(t)("config.mergeImport")), 1)], 8, _hoisted_4$5)) : createCommentVNode("", true),
-						__props.imported ? (openBlock(), createElementBlock("label", _hoisted_5$5, [withDirectives(createBaseVNode("input", {
+						}, null, 512), [[vModelRadio, importMode.value]]), createTextVNode(" " + toDisplayString(unref(t)("config.mergeImport")), 1)], 8, _hoisted_4$4)) : createCommentVNode("", true),
+						__props.imported ? (openBlock(), createElementBlock("label", _hoisted_5$4, [withDirectives(createBaseVNode("input", {
 							type: "radio",
 							name: "sej-import-mode",
 							value: "overwrite",
@@ -10469,8 +10469,8 @@
 		"title"
 	];
 	var _hoisted_3$4 = { class: "iqxin-pointer-events" };
-	var _hoisted_4$4 = ["innerHTML"];
-	var _hoisted_5$4 = ["title", "innerHTML"];
+	var _hoisted_4$3 = ["innerHTML"];
+	var _hoisted_5$3 = ["title", "innerHTML"];
 	var _hoisted_6$2 = ["title", "innerHTML"];
 	var _hoisted_7$2 = ["data-sej-drag-el"];
 	var _hoisted_8$2 = [
@@ -10563,13 +10563,13 @@
 					createBaseVNode("span", {
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
-					}, null, 8, _hoisted_4$4),
+					}, null, 8, _hoisted_4$3),
 					createBaseVNode("span", {
 						class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": !__props.category.enabled }]),
 						title: __props.category.enabled ? unref(t)("common.hide") : unref(t)("common.show"),
 						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle-category", __props.ci), ["stop"])),
 						innerHTML: __props.category.enabled ? unref(EYE) : unref(EYE_OFF)
-					}, null, 10, _hoisted_5$4),
+					}, null, 10, _hoisted_5$3),
 					!__props.hideDelete ? (openBlock(), createElementBlock("span", {
 						key: 0,
 						class: "sej-hover-delete",
@@ -10641,8 +10641,8 @@
 		id: "xin-modification",
 		class: "sej-config-box"
 	};
-	var _hoisted_4$3 = ["title"];
-	var _hoisted_5$3 = ["title"];
+	var _hoisted_4$2 = ["title"];
+	var _hoisted_5$2 = ["title"];
 	var _hoisted_6$1 = ["title"];
 	var _hoisted_7$1 = { class: "sej-footer-links" };
 	var _hoisted_8$1 = ["title"];
@@ -10685,7 +10685,7 @@
 							cx: "12",
 							cy: "12",
 							r: "3"
-						}), createBaseVNode("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" })], -1)), createTextVNode(" " + toDisplayString(unref(t)("settings.editConfig")), 1)], 8, _hoisted_4$3),
+						}), createBaseVNode("path", { d: "M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" })], -1)), createTextVNode(" " + toDisplayString(unref(t)("settings.editConfig")), 1)], 8, _hoisted_4$2),
 						_cache[7] || (_cache[7] = createBaseVNode("span", {
 							class: "sej-config-sep",
 							"aria-hidden": "true"
@@ -10709,7 +10709,7 @@
 							createBaseVNode("path", { d: "M12 21V9" }),
 							createBaseVNode("path", { d: "m7 14 5-5 5 5" }),
 							createBaseVNode("path", { d: "M5 3h14" })
-						], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.import")), 1)], 8, _hoisted_5$3),
+						], -1)), createTextVNode(" " + toDisplayString(unref(t)("config.import")), 1)], 8, _hoisted_5$2),
 						_cache[8] || (_cache[8] = createBaseVNode("span", {
 							class: "sej-config-sep",
 							"aria-hidden": "true"
@@ -10761,8 +10761,8 @@
 	var _hoisted_1$2 = { class: "sej-footer-options" };
 	var _hoisted_2$2 = { id: "xin-selectSearch" };
 	var _hoisted_3$2 = ["checked"];
-	var _hoisted_4$2 = ["title"];
-	var _hoisted_5$2 = ["checked"];
+	var _hoisted_4$1 = ["title"];
+	var _hoisted_5$1 = ["checked"];
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
 	var _hoisted_8 = ["title"];
@@ -10802,7 +10802,7 @@
 						type: "checkbox",
 						checked: __props.options.selectSearchInInput,
 						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
-					}, null, 40, _hoisted_5$2)])], 8, _hoisted_4$2), [[vShow, __props.options.selectSearch]]),
+					}, null, 40, _hoisted_5$1)])], 8, _hoisted_4$1), [[vShow, __props.options.selectSearch]]),
 					createBaseVNode("span", {
 						id: "xin-centerDisplay",
 						title: unref(t)("settings.centerTip")
@@ -10862,8 +10862,8 @@
 		"aria-label",
 		"onKeydown"
 	];
-	var _hoisted_4$1 = { id: "btnEle" };
-	var _hoisted_5$1 = { class: "btnEleLayer" };
+	var _hoisted_4 = { id: "btnEle" };
+	var _hoisted_5 = { class: "btnEleLayer" };
 	var _sfc_main$3 = {
 		__name: "SettingPanel",
 		setup(__props) {
@@ -11127,7 +11127,7 @@
 						onClick: addCategory,
 						onKeydown: [withKeys(addCategory, ["enter"]), withKeys(withModifiers(addCategory, ["prevent"]), ["space"])]
 					}, [..._cache[7] || (_cache[7] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_3$1)], 32),
-					createBaseVNode("div", _hoisted_4$1, [createBaseVNode("div", _hoisted_5$1, [createVNode(_sfc_main$4, {
+					createBaseVNode("div", _hoisted_4, [createBaseVNode("div", _hoisted_5, [createVNode(_sfc_main$4, {
 						options: unref(draft),
 						onUpdateOption: updateOption
 					}, null, 8, ["options"]), createVNode(_sfc_main$5, {
@@ -11243,14 +11243,12 @@
 		return list.filter((engine) => !engine.disable && engine.url);
 	}
 	var _hoisted_1 = ["aria-label"];
-	var _hoisted_2 = { class: "sej-image-menu-head" };
+	var _hoisted_2 = ["onClick"];
 	var _hoisted_3 = ["src"];
-	var _hoisted_4 = ["onClick"];
-	var _hoisted_5 = ["src"];
 	var _sfc_main$2 = {
 		__name: "ImageSearchMenu",
 		setup(__props) {
-			addStyle("\n#sej-image-menu {\n  position: fixed;\n  z-index: 100000001;\n  min-width: 148px;\n  max-width: min(280px, calc(100vw - 16px));\n  padding: 4px;\n  box-sizing: border-box;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  border-radius: var(--sej-radius-menu, 12px);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  overflow: hidden;\n  user-select: none;\n  animation: sej-image-menu-in 0.1s ease-out;\n}\n\n#sej-image-menu .sej-image-menu-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 4px 8px 6px;\n  font-weight: 600;\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-thumb {\n  width: 28px;\n  height: 28px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  border-radius: 6px;\n  background: var(--sej-surface-2);\n}\n\n#sej-image-menu .sej-image-menu-item {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n#sej-image-menu .sej-image-menu-item + .sej-image-menu-item {\n  margin-top: 1px;\n}\n\n/* 一键搜索与单独引擎之间加分隔线，避免误点 */\n#sej-image-menu .sej-image-menu-all {\n  position: relative;\n  margin-top: 5px;\n}\n\n#sej-image-menu .sej-image-menu-all::before {\n  content: '';\n  position: absolute;\n  top: -3px;\n  left: 6px;\n  right: 6px;\n  height: 1px;\n  background: var(--border-color-sej);\n}\n\n/* 图标槽与引擎图标的 16px 保持一致，文字不因有无图标而错位 */\n#sej-image-menu .sej-image-menu-all-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  color: var(--font-color-qxin);\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-all-icon svg {\n  width: 100%;\n  height: 100%;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n@keyframes sej-image-menu-in {\n  from {\n    opacity: 0;\n    transform: scale(0.98);\n  }\n}\n");
+			addStyle("\n#sej-image-menu {\n  position: fixed;\n  z-index: 100000001;\n  min-width: 148px;\n  max-width: min(280px, calc(100vw - 16px));\n  padding: 4px;\n  box-sizing: border-box;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  border-radius: var(--sej-radius-menu, 12px);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  overflow: hidden;\n  user-select: none;\n  animation: sej-image-menu-in 0.1s ease-out;\n}\n\n#sej-image-menu .sej-image-menu-item {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n#sej-image-menu .sej-image-menu-item + .sej-image-menu-item {\n  margin-top: 1px;\n}\n\n/* 一键搜索固定在顶部，与下面的单个引擎之间加分隔线，避免误点 */\n#sej-image-menu .sej-image-menu-all {\n  position: relative;\n  margin-bottom: 5px;\n}\n\n#sej-image-menu .sej-image-menu-all::after {\n  content: '';\n  position: absolute;\n  bottom: -3px;\n  left: 6px;\n  right: 6px;\n  height: 1px;\n  background: var(--border-color-sej);\n}\n\n/* 图标槽与引擎图标的 16px 保持一致，文字不因有无图标而错位 */\n#sej-image-menu .sej-image-menu-all-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  color: var(--font-color-qxin);\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-all-icon svg {\n  width: 100%;\n  height: 100%;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n@keyframes sej-image-menu-in {\n  from {\n    opacity: 0;\n    transform: scale(0.98);\n  }\n}\n");
 			const data = useSettings().settingData;
 			const engines = computed(() => getImageEngines(data).map((engine) => ({
 				...engine,
@@ -11313,32 +11311,24 @@
 					"aria-label": unref(t)("imageSearch.title"),
 					style: normalizeStyle(position.value),
 					onContextmenu: _cache[0] || (_cache[0] = withModifiers(() => {}, ["prevent"]))
-				}, [
-					createBaseVNode("div", _hoisted_2, [createBaseVNode("img", {
-						class: "sej-image-menu-thumb",
-						src: unref(imageSearch).imageUrl,
-						alt: ""
-					}, null, 8, _hoisted_3), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.title")), 1)]),
-					(openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
-						return openBlock(), createElementBlock("a", {
-							key: engine.name + engine.url,
-							class: "sej-engine sej-image-menu-item",
-							role: "menuitem",
-							onClick: withModifiers(($event) => onJump(engine), ["prevent", "stop"])
-						}, [engine.icon ? (openBlock(), createElementBlock("img", {
-							key: 0,
-							class: "sej-engine-icon",
-							src: engine.icon,
-							alt: ""
-						}, null, 8, _hoisted_5)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_4);
-					}), 128)),
-					engines.value.length > 1 ? (openBlock(), createElementBlock("a", {
-						key: 0,
-						class: "sej-engine sej-image-menu-item sej-image-menu-all",
+				}, [engines.value.length > 1 ? (openBlock(), createElementBlock("a", {
+					key: 0,
+					class: "sej-engine sej-image-menu-item sej-image-menu-all",
+					role: "menuitem",
+					onClick: withModifiers(onJumpAll, ["prevent", "stop"])
+				}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.searchAll")), 1)])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
+					return openBlock(), createElementBlock("a", {
+						key: engine.name + engine.url,
+						class: "sej-engine sej-image-menu-item",
 						role: "menuitem",
-						onClick: withModifiers(onJumpAll, ["prevent", "stop"])
-					}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.searchAll")), 1)])) : createCommentVNode("", true)
-				], 44, _hoisted_1);
+						onClick: withModifiers(($event) => onJump(engine), ["prevent", "stop"])
+					}, [engine.icon ? (openBlock(), createElementBlock("img", {
+						key: 0,
+						class: "sej-engine-icon",
+						src: engine.icon,
+						alt: ""
+					}, null, 8, _hoisted_3)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_2);
+				}), 128))], 44, _hoisted_1);
 			};
 		}
 	};
