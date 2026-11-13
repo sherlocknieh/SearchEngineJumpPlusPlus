@@ -80,7 +80,7 @@ src/main.js                 只做装配
 - 引擎来源：内置「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；
   没有可用引擎时不接管
 - 呈现：复用跳转条（`JumpBar` 的图片模式），`stores/imageSearch.js` 提供 `{ active, imageUrl }`；
-  只显示「搜图」分类，顶部缩略图用 `--sej-image-thumb`；
+  只显示「搜图」分类；与划词共用图标模式，搜图始终以图标收起、悬停或点击图标展开；
   点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
 - 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式只显示「搜图」分类，
   普通模式按显示开关决定且永不显示「搜图」分类；该分类的显示状态固定为显示，设置里不提供隐藏按钮

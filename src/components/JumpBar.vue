@@ -84,12 +84,16 @@ const isImageSearch = ref(false);
 const compactBar = computed(
   () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
 );
-// 图标模式：划词后只露出一个图标，指针停到图标上才展开整条搜索条；
-// 搜图条需要显示图片缩略图与引擎，始终维持整条
-const iconMode = computed(() => isFloat && !isImageSearch.value && Boolean(data.selectionIcon));
+// 图标模式：划词或长按搜图后只露出一个图标，指针停到图标上才展开整条搜索条；
+// 搜图是长按唤起的临时浮层，始终以图标收起，避免整条盖住被搜的图片
+const iconMode = computed(
+  () => isFloat && (isImageSearch.value || Boolean(data.selectionIcon)),
+);
 // 展开态切换只改类名，宽度由 CSS 过渡；展开后的整条宽度写在 CSS 变量里
 const iconExpanded = ref(false);
 const iconOpenWidth = ref(0);
+// 展开后的整条高度：收起态据此把图标下移到整条的中心，两者天然同心
+const iconOpenHeight = ref(0);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -130,12 +134,12 @@ let insertTarget = null;
 let insertPosition = 'beforeend';
 let resolvedStyle = '';
 
-// 浮层条的定位坐标与图片缩略图共用同一个 style 绑定
+// 浮层条的定位坐标与图标展开宽度共用同一个 style 绑定
 const barStyle = computed(() => {
   const style = { ...floatStyle.value };
-  if (isImageSearch.value) style['--sej-image-thumb'] = `url(${imageSearch.imageUrl})`;
   // 图标模式展开的宽度目标：收起时按图标宽度渲染，CSS 过渡到整条宽度
   if (iconOpenWidth.value) style['--sej-icon-open-width'] = `${iconOpenWidth.value}px`;
+  if (iconOpenHeight.value) style['--sej-icon-open-height'] = `${iconOpenHeight.value}px`;
   return style;
 });
 
@@ -463,6 +467,7 @@ async function showFloatBar() {
     if (token !== showToken) return;
     iconFullSize = full;
     iconOpenWidth.value = full?.width ?? 0;
+    iconOpenHeight.value = full?.height ?? 0;
   }
   syncFloatPlacement();
   barVisible.value = true;
@@ -493,6 +498,7 @@ function hideFloatBar() {
   barVisible.value = false;
   shownKeyword = '';
   iconFullSize = null;
+  iconOpenHeight.value = 0;
 }
 
 // 当前显示的关键词：用于区分「新选区」与「同一条搜索条的重复显示」
@@ -626,10 +632,10 @@ onMounted(async () => {
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
   if (isSelectSearch.value) onSelectionChange();
-  // 图片模式下由长按触发，挂载后直接显示并定位
+  // 图片模式下由长按触发，挂载后按图标模式量好展开尺寸再显示
   if (isImageSearch.value) {
     refreshAnchor(null);
-    barVisible.value = true;
+    showFloatBar();
   }
 
   if (matchedRule) {
@@ -714,7 +720,6 @@ onBeforeUnmount(() => {
         'sej-top': isFloat && !anchorRect,
         'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
-        'sej-image-search': isImageSearch,
         'sej-compact': compactBar,
         'sej-icon-mode': iconMode,
         'sej-icon-open': iconMode && iconExpanded,
@@ -845,18 +850,21 @@ onBeforeUnmount(() => {
 /* 图标模式：收起时只占图标一格，展开时把宽度过渡到脚本量好的整条宽度；
    展开态与测量态都不覆盖普通搜索条的内边距、边框、背景与阴影 */
 #sej-container.selectSearch.sej-icon-mode {
+  --sej-icon-size: 30px;
   justify-content: flex-start;
   transition:
     width 0.16s ease-out,
-    margin-top 0.16s ease-out,
     background-color 0.16s ease-out,
     backdrop-filter 0.16s ease-out;
 }
 
-/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界 */
+/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界。
+   盒子下移（整条高 - 图标高）/2，图标圆心正好落在展开后整条的中心，
+   展开前后搜索项的位置不移动 */
 #sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
-  width: 30px !important;
-  height: 30px;
+  width: var(--sej-icon-size) !important;
+  height: var(--sej-icon-size);
+  margin-top: calc((var(--sej-icon-open-height, var(--sej-icon-size)) - var(--sej-icon-size)) / 2);
   border: 0;
   background-color: transparent;
   backdrop-filter: none;
@@ -881,16 +889,6 @@ onBeforeUnmount(() => {
 
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
-}
-
-/* 展开后整条比图标高 6px，上移 3px 让搜索项与图标同心 */
-#sej-container.selectSearch.sej-icon-mode.sej-icon-open {
-  margin-top: -3px;
-}
-
-/* 顶部居中时同样上移，同时抬高站位，避免整条顶边被视口裁掉 */
-#sej-container.selectSearch.sej-icon-mode.sej-top {
-  top: 5px;
 }
 
 /* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */
@@ -1165,26 +1163,6 @@ onBeforeUnmount(() => {
   transform: none;
   visibility: visible;
   pointer-events: auto;
-}
-
-/*
- * 图片模式：长按后直接显示，并显示当前要搜索的图片缩略图，
- * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。
- */
-#sej-container.sej-image-search {
-  padding-left: 6px;
-}
-
-#sej-container.sej-image-search::before {
-  content: '';
-  flex: 0 0 auto;
-  width: 20px;
-  height: 20px;
-  margin-right: 4px;
-  border-radius: 4px;
-  background: var(--sej-surface-2) center / cover no-repeat;
-  background-image: var(--sej-image-thumb, none);
-  box-shadow: inset 0 0 0 1px var(--border-color-sej);
 }
 
 .sej-category-title {
