@@ -40,7 +40,7 @@ import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
-import { SEARCH } from '../assets/icons.js';
+import scriptIcon from '../../assets/icon.svg?raw';
 import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';
@@ -688,7 +688,7 @@ onBeforeUnmount(() => {
       :tabindex="iconExpanded ? -1 : 0"
       @click.stop="setIconExpanded(true)"
       @focus="setIconExpanded(true)"
-      v-html="SEARCH"
+      v-html="scriptIcon"
     ></button>
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
@@ -794,10 +794,17 @@ onBeforeUnmount(() => {
   gap: 0;
 }
 
-/* icon 模式：收起时只保留触发图标，展开后恢复正常搜索条 */
+/* icon 模式：收起时只保留脚本 logo，展开后恢复正常搜索条 */
 #sej-container.sej-icon-mode.sej-icon-collapsed {
-  padding: 4px;
+  padding: 0;
+  border-color: transparent;
+  /* logo 自带白色底与配色，容器不再铺底色，避免出现双层圆 */
+  background: none;
+  backdrop-filter: none;
   border-radius: 50%;
+  box-shadow:
+    0 1px 2px hsla(0, 0%, 0%, 0.12),
+    0 6px 16px -8px hsla(0, 0%, 0%, 0.4);
 }
 
 #sej-container.sej-icon-mode.sej-icon-collapsed > .sej-scroll-viewport,
@@ -807,37 +814,35 @@ onBeforeUnmount(() => {
 
 /* 展开后图标留在最左侧作为当前模式标识，指针始终落在整条内，不会因元素消失而误收起 */
 #sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
-  margin-right: 2px;
+  width: 18px;
+  height: 18px;
+  margin: 0 4px 0 2px;
   cursor: default;
-}
-
-#sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger:hover {
-  background: none;
 }
 
 .sej-icon-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
   padding: 0;
   border: 0;
   border-radius: 50%;
   appearance: none;
   background: none;
-  color: inherit;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  transition: transform 0.12s ease-out;
 }
 
 .sej-icon-trigger:hover {
-  background: var(--sej-hover-bg, var(--background-hover-color-qxin));
+  transform: scale(1.06);
 }
 
 .sej-icon-trigger svg {
-  width: 16px;
-  height: 16px;
+  width: 100%;
+  height: 100%;
   display: block;
 }
 
