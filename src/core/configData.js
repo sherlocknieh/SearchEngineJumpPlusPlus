@@ -24,7 +24,7 @@ export function isBuiltinCategory(category) {
 }
 
 /**
- * 分类是否出现在跳转条：图片模式只显示搜图分类；
+ * 分类是否出现在跳转条：图片模式显示搜图分类，并允许「功能」分类按显示开关出现；
  * 普通模式只按显示开关决定，搜图分类即便设为显示也不出现。
  * @param {string} key 分类键名
  * @param {boolean} enabled 分类的显示开关
@@ -32,7 +32,9 @@ export function isBuiltinCategory(category) {
  */
 export function isBarCategoryVisible(key, enabled, imageMode) {
   if (key === IMAGE_CATEGORY_KEY) return Boolean(imageMode);
-  return !imageMode && Boolean(enabled);
+  // 图片模式下其它分类一律不上条，只额外允许复制/打开这类「功能」动作
+  if (imageMode) return key === BUILTIN_CATEGORY_KEY && Boolean(enabled);
+  return Boolean(enabled);
 }
 
 export function normalizeEngineAction(value) {

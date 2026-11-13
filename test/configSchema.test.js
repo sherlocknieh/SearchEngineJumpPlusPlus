@@ -312,6 +312,11 @@ describe('isBarCategoryVisible', () => {
     expect(isBarCategoryVisible('image', false, true)).toBe(true);
   });
 
+  it('功能分类在图片模式下按显示开关出现', () => {
+    expect(isBarCategoryVisible('actions', true, true)).toBe(true);
+    expect(isBarCategoryVisible('actions', false, true)).toBe(false);
+  });
+
   it('其他分类按显示开关决定', () => {
     expect(isBarCategoryVisible('web', true, false)).toBe(true);
     expect(isBarCategoryVisible('web', false, false)).toBe(false);

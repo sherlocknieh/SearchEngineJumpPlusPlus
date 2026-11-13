@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0604
+// @version            2026.11.14.0605
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6175,7 +6175,8 @@
 	}
 	function isBarCategoryVisible(key, enabled, imageMode) {
 		if (key === "image") return Boolean(imageMode);
-		return !imageMode && Boolean(enabled);
+		if (imageMode) return key === "actions" && Boolean(enabled);
+		return Boolean(enabled);
 	}
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";

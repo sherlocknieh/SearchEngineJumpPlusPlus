@@ -146,7 +146,8 @@ const barStyle = computed(() => {
 const categories = computed(() =>
   data.engineCategories
     // 搜图分类只在图片模式下出现：图片地址搜网页没有意义，
-    // 普通跳转条也从不展示它，与分类的显示开关无关
+    // 普通跳转条也从不展示它，与分类的显示开关无关；
+    // 图片模式还会按显示开关带上「功能」分类（复制/打开图片链接）
     .filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isImageSearch.value))
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
