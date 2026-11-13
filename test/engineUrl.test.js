@@ -4,6 +4,7 @@ import {
   analyzeSearchUrl,
   faviconFromUrl,
   hostFromUrl,
+  findKeywordUrl,
   normalizeKeywordUrl,
   registrableDomain,
   searchTemplateFromUrl,
@@ -272,5 +273,23 @@ describe('默认引擎链接可被自动解析', () => {
         }
       }
     }
+  });
+});
+
+describe('findKeywordUrl', () => {
+  it('整段是链接时直接使用', () => {
+    expect(findKeywordUrl('  example.com/a  ')).toBe('https://example.com/a');
+    expect(findKeywordUrl('mailto:a@example.com')).toBe('mailto:a@example.com');
+  });
+
+  it('从文字里取出第一个链接，去掉句末标点', () => {
+    expect(findKeywordUrl('看看这个 https://a.test/p?q=1，再说')).toBe('https://a.test/p?q=1');
+    expect(findKeywordUrl('见 www.a.test/x.')).toBe('https://www.a.test/x');
+  });
+
+  it('不含链接的文字返回空串', () => {
+    expect(findKeywordUrl('hello world')).toBe('');
+    expect(findKeywordUrl('')).toBe('');
+    expect(findKeywordUrl(null)).toBe('');
   });
 });

@@ -340,3 +340,24 @@ export function normalizeKeywordUrl(raw) {
   }
   return '';
 }
+
+// 文字里可识别的链接片段：要求带协议或 www，避免把普通单词当成地址
+const LINK_IN_TEXT_RE = /(?:https?:\/\/|mailto:|tel:|www\.)[^\s"'<>，。；：！？、）】]+/gi;
+
+/**
+ * 从一段文字里找出可打开的链接：整段就是链接时优先，否则取第一个带协议/ www 的片段。
+ * 找不到时返回空串，调用方据此判断是否提供「打开」。
+ */
+export function findKeywordUrl(raw) {
+  const value = String(raw ?? '').trim();
+  if (!value) return '';
+  const direct = normalizeKeywordUrl(value);
+  if (direct) return direct;
+  for (const match of value.matchAll(LINK_IN_TEXT_RE)) {
+    // 去掉句末标点，避免把「。」「,」当成链接的一部分
+    const candidate = match[0].replace(/[.,;:!?)\]}]+$/, '');
+    const url = normalizeKeywordUrl(candidate);
+    if (url) return url;
+  }
+  return '';
+}

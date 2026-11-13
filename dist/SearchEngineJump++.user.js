@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0620
+// @version            2026.11.14.0622
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6932,6 +6932,18 @@
 		}
 		return "";
 	}
+	var LINK_IN_TEXT_RE = /(?:https?:\/\/|mailto:|tel:|www\.)[^\s"'<>，。；：！？、）】]+/gi;
+	function findKeywordUrl(raw) {
+		const value = String(raw ?? "").trim();
+		if (!value) return "";
+		const direct = normalizeKeywordUrl(value);
+		if (direct) return direct;
+		for (const match of value.matchAll(LINK_IN_TEXT_RE)) {
+			const url = normalizeKeywordUrl(match[0].replace(/[.,;:!?)\]}]+$/, ""));
+			if (url) return url;
+		}
+		return "";
+	}
 	var FALLBACK_STYLE_ID = "sej-copy-fallback-style";
 	function ensureFallbackStyle() {
 		if (document.getElementById(FALLBACK_STYLE_ID)) return;
@@ -7049,7 +7061,7 @@
 			return copyText(source.text);
 		}
 		if (action === "open") {
-			const url = normalizeKeywordUrl(source.url);
+			const url = findKeywordUrl(source.url);
 			if (!url) return false;
 			if (shouldOpenInNewTab(engine, false, defaultTarget)) {
 				if (!openInNewTab(url)) window.open(url, "_blank");
@@ -8417,11 +8429,15 @@
 			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
-				engines: (data.engineList[key] || []).filter((engine) => !engine.disable).map((engine) => isContextAction.value && engine.action ? {
+				engines: (data.engineList[key] || []).filter((engine) => !engine.disable && !hidesOpenAction(engine)).map((engine) => isContextAction.value && engine.action ? {
 					...engine,
 					hint: t(contextActionHintKey(contextMode.value, engine.action))
 				} : engine)
 			})).filter((category) => category.engines.length));
+			function hidesOpenAction(engine) {
+				if (engine.action !== "open" || isContextAction.value || !isSelectSearch.value) return false;
+				return !findKeywordUrl(selectionText.value);
+			}
 			function getCurrentKeyword() {
 				if (isSelectSearch.value) return selectionText.value;
 				return extractKeyword(inputTarget);

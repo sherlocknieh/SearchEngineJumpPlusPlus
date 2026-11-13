@@ -103,6 +103,15 @@ describe('动作引擎', () => {
     });
   });
 
+  it('文字里含链接时打开其中的链接', async () => {
+    expect(await performEngineAction({ action: 'open' }, '看看 https://a.test/p 这个')).toBe(true);
+    expect(openInTab).toHaveBeenCalledWith('https://a.test/p', {
+      active: true,
+      insert: true,
+      setParent: true,
+    });
+  });
+
   it('当前内容不是链接时不打开', async () => {
     expect(await performEngineAction({ action: 'open' }, 'just words')).toBe(false);
     expect(openInTab).not.toHaveBeenCalled();

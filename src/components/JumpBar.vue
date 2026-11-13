@@ -40,6 +40,7 @@ import {
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible } from '../core/configData.js';
+import { findKeywordUrl } from '../core/engineUrl.js';
 import { contextActionHintKey, contextActionTarget } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
@@ -155,7 +156,7 @@ const categories = computed(() =>
       name: localizeCategoryName(name, key),
       key,
       engines: (data.engineList[key] || [])
-        .filter((engine) => !engine.disable)
+        .filter((engine) => !engine.disable && !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么
         .map((engine) =>
           isContextAction.value && engine.action
@@ -165,6 +166,12 @@ const categories = computed(() =>
     }))
     .filter((category) => category.engines.length),
 );
+
+/** 划词内容不含链接时，「打开」没有可打开的目标，不显示该动作 */
+function hidesOpenAction(engine) {
+  if (engine.action !== 'open' || isContextAction.value || !isSelectSearch.value) return false;
+  return !findKeywordUrl(selectionText.value);
+}
 
 function getCurrentKeyword() {
   if (isSelectSearch.value) return selectionText.value;

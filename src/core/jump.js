@@ -1,6 +1,6 @@
 import { GM_openInTab } from '$';
 import { DEFAULT_OPEN_TARGET, normalizeEngineAction, normalizeDefaultOpenTarget } from './configData.js';
-import { normalizeKeywordUrl } from './engineUrl.js';
+import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
 
 export function extractKeyword(inputTarget) {
@@ -70,7 +70,7 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
     return copyText(source.text);
   }
   if (action === 'open') {
-    const url = normalizeKeywordUrl(source.url);
+    const url = findKeywordUrl(source.url);
     if (!url) return false;
     if (shouldOpenInNewTab(engine, false, defaultTarget)) {
       if (!openInNewTab(url)) window.open(url, '_blank');
