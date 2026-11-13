@@ -114,7 +114,7 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
-    'action.hintCopyLink': '复制链接标题和地址',
+    'action.hintCopyLink': '复制为 Markdown 链接',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintOpenImage': '打开图片',
@@ -268,7 +268,7 @@ export const messages = {
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',
-    'action.hintCopyLink': 'Copy link title and address',
+    'action.hintCopyLink': 'Copy as Markdown link',
     'action.hintOpenLink': 'Open link',
     'action.hintCopyImage': 'Copy image',
     'action.hintOpenImage': 'Open image',

@@ -42,7 +42,7 @@ export function getContextEngines(settingData, mode) {
 }
 
 /**
- * 命中内容交给动作引擎的目标：链接复制标题加地址，图片复制图片本身；打开统一用地址。
+ * 命中内容交给动作引擎的目标：链接复制为 Markdown 链接，图片复制图片本身；打开统一用地址。
  * @param {'image' | 'link'} mode 命中类型
  * @param {'copy' | 'open'} action 动作类型
  * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
@@ -54,7 +54,7 @@ export function contextActionTarget(mode, action, hit = {}) {
   if (action !== 'copy') return url || keyword;
   if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
   // 纯图片链接没有文字，关键词就是地址，此时只复制地址
-  return keyword && keyword !== url ? `${keyword}\n${url}` : url || keyword;
+  return keyword && keyword !== url ? `[${keyword}](${url})` : url || keyword;
 }
 
 /**

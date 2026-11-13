@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0638
+// @version            2026.11.14.0639
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5898,7 +5898,7 @@
 			"engine.requiredAction": "标题必填",
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
-			"action.hintCopyLink": "复制链接标题和地址",
+			"action.hintCopyLink": "复制为 Markdown 链接",
 			"action.hintOpenLink": "打开链接",
 			"action.hintCopyImage": "复制图片",
 			"action.hintOpenImage": "打开图片",
@@ -6036,7 +6036,7 @@
 			"engine.requiredAction": "Title is required",
 			"action.copied": "Copied to clipboard",
 			"action.opened": "Opened",
-			"action.hintCopyLink": "Copy link title and address",
+			"action.hintCopyLink": "Copy as Markdown link",
 			"action.hintOpenLink": "Open link",
 			"action.hintCopyImage": "Copy image",
 			"action.hintOpenImage": "Open image",
@@ -7334,7 +7334,7 @@
 			url,
 			image: url || keyword
 		};
-		return keyword && keyword !== url ? `${keyword}\n${url}` : url || keyword;
+		return keyword && keyword !== url ? `[${keyword}](${url})` : url || keyword;
 	}
 	function contextActionHintKey(mode, action) {
 		return CONTEXT_ACTION_HINTS[mode]?.[action] || "";

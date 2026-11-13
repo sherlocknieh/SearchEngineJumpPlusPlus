@@ -71,8 +71,8 @@ describe('getContextEngines', () => {
 describe('contextActionTarget', () => {
   const hit = { keyword: '示例标题', url: 'https://site.test/a' };
 
-  it('链接复制标题加地址，打开只用地址', () => {
-    expect(contextActionTarget('link', 'copy', hit)).toBe('示例标题\nhttps://site.test/a');
+  it('链接复制为 Markdown 链接，打开只用地址', () => {
+    expect(contextActionTarget('link', 'copy', hit)).toBe('[示例标题](https://site.test/a)');
     expect(contextActionTarget('link', 'open', hit)).toBe('https://site.test/a');
   });
 
