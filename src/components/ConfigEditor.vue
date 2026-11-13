@@ -223,14 +223,11 @@ function cancel() {
   border: 1px solid var(--border-color-sej);
   border-radius: 10px;
   background: var(--sej-input-bg);
-  transition:
-    border-color 0.12s ease-out,
-    box-shadow 0.12s ease-out;
+  transition: border-color 0.12s ease-out;
 }
 
 #iqxin-editCodeBox .sej-config-textarea:focus-within {
   border-color: var(--sej-accent);
-  box-shadow: 0 0 0 3px var(--sej-focus-ring);
 }
 
 #iqxin-editCodeBox textarea {
