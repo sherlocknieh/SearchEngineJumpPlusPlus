@@ -12,7 +12,12 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import { PLACEMENT_GAP, placeAboveRect, placeInsideRect } from '../core/floatPlacement.js';
+import {
+  PLACEMENT_GAP,
+  placeAboveRect,
+  placeInlineIcon,
+  placeInsideRect,
+} from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -386,6 +391,12 @@ function isInsideBar(e) {
   return isEventInsideUi(containerEl.value, e);
 }
 
+/** 收起态图标边长：读取图标模式样式里的变量，取不到时用样式里的默认值 */
+function iconTriggerSize() {
+  const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue('--sej-icon-size'));
+  return Number.isFinite(value) ? value : 30;
+}
+
 /** 跟随模式下用选区/命中元素的矩形算出跳转条的视口坐标 */
 function syncFloatPlacement() {
   if (!isFloat) return;
@@ -438,8 +449,26 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
+  // 极简模式收起时只有图标：贴在文字/链接同一行的开头，展开时向右生长
+  if (iconMode.value && !isImageContext.value) {
+    const { top, left } = placeInlineIcon({
+      rect,
+      iconSize: iconTriggerSize(),
+      barHeight: barSize.height,
+      viewport,
+    });
+    bar.classList.remove('sej-top');
+    bar.classList.add('sej-follow-anchor');
+    floatStyle.value = {
+      top: `${top}px`,
+      left: `${left}px`,
+      right: 'auto',
+      transform: 'none',
+    };
+    return;
+  }
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
-  // 文字与链接触发的条放在锚点正上方
+  // 文字与链接触发的整条放在锚点正上方
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))

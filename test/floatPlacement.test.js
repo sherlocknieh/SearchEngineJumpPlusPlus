@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeAboveRect, placeInsideRect } from '../src/core/floatPlacement.js';
+import { placeAboveRect, placeInsideRect, placeInlineIcon } from '../src/core/floatPlacement.js';
 
 const viewport = { width: 1200, height: 800 };
 const bar = { width: 300, height: 32 };
@@ -82,5 +82,35 @@ describe('placeAboveRect 图片兜底', () => {
   it('顶部空间不足时翻到图片下方', () => {
     const rect = { top: 10, left: 300, right: 800, bottom: 100 };
     expect(placeAboveRect({ rect, bar, viewport }).top).toBe(100 + 6);
+  });
+});
+
+describe('placeInlineIcon', () => {
+  const viewport = { width: 1200, height: 800 };
+  const size = { iconSize: 30, barHeight: 32 };
+
+  it('贴在选区左侧、与这一行垂直居中', () => {
+    const rect = { top: 300, left: 400, right: 500, bottom: 320 };
+    expect(placeInlineIcon({ rect, ...size, viewport })).toEqual({
+      top: 310 - 16,
+      left: 400 - 6 - 30,
+    });
+  });
+
+  it('左侧放不下时压住选区开头', () => {
+    const rect = { top: 300, left: 10, right: 200, bottom: 320 };
+    expect(placeInlineIcon({ rect, ...size, viewport }).left).toBe(10);
+  });
+
+  it('多行选区按第一行对齐', () => {
+    const rect = { top: 300, left: 400, right: 500, bottom: 500 };
+    expect(placeInlineIcon({ rect, ...size, viewport }).top).toBe(300 + 15 - 16);
+  });
+
+  it('靠近右边界时图标仍在视口内', () => {
+    const rect = { top: 300, left: 1190, right: 1195, bottom: 320 };
+    const { left } = placeInlineIcon({ rect, ...size, viewport });
+    expect(left).toBe(1190 - 6 - 30);
+    expect(left + 30).toBeLessThanOrEqual(1200 - 6);
   });
 });

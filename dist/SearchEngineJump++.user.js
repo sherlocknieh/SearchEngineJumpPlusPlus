@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0723
+// @version            2026.11.14.0727
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5824,7 +5824,7 @@
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "极简模式",
-			"settings.selectionIconTip": "划词后只在文字开头出现一个图标，鼠标悬浮时展开搜索条",
+			"settings.selectionIconTip": "划词后在文字/链接同一行的开头出现一个图标，鼠标悬浮时展开搜索条",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
@@ -5962,7 +5962,7 @@
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
-			"settings.selectionIconTip": "Show a single icon at the start of the selected text; hover it to expand the search bar",
+			"settings.selectionIconTip": "Show a single icon at the start of the selected text/link line; hover it to expand the search bar",
 			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.editConfig": "Config file",
@@ -6471,6 +6471,21 @@
 		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
 		return {
 			top: Math.round(Math.min(Math.max(candidate, gap), maxTop)),
+			left: Math.round(left)
+		};
+	}
+	function placeInlineIcon({ rect, iconSize, barHeight, viewport, gap = 6 }) {
+		const viewWidth = Math.max(0, viewport?.width ?? 0);
+		const viewHeight = Math.max(0, viewport?.height ?? 0);
+		const lineHeight = Math.min(Math.max(0, rect.bottom - rect.top), iconSize);
+		const centerY = rect.top + lineHeight / 2;
+		const beforeLeft = rect.left - gap - iconSize;
+		const maxLeft = Math.max(gap, viewWidth - gap - iconSize);
+		const left = Math.min(Math.max(beforeLeft >= gap ? beforeLeft : rect.left, gap), maxLeft);
+		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
+		const top = Math.min(Math.max(centerY - barHeight / 2, gap), maxTop);
+		return {
+			top: Math.round(top),
 			left: Math.round(left)
 		};
 	}
@@ -8582,6 +8597,10 @@
 			function isInsideBar(e) {
 				return isEventInsideUi(containerEl.value, e);
 			}
+			function iconTriggerSize() {
+				const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue("--sej-icon-size"));
+				return Number.isFinite(value) ? value : 30;
+			}
 			function syncFloatPlacement() {
 				if (!isFloat) return;
 				const bar = containerEl.value;
@@ -8623,6 +8642,23 @@
 					width: document.documentElement.clientWidth,
 					height: window.visualViewport?.height || window.innerHeight
 				};
+				if (iconMode.value && !isImageContext.value) {
+					const { top, left } = placeInlineIcon({
+						rect,
+						iconSize: iconTriggerSize(),
+						barHeight: barSize.height,
+						viewport
+					});
+					bar.classList.remove("sej-top");
+					bar.classList.add("sej-follow-anchor");
+					floatStyle.value = {
+						top: `${top}px`,
+						left: `${left}px`,
+						right: "auto",
+						transform: "none"
+					};
+					return;
+				}
 				const { top, left } = (isImageContext.value ? placeInsideRect({
 					rect,
 					bar: barSize,

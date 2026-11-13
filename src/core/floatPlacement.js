@@ -1,7 +1,8 @@
 /**
  * 贴内容的浮层条定位计算。
  *
- * 文字/链接触发的跳转条放在锚点正上方、左侧贴住锚点开头；图片条优先放进图片内部顶部居中，
+ * 文字/链接触发的跳转条放在锚点正上方、左侧贴住锚点开头；极简模式收起时图标贴在
+ * 文字/链接同一行的开头；图片条优先放进图片内部顶部居中，
  * 图片尺寸不足时放到图片上方居中。放不下时都会收进视口，始终留出最小边距。
  */
 
@@ -75,6 +76,36 @@ export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align
   const candidate = above >= gap ? above : rect.bottom + gap;
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
   const top = Math.min(Math.max(candidate, gap), maxTop);
+
+  return { top: Math.round(top), left: Math.round(left) };
+}
+
+/**
+ * 极简模式收起态图标：与锚点同一行，贴在锚点左侧的开头位置。
+ * 左侧放不下时压住锚点开头；多行锚点按第一行对齐。
+ *
+ * @param {object} options
+ * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或链接的视口矩形
+ * @param {number} options.iconSize 收起态图标边长
+ * @param {number} options.barHeight 展开后整条的高度，用于把图标圆心对齐到这一行
+ * @param {{width:number, height:number}} options.viewport 视口尺寸
+ * @param {number} [options.gap] 与锚点、视口边界的间距
+ * @returns {{top:number, left:number}} 跳转条的视口坐标
+ */
+export function placeInlineIcon({ rect, iconSize, barHeight, viewport, gap = PLACEMENT_GAP }) {
+  const viewWidth = Math.max(0, viewport?.width ?? 0);
+  const viewHeight = Math.max(0, viewport?.height ?? 0);
+  // 多行锚点只取第一行的高度，图标始终贴在这一行的开头
+  const lineHeight = Math.min(Math.max(0, rect.bottom - rect.top), iconSize);
+  const centerY = rect.top + lineHeight / 2;
+
+  // 优先贴在锚点左侧，左侧放不下就压住锚点开头
+  const beforeLeft = rect.left - gap - iconSize;
+  const maxLeft = Math.max(gap, viewWidth - gap - iconSize);
+  const left = Math.min(Math.max(beforeLeft >= gap ? beforeLeft : rect.left, gap), maxLeft);
+
+  const maxTop = Math.max(gap, viewHeight - gap - barHeight);
+  const top = Math.min(Math.max(centerY - barHeight / 2, gap), maxTop);
 
   return { top: Math.round(top), left: Math.round(left) };
 }
