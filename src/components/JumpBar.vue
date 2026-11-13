@@ -357,22 +357,21 @@ function syncFloatPlacement() {
     return;
   }
   const barRect = bar.getBoundingClientRect();
+  // 图标模式始终按展开后的整条尺寸定位，图标与搜索条因此共用同一落点，展开时不挪动
+  const barSize =
+    iconMode.value && iconFullSize
+      ? iconFullSize
+      : { width: barRect.width, height: barRect.height };
   const viewport = {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
   const imagePlacement = isImageSearch.value
-    ? (placeInsideRect({ rect, bar: { width: barRect.width, height: barRect.height }, viewport }) ??
-      placeAboveRect({ rect, bar: { width: barRect.width, height: barRect.height }, viewport }))
+    ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
+      placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  const { top, left } =
-    imagePlacement ??
-    placeNearRect({
-      rect,
-      bar: { width: barRect.width, height: barRect.height },
-      viewport,
-    });
+  const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
   floatStyle.value = { top: `${top}px`, left: `${left}px` };
@@ -436,8 +435,31 @@ async function showFloatBar() {
   const token = ++showToken;
   await nextTick();
   if (token !== showToken) return;
+  if (iconMode.value && !iconFullSize) {
+    const full = await measureExpandedSize();
+    if (token !== showToken) return;
+    iconFullSize = full;
+  }
   syncFloatPlacement();
   barVisible.value = true;
+}
+
+/**
+ * 图标模式下量一次展开后的整条尺寸。
+ * 图标在展开前就按这个尺寸定位，展开时搜索条不再移动，只从图标处长大。
+ * 测量期间临时隐藏整条，避免已显示的搜索条闪一下展开态。
+ */
+async function measureExpandedSize() {
+  const bar = containerEl.value;
+  if (!bar) return null;
+  bar.classList.add('sej-measuring');
+  iconExpanded.value = true;
+  await nextTick();
+  const rect = bar.getBoundingClientRect();
+  iconExpanded.value = false;
+  await nextTick();
+  bar.classList.remove('sej-measuring');
+  return rect.width > 0 ? { width: rect.width, height: rect.height } : null;
 }
 
 function hideFloatBar() {
@@ -447,10 +469,13 @@ function hideFloatBar() {
   iconExpanded.value = false;
   barVisible.value = false;
   shownKeyword = '';
+  iconFullSize = null;
 }
 
 // 当前显示的关键词：用于区分「新选区」与「同一条搜索条的重复显示」
 let shownKeyword = '';
+// 图标模式下展开后的整条尺寸：图标与搜索条共用同一落点
+let iconFullSize = null;
 
 // 图标模式下指针停靠的宽限时间：斜向移动时短暂离开图标不该马上收起
 const ICON_COLLAPSE_DELAY = 180;
@@ -472,7 +497,8 @@ async function setIconExpanded(expanded) {
   const first = bar?.getBoundingClientRect();
   iconExpanded.value = expanded;
   await nextTick();
-  syncFloatPlacement();
+  // 位置在显示时已按整条尺寸算好，展开/收起只改变大小，不重新定位
+  if (!iconFullSize) syncFloatPlacement();
   updateScrollHints();
   if (!bar || !first) return;
 
@@ -719,6 +745,8 @@ onBeforeUnmount(() => {
       @focus="setIconExpanded(true)"
       v-html="scriptIcon"
     ></button>
+    <!-- 图标模式下设置按钮占住最左侧，展开后正好接替图标的位置 -->
+    <SettingButton v-if="iconMode" />
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
         ref="scrollEl"
@@ -768,7 +796,7 @@ onBeforeUnmount(() => {
       ></button>
     </div>
 
-    <SettingButton />
+    <SettingButton v-if="!iconMode" />
   </div>
 </template>
 <style>
@@ -823,25 +851,36 @@ onBeforeUnmount(() => {
   gap: 0;
 }
 
-/* 图标模式：底色、圆角与内边距随展开/收起平滑过渡，尺寸动画由脚本补足 */
+/* 图标模式：搜索条与图标同为全圆角，展开的第一帧就是图标本身的圆 */
 #sej-container.selectSearch.sej-icon-mode {
+  /* 去掉 1px 边框，改用内阴影描边：图标与搜索条的左、上边因此完全重合 */
+  border: 0;
+  border-radius: 999px;
+  box-shadow:
+    inset 0 0 0 1px var(--border-color-sej),
+    0 1px 2px hsla(0, 0%, 0%, 0.06),
+    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);
+  /* 底色、圆角与内边距随展开/收起平滑过渡，尺寸动画由脚本补足 */
   transition:
     background-color 0.16s ease-out,
-    border-color 0.16s ease-out,
     border-radius 0.16s ease-out,
     box-shadow 0.16s ease-out,
     padding 0.16s ease-out,
     backdrop-filter 0.16s ease-out;
 }
 
+/* 量展开尺寸时先藏起来，避免已显示的搜索条闪一下展开态 */
+#sej-container.sej-measuring {
+  visibility: hidden !important;
+}
+
 /* icon 模式：收起时只保留脚本 logo，展开后恢复正常搜索条 */
 #sej-container.sej-icon-mode.sej-icon-collapsed {
   padding: 0;
-  border-color: transparent;
   /* logo 自带白色底与配色，容器不再铺底色，避免出现双层圆 */
   background-color: transparent;
   backdrop-filter: none;
-  border-radius: 50%;
+  /* 收起时不需要描边，保持 logo 边缘干净 */
   box-shadow:
     0 1px 2px hsla(0, 0%, 0%, 0.12),
     0 6px 16px -8px hsla(0, 0%, 0%, 0.4);
@@ -852,19 +891,27 @@ onBeforeUnmount(() => {
   display: none;
 }
 
-/* 展开后不再显示图标：保留元素但移出布局，避免指针下的元素消失触发误收起 */
+/* 展开后图标不占布局：绝对定位到与收起时相同的原点并淡出，
+   搜索条从图标处长大，边与角完全重合 */
+#sej-container.sej-icon-mode:not(.sej-icon-collapsed) {
+  padding: 2px 6px;
+}
+
 #sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
   position: absolute;
-  visibility: hidden;
+  top: 0;
+  left: 0;
+  opacity: 0;
   pointer-events: none;
+  cursor: default;
 }
 
 .sej-icon-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -872,7 +919,9 @@ onBeforeUnmount(() => {
   background: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.12s ease-out;
+  transition:
+    transform 0.12s ease-out,
+    opacity 0.12s ease-out;
 }
 
 .sej-icon-trigger:hover {
