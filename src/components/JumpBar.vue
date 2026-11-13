@@ -842,28 +842,28 @@ onBeforeUnmount(() => {
   gap: 0;
 }
 
-/* 图标模式：搜索条始终是整条布局，收起时只露出左端的图标宽度，
-   展开就是把宽度过渡到整条；阴影、圆角都跟着实际宽度走，不会换一套 */
+/* 图标模式：收起时只占图标一格，展开时把宽度过渡到脚本量好的整条宽度；
+   展开态与测量态都不覆盖普通搜索条的内边距、边框、背景与阴影 */
 #sej-container.selectSearch.sej-icon-mode {
-  border: 0;
-  border-radius: 999px;
-  /* 收起态：只留图标那一格 */
+  justify-content: flex-start;
+  transition:
+    width 0.16s ease-out,
+    background-color 0.16s ease-out,
+    backdrop-filter 0.16s ease-out;
+}
+
+/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界 */
+#sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
   width: 30px !important;
   height: 30px;
-  padding: 2px;
-  justify-content: flex-start;
+  border: 0;
   background-color: transparent;
   backdrop-filter: none;
-  /* 四周加重的投影：白色页面上也能看出边界 */
   box-shadow:
     0 0 0 1px hsla(0, 0%, 0%, 0.06),
     0 0 12px hsla(0, 0%, 0%, 0.1),
     0 2px 8px hsla(0, 0%, 0%, 0.16),
     0 14px 36px -10px hsla(0, 0%, 0%, 0.45);
-  transition:
-    width 0.16s ease-out,
-    background-color 0.16s ease-out,
-    backdrop-filter 0.16s ease-out;
 }
 
 /* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩；
@@ -878,13 +878,8 @@ onBeforeUnmount(() => {
   pointer-events: none;
 }
 
-/* 展开态：宽度过渡到脚本量好的整条宽度；左右两端都由圆角元素填满，
-   左侧是第一个搜索项，右侧是设置按钮，不再留白 */
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
-  padding: 0;
-  background-color: var(--sej-bar-bg, var(--background-color-qxin));
-  backdrop-filter: blur(20px) saturate(180%);
 }
 
 /* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */
@@ -895,7 +890,6 @@ onBeforeUnmount(() => {
 
 #sej-container.sej-measuring.sej-icon-measure {
   width: max-content !important;
-  padding: 0;
 }
 
 /* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
