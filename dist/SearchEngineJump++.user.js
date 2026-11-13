@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2236
+// @version            2026.11.13.2240
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6254,6 +6254,10 @@
 	function configToText(config) {
 		const clean = JSON.parse(JSON.stringify(config));
 		if (clean.engineList) delete clean.engineList.engineCategories;
+		for (const engines of Object.values(clean.engineList || {})) {
+			if (!Array.isArray(engines)) continue;
+			for (const engine of engines) delete engine.faviconData;
+		}
 		return JSON.stringify(clean, null, 4);
 	}
 	function readConfig(data) {

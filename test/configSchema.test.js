@@ -199,6 +199,20 @@ describe('configToText', () => {
     expect(text).toContain('\n    ');
     expect(JSON.parse(text).engineList).toEqual({});
   });
+
+  it('导出时去掉内嵌图标数据，保留 favicon 地址', () => {
+    const source = {
+      engineList: {
+        web: [{ name: 'A', url: 'https://a.test', favicon: 'https://a.test/f.ico', faviconData: 'data:x' }],
+      },
+    };
+    const parsed = JSON.parse(configToText(source));
+    expect(parsed.engineList.web).toEqual([
+      { name: 'A', url: 'https://a.test', favicon: 'https://a.test/f.ico' },
+    ]);
+    // 不影响原配置
+    expect(source.engineList.web[0].faviconData).toBe('data:x');
+  });
 });
 
 describe('readConfig', () => {

@@ -163,11 +163,15 @@ export function serializeConfig({ options, categories, version = '' }) {
   return config;
 }
 
-/** 导出/预览用的 JSON 文本 */
+/** 导出/预览用的 JSON 文本：内嵌图标体积大，只保留 favicon 地址 */
 export function configToText(config) {
   const clean = JSON.parse(JSON.stringify(config));
   // 历史遗留字段，导出时清掉
   if (clean.engineList) delete clean.engineList.engineCategories;
+  for (const engines of Object.values(clean.engineList || {})) {
+    if (!Array.isArray(engines)) continue;
+    for (const engine of engines) delete engine.faviconData;
+  }
   return JSON.stringify(clean, null, 4);
 }
 
