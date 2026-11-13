@@ -79,8 +79,10 @@ src/main.js                 只做装配
 - 引擎来源：内置「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；
   没有可用引擎时不接管
 - 呈现：复用跳转条（`JumpBar` 的图片模式），`stores/imageSearch.js` 提供 `{ active, imageUrl }`；
-  只显示「搜图」分类并忽略其隐藏状态，顶部缩略图用 `--sej-image-thumb`；
+  只显示「搜图」分类，顶部缩略图用 `--sej-image-thumb`；
   点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
+- 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式只显示「搜图」分类，
+  普通模式按显示开关决定且永不显示「搜图」分类；该分类的显示状态固定为显示，设置里不提供隐藏按钮
 - 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听 `imageSearch.active` 与当前挂载模式不一致时
   `requestRestart()` 重建，让同一条跳转条在「站点内嵌」与「顶部图片浮层」之间切换
 
@@ -159,7 +161,8 @@ src/main.js                 只做装配
 - `%s` 是关键词占位符（可多次出现），不要做 URL 编码，否则替换逻辑失效
 - 所有配置读写必须经过 `configSchema` / `configData`，避免多处解释不一致
 - 新增默认引擎：`src/data/engines.json`；新增站点适配：`src/data/sites/`
-- 内置分类（`actions` / `image`）不可删除，`isBuiltinCategory` 统一判断；`image` 分类缺失时由 `normalizeConfig` 补回
+- 内置分类（`actions` / `image`）不可删除，`isBuiltinCategory` 统一判断；`image` 分类缺失时由 `normalizeConfig` 补回，
+  且始终视为显示、只出现在图片模式（`isBarCategoryVisible`）
 - 删除操作默认走 `useUndoDelete`（可撤销）
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值

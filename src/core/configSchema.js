@@ -97,6 +97,10 @@ export function normalizeConfig(raw, defaults) {
   ensureBuiltinActions(categories, engineList);
   // 搜图分类是右键搜图的入口，同样始终存在
   ensureImageCategory(categories, engineList);
+  // 搜图分类只在图片模式下出现，不参与普通跳转条的显示开关，始终视为显示
+  for (const category of categories) {
+    if (category[1] === IMAGE_CATEGORY_KEY) category[2] = true;
+  }
 
   settings.engineCategories = categories;
   settings.engineList = engineList;

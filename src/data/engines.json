@@ -8,7 +8,7 @@
   "center": false,
   "engineCategories": [
     ["功能", "actions", false],
-    ["搜图", "image", false],
+    ["搜图", "image", true],
     ["搜索", "web", true],
     ["AI", "ai", true],
     ["影视", "video", true],

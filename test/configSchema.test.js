@@ -7,6 +7,7 @@ import {
   readConfig,
   serializeConfig,
 } from '../src/core/configSchema.js';
+import { isBarCategoryVisible } from '../src/core/configData.js';
 
 describe('createDefaultConfig', () => {
   it('每次返回独立副本', () => {
@@ -51,8 +52,8 @@ describe('createDefaultConfig', () => {
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
-    // 搜图分类命名为「搜图」，紧跟「功能」分类
-    expect(config.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
+    // 搜图分类命名为「搜图」，紧跟「功能」分类，默认不隐藏
+    expect(config.engineCategories[1]).toEqual(['搜图', 'image', true]);
     expect(config.engineList.image.length).toBeGreaterThan(0);
   });
 });
@@ -207,6 +208,17 @@ describe('normalizeConfig', () => {
     );
     expect(result.engineList.image).toEqual([]);
   });
+
+  it('搜图分类不参与跳转条显示开关，始终按显示处理', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['搜图', 'image', false]],
+        engineList: { image: [{ name: 'A', url: 'https://a.test/?q=%s' }] },
+      },
+      defaults,
+    );
+    expect(result.engineCategories.find(([, key]) => key === 'image')[2]).toBe(true);
+  });
 });
 
 describe('serializeConfig', () => {
@@ -286,5 +298,19 @@ describe('readConfig', () => {
     expect(readConfig(null)).toBeNull();
     expect(readConfig({ engineList: {} })).toBeNull();
     expect(readConfig({ engineList: { web: 'nope' } })).toBeNull();
+  });
+});
+
+describe('isBarCategoryVisible', () => {
+  it('搜图分类只在图片模式下出现，普通跳转条始终不显示', () => {
+    expect(isBarCategoryVisible('image', true, false)).toBe(false);
+    expect(isBarCategoryVisible('image', false, true)).toBe(true);
+  });
+
+  it('其他分类按显示开关决定', () => {
+    expect(isBarCategoryVisible('web', true, false)).toBe(true);
+    expect(isBarCategoryVisible('web', false, false)).toBe(false);
+    // 图片模式下普通分类同样不显示
+    expect(isBarCategoryVisible('web', true, true)).toBe(false);
   });
 });

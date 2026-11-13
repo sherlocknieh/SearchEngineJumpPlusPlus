@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { OPTION_KEYS } from '../core/configSchema.js';
-import { isBuiltinCategory } from '../core/configData.js';
+import { IMAGE_CATEGORY_KEY, isBuiltinCategory } from '../core/configData.js';
 import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { closeSettingPanel } from '../stores/ui.js';
@@ -350,6 +350,7 @@ onBeforeUnmount(() => {
           :copy-target-ci="copyTargetCi"
           :display-name="displayCategoryName(category)"
           :hide-delete="isBuiltinCategory(category)"
+          :hide-toggle="category.key === IMAGE_CATEGORY_KEY"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"
           @delete-category="deleteCategory"

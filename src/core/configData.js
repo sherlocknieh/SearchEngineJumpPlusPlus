@@ -23,6 +23,18 @@ export function isBuiltinCategory(category) {
   return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 }
 
+/**
+ * 分类是否出现在跳转条：图片模式只显示搜图分类；
+ * 普通模式只按显示开关决定，搜图分类即便设为显示也不出现。
+ * @param {string} key 分类键名
+ * @param {boolean} enabled 分类的显示开关
+ * @param {boolean} imageMode 当前是否为图片搜索模式
+ */
+export function isBarCategoryVisible(key, enabled, imageMode) {
+  if (key === IMAGE_CATEGORY_KEY) return Boolean(imageMode);
+  return !imageMode && Boolean(enabled);
+}
+
 export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }

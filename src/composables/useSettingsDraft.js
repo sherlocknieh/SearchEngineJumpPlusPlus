@@ -8,6 +8,7 @@ import { computed, reactive } from 'vue';
 import { OPTION_KEYS, serializeConfig } from '../core/configSchema.js';
 import { cloneValue } from '../core/storageBackend.js';
 import { localizeCategoryName } from '../assets/i18n.js';
+import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
 
 /**
  * @param {object} options
@@ -59,6 +60,8 @@ export function useSettingsDraft({ settings }) {
 
   function toggleCategory(index) {
     const category = draft.categories[index];
+    // 搜图分类只在图片模式下出现，显示开关对它没有意义
+    if (category.key === IMAGE_CATEGORY_KEY) return category.enabled;
     category.enabled = !category.enabled;
     return category.enabled;
   }

@@ -11,6 +11,8 @@ defineProps({
   displayName: { type: String, required: true },
   // 内置分类（快捷动作）：只隐藏删除按钮，其余编辑操作保持可用
   hideDelete: { type: Boolean, default: false },
+  // 搜图分类不参与跳转条显示开关，隐藏它的眼睛按钮
+  hideToggle: { type: Boolean, default: false },
 });
 
 const emit = defineEmits([
@@ -48,6 +50,7 @@ const emit = defineEmits([
       <span class="iqxin-pointer-events">{{ displayName }}</span>
       <span class="sej-hover-edit" v-html="PENCIL"></span>
       <span
+        v-if="!hideToggle"
         class="iqxin-set-toggle"
         :class="{ 'iqxin-set-hidden': !category.enabled }"
         :title="category.enabled ? t('common.hide') : t('common.show')"

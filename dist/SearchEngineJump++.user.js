@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0421
+// @version            2026.11.14.0422
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5742,7 +5742,7 @@
 			[
 				"搜图",
 				"image",
-				false
+				true
 			],
 			[
 				"搜索",
@@ -6160,6 +6160,10 @@
 	function isBuiltinCategory(category) {
 		return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 	}
+	function isBarCategoryVisible(key, enabled, imageMode) {
+		if (key === "image") return Boolean(imageMode);
+		return !imageMode && Boolean(enabled);
+	}
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
@@ -6247,6 +6251,7 @@
 		for (const [, key] of categories) engineList[key] = (rawList ? Array.isArray(rawList[key]) ? rawList[key] : [] : defaults.engineList[key] || []).map(normalizeEngine).filter(Boolean);
 		ensureBuiltinActions(categories, engineList);
 		ensureImageCategory(categories, engineList);
+		for (const category of categories) if (category[1] === "image") category[2] = true;
 		settings.engineCategories = categories;
 		settings.engineList = engineList;
 		return settings;
@@ -8181,7 +8186,7 @@
 				if (isImageSearch.value) style["--sej-image-thumb"] = `url(${imageSearch.imageUrl})`;
 				return style;
 			});
-			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isImageSearch.value ? key === IMAGE_CATEGORY_KEY : enabled).map(([name, key]) => ({
+			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isImageSearch.value)).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
 				engines: (data.engineList[key] || []).filter((engine) => !engine.disable)
@@ -9809,6 +9814,7 @@
 		}
 		function toggleCategory(index) {
 			const category = draft.categories[index];
+			if (category.key === "image") return category.enabled;
 			category.enabled = !category.enabled;
 			return category.enabled;
 		}
@@ -10760,6 +10766,10 @@
 			hideDelete: {
 				type: Boolean,
 				default: false
+			},
+			hideToggle: {
+				type: Boolean,
+				default: false
 			}
 		},
 		emits: [
@@ -10795,14 +10805,15 @@
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
 					}, null, 8, _hoisted_4$3),
-					createBaseVNode("span", {
+					!__props.hideToggle ? (openBlock(), createElementBlock("span", {
+						key: 0,
 						class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": !__props.category.enabled }]),
 						title: __props.category.enabled ? unref(t)("common.hide") : unref(t)("common.show"),
 						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle-category", __props.ci), ["stop"])),
 						innerHTML: __props.category.enabled ? unref(EYE) : unref(EYE_OFF)
-					}, null, 10, _hoisted_5$3),
+					}, null, 10, _hoisted_5$3)) : createCommentVNode("", true),
 					!__props.hideDelete ? (openBlock(), createElementBlock("span", {
-						key: 0,
+						key: 1,
 						class: "sej-hover-delete",
 						title: unref(t)("settings.deleteCategory"),
 						onPointerdown: _cache[1] || (_cache[1] = withModifiers(() => {}, ["stop"])),
@@ -11320,6 +11331,7 @@
 							"copy-target-ci": unref(copyTargetCi),
 							"display-name": unref(displayCategoryName)(category),
 							"hide-delete": unref(isBuiltinCategory)(category),
+							"hide-toggle": category.key === unref(IMAGE_CATEGORY_KEY),
 							onToggleCategory,
 							onOpenCategory: unref(openCategoryDialog),
 							onDeleteCategory: unref(deleteCategory),
@@ -11335,6 +11347,7 @@
 							"copy-target-ci",
 							"display-name",
 							"hide-delete",
+							"hide-toggle",
 							"onOpenCategory",
 							"onDeleteCategory",
 							"onAddEngine",

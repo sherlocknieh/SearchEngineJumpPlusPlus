@@ -34,7 +34,7 @@ import {
   isSelectionDrag,
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
-import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
+import { isBarCategoryVisible } from '../core/configData.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
@@ -127,9 +127,9 @@ const barStyle = computed(() => {
 
 const categories = computed(() =>
   data.engineCategories
-    // 图片模式只保留「图片」分类：用图片地址去搜网页没有意义；
-    // 该分类默认不在跳转条显示，图片模式下不受隐藏状态限制
-    .filter(([, key, enabled]) => (isImageSearch.value ? key === IMAGE_CATEGORY_KEY : enabled))
+    // 搜图分类只在图片模式下出现：图片地址搜网页没有意义，
+    // 普通跳转条也从不展示它，与分类的显示开关无关
+    .filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isImageSearch.value))
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
       key,
