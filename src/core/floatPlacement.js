@@ -10,13 +10,15 @@ export const PLACEMENT_GAP = 6;
 
 /**
  * 锚点矩形在水平方向对齐后收进视口的左坐标。
- * @param {'center'|'right'} align center 居中；right 右边缘贴住锚点右边缘
+ * @param {'center'|'left'|'right'} align center 居中；left 左边缘贴住锚点左边缘；right 贴住右边缘
  */
 function alignedLeft(rect, barWidth, viewWidth, gap, align) {
-  const preferred =
-    align === 'right'
-      ? Math.max(0, rect.right ?? 0) - barWidth
-      : rect.left + (Math.max(0, rect.right - rect.left) - barWidth) / 2;
+  const rectLeft = Math.max(0, rect.left ?? 0);
+  const rectRight = Math.max(rectLeft, rect.right ?? 0);
+  let preferred;
+  if (align === 'right') preferred = rectRight - barWidth;
+  else if (align === 'left') preferred = rectLeft;
+  else preferred = rectLeft + (rectRight - rectLeft - barWidth) / 2;
   const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
   return Math.min(Math.max(preferred, gap), maxLeft);
 }
@@ -60,7 +62,7 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
  * @param {{width:number, height:number}} options.bar 跳转条实测尺寸
  * @param {{width:number, height:number}} options.viewport 视口尺寸
  * @param {number} [options.gap] 与锚点、视口边界的间距
- * @param {'center'|'right'} [options.align] 水平对齐方式，默认居中
+ * @param {'center'|'left'|'right'} [options.align] 水平对齐方式，默认居中
  * @returns {{top:number, left:number}} 跳转条的视口坐标
  */
 export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align = 'center' }) {

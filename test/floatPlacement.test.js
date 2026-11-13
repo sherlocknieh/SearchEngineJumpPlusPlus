@@ -16,6 +16,13 @@ describe('placeAboveRect', () => {
     });
   });
 
+  it('左对齐时贴住锚点左边缘', () => {
+    expect(placeAboveRect({ rect: rect(300, 500, 320), bar, viewport, align: 'left' })).toEqual({
+      top: 300 - 6 - 32,
+      left: 400,
+    });
+  });
+
   it('未指定对齐方式时居中', () => {
     expect(placeAboveRect({ rect: rect(300, 500, 320), bar, viewport })).toEqual({
       top: 300 - 6 - 32,

@@ -439,13 +439,14 @@ function syncFloatPlacement() {
     height: window.visualViewport?.height || window.innerHeight,
   };
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
-  // 文字与链接触发的条放在锚点正上方，右边缘与锚点右边缘对齐
+  // 文字与链接触发的条放在锚点正上方
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  const placement =
-    imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align: 'right' });
+  // 极简模式收起时只有图标，贴在文本开头并向右展开；其余情况右边缘与锚点右边缘对齐
+  const align = iconMode.value ? 'left' : 'right';
+  const placement = imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align });
   const { top, left } = placement;
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
@@ -456,19 +457,6 @@ function syncFloatPlacement() {
       top: `${top}px`,
       left: `${Math.round(center)}px`,
       transform: 'translateX(-50%)',
-    };
-    return;
-  }
-  // 极简模式收起时只占图标宽，右边缘钉在整条右边缘：展开只向左生长，图标不移动
-  if (iconMode.value) {
-    const right = left + barSize.width;
-    floatStyle.value = {
-      top: `${top}px`,
-      left: 'auto',
-      right: `${Math.round(viewport.width - right)}px`,
-      marginLeft: '0px',
-      marginRight: '0px',
-      transform: 'none',
     };
     return;
   }
@@ -1003,14 +991,14 @@ onBeforeUnmount(() => {
   width: max-content !important;
 }
 
-/* 图标钉在右端圆内（与收起态整圆同心），展开/收起都不动；
+/* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
    压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项。
    1px 抵消收起态那条透明边框，26px 图标正好居中于 30px 圆内 */
 #sej-container.sej-icon-mode > .sej-icon-trigger {
   position: absolute;
   z-index: 1;
   top: 1px;
-  right: 1px;
+  left: 1px;
   pointer-events: auto;
 }
 
