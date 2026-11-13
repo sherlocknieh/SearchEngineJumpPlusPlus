@@ -142,6 +142,31 @@ function injectExpression() {
 })()`;
 }
 
+/**
+ * 往当前文档补入口。
+ *
+ * 不带 contextId，让 CDP 用主框架当前的默认上下文：
+ * 站点在解析阶段跳转时上下文会被替换，带 id 求值就会报 Cannot find context with specified id。
+ * 仍然失败则稍后重试，注入表达式自身会判断是否已经插过。
+ */
+async function inject(sessionId, origin, attempt = 1) {
+  try {
+    const result = await cdp.send(
+      'Runtime.evaluate',
+      { expression: injectExpression(), returnByValue: true },
+      sessionId,
+    );
+    if (opts.verbose) console.log(`[SEJ dev] ${origin} 注入：${result.result.value}`);
+  } catch (e) {
+    if (attempt >= 3) {
+      console.warn(`[SEJ dev] 注入 ${origin} 失败：${e.message}`);
+      return;
+    }
+    await sleep(200);
+    await inject(sessionId, origin, attempt + 1);
+  }
+}
+
 const chromePath = findChrome();
 if (!chromePath) {
   console.error('[SEJ dev] 找不到 Chrome，用 SEJ_CHROME=/path/to/chrome 指定');
@@ -185,16 +210,7 @@ cdp.on(async (message) => {
   if (message.method === 'Runtime.executionContextCreated' && injectEntry) {
     const { context } = message.params;
     if (!context.auxData?.isDefault || !/^https?:/.test(context.origin)) return;
-    try {
-      const result = await cdp.send(
-        'Runtime.evaluate',
-        { expression: injectExpression(), contextId: context.id, returnByValue: true },
-        message.sessionId,
-      );
-      if (opts.verbose) console.log(`[SEJ dev] ${context.origin} 注入：${result.result.value}`);
-    } catch (e) {
-      console.warn(`[SEJ dev] 注入 ${context.origin} 失败：${e.message}`);
-    }
+    inject(message.sessionId, context.origin);
   }
 });
 
