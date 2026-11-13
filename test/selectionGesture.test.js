@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { isPointerPressed, trackSelectionPointer } from '../src/core/selectionGesture.js';
+import {
+  currentGestureId,
+  isPointerPressed,
+  trackSelectionPointer,
+} from '../src/core/selectionGesture.js';
 
 /** 最小事件目标：只记录监听器，供测试手动派发 */
 function fakeTarget() {
@@ -41,5 +45,35 @@ describe('selectionGesture', () => {
     target.dispatch('pointerdown', { button: 0 });
     target.dispatch('blur', {});
     expect(isPointerPressed()).toBe(false);
+  });
+});
+
+describe('selectionGesture 操作序号', () => {
+  it('每次按下主键都开启新的操作序号', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    const first = currentGestureId();
+    target.dispatch('pointerdown', { button: 0 });
+    const second = currentGestureId();
+    expect(second).toBeGreaterThan(first);
+    target.dispatch('pointerup', { button: 0 });
+    expect(currentGestureId()).toBe(second);
+  });
+
+  it('同一次点击内的鼠标松开与选区变化保持同一序号', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0 });
+    const id = currentGestureId();
+    target.dispatch('pointerup', { button: 0 });
+    expect(currentGestureId()).toBe(id);
+  });
+
+  it('键盘操作也视为新的操作', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    const before = currentGestureId();
+    target.dispatch('keydown', { key: 'ArrowRight' });
+    expect(currentGestureId()).toBeGreaterThan(before);
   });
 });

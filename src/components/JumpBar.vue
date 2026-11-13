@@ -27,7 +27,11 @@ import {
   performEngineAction,
 } from '../core/jump.js';
 import { getSelectedText } from '../core/selection.js';
-import { isPointerPressed, trackSelectionPointer } from '../core/selectionGesture.js';
+import {
+  currentGestureId,
+  isPointerPressed,
+  trackSelectionPointer,
+} from '../core/selectionGesture.js';
 import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
 import { showToast } from '../stores/ui.js';
@@ -156,7 +160,7 @@ function onJumpAll(engines) {
 
 /** 收起图片模式：清掉图片状态后由浮层条自行收起 */
 function closeImageMode() {
-  barVisible.value = false;
+  hideFloatBar();
   closeImageSearch();
 }
 
@@ -173,7 +177,7 @@ watch(
       showFloatBar();
       return;
     }
-    barVisible.value = false;
+    hideFloatBar();
   },
 );
 
@@ -191,7 +195,7 @@ function onOverlayKeydown(e) {
     closeImageMode();
     return;
   }
-  barVisible.value = false;
+  hideFloatBar();
 }
 
 function onImageModeScroll() {
@@ -400,13 +404,26 @@ async function showFloatBar() {
     barVisible.value = true;
     return;
   }
+  // 等待渲染期间可能已经被收起，只有仍允许显示时才落地
+  const token = ++showToken;
   await nextTick();
+  if (token !== showToken) return;
   syncFloatPlacement();
   barVisible.value = true;
 }
 
+function hideFloatBar() {
+  // 递增令牌取消排队中的显示，避免收起后被上一帧的显示重新拉起
+  showToken += 1;
+  barVisible.value = false;
+}
+
+// 异步显示的令牌：收起时作废所有未落地的显示
+let showToken = 0;
 // 点击跳转条本身会清掉页面选区，此时要保持浮层
 let keepOverlayUntil = 0;
+// 本次输入操作里已主动收起，残余的选区变化不应再弹出
+let dismissedGesture = -1;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
@@ -415,12 +432,14 @@ function onSelectionChange(e) {
   if (isImageSearch.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
+  // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出
+  if (dismissedGesture === currentGestureId()) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
   if (!text) {
     // 点跳转条本身会清掉页面选区，浮层要留到这次点击结束
     if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
-    barVisible.value = false;
+    hideFloatBar();
     return;
   }
   selectionText.value = text;
@@ -440,7 +459,9 @@ function onOverlayPointerDown(e) {
     closeImageMode();
     return;
   }
-  barVisible.value = false;
+  // 记下本次操作，避免同一击的 mouseup/selectionchange 把刚收起的浮层又拉回来
+  dismissedGesture = currentGestureId();
+  hideFloatBar();
 }
 
 // selectionchange 不带可靠的事件目标，只用来发现新选区

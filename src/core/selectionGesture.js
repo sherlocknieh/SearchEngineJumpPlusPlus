@@ -3,24 +3,40 @@
  *
  * 拖动选区时 selectionchange 会连续触发，此时弹出划词条会打断选择；
  * 这里记录左键是否按住，让调用方等到松手后再按最终选区决定是否显示。
+ *
+ * 同时为每次输入操作分配序号：同一次点击/按键产生的残余选区变化
+ * 不应让刚收起的划词条重新出现。
  */
 
 let pressed = false;
+let gestureId = 0;
 // 同一目标只注册一次，组件重建不会叠加监听器
 const trackedTargets = new WeakSet();
 
 function onPointerDown(event) {
   // 只有主键按下才是划词，右键与中键不参与
-  if (event.button === 0) pressed = true;
+  if (event.button !== 0) return;
+  pressed = true;
+  gestureId += 1;
 }
 
 function onPointerEnd() {
   pressed = false;
 }
 
+// 键盘同样可能改变选区，按下即视为新的操作
+function onKeyDown() {
+  gestureId += 1;
+}
+
 /** 页面上的左键是否仍按着，用于暂缓响应拖动过程中的选区变化 */
 export function isPointerPressed() {
   return pressed;
+}
+
+/** 当前输入操作的序号，用于识别同一次点击/按键 */
+export function currentGestureId() {
+  return gestureId;
 }
 
 /** 开始跟踪页面上的左键拖动；同一目标重复调用不会叠加监听 */
@@ -31,6 +47,7 @@ export function trackSelectionPointer(target = window) {
   target.addEventListener('pointerdown', onPointerDown, true);
   target.addEventListener('pointerup', onPointerEnd, true);
   target.addEventListener('pointercancel', onPointerEnd, true);
+  target.addEventListener('keydown', onKeyDown, true);
   // 指针在窗口外松开时收不到 pointerup，失焦后同样视为结束
   target.addEventListener('blur', onPointerEnd);
 }

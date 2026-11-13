@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0216
+// @version            2026.11.14.0224
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7029,15 +7029,24 @@
 		return selection.toString();
 	}
 	var pressed = false;
+	var gestureId = 0;
 	var trackedTargets = new WeakSet();
 	function onPointerDown(event) {
-		if (event.button === 0) pressed = true;
+		if (event.button !== 0) return;
+		pressed = true;
+		gestureId += 1;
 	}
 	function onPointerEnd() {
 		pressed = false;
 	}
+	function onKeyDown() {
+		gestureId += 1;
+	}
 	function isPointerPressed() {
 		return pressed;
+	}
+	function currentGestureId() {
+		return gestureId;
 	}
 	function trackSelectionPointer(target = window) {
 		if (!target || trackedTargets.has(target)) return;
@@ -7045,6 +7054,7 @@
 		target.addEventListener("pointerdown", onPointerDown, true);
 		target.addEventListener("pointerup", onPointerEnd, true);
 		target.addEventListener("pointercancel", onPointerEnd, true);
+		target.addEventListener("keydown", onKeyDown, true);
 		target.addEventListener("blur", onPointerEnd);
 	}
 	var imageSearch = reactive({
@@ -8102,7 +8112,7 @@
 				if (isImageSearch.value) closeImageMode();
 			}
 			function closeImageMode() {
-				barVisible.value = false;
+				hideFloatBar();
 				closeImageSearch();
 			}
 			watch(() => imageSearch.active, (active) => {
@@ -8114,7 +8124,7 @@
 					showFloatBar();
 					return;
 				}
-				barVisible.value = false;
+				hideFloatBar();
 			});
 			function onImageModePointerDown(e) {
 				if (e.button !== 0) return;
@@ -8126,7 +8136,7 @@
 					closeImageMode();
 					return;
 				}
-				barVisible.value = false;
+				hideFloatBar();
 			}
 			function onImageModeScroll() {
 				if (isImageSearch.value) closeImageMode();
@@ -8273,19 +8283,28 @@
 					barVisible.value = true;
 					return;
 				}
+				const token = ++showToken;
 				await nextTick();
+				if (token !== showToken) return;
 				syncFloatPlacement();
 				barVisible.value = true;
 			}
+			function hideFloatBar() {
+				showToken += 1;
+				barVisible.value = false;
+			}
+			let showToken = 0;
 			let keepOverlayUntil = 0;
+			let dismissedGesture = -1;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
 				if (isImageSearch.value) return;
 				if (isPointerPressed()) return;
+				if (dismissedGesture === currentGestureId()) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (!text) {
 					if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
-					barVisible.value = false;
+					hideFloatBar();
 					return;
 				}
 				selectionText.value = text;
@@ -8302,7 +8321,8 @@
 					closeImageMode();
 					return;
 				}
-				barVisible.value = false;
+				dismissedGesture = currentGestureId();
+				hideFloatBar();
 			}
 			function onDocumentSelectionChange() {
 				onSelectionChange(null);
