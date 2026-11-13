@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0201
+// @version            2026.11.14.0210
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7028,6 +7028,25 @@
 		if (isOwnUiSelection(selection)) return "";
 		return selection.toString();
 	}
+	var pressed = false;
+	var trackedTargets = new WeakSet();
+	function onPointerDown(event) {
+		if (event.button === 0) pressed = true;
+	}
+	function onPointerEnd() {
+		pressed = false;
+	}
+	function isPointerPressed() {
+		return pressed;
+	}
+	function trackSelectionPointer(target = window) {
+		if (!target || trackedTargets.has(target)) return;
+		trackedTargets.add(target);
+		target.addEventListener("pointerdown", onPointerDown, true);
+		target.addEventListener("pointerup", onPointerEnd, true);
+		target.addEventListener("pointercancel", onPointerEnd, true);
+		target.addEventListener("blur", onPointerEnd);
+	}
 	var imageSearch = reactive({
 		active: false,
 		imageUrl: "",
@@ -8261,6 +8280,7 @@
 			let keepOverlayUntil = 0;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
+				if (isPointerPressed()) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (!text) {
 					if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
@@ -8326,6 +8346,7 @@
 					window.addEventListener("scroll", onFloatScroll, true);
 				}
 				if (isSelectSearch.value) {
+					trackSelectionPointer();
 					document.addEventListener("selectionchange", onDocumentSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
@@ -11660,7 +11681,9 @@
 		boot();
 	}
 	function armLazyStart(includeInput) {
+		trackSelectionPointer();
 		const onSelectionChange = () => {
+			if (isPointerPressed()) return;
 			if (!getSelectedText({ includeInput }).trim()) return;
 			requestBoot();
 		};

@@ -5,6 +5,7 @@ import { DELAY_START_MS, shouldDelayStart } from './delay.js';
 import { boot } from './lifecycle.js';
 import { registerMenu } from './menu.js';
 import { getSelectedText } from '../core/selection.js';
+import { isPointerPressed, trackSelectionPointer } from '../core/selectionGesture.js';
 import { armImageContextMenu } from './imageContextMenu.js';
 
 let startTimer = 0;
@@ -85,7 +86,12 @@ export function requestBoot() {
 }
 
 function armLazyStart(includeInput) {
+  // 划词条要等松手再出现，懒启动也必须等到松手
+  trackSelectionPointer();
+
   const onSelectionChange = () => {
+    // 拖动选区的中间态不启动，等 pointerup/mouseup 后的最终选区
+    if (isPointerPressed()) return;
     // 懒启动期间页面的鼠标/键盘事件都会走到这里，先做最廉价的判断
     const text = getSelectedText({ includeInput });
     if (!text.trim()) return;

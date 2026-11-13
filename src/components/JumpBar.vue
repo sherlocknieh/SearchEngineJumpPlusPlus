@@ -27,6 +27,7 @@ import {
   performEngineAction,
 } from '../core/jump.js';
 import { getSelectedText } from '../core/selection.js';
+import { isPointerPressed, trackSelectionPointer } from '../core/selectionGesture.js';
 import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
 import { showToast } from '../stores/ui.js';
@@ -409,6 +410,8 @@ let keepOverlayUntil = 0;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
+  // 仍在拖动选区就先不弹，等松手后按最终选区显示
+  if (isPointerPressed()) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
   if (!text) {
@@ -503,6 +506,8 @@ onMounted(async () => {
   }
 
   if (isSelectSearch.value) {
+    // 记录左键是否按住，拖动过程中的选区变化要延后到松手
+    trackSelectionPointer();
     document.addEventListener('selectionchange', onDocumentSelectionChange);
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
     document.addEventListener('mouseup', onSelectionChange);
