@@ -7,9 +7,9 @@ let anchorSeq = 0;
 </script>
 
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
-import { getDropRoot, getHost } from '../core/shadowDom.js';
+import { getDropRoot, getHost, HOST_ROLE_KEY, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
 import { subscribePointer } from '../composables/sharedPointer.js';
 import EngineItem from './EngineItem.vue';
@@ -37,7 +37,9 @@ const supportsAnchorPositioning = Boolean(
 anchorSeq += 1;
 const anchorId = `--sej-anchor-${anchorSeq}`;
 
-const dropRoot = getDropRoot();
+// 面板要在所属宿主的 Shadow Root 内渲染：内嵌条与划词条各有独立宿主
+const hostRole = inject(HOST_ROLE_KEY, HOST_ROLE_MAIN);
+const dropRoot = getDropRoot(hostRole);
 const triggerEl = ref(null);
 const listEl = ref(null);
 const shown = ref(false);
@@ -120,7 +122,7 @@ function getPositioningMode() {
   const containerPosition = container ? getComputedStyle(container).position : '';
   if (containerPosition === 'fixed' || containerPosition === 'sticky') return 'fixed';
   // 宿主没有定位上下文时 absolute 会相对更外层的祖先定位，位置会错
-  if (getComputedStyle(getHost()).position === 'static') return 'fixed';
+  if (getComputedStyle(getHost(hostRole)).position === 'static') return 'fixed';
   return 'absolute';
 }
 
@@ -152,7 +154,7 @@ function measureAndPosition() {
   let originLeft = 0;
   let originTop = 0;
   if (mode === 'absolute') {
-    const host = getHost();
+    const host = getHost(hostRole);
     const hostRect = host.getBoundingClientRect();
     originLeft = hostRect.left + host.clientLeft;
     originTop = hostRect.top + host.clientTop;

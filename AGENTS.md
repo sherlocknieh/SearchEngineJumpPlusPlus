@@ -23,13 +23,15 @@ src/main.js                 只做装配
    ├─ 命中站点规则 → boot()（延迟站点见 app/delay.js）
    └─ 未命中 → 只开启划词懒启动（首次划词/菜单才 boot）
    └─ app/lifecycle.js      boot(): teardown → Shadow DOM → 全局样式 → 暗色 → 挂 App
-      └─ App.vue            JumpBar + SettingPanel(v-if) + Toast
-         └─ JumpBar.vue     initTargets（找输入框/插入点）→ injectHost（移动 shadow host）
+      ├─ App(role=main)     JumpBar + SettingPanel(v-if) + Toast，挂在 sej-shadow-host
+      └─ App(role=float)    ensureFloatBar() 单独挂载划词条，挂在 sej-shadow-host-float
+         └─ JumpBar.vue     role 决定挂载位置：main 找输入框/插入点，float 固定浮层
 ```
 
 - **SPA 路由**：`app/urlChange.js` 监听 `urlchange`，规则未变且 `barMounted` 时不重建，只刷新 `settings.activeRule`。
 - **重启**：设置保存后 `core/appControl.js` → `lifecycle.restart()`（整棵 Vue 应用重建）。
 - **多实例**：开发版/正式版用不同 host id 共存，层叠偏移在 `core/shadowDom.js`。
+- **划词条独立**：`float` 宿主是独立 Vue 应用，划词/图片模式只影响它，站点内嵌条保持原位。
 
 ## 设置数据链路
 
@@ -87,7 +89,7 @@ src/main.js                 只做装配
   `insertIntoDoc{keyword,target,where}` / `style` / `stylish` / `patches` / `wrapperClass` /
   `selectSearchPriority`
 - 选择器与样式解析：`core/applyRule.js`
-- 命中失败或站点改版 → `JumpBar.initTargets` 自动回退到划词模式
+- 命中失败或站点改版 → 内嵌条不渲染，划词交给独立的划词条（`float` 宿主）
 
 ## 引擎链接解析（自动补 `%s`）
 
@@ -109,7 +111,9 @@ src/main.js                 只做装配
 
 ## Shadow DOM 与样式
 
-- `core/shadowDom.js`：host id、`addStyle`、层叠偏移、`reset`
+- `core/shadowDom.js`：按角色（`main` / `float`）多宿主、`addStyle` 广播、层叠偏移、`reset`；
+  子组件通过 `inject(HOST_ROLE_KEY)` 取所属宿主（`getDropRoot` / `getHost`）
+- 划词条定位：`core/floatPlacement.js` 的 `placeNearRect`，跟随选区时由 JumpBar 写入内联坐标
 - `.build/vueStyleToShadow.js`：把 SFC `<style>` 改写为 `addStyle()`（脚本在 Shadow Root 内，document 样式不生效）
 - 面板样式：`components/settingPanelStyles.js` 按 shell → list → footer → controls → dialogs 顺序拼接
 - `composables/useEventIsolation.js`：面板内的指针/键盘事件在 mask 处截断，避免触发页面自身监听器

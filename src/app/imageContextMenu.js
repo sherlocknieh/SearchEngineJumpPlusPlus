@@ -11,13 +11,8 @@
  */
 import { useSettings } from '../stores/settings.js';
 import { openImageSearch } from '../stores/imageSearch.js';
-import { HOST_ID } from '../core/shadowDom.js';
-import {
-  LONG_PRESS_MS,
-  getImageEngines,
-  isLongPressMove,
-  resolveImageUrl,
-} from '../core/imageSearch.js';
+import { isOwnHostNode } from '../core/shadowDom.js';
+import { LONG_PRESS_MS, getImageEngines, isLongPressMove, resolveImageHit } from '../core/imageSearch.js';
 
 let armed = false;
 
@@ -31,6 +26,7 @@ export function armImageContextMenu(ensureBoot) {
   let timer = 0;
   let startX = 0;
   let startY = 0;
+  // 命中的 { url, element }，长按成立后才交给划词条
   let pressed = null;
   // 长按已触发时，随后的 click / contextmenu 要一并吞掉，避免页面误响应
   let suppressUntil = 0;
@@ -46,18 +42,18 @@ export function armImageContextMenu(ensureBoot) {
     if (e.button !== 0 || !e.isPrimary) return;
     if (!imageSearchEnabled()) return;
 
-    const imageUrl = resolveImageUrl(e.target);
-    if (!imageUrl) return;
+    const hit = resolveImageHit(e.target);
+    if (!hit) return;
 
     startX = e.clientX;
     startY = e.clientY;
-    pressed = imageUrl;
+    pressed = hit;
     clearTimeout(timer);
     timer = setTimeout(() => {
       timer = 0;
       if (!pressed) return;
       suppressUntil = performance.now() + 800;
-      showImageSearch(pressed);
+      showImageSearch(pressed.url, pressed.element);
       pressed = null;
       // 触屏设备给一次轻震动，确认长按已生效
       navigator.vibrate?.(10);
@@ -69,10 +65,10 @@ export function armImageContextMenu(ensureBoot) {
     if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
   }
 
-  /** 把图片地址交给跳转条；先写状态再启动，挂载时才能进入图片模式 */
-  function showImageSearch(imageUrl) {
+  /** 把图片地址交给划词条；先写状态再启动，挂载时才能进入图片模式 */
+  function showImageSearch(imageUrl, element) {
     if (!imageUrl) return;
-    openImageSearch(imageUrl);
+    openImageSearch(imageUrl, element);
     ensureBoot?.();
   }
 
@@ -98,8 +94,9 @@ export function armImageContextMenu(ensureBoot) {
     if (!imageSearchEnabled()) return;
     // 跳转条自身的右键交给浏览器，避免在浮层里再弹一次
     const path = e.composedPath?.() || [];
-    if (path.some((node) => node?.id === HOST_ID)) return;
-    showImageSearch(resolveImageUrl(e.target));
+    if (path.some((node) => isOwnHostNode(node))) return;
+    const hit = resolveImageHit(e.target);
+    if (hit) showImageSearch(hit.url, hit.element);
   }
 
   document.addEventListener('pointerdown', onPointerDown, true);

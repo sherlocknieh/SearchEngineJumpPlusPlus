@@ -38,7 +38,7 @@ export async function startScript() {
 /**
  * 根据当前页面选择启动方式：
  * - 命中站点规则：按延迟策略直接挂载跳转条；
- * - 没有站点规则：只按需挂载（划词或打开设置菜单时）。
+ * - 没有站点规则：只按需挂载划词条（划词、搜图或打开设置菜单时）。
  */
 function armStart() {
   disarmLazyStart();
@@ -46,7 +46,7 @@ function armStart() {
   const settings = useSettings();
 
   // 没有站点规则：
-  // - 开启划词搜索时等第一次划词再挂载；
+  // - 开启划词搜索时等第一次划词再启动；
   // - 连划词条也关闭时完全不挂载，只在打开设置菜单时按需启动。
   if (!settings.getMatchedRule()) {
     if (settings.settingData.selectSearch) {

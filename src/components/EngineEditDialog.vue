@@ -11,10 +11,10 @@ import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
-import { addStyle } from '../core/shadowDom.js';
+import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import engineEditStyles from './EngineEditDialog.css?raw';
 
-addStyle(engineEditStyles);
+addStyle(engineEditStyles, HOST_ROLE_MAIN);
 
 const props = defineProps({
   mode: { type: String, default: 'add' },

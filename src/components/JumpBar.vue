@@ -1,10 +1,17 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
 import { localizeCategoryName, t } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
-import { getHost, insertHost } from '../core/shadowDom.js';
+import {
+  getHost,
+  insertHost,
+  HOST_ROLE_FLOAT,
+  HOST_ROLE_KEY,
+  HOST_ROLE_MAIN,
+} from '../core/shadowDom.js';
+import { placeNearRect } from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -22,7 +29,6 @@ import {
 import { getSelectedText } from '../core/selection.js';
 import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
-import { requestRestart } from '../core/appControl.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
@@ -31,34 +37,44 @@ import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';
 
+const props = defineProps({
+  // float 角色只做划词条 / 图片条，main 角色负责站点内嵌的跳转条
+  role: { type: String, default: HOST_ROLE_MAIN },
+});
+
+const isFloat = props.role === HOST_ROLE_FLOAT;
+// 子组件（下拉面板等）据此在所属 Shadow Root 内取根节点
+provide(HOST_ROLE_KEY, props.role);
+
 const settings = useSettings();
 const data = settings.settingData;
-const matchedRule = settings.getMatchedRule();
+const matchedRule = isFloat ? null : settings.getMatchedRule();
 // 记录本实例实际使用的规则，供 SPA 路由变化时判断能否复用
-settings.activeRule = matchedRule;
-settings.barMounted = false;
+if (!isFloat) {
+  settings.activeRule = matchedRule;
+  settings.barMounted = false;
+}
 // 站点行为补丁由 siteStyles 模块提供
 const sitePatches = matchedRule?.patches ?? {};
 const inlineStyleBlocked = isInlineStyleBlocked();
 
 const ready = ref(false);
-const isSelectSearch = ref(false);
-// 长按图片时复用同一条跳转条，只把关键词换成图片地址
+// 浮层条（划词条 / 图片条）始终脱离文档流显示，内嵌条跟随站点布局；
+// 这里只需一个固定值，供视图校正判断“是否浮层”
+const isOverlayBar = { value: isFloat };
+// 浮层条只在开启划词搜索时响应选区，图片模式与设置项无关
+const selectSearchEnabled = Boolean(data.selectSearch);
+const isSelectSearch = ref(isFloat && selectSearchEnabled);
+// 长按图片时复用同一条划词条，只把关键词换成图片地址
 const isImageSearch = ref(false);
-// 站点内嵌的跳转条在划词时临时改成顶部浮层
-const isSelectionOverlay = ref(false);
-const isOverlay = computed(
-  () => isSelectSearch.value || isImageSearch.value || isSelectionOverlay.value,
-);
-// 站点内嵌的跳转条也能响应划词（临时浮到顶部），纯划词条已是浮层，无需再接管
-const selectionOverlayAvailable = computed(
-  () => Boolean(matchedRule?.enabled) && Boolean(data.selectSearch) && !isSelectSearch.value,
-);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
 const scrollEl = ref(null);
 const containerClass = ref('rwl-exempt');
+// 跟随选区/图片时记录锚点矩形，顶部居中模式保持 null
+const anchorRect = ref(null);
+const floatStyle = ref({});
 
 const {
   updateScrollHints,
@@ -80,7 +96,7 @@ const {
 } = useBarViewport({
   containerEl,
   // 浮层期间不做页面内的横向校正
-  isSelectSearch: isOverlay,
+  isSelectSearch: isOverlayBar,
   sitePatches,
   updateScrollHints,
   forceCenter: Boolean(data.center),
@@ -90,6 +106,13 @@ let inputTarget = null;
 let insertTarget = null;
 let insertPosition = 'beforeend';
 let resolvedStyle = '';
+
+// 浮层条的定位坐标与图片缩略图共用同一个 style 绑定
+const barStyle = computed(() => {
+  const style = { ...floatStyle.value };
+  if (isImageSearch.value) style['--sej-image-thumb'] = `url(${imageSearch.imageUrl})`;
+  return style;
+});
 
 const categories = computed(() =>
   data.engineCategories
@@ -106,7 +129,7 @@ const categories = computed(() =>
 
 function getCurrentKeyword() {
   if (isImageSearch.value) return imageSearch.imageUrl;
-  if (isSelectSearch.value || isSelectionOverlay.value) return selectionText.value;
+  if (isSelectSearch.value) return selectionText.value;
   return extractKeyword(inputTarget);
 }
 
@@ -130,19 +153,26 @@ function onJumpAll(engines) {
   if (isImageSearch.value) closeImageMode();
 }
 
-/** 收起图片模式：清掉图片状态后重建，跳转条回到原本的站点布局 */
+/** 收起图片模式：清掉图片状态后由浮层条自行收起 */
 function closeImageMode() {
   barVisible.value = false;
   closeImageSearch();
 }
 
-// 长按可能发生在跳转条已挂载之后：状态与当前挂载模式不一致时重建，
-// 让同一条跳转条在「站点内嵌」与「顶部图片浮层」之间切换
+// 长按可能发生在浮层条已挂载之后：图片模式与划词共用同一个浮层条，
+// 切换模式只需刷新关键词与显隐，无需重建 Vue 应用
 watch(
   () => imageSearch.active,
   (active) => {
-    if (active === isImageSearch.value) return;
-    setTimeout(() => requestRestart(), 0);
+    if (!isFloat || active === isImageSearch.value) return;
+    isImageSearch.value = active;
+    if (active) {
+      selectionText.value = '';
+      refreshAnchor(null);
+      showFloatBar();
+      return;
+    }
+    barVisible.value = false;
   },
 );
 
@@ -150,13 +180,21 @@ watch(
 function onImageModePointerDown(e) {
   // 右键用于重新指定图片，交给 contextmenu 处理，避免先收起再重建
   if (e.button !== 0) return;
-  const path = e.composedPath?.();
-  const inside = path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target);
-  if (!inside) closeImageMode();
+  if (!isInsideBar(e)) closeImageMode();
 }
 
-function onImageModeKeydown(e) {
-  if (e.key === 'Escape') closeImageMode();
+// Escape 统一收起浮层条：图片模式同时清掉图片状态
+function onOverlayKeydown(e) {
+  if (e.key !== 'Escape') return;
+  if (isImageSearch.value) {
+    closeImageMode();
+    return;
+  }
+  barVisible.value = false;
+}
+
+function onImageModeScroll() {
+  if (isImageSearch.value) closeImageMode();
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文
@@ -216,6 +254,7 @@ function onBarWheel(e) {
   onScrollWheel(e);
 }
 
+/** 划词条沿用同一套跳转条，只是关键词来自选区 */
 function initSelectSearch() {
   // 划词条本身靠 Shadow DOM 样式定位，不依赖内联样式，CSP 下也可工作
   if (inlineStyleBlocked) {
@@ -223,31 +262,30 @@ function initSelectSearch() {
   }
   isSelectSearch.value = true;
   inputTarget = () => selectionText.value;
-  insertTarget = document.body;
-  insertPosition = 'beforeend';
+  return true;
+}
+
+function initImageSearch() {
+  isImageSearch.value = true;
+  inputTarget = () => imageSearch.imageUrl;
   return true;
 }
 
 /**
- * 长按图片时以图片模式挂载：跳转条固定在视口顶部，关键词是图片地址。
- * 与划词条共用同一套定位与样式，只是内容换成「图片」分类。
+ * 解析本角色的挂载目标。
+ * @returns {{render: boolean, ok?: boolean}} render 为 false 表示本角色无需渲染；
+ *   ok 为 false 表示站点规则命中但目标失效，调用方应保持未挂载状态以便重试。
  */
-function initImageSearch() {
-  isImageSearch.value = true;
-  inputTarget = () => imageSearch.imageUrl;
-  insertTarget = document.body;
-  insertPosition = 'beforeend';
-  return true;
-}
-
 function initTargets() {
-  // 长按图片触发的懒启动优先进入图片模式，避免先按站点规则找输入框
-  if (imageSearch.active) return initImageSearch();
+  // 划词条与图片条共用同一个浮层条：长按触发时优先进入图片模式
+  if (isFloat) {
+    if (imageSearch.active) return { render: initImageSearch() };
+    return { render: selectSearchEnabled && initSelectSearch() };
+  }
 
-  // 此类站点（如 Wikipedia）的规则只适合作为标题跳转，
-  // 开启划词搜索时优先使用划词模式，避免规则目标失效或无输入框
-  if (data.selectSearch && matchedRule?.enabled && matchedRule.selectSearchPriority) {
-    return initSelectSearch();
+  // 规则声明优先划词时（如 Wikipedia），内嵌条让位给独立的划词条
+  if (selectSearchEnabled && matchedRule?.enabled && matchedRule.selectSearchPriority) {
+    return { render: false };
   }
 
   if (matchedRule?.enabled) {
@@ -258,65 +296,30 @@ function initTargets() {
       console.warn(
         `[SEJ] 未找到输入框或插入位置：\n输入框：${inputTarget}\n插入位置：${insertTarget}`,
       );
-      // 站点结构可能已改版（如 Wikipedia 的 #mw-head），回退到划词搜索
-      if (data.selectSearch) {
-        return initSelectSearch();
-      }
-      return false;
+      return { render: false, ok: false };
     }
-    return true;
+    return { render: true };
   }
 
-  if (data.selectSearch) {
-    return initSelectSearch();
-  }
-
-  console.info('[SEJ] 未启用搜索跳转，跳过初始化');
-  return false;
+  // 没有站点规则：内嵌条不渲染，划词交给独立的浮层条
+  return { render: false };
 }
 
-/** 站点 wrapperClass 会参与页面网格布局，浮层期间需要摘掉 */
+/** 站点 wrapperClass 会参与页面网格布局 */
 function applyWrapperClass() {
   if (!matchedRule?.wrapperClass) return;
   const needsWrapper = !resolvedStyle.includes('sticky') && !resolvedStyle.includes('fixed');
-  if (needsWrapper) getHost().classList.add(matchedRule.wrapperClass);
+  if (needsWrapper) getHost(props.role).classList.add(matchedRule.wrapperClass);
 }
 
 function injectHost() {
-  if (isOverlay.value) {
-    insertHost(document.body, 'beforeend');
+  // 浮层条脱离站点布局；内嵌条跟随规则指定的插入位置
+  if (isFloat) {
+    insertHost(document.body, 'beforeend', props.role);
     return;
   }
-
-  insertHost(insertTarget, insertPosition);
+  insertHost(insertTarget, insertPosition, props.role);
   applyWrapperClass();
-}
-
-/**
- * 站点内嵌的跳转条在划词时临时改为顶部浮层，
- * 复用同一条跳转条，关键词换成选中文字。
- */
-function enterSelectionOverlay(text) {
-  selectionText.value = text;
-  if (isSelectionOverlay.value) {
-    barVisible.value = true;
-    return;
-  }
-  isSelectionOverlay.value = true;
-
-  const host = getHost();
-  const bar = containerEl.value;
-  // 站点布局留下的位置、宽度与居中位移在浮层里都不再适用
-  bar?.removeAttribute('style');
-  bar?.classList.remove('sej-mobile-centered');
-  host.removeAttribute('style');
-  if (matchedRule?.wrapperClass) host.classList.remove(matchedRule.wrapperClass);
-  insertHost(document.body, 'beforeend');
-
-  // 先套用浮层定位，下一帧再显示，保留从顶部滑出的过渡
-  requestAnimationFrame(() => {
-    if (isSelectionOverlay.value) barVisible.value = true;
-  });
 }
 
 /** 事件是否发生在跳转条（Shadow DOM）内部 */
@@ -325,56 +328,110 @@ function isInsideBar(e) {
   return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
 }
 
-/** 选区消失后把跳转条交还页面的内嵌位置 */
-function exitSelectionOverlay() {
-  if (!isSelectionOverlay.value) return;
-  isSelectionOverlay.value = false;
-  barVisible.value = false;
-
-  injectHost();
-  constrainBarToViewport();
-  updateScrollHints();
-  scheduleConstrainCheck();
+/** 跟随模式下用选区/图片的矩形算出跳转条的视口坐标 */
+function syncFloatPlacement() {
+  if (!isFloat) return;
+  const bar = containerEl.value;
+  const rect = anchorRect.value;
+  if (!bar || !rect) {
+    floatStyle.value = {};
+    containerEl.value?.classList.remove('sej-follow-anchor');
+    containerEl.value?.classList.add('sej-top');
+    return;
+  }
+  const barRect = bar.getBoundingClientRect();
+  const { top, left } = placeNearRect({
+    rect,
+    bar: { width: barRect.width, height: barRect.height },
+    viewport: {
+      width: document.documentElement.clientWidth,
+      height: window.visualViewport?.height || window.innerHeight,
+    },
+  });
+  bar.classList.remove('sej-top');
+  bar.classList.add('sej-follow-anchor');
+  floatStyle.value = { top: `${top}px`, left: `${left}px` };
 }
 
-// 点击跳转条本身会清掉页面选区，此时要保持浮层，否则点第二个引擎前就被收回
+/**
+ * 选区的视口矩形：多行选区取包围盒；拿不到范围时返回 null，退回顶部居中。
+ * @param {Selection} selection 文档选区
+ */
+function selectionAnchorRect(selection) {
+  if (typeof selection?.getRangeAt === 'function' && selection.rangeCount) {
+    try {
+      const rangeRect = selection.getRangeAt(0).getBoundingClientRect();
+      if (rangeRect && (rangeRect.width > 0 || rangeRect.height > 0)) return rangeRect;
+    } catch (e) {
+      // 选区跨 Shadow 边界等情况下拿不到范围
+    }
+  }
+  return null;
+}
+
+/** 当前长按命中的图片元素（用于跟随模式取图片右上角） */
+function imageAnchorRect() {
+  const el = imageSearch.element;
+  if (!el?.isConnected) return null;
+  const rect = el.getBoundingClientRect?.();
+  return rect && rect.width > 0 ? rect : null;
+}
+
+/**
+ * 记录本次要贴住的锚点；关闭跟随或拿不到矩形时回到顶部居中。
+ * @param {Selection | null} selection 文档选区
+ */
+function refreshAnchor(selection) {
+  anchorRect.value =
+    isFloat && data.selectionFollowPointer
+      ? isImageSearch.value
+        ? imageAnchorRect()
+        : selectionAnchorRect(selection)
+      : null;
+}
+
+/**
+ * 显示浮层条。跟随模式下内容与宽度都可能刚变化，
+ * 先渲染完再量尺寸定位，避免用旧宽高算出偏移的坐标。
+ */
+async function showFloatBar() {
+  if (!isFloat) {
+    barVisible.value = true;
+    return;
+  }
+  await nextTick();
+  syncFloatPlacement();
+  barVisible.value = true;
+}
+
+// 点击跳转条本身会清掉页面选区，此时要保持浮层
 let keepOverlayUntil = 0;
 
 function onSelectionChange(e) {
+  if (!isSelectSearch.value) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
   if (!text) {
     // 点跳转条本身会清掉页面选区，浮层要留到这次点击结束
-    if (isSelectionOverlay.value) {
-      if (performance.now() < keepOverlayUntil || isInsideBar(e)) return;
-      exitSelectionOverlay();
-      return;
-    }
+    if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
     barVisible.value = false;
     return;
   }
   // 图片模式下关键词是图片地址，不跟随页面选区
   if (isImageSearch.value) return;
-  if (isSelectSearch.value) {
-    selectionText.value = text;
-    barVisible.value = true;
-    return;
-  }
-  enterSelectionOverlay(text);
+  selectionText.value = text;
+  refreshAnchor(document.getSelection());
+  showFloatBar();
 }
 
-// 在页面其他位置按下鼠标即收起划词浮层；selectionchange 无法区分点击目标
+// 在页面其他位置按下鼠标即收起划词条；selectionchange 无法区分点击目标
 function onOverlayPointerDown(e) {
-  if (!isSelectionOverlay.value) return;
+  if (!barVisible.value) return;
   if (isInsideBar(e)) {
     keepOverlayUntil = performance.now() + 500;
     return;
   }
-  exitSelectionOverlay();
-}
-
-function onOverlayKeydown(e) {
-  if (e.key === 'Escape') exitSelectionOverlay();
+  barVisible.value = false;
 }
 
 // selectionchange 不带可靠的事件目标，只用来发现新选区
@@ -382,15 +439,35 @@ function onDocumentSelectionChange() {
   onSelectionChange(null);
 }
 
+// 页面滚动后原来的选区坐标已失效，跟随模式改为贴着视口顶部
+function onFloatScroll() {
+  if (!isFloat || !anchorRect.value) return;
+  anchorRect.value = null;
+  syncFloatPlacement();
+}
+
+// 视口变化后重新收一次边界，避免跟随模式跑到屏幕外
+function onFloatResize() {
+  onViewportResize();
+  syncFloatPlacement();
+}
+
 onMounted(async () => {
-  if (!initTargets()) return;
-  settings.barMounted = true;
+  const { render, ok = true } = initTargets();
+  if (!ok) return;
+  // ok 为真表示初始化已完成（含让位给划词条的情况），路由变化无需重试
+  if (!isFloat) settings.barMounted = ok;
+  // 没有需要渲染的内容时保持空挂载，避免多建一个无用实例
+  if (!render) return;
   ready.value = true;
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
   if (isSelectSearch.value) onSelectionChange();
-  // 图片模式由长按触发，挂载后直接显示
-  if (isImageSearch.value) barVisible.value = true;
+  // 图片模式下由长按触发，挂载后直接显示并定位
+  if (isImageSearch.value) {
+    refreshAnchor(null);
+    barVisible.value = true;
+  }
 
   if (matchedRule) {
     applyStylish(matchedRule);
@@ -403,48 +480,47 @@ onMounted(async () => {
   await nextTick();
   injectHost();
   startStackSync();
-  constrainBarToViewport();
+  if (isFloat) {
+    syncFloatPlacement();
+  } else {
+    constrainBarToViewport();
+  }
   updateScrollHints();
   // 入场动画的 scale 会让首帧测量偏小，动画结束后重新校准
   scheduleConstrainCheck();
-  window.addEventListener('resize', onViewportResize);
+  window.addEventListener('resize', isFloat ? onFloatResize : onViewportResize);
   window.addEventListener('pointermove', onWindowPointerMove, {
     passive: true,
   });
   window.addEventListener('pointerup', endScrollDrag);
   window.addEventListener('pointercancel', endScrollDrag);
 
-  if (isImageSearch.value) {
+  if (isFloat) {
     document.addEventListener('pointerdown', onImageModePointerDown, true);
-    document.addEventListener('keydown', onImageModeKeydown, true);
-    window.addEventListener('scroll', closeImageMode, true);
+    document.addEventListener('keydown', onOverlayKeydown, true);
+    window.addEventListener('scroll', onImageModeScroll, true);
+    window.addEventListener('scroll', onFloatScroll, true);
   }
 
-  // 划词监听：纯划词条直接控制显隐；站点内嵌的跳转条则在划词时临时吸到顶部
-  if (isSelectSearch.value || selectionOverlayAvailable.value) {
+  if (isSelectSearch.value) {
     document.addEventListener('selectionchange', onDocumentSelectionChange);
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
     document.addEventListener('mouseup', onSelectionChange);
     document.addEventListener('keyup', onSelectionChange);
-  }
-  // 页面其它位置的点击会带走选区，需要主动收起浮层
-  if (selectionOverlayAvailable.value) {
     document.addEventListener('pointerdown', onOverlayPointerDown, true);
-    document.addEventListener('keydown', onOverlayKeydown, true);
   }
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onImageModePointerDown, true);
-  document.removeEventListener('keydown', onImageModeKeydown, true);
-  window.removeEventListener('scroll', closeImageMode, true);
-  document.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
+  window.removeEventListener('scroll', onImageModeScroll, true);
+  window.removeEventListener('scroll', onFloatScroll, true);
+  document.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('selectionchange', onDocumentSelectionChange);
-  document.removeEventListener('selectionchange', onSelectionChange);
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);
-  window.removeEventListener('resize', onViewportResize);
+  window.removeEventListener('resize', isFloat ? onFloatResize : onViewportResize);
   window.removeEventListener('pointermove', onWindowPointerMove);
   window.removeEventListener('pointerup', endScrollDrag);
   window.removeEventListener('pointercancel', endScrollDrag);
@@ -463,13 +539,15 @@ onBeforeUnmount(() => {
     :class="[
       containerClass,
       {
-        selectSearch: isOverlay,
+        selectSearch: isFloat,
+        'sej-top': isFloat && !anchorRect,
+        'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
         'sej-image-search': isImageSearch,
       },
     ]"
-    :aria-hidden="isOverlay && !barVisible ? 'true' : undefined"
-    :style="isImageSearch ? { '--sej-image-thumb': `url(${imageSearch.imageUrl})` } : undefined"
+    :aria-hidden="isFloat && !barVisible ? 'true' : undefined"
+    :style="barStyle"
   >
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
@@ -521,7 +599,6 @@ onBeforeUnmount(() => {
     <SettingButton />
   </div>
 </template>
-
 <style>
 #sej-container {
   display: flex;
@@ -727,22 +804,40 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-/* 滑词搜索样式 */
+/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */
 #sej-container.selectSearch {
   position: fixed;
-  top: 2px;
-  left: 0;
-  right: 0;
   z-index: 99999999;
-  margin: 0 auto;
+  margin: 0;
   /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */
   grid-column: auto;
+  max-width: min(calc(100vw - 8px), max-content);
   transform: translateY(calc(-100% - 10px));
   visibility: hidden;
   pointer-events: none;
   transition:
     transform 0.3s,
     visibility 0s linear 0.3s;
+}
+
+/* 顶部居中：默认位置，横向由视口决定 */
+#sej-container.selectSearch.sej-top {
+  top: 2px;
+  left: 0;
+  right: 0;
+  margin: 0 auto;
+}
+
+/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */
+#sej-container.selectSearch.sej-follow-anchor {
+  top: 0;
+  left: 0;
+  right: auto;
+  margin: 0;
+  transform: none;
+  transform-origin: top left;
+  /* 入场动画的位移会让首帧偏离锚点，跟随模式直接显示 */
+  animation: none;
 }
 
 #sej-container.selectSearch.sej-select-visible {

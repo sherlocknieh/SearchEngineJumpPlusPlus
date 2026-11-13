@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0134
+// @version            2026.11.14.0201
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -4883,67 +4883,43 @@
 		cspNonce = null;
 	}
 	var INSTANCE_ROLE = "prod";
-	var HOST_ID = "sej-shadow-host";
-	var HOST_SELECTOR = "#sej-shadow-host, #sej-shadow-host-dev";
+	var HOST_ROLE_MAIN = "main";
+	var HOST_ROLE_FLOAT = "float";
+	var HOST_ROLE_KEY = Symbol("sejHostRole");
+	var HOST_IDS = {
+		main: {
+			prod: "sej-shadow-host",
+			dev: "sej-shadow-host-dev"
+		},
+		float: {
+			prod: "sej-shadow-host-float",
+			dev: "sej-shadow-host-float-dev"
+		}
+	};
+	var HOST_ID = HOST_IDS.main[INSTANCE_ROLE];
+	HOST_IDS.float[INSTANCE_ROLE];
+	var HOST_SELECTOR = Object.values(HOST_IDS).flatMap((ids) => Object.values(ids)).map((id) => `#${id}`).join(", ");
 	var ROLE_RANK = {
 		prod: 0,
 		dev: 1
 	};
 	var STACK_GAP = 8;
 	var TOAST_STACK_STEP = 43;
-	var shadowHost = null;
-	var shadowRoot = null;
-	var constructableSheets = [];
-	var injectedStyles = new Set();
+	var roots = new Map();
+	var styleTexts = [];
+	var stackSheets = new Map();
+	function hostIdFor(role) {
+		return HOST_IDS[role]?.["prod"] ?? HOST_ID;
+	}
 	function supportsConstructableStylesheets() {
 		return typeof CSSStyleSheet !== "undefined" && typeof ShadowRoot !== "undefined" && "replaceSync" in CSSStyleSheet.prototype && "adoptedStyleSheets" in ShadowRoot.prototype;
 	}
-	function initialize() {
-		if (shadowHost) return shadowRoot;
-		shadowHost = document.createElement("div");
-		shadowHost.id = HOST_ID;
-		shadowHost.dataset.sejInstance = INSTANCE_ROLE;
-		shadowRoot = shadowHost.attachShadow({ mode: "open" });
-		return shadowRoot;
-	}
-	function getHost() {
-		if (!shadowHost) initialize();
-		return shadowHost;
-	}
-	var dropRoot = null;
-	function getDropRoot() {
-		if (!shadowRoot) initialize();
-		if (!dropRoot) {
-			dropRoot = document.createElement("div");
-			dropRoot.id = "sej-drop-lists";
-			shadowRoot.appendChild(dropRoot);
-		}
-		return dropRoot;
-	}
-	function insertHost(target, position = "beforeend") {
-		if (!shadowHost) initialize();
-		if (shadowHost.parentNode) shadowHost.parentNode.removeChild(shadowHost);
-		if (position === "beforebegin") target.parentNode.insertBefore(shadowHost, target);
-		else if (position === "afterbegin") {
-			if (target.firstChild) target.insertBefore(shadowHost, target.firstChild);
-			else target.appendChild(shadowHost);
-		} else if (position === "beforeend") target.appendChild(shadowHost);
-		else if (position === "afterend") {
-			if (target.nextSibling) target.parentNode.insertBefore(shadowHost, target.nextSibling);
-			else target.parentNode.appendChild(shadowHost);
-		} else document.body.appendChild(shadowHost);
-		return shadowHost;
-	}
-	function addStyle(cssText) {
-		if (!cssText || injectedStyles.has(cssText)) return;
-		injectedStyles.add(cssText);
-		if (!shadowRoot) initialize();
+	function injectStyle(entry, cssText, reusable = false) {
 		if (supportsConstructableStylesheets()) try {
 			const sheet = new CSSStyleSheet();
 			sheet.replaceSync(cssText);
-			constructableSheets.push(sheet);
-			shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, sheet];
-			return;
+			entry.root.adoptedStyleSheets = [...entry.root.adoptedStyleSheets, sheet];
+			return reusable ? sheet : null;
 		} catch (e) {
 			console.warn("Constructable stylesheet 注入失败，回退到 <style> 注入", e);
 		}
@@ -4951,21 +4927,85 @@
 		const nonce = getCSPNonce();
 		if (nonce) style.setAttribute("nonce", nonce);
 		style.textContent = cssText;
-		shadowRoot.appendChild(style);
+		entry.root.appendChild(style);
+		return style;
+	}
+	function initialize(role = HOST_ROLE_MAIN) {
+		const existing = roots.get(role);
+		if (existing) return existing.root;
+		const host = document.createElement("div");
+		host.id = hostIdFor(role);
+		host.dataset.sejInstance = INSTANCE_ROLE;
+		host.dataset.sejRole = role;
+		const root = host.attachShadow({ mode: "open" });
+		const entry = {
+			host,
+			root,
+			dropRoot: null
+		};
+		roots.set(role, entry);
+		for (const { cssText, scope } of styleTexts) {
+			if (scope && scope !== role) continue;
+			injectStyle(entry, cssText);
+		}
+		return root;
+	}
+	function getHost(role = HOST_ROLE_MAIN) {
+		initialize(role);
+		return roots.get(role)?.host ?? null;
+	}
+	function getHosts() {
+		return Array.from(roots.values(), (entry) => entry.host);
+	}
+	function isOwnHostNode(node) {
+		return Boolean(node?.dataset?.sejRole);
+	}
+	function getDropRoot(role = HOST_ROLE_MAIN) {
+		const root = initialize(role);
+		const entry = roots.get(role);
+		if (!entry.dropRoot) {
+			entry.dropRoot = document.createElement("div");
+			entry.dropRoot.id = "sej-drop-lists";
+			root.appendChild(entry.dropRoot);
+		}
+		return entry.dropRoot;
+	}
+	function insertHost(target, position = "beforeend", role = HOST_ROLE_MAIN) {
+		const host = getHost(role);
+		if (host.parentNode) host.parentNode.removeChild(host);
+		if (position === "beforebegin") target.parentNode.insertBefore(host, target);
+		else if (position === "afterbegin") {
+			if (target.firstChild) target.insertBefore(host, target.firstChild);
+			else target.appendChild(host);
+		} else if (position === "beforeend") target.appendChild(host);
+		else if (position === "afterend") {
+			if (target.nextSibling) target.parentNode.insertBefore(host, target.nextSibling);
+			else target.parentNode.appendChild(host);
+		} else document.body.appendChild(host);
+		return host;
+	}
+	function addStyle(cssText, role = null) {
+		if (!cssText) return;
+		if (styleTexts.some((item) => item.cssText === cssText && item.scope === (role || null))) return;
+		styleTexts.push({
+			cssText,
+			scope: role || null
+		});
+		for (const [hostRole, entry] of roots) {
+			if (role && hostRole !== role) continue;
+			injectStyle(entry, cssText);
+		}
 	}
 	function reset() {
-		if (shadowHost?.parentNode) shadowHost.parentNode.removeChild(shadowHost);
-		shadowHost = null;
-		shadowRoot = null;
-		dropRoot = null;
-		constructableSheets.length = 0;
-		injectedStyles.clear();
-		stackSheet = null;
-		stackSheetText = "";
+		for (const entry of roots.values()) if (entry.host.parentNode) entry.host.parentNode.removeChild(entry.host);
+		roots.clear();
+		styleTexts.length = 0;
+		stackSheets.clear();
 		resetCSPNonce();
 	}
-	function getInstanceHosts() {
-		return Array.from(document.querySelectorAll(HOST_SELECTOR));
+	function getInstanceHosts(role) {
+		const hosts = Array.from(document.querySelectorAll(HOST_SELECTOR));
+		return role ? hosts.filter((host) => host.dataset.sejRole === role) : hosts;
 	}
 	function getContainerEl(host) {
 		return host.shadowRoot?.querySelector("#sej-container") || null;
@@ -4981,49 +5021,45 @@
 		const container = getContainerEl(host);
 		return container ? container.getBoundingClientRect().height : 0;
 	}
-	function getStackOffset() {
-		if (!shadowHost) return 0;
+	function getStackOffset(role = HOST_ROLE_MAIN) {
+		const selfHost = roots.get(role)?.host;
+		if (!selfHost) return 0;
 		const selfRank = ROLE_RANK["prod"] ?? 0;
 		let offset = 0;
 		for (const host of getInstanceHosts()) {
-			if (host === shadowHost) continue;
+			if (host === selfHost) continue;
 			if ((ROLE_RANK[host.dataset.sejInstance] ?? 0) >= selfRank || !isOverlayHost(host)) continue;
 			offset += renderedHeight(host) + STACK_GAP;
 		}
 		return Math.round(offset);
 	}
-	var stackSheet = null;
-	var stackSheetText = "";
-	function writeStackSheet(cssText) {
-		if (cssText === stackSheetText) return;
-		if (!shadowRoot) initialize();
-		if (!stackSheet) {
-			if (supportsConstructableStylesheets()) try {
-				stackSheet = new CSSStyleSheet();
-				stackSheet.replaceSync("");
-				shadowRoot.adoptedStyleSheets = [...shadowRoot.adoptedStyleSheets, stackSheet];
-			} catch (e) {
-				stackSheet = null;
-			}
-			if (!stackSheet) {
-				stackSheet = document.createElement("style");
-				const nonce = getCSPNonce();
-				if (nonce) stackSheet.setAttribute("nonce", nonce);
-				shadowRoot.appendChild(stackSheet);
-			}
+	function stackRulesFor(role) {
+		const rules = [];
+		const offset = getStackOffset(role);
+		if (offset > 0 && role === "float") rules.push(`#sej-container.selectSearch.sej-top { top: calc(2px + ${offset}px); }`);
+		if (role === "main") {
+			const toastOffset = getInstanceHosts("main").length > 1 ? TOAST_STACK_STEP : 0;
+			if (toastOffset > 0) rules.push(`#iqixn-global-tip { bottom: calc(5% + ${toastOffset}px); }`);
 		}
-		if (typeof stackSheet.replaceSync === "function") stackSheet.replaceSync(cssText);
-		else stackSheet.textContent = cssText;
-		stackSheetText = cssText;
+		return rules.join("\n");
+	}
+	function writeStackSheet(role) {
+		const entry = roots.get(role);
+		if (!entry) return;
+		const cssText = stackRulesFor(role);
+		let sheet = stackSheets.get(role);
+		if (!sheet) {
+			const injected = injectStyle(entry, cssText, true);
+			if (injected) stackSheets.set(role, injected);
+			return;
+		}
+		if (typeof sheet.replaceSync === "function") sheet.replaceSync(cssText);
+		else sheet.textContent = cssText;
 	}
 	function refreshStackLayout() {
-		if (!shadowRoot) return;
-		const offset = getStackOffset();
-		const toastOffset = getInstanceHosts().length > 1 ? TOAST_STACK_STEP : 0;
-		const rules = [];
-		if (offset > 0) rules.push(`#sej-container.selectSearch { top: calc(2px + ${offset}px); }`);
-		if (toastOffset > 0) rules.push(`#iqixn-global-tip { bottom: calc(5% + ${toastOffset}px); }`);
-		writeStackSheet(rules.join("\n"));
+		if (!roots.size) return;
+		writeStackSheet(HOST_ROLE_MAIN);
+		writeStackSheet(HOST_ROLE_FLOAT);
 	}
 	var _163_exports = __exportAll({ default: () => _163_default });
 	var _163_default = [{
@@ -5682,6 +5718,7 @@
 		version: "2026-10-24 08:47:49",
 		selectSearch: true,
 		selectSearchInInput: true,
+		selectionFollowPointer: false,
 		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
@@ -5763,6 +5800,8 @@
 			"settings.selectSearch": "划词搜索",
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
+			"settings.selectionFollowPointer": "跟随选区",
+			"settings.selectionFollowPointerTip": "划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出",
 			"settings.center": "强制居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
@@ -5894,6 +5933,8 @@
 			"settings.selectSearch": "Selection search",
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
+			"settings.selectionFollowPointer": "Follow selection",
+			"settings.selectionFollowPointerTip": "Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top",
 			"settings.center": "Force center",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.editConfig": "Config file",
@@ -6162,6 +6203,7 @@
 		"center",
 		"selectSearch",
 		"selectSearchInInput",
+		"selectionFollowPointer",
 		"defaultOpenTarget",
 		"imageSearch",
 		"language"
@@ -6170,6 +6212,7 @@
 		return {
 			selectSearch: true,
 			selectSearchInInput: true,
+			selectionFollowPointer: false,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			imageSearch: true,
@@ -6348,6 +6391,22 @@
 		if (!instance) instance = reactive(new Settings());
 		return instance;
 	}
+	function placeNearRect({ rect, bar, viewport, gap = 6 }) {
+		const viewWidth = Math.max(0, viewport?.width ?? 0);
+		const viewHeight = Math.max(0, viewport?.height ?? 0);
+		const barWidth = Math.max(0, bar?.width ?? 0);
+		const barHeight = Math.max(0, bar?.height ?? 0);
+		const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
+		const left = Math.min(Math.max(rect.right, gap), maxLeft);
+		let top = rect.top - gap - barHeight;
+		if (top < gap) top = rect.bottom + gap;
+		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
+		top = Math.min(Math.max(top, gap), maxTop);
+		return {
+			top: Math.round(top),
+			left: Math.round(left)
+		};
+	}
 	var pageStyleEl = null;
 	function addPageStyle(cssText) {
 		if (!cssText) return;
@@ -6397,14 +6456,14 @@
 		const searchMain = document.getElementById("SearchMain");
 		if (searchMain && searchMain.style.marginLeft == "150px") style = rule.style_ZhihuChenglinz || style;
 		if (settingData.center) style += FORCE_CENTER_STYLE;
-		addStyle(`#sej-container { ${style} }`);
+		addStyle(`#sej-container { ${style} }`, HOST_ROLE_MAIN);
 		return style;
 	}
 	function applyStylish(rule) {
 		if (!rule?.stylish) return;
 		addPageStyle(rule.stylish);
 		const scriptElementStyles = rule.stylish.match(/#sej-container(-wrapper)?\s*\{[^}]+\}/g);
-		if (scriptElementStyles) scriptElementStyles.forEach((ruleText) => addStyle(ruleText));
+		if (scriptElementStyles) scriptElementStyles.forEach((ruleText) => addStyle(ruleText, HOST_ROLE_MAIN));
 	}
 	var SECOND_LEVEL_SUFFIXES = new Set([
 		"com",
@@ -6971,14 +7030,17 @@
 	}
 	var imageSearch = reactive({
 		active: false,
-		imageUrl: ""
+		imageUrl: "",
+		element: null
 	});
-	function openImageSearch(imageUrl) {
+	function openImageSearch(imageUrl, element = null) {
 		imageSearch.imageUrl = imageUrl;
+		imageSearch.element = element;
 		imageSearch.active = true;
 	}
 	function closeImageSearch() {
 		imageSearch.active = false;
+		imageSearch.element = null;
 	}
 	var VIEWPORT_GAP = 4;
 	var NARROW_BAR_MAX = 640;
@@ -7610,7 +7672,8 @@
 			const supportsAnchorPositioning = Boolean(typeof CSS !== "undefined" && CSS.supports?.("position-anchor: --sej-anchor") && CSS.supports?.("top: anchor(bottom)"));
 			anchorSeq += 1;
 			const anchorId = `--sej-anchor-${anchorSeq}`;
-			const dropRoot = getDropRoot();
+			const hostRole = inject(HOST_ROLE_KEY, HOST_ROLE_MAIN);
+			const dropRoot = getDropRoot(hostRole);
 			const triggerEl = ref(null);
 			const listEl = ref(null);
 			const shown = ref(false);
@@ -7662,7 +7725,7 @@
 				const container = trigger.closest("#sej-container");
 				const containerPosition = container ? getComputedStyle(container).position : "";
 				if (containerPosition === "fixed" || containerPosition === "sticky") return "fixed";
-				if (getComputedStyle(getHost()).position === "static") return "fixed";
+				if (getComputedStyle(getHost(hostRole)).position === "static") return "fixed";
 				return "absolute";
 			}
 			function measureAndPosition() {
@@ -7686,7 +7749,7 @@
 				let originLeft = 0;
 				let originTop = 0;
 				if (mode === "absolute") {
-					const host = getHost();
+					const host = getHost(hostRole);
 					const hostRect = host.getBoundingClientRect();
 					originLeft = hostRect.left + host.clientLeft;
 					originTop = hostRect.top + host.clientTop;
@@ -7947,31 +8010,41 @@
 	var PAGE_SCROLL_DURATION = 150;
 	var _sfc_main$9 = {
 		__name: "JumpBar",
+		props: { role: {
+			type: String,
+			default: HOST_ROLE_MAIN
+		} },
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n/*\n * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */\n#sej-container.selectSearch {\n  position: fixed;\n  z-index: 99999999;\n  margin: 0;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  max-width: min(calc(100vw - 8px), max-content);\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n/* 顶部居中：默认位置，横向由视口决定 */\n#sej-container.selectSearch.sej-top {\n  top: 2px;\n  left: 0;\n  right: 0;\n  margin: 0 auto;\n}\n\n/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */\n#sej-container.selectSearch.sej-follow-anchor {\n  top: 0;\n  left: 0;\n  right: auto;\n  margin: 0;\n  transform: none;\n  transform-origin: top left;\n  /* 入场动画的位移会让首帧偏离锚点，跟随模式直接显示 */\n  animation: none;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n/*\n * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			const props = __props;
+			const isFloat = props.role === HOST_ROLE_FLOAT;
+			provide(HOST_ROLE_KEY, props.role);
 			const settings = useSettings();
 			const data = settings.settingData;
-			const matchedRule = settings.getMatchedRule();
-			settings.activeRule = matchedRule;
-			settings.barMounted = false;
+			const matchedRule = isFloat ? null : settings.getMatchedRule();
+			if (!isFloat) {
+				settings.activeRule = matchedRule;
+				settings.barMounted = false;
+			}
 			const sitePatches = matchedRule?.patches ?? {};
 			const inlineStyleBlocked = isInlineStyleBlocked();
 			const ready = ref(false);
-			const isSelectSearch = ref(false);
+			const isOverlayBar = { value: isFloat };
+			const selectSearchEnabled = Boolean(data.selectSearch);
+			const isSelectSearch = ref(isFloat && selectSearchEnabled);
 			const isImageSearch = ref(false);
-			const isSelectionOverlay = ref(false);
-			const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value || isSelectionOverlay.value);
-			const selectionOverlayAvailable = computed(() => Boolean(matchedRule?.enabled) && Boolean(data.selectSearch) && !isSelectSearch.value);
 			const selectionText = ref("");
 			const barVisible = ref(false);
 			const containerEl = ref(null);
 			const scrollEl = ref(null);
 			const containerClass = ref("rwl-exempt");
+			const anchorRect = ref(null);
+			const floatStyle = ref({});
 			const { updateScrollHints, onScrollPointerDown, onWindowPointerMove, endScrollDrag, onScrollClickCapture, onScrollWheel, dispose: disposeScrollDrag } = useScrollDrag({ scrollEl });
 			const { start: startStackSync, stop: stopStackSync } = useStackSync();
 			const { constrainBarToViewport, onViewportResize, scheduleConstrainCheck, dispose: disposeViewport } = useBarViewport({
 				containerEl,
-				isSelectSearch: isOverlay,
+				isSelectSearch: isOverlayBar,
 				sitePatches,
 				updateScrollHints,
 				forceCenter: Boolean(data.center)
@@ -7980,6 +8053,11 @@
 			let insertTarget = null;
 			let insertPosition = "beforeend";
 			let resolvedStyle = "";
+			const barStyle = computed(() => {
+				const style = { ...floatStyle.value };
+				if (isImageSearch.value) style["--sej-image-thumb"] = `url(${imageSearch.imageUrl})`;
+				return style;
+			});
 			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isImageSearch.value ? key === IMAGE_CATEGORY_KEY : enabled).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
@@ -7987,7 +8065,7 @@
 			})).filter((category) => category.engines.length));
 			function getCurrentKeyword() {
 				if (isImageSearch.value) return imageSearch.imageUrl;
-				if (isSelectSearch.value || isSelectionOverlay.value) return selectionText.value;
+				if (isSelectSearch.value) return selectionText.value;
 				return extractKeyword(inputTarget);
 			}
 			async function onJump(engine) {
@@ -8009,16 +8087,30 @@
 				closeImageSearch();
 			}
 			watch(() => imageSearch.active, (active) => {
-				if (active === isImageSearch.value) return;
-				setTimeout(() => requestRestart(), 0);
+				if (!isFloat || active === isImageSearch.value) return;
+				isImageSearch.value = active;
+				if (active) {
+					selectionText.value = "";
+					refreshAnchor(null);
+					showFloatBar();
+					return;
+				}
+				barVisible.value = false;
 			});
 			function onImageModePointerDown(e) {
 				if (e.button !== 0) return;
-				const path = e.composedPath?.();
-				if (!(path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target))) closeImageMode();
+				if (!isInsideBar(e)) closeImageMode();
 			}
-			function onImageModeKeydown(e) {
-				if (e.key === "Escape") closeImageMode();
+			function onOverlayKeydown(e) {
+				if (e.key !== "Escape") return;
+				if (isImageSearch.value) {
+					closeImageMode();
+					return;
+				}
+				barVisible.value = false;
+			}
+			function onImageModeScroll() {
+				if (isImageSearch.value) closeImageMode();
 			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
@@ -8068,118 +8160,149 @@
 				if (inlineStyleBlocked) console.warn("[SEJ] 检测到 CSP 阻止内联样式，划词条仍会尝试显示");
 				isSelectSearch.value = true;
 				inputTarget = () => selectionText.value;
-				insertTarget = document.body;
-				insertPosition = "beforeend";
 				return true;
 			}
 			function initImageSearch() {
 				isImageSearch.value = true;
 				inputTarget = () => imageSearch.imageUrl;
-				insertTarget = document.body;
-				insertPosition = "beforeend";
 				return true;
 			}
 			function initTargets() {
-				if (imageSearch.active) return initImageSearch();
-				if (data.selectSearch && matchedRule?.enabled && matchedRule.selectSearchPriority) return initSelectSearch();
+				if (isFloat) {
+					if (imageSearch.active) return { render: initImageSearch() };
+					return { render: selectSearchEnabled && initSelectSearch() };
+				}
+				if (selectSearchEnabled && matchedRule?.enabled && matchedRule.selectSearchPriority) return { render: false };
 				if (matchedRule?.enabled) {
 					inputTarget = getInputTarget(matchedRule);
 					insertTarget = getInsertTarget(matchedRule);
 					insertPosition = getInsertPositionLabel(matchedRule) || "beforeend";
 					if (!inputTarget || !insertTarget) {
 						console.warn(`[SEJ] 未找到输入框或插入位置：\n输入框：${inputTarget}\n插入位置：${insertTarget}`);
-						if (data.selectSearch) return initSelectSearch();
-						return false;
+						return {
+							render: false,
+							ok: false
+						};
 					}
-					return true;
+					return { render: true };
 				}
-				if (data.selectSearch) return initSelectSearch();
-				console.info("[SEJ] 未启用搜索跳转，跳过初始化");
-				return false;
+				return { render: false };
 			}
 			function applyWrapperClass() {
 				if (!matchedRule?.wrapperClass) return;
-				if (!resolvedStyle.includes("sticky") && !resolvedStyle.includes("fixed")) getHost().classList.add(matchedRule.wrapperClass);
+				if (!resolvedStyle.includes("sticky") && !resolvedStyle.includes("fixed")) getHost(props.role).classList.add(matchedRule.wrapperClass);
 			}
 			function injectHost() {
-				if (isOverlay.value) {
-					insertHost(document.body, "beforeend");
+				if (isFloat) {
+					insertHost(document.body, "beforeend", props.role);
 					return;
 				}
-				insertHost(insertTarget, insertPosition);
+				insertHost(insertTarget, insertPosition, props.role);
 				applyWrapperClass();
-			}
-			function enterSelectionOverlay(text) {
-				selectionText.value = text;
-				if (isSelectionOverlay.value) {
-					barVisible.value = true;
-					return;
-				}
-				isSelectionOverlay.value = true;
-				const host = getHost();
-				const bar = containerEl.value;
-				bar?.removeAttribute("style");
-				bar?.classList.remove("sej-mobile-centered");
-				host.removeAttribute("style");
-				if (matchedRule?.wrapperClass) host.classList.remove(matchedRule.wrapperClass);
-				insertHost(document.body, "beforeend");
-				requestAnimationFrame(() => {
-					if (isSelectionOverlay.value) barVisible.value = true;
-				});
 			}
 			function isInsideBar(e) {
 				const path = e?.composedPath?.();
 				return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
 			}
-			function exitSelectionOverlay() {
-				if (!isSelectionOverlay.value) return;
-				isSelectionOverlay.value = false;
-				barVisible.value = false;
-				injectHost();
-				constrainBarToViewport();
-				updateScrollHints();
-				scheduleConstrainCheck();
+			function syncFloatPlacement() {
+				if (!isFloat) return;
+				const bar = containerEl.value;
+				const rect = anchorRect.value;
+				if (!bar || !rect) {
+					floatStyle.value = {};
+					containerEl.value?.classList.remove("sej-follow-anchor");
+					containerEl.value?.classList.add("sej-top");
+					return;
+				}
+				const barRect = bar.getBoundingClientRect();
+				const { top, left } = placeNearRect({
+					rect,
+					bar: {
+						width: barRect.width,
+						height: barRect.height
+					},
+					viewport: {
+						width: document.documentElement.clientWidth,
+						height: window.visualViewport?.height || window.innerHeight
+					}
+				});
+				bar.classList.remove("sej-top");
+				bar.classList.add("sej-follow-anchor");
+				floatStyle.value = {
+					top: `${top}px`,
+					left: `${left}px`
+				};
+			}
+			function selectionAnchorRect(selection) {
+				if (typeof selection?.getRangeAt === "function" && selection.rangeCount) try {
+					const rangeRect = selection.getRangeAt(0).getBoundingClientRect();
+					if (rangeRect && (rangeRect.width > 0 || rangeRect.height > 0)) return rangeRect;
+				} catch (e) {}
+				return null;
+			}
+			function imageAnchorRect() {
+				const el = imageSearch.element;
+				if (!el?.isConnected) return null;
+				const rect = el.getBoundingClientRect?.();
+				return rect && rect.width > 0 ? rect : null;
+			}
+			function refreshAnchor(selection) {
+				anchorRect.value = isFloat && data.selectionFollowPointer ? isImageSearch.value ? imageAnchorRect() : selectionAnchorRect(selection) : null;
+			}
+			async function showFloatBar() {
+				if (!isFloat) {
+					barVisible.value = true;
+					return;
+				}
+				await nextTick();
+				syncFloatPlacement();
+				barVisible.value = true;
 			}
 			let keepOverlayUntil = 0;
 			function onSelectionChange(e) {
+				if (!isSelectSearch.value) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (!text) {
-					if (isSelectionOverlay.value) {
-						if (performance.now() < keepOverlayUntil || isInsideBar(e)) return;
-						exitSelectionOverlay();
-						return;
-					}
+					if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
 					barVisible.value = false;
 					return;
 				}
 				if (isImageSearch.value) return;
-				if (isSelectSearch.value) {
-					selectionText.value = text;
-					barVisible.value = true;
-					return;
-				}
-				enterSelectionOverlay(text);
+				selectionText.value = text;
+				refreshAnchor(document.getSelection());
+				showFloatBar();
 			}
 			function onOverlayPointerDown(e) {
-				if (!isSelectionOverlay.value) return;
+				if (!barVisible.value) return;
 				if (isInsideBar(e)) {
 					keepOverlayUntil = performance.now() + 500;
 					return;
 				}
-				exitSelectionOverlay();
-			}
-			function onOverlayKeydown(e) {
-				if (e.key === "Escape") exitSelectionOverlay();
+				barVisible.value = false;
 			}
 			function onDocumentSelectionChange() {
 				onSelectionChange(null);
 			}
+			function onFloatScroll() {
+				if (!isFloat || !anchorRect.value) return;
+				anchorRect.value = null;
+				syncFloatPlacement();
+			}
+			function onFloatResize() {
+				onViewportResize();
+				syncFloatPlacement();
+			}
 			onMounted(async () => {
-				if (!initTargets()) return;
-				settings.barMounted = true;
+				const { render, ok = true } = initTargets();
+				if (!ok) return;
+				if (!isFloat) settings.barMounted = ok;
+				if (!render) return;
 				ready.value = true;
 				if (isSelectSearch.value) onSelectionChange();
-				if (isImageSearch.value) barVisible.value = true;
+				if (isImageSearch.value) {
+					refreshAnchor(null);
+					barVisible.value = true;
+				}
 				if (matchedRule) {
 					applyStylish(matchedRule);
 					resolvedStyle = resolveRuleStyle(matchedRule, data) || "";
@@ -8188,39 +8311,37 @@
 				await nextTick();
 				injectHost();
 				startStackSync();
-				constrainBarToViewport();
+				if (isFloat) syncFloatPlacement();
+				else constrainBarToViewport();
 				updateScrollHints();
 				scheduleConstrainCheck();
-				window.addEventListener("resize", onViewportResize);
+				window.addEventListener("resize", isFloat ? onFloatResize : onViewportResize);
 				window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
 				window.addEventListener("pointerup", endScrollDrag);
 				window.addEventListener("pointercancel", endScrollDrag);
-				if (isImageSearch.value) {
+				if (isFloat) {
 					document.addEventListener("pointerdown", onImageModePointerDown, true);
-					document.addEventListener("keydown", onImageModeKeydown, true);
-					window.addEventListener("scroll", closeImageMode, true);
+					document.addEventListener("keydown", onOverlayKeydown, true);
+					window.addEventListener("scroll", onImageModeScroll, true);
+					window.addEventListener("scroll", onFloatScroll, true);
 				}
-				if (isSelectSearch.value || selectionOverlayAvailable.value) {
+				if (isSelectSearch.value) {
 					document.addEventListener("selectionchange", onDocumentSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
-				}
-				if (selectionOverlayAvailable.value) {
 					document.addEventListener("pointerdown", onOverlayPointerDown, true);
-					document.addEventListener("keydown", onOverlayKeydown, true);
 				}
 			});
 			onBeforeUnmount(() => {
 				document.removeEventListener("pointerdown", onImageModePointerDown, true);
-				document.removeEventListener("keydown", onImageModeKeydown, true);
-				window.removeEventListener("scroll", closeImageMode, true);
-				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("keydown", onOverlayKeydown, true);
+				window.removeEventListener("scroll", onImageModeScroll, true);
+				window.removeEventListener("scroll", onFloatScroll, true);
+				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("selectionchange", onDocumentSelectionChange);
-				document.removeEventListener("selectionchange", onSelectionChange);
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
-				window.removeEventListener("resize", onViewportResize);
+				window.removeEventListener("resize", isFloat ? onFloatResize : onViewportResize);
 				window.removeEventListener("pointermove", onWindowPointerMove);
 				window.removeEventListener("pointerup", endScrollDrag);
 				window.removeEventListener("pointercancel", endScrollDrag);
@@ -8236,12 +8357,14 @@
 					ref: containerEl,
 					id: "sej-container",
 					class: normalizeClass([containerClass.value, {
-						selectSearch: isOverlay.value,
+						selectSearch: isFloat,
+						"sej-top": isFloat && !anchorRect.value,
+						"sej-follow-anchor": isFloat && Boolean(anchorRect.value),
 						"sej-select-visible": barVisible.value,
 						"sej-image-search": isImageSearch.value
 					}]),
-					"aria-hidden": isOverlay.value && !barVisible.value ? "true" : void 0,
-					style: normalizeStyle(isImageSearch.value ? { "--sej-image-thumb": `url(${unref(imageSearch).imageUrl})` } : void 0)
+					"aria-hidden": isFloat && !barVisible.value ? "true" : void 0,
+					style: normalizeStyle(barStyle.value)
 				}, [createBaseVNode("div", {
 					class: "sej-scroll-viewport",
 					onWheel: onBarWheel
@@ -9897,8 +10020,8 @@
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17 = ["title"];
-	var _hoisted_18 = {
+	var _hoisted_17$1 = ["title"];
+	var _hoisted_18$1 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -9954,7 +10077,7 @@
 			"delete"
 		],
 		setup(__props, { emit: __emit }) {
-			addStyle(EngineEditDialog_default);
+			addStyle(EngineEditDialog_default, HOST_ROLE_MAIN);
 			const props = __props;
 			const emit = __emit;
 			const initialAction = props.initial.action === "copy" || props.initial.action === "open" ? props.initial.action : "";
@@ -10093,7 +10216,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10699,14 +10822,16 @@
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
 	var _hoisted_8 = ["title"];
-	var _hoisted_9 = ["value"];
-	var _hoisted_10 = { value: "_blank" };
-	var _hoisted_11 = { value: "_self" };
-	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["checked"];
-	var _hoisted_14 = { id: "xin-language" };
-	var _hoisted_15 = ["value"];
-	var _hoisted_16 = { value: "auto" };
+	var _hoisted_9 = ["checked"];
+	var _hoisted_10 = ["title"];
+	var _hoisted_11 = ["value"];
+	var _hoisted_12 = { value: "_blank" };
+	var _hoisted_13 = { value: "_self" };
+	var _hoisted_14 = ["title"];
+	var _hoisted_15 = ["checked"];
+	var _hoisted_16 = { id: "xin-language" };
+	var _hoisted_17 = ["value"];
+	var _hoisted_18 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -10731,39 +10856,47 @@
 						checked: __props.options.selectSearchInInput,
 						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
 					}, null, 40, _hoisted_5$1)])], 8, _hoisted_4$1), [[vShow, __props.options.selectSearch]]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionFollowPointer",
+						title: unref(t)("settings.selectionFollowPointerTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionFollowPointer")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionFollowPointer,
+						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
+					}, null, 40, _hoisted_7)])], 8, _hoisted_6), [[vShow, __props.options.selectSearch]]),
 					createBaseVNode("span", {
 						id: "xin-centerDisplay",
 						title: unref(t)("settings.centerTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.center")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.center,
-						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "center", $event.target.checked))
-					}, null, 40, _hoisted_7)])], 8, _hoisted_6),
+						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "center", $event.target.checked))
+					}, null, 40, _hoisted_9)])], 8, _hoisted_8),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_10, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_11, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_9)])], 8, _hoisted_8),
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_12, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_13, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_11)])], 8, _hoisted_10),
 					createBaseVNode("span", {
 						id: "xin-imageSearch",
 						title: unref(t)("settings.imageSearchTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.imageSearch")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.imageSearch,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
-					}, null, 40, _hoisted_13)])], 8, _hoisted_12),
-					createBaseVNode("span", _hoisted_14, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
+					}, null, 40, _hoisted_15)])], 8, _hoisted_14),
+					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_15)])])
+						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_17)])])
 				]);
 			};
 		}
@@ -10783,7 +10916,7 @@
 	var _sfc_main$2 = {
 		__name: "SettingPanel",
 		setup(__props) {
-			addStyle(settingPanelStyles_default);
+			addStyle(settingPanelStyles_default, HOST_ROLE_MAIN);
 			const settings = useSettings();
 			const { source, draft, nextId, buildResult, refreshDraft, displayCategoryName, toggleCategory, toggleEngine, appendCategory } = useSettingsDraft({ settings });
 			const layerEl = ref(null);
@@ -11135,13 +11268,14 @@
 	};
 	var _sfc_main = {
 		__name: "App",
+		props: { role: {
+			type: String,
+			default: "main"
+		} },
 		setup(__props) {
+			const isFloat = __props.role === HOST_ROLE_FLOAT;
 			return (_ctx, _cache) => {
-				return openBlock(), createElementBlock(Fragment, null, [
-					createVNode(_sfc_main$9),
-					unref(ui).settingPanelOpen ? (openBlock(), createBlock(_sfc_main$2, { key: 0 })) : createCommentVNode("", true),
-					createVNode(_sfc_main$1)
-				], 64);
+				return openBlock(), createElementBlock(Fragment, null, [createVNode(_sfc_main$9, { role: __props.role }, null, 8, ["role"]), !isFloat ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [unref(ui).settingPanelOpen ? (openBlock(), createBlock(_sfc_main$2, { key: 0 })) : createCommentVNode("", true), createVNode(_sfc_main$1)], 64)) : createCommentVNode("", true)], 64);
 			};
 		}
 	};
@@ -11200,11 +11334,14 @@
 		return Boolean(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
 	}
 	function applyDarkModeIfNeeded() {
-		const host = getHost();
 		const dark = isDarkMode();
-		if (dark === host.hasAttribute("qxintheme")) return;
-		if (dark) host.setAttribute("qxintheme", "dark");
-		else host.removeAttribute("qxintheme");
+		const hosts = getHosts();
+		if (!hosts.length) hosts.push(getHost());
+		for (const host of hosts) {
+			if (dark === host.hasAttribute("qxintheme")) continue;
+			if (dark) host.setAttribute("qxintheme", "dark");
+			else host.removeAttribute("qxintheme");
+		}
 	}
 	var darkModeWatched = false;
 	var refreshTimer = null;
@@ -11271,29 +11408,62 @@
 			console.warn("[SEJ] 注册菜单命令失败", e);
 		}
 	}
-	var app = null;
+	var mainApp = null;
+	var floatApp = null;
+	var stopFloatWatch = null;
 	function isRunning() {
 		return Boolean(document.getElementById(HOST_ID));
 	}
+	function unmountApp(app) {
+		if (!app) return;
+		try {
+			app.unmount();
+		} catch (e) {}
+	}
 	function teardown() {
-		if (app) {
-			try {
-				app.unmount();
-			} catch (e) {}
-			app = null;
-		}
+		stopFloatWatch?.();
+		stopFloatWatch = null;
+		unmountApp(floatApp);
+		unmountApp(mainApp);
+		floatApp = null;
+		mainApp = null;
 		reset();
 	}
+	function ensureFloatBar() {
+		if (floatApp) return;
+		if (!useSettings().settingData?.selectSearch && !imageSearch.active) return;
+		const root = initialize(HOST_ROLE_FLOAT);
+		document.body.appendChild(getHost(HOST_ROLE_FLOAT));
+		applyDarkModeIfNeeded();
+		floatApp = createApp(_sfc_main, { role: HOST_ROLE_FLOAT });
+		floatApp.mount(root);
+		stopFloatWatch?.();
+		stopFloatWatch = watch(() => imageSearch.active, (active) => {
+			if (active || useSettings().settingData?.selectSearch) return;
+			disposeFloatBar();
+		});
+	}
+	function disposeFloatBar() {
+		stopFloatWatch?.();
+		stopFloatWatch = null;
+		unmountApp(floatApp);
+		floatApp = null;
+		getHost(HOST_ROLE_FLOAT).remove();
+	}
 	function boot({ force = false } = {}) {
-		if (!force && isRunning()) return;
+		if (!force && isRunning()) {
+			ensureFloatBar();
+			return;
+		}
 		teardown();
-		const root = initialize();
+		const root = initialize(HOST_ROLE_MAIN);
 		addStyle(global_default);
 		applyDarkModeIfNeeded();
 		watchDarkModeChanges();
-		document.body.appendChild(getHost());
-		app = createApp(_sfc_main);
-		app.mount(root);
+		document.body.appendChild(getHost(HOST_ROLE_MAIN));
+		mainApp = createApp(_sfc_main, { role: HOST_ROLE_MAIN });
+		mainApp.mount(root);
+		ensureFloatBar();
 		registerMenu();
 	}
 	function restart() {
@@ -11355,11 +11525,14 @@
 		}
 		return "";
 	}
-	function resolveImageUrl(target, base = globalThis.location?.href) {
+	function resolveImageHit(target, base = globalThis.location?.href) {
 		const img = typeof target?.closest === "function" ? target.closest("img") : null;
 		if (img) {
 			const url = imgUrl(img, base);
-			if (url) return url;
+			if (url) return {
+				url,
+				element: img
+			};
 		}
 		const doc = target?.ownerDocument;
 		let el = target?.nodeType === 1 ? target : target?.parentElement;
@@ -11368,9 +11541,12 @@
 			const rect = el.getBoundingClientRect?.();
 			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
 			const url = backgroundUrl(el, base);
-			if (url) return url;
+			if (url) return {
+				url,
+				element: el
+			};
 		}
-		return "";
+		return null;
 	}
 	function isLongPressMove(startX, startY, x, y) {
 		return Math.hypot(x - startX, y - startY) > 10;
@@ -11397,17 +11573,17 @@
 		function onPointerDown(e) {
 			if (e.button !== 0 || !e.isPrimary) return;
 			if (!imageSearchEnabled()) return;
-			const imageUrl = resolveImageUrl(e.target);
-			if (!imageUrl) return;
+			const hit = resolveImageHit(e.target);
+			if (!hit) return;
 			startX = e.clientX;
 			startY = e.clientY;
-			pressed = imageUrl;
+			pressed = hit;
 			clearTimeout(timer);
 			timer = setTimeout(() => {
 				timer = 0;
 				if (!pressed) return;
 				suppressUntil = performance.now() + 800;
-				showImageSearch(pressed);
+				showImageSearch(pressed.url, pressed.element);
 				pressed = null;
 				navigator.vibrate?.(10);
 			}, 450);
@@ -11416,9 +11592,9 @@
 			if (!pressed) return;
 			if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
 		}
-		function showImageSearch(imageUrl) {
+		function showImageSearch(imageUrl, element) {
 			if (!imageUrl) return;
-			openImageSearch(imageUrl);
+			openImageSearch(imageUrl, element);
 			ensureBoot?.();
 		}
 		function imageSearchEnabled() {
@@ -11437,8 +11613,9 @@
 				return;
 			}
 			if (!imageSearchEnabled()) return;
-			if ((e.composedPath?.() || []).some((node) => node?.id === "sej-shadow-host")) return;
-			showImageSearch(resolveImageUrl(e.target));
+			if ((e.composedPath?.() || []).some((node) => isOwnHostNode(node))) return;
+			const hit = resolveImageHit(e.target);
+			if (hit) showImageSearch(hit.url, hit.element);
 		}
 		document.addEventListener("pointerdown", onPointerDown, true);
 		document.addEventListener("pointermove", onPointerMove, true);

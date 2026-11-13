@@ -25,6 +25,7 @@ export const OPTION_KEYS = [
   'center',
   'selectSearch',
   'selectSearchInInput',
+  'selectionFollowPointer',
   'defaultOpenTarget',
   'imageSearch',
   'language',
@@ -36,6 +37,8 @@ export function createDefaultConfig() {
     // 默认开启划词搜索，输入框内的选区同样触发
     selectSearch: true,
     selectSearchInInput: true,
+    // 划词条默认从页面顶部滑出，不跟随选区位置
+    selectionFollowPointer: false,
     // 默认跟随各站点规则排版，不强制居中
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开

@@ -6,7 +6,7 @@ import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { closeSettingPanel } from '../stores/ui.js';
 import { setLanguagePreference, t } from '../assets/i18n.js';
-import { addStyle } from '../core/shadowDom.js';
+import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { useAutoSave } from '../composables/useAutoSave.js';
 import { usePanelDrag } from '../composables/usePanelDrag.js';
 import { useDragSort } from '../composables/useDragSort.js';
@@ -26,7 +26,8 @@ import SettingsCategoryCard from './SettingsCategoryCard.vue';
 import SettingsFooter from './SettingsFooter.vue';
 import SettingsOptions from './SettingsOptions.vue';
 
-addStyle(settingPanelStyles);
+// 面板只挂在内嵌条所在的应用里
+addStyle(settingPanelStyles, HOST_ROLE_MAIN);
 
 const settings = useSettings();
 const {

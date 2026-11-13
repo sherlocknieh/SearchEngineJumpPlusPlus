@@ -55,16 +55,17 @@ function backgroundUrl(el, base) {
 }
 
 /**
- * 取按下位置对应的图片地址；不是图片或地址不可用时返回空串。
+ * 取按下位置对应的图片地址与元素；不是图片或地址不可用时返回 null。
  * 先看 <img>，再向上找带 background-image 的容器（头像、卡片封面等）。
  * @param {Element | null} target 按下事件的目标元素
  * @param {string} [base] 相对地址的基准，默认当前页面
+ * @returns {{url: string, element: Element} | null}
  */
-export function resolveImageUrl(target, base = globalThis.location?.href) {
+export function resolveImageHit(target, base = globalThis.location?.href) {
   const img = typeof target?.closest === 'function' ? target.closest('img') : null;
   if (img) {
     const url = imgUrl(img, base);
-    if (url) return url;
+    if (url) return { url, element: img };
   }
 
   const doc = target?.ownerDocument;
@@ -74,9 +75,18 @@ export function resolveImageUrl(target, base = globalThis.location?.href) {
     const rect = el.getBoundingClientRect?.();
     if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
     const url = backgroundUrl(el, base);
-    if (url) return url;
+    if (url) return { url, element: el };
   }
-  return '';
+  return null;
+}
+
+/**
+ * 取按下位置对应的图片地址；不是图片或地址不可用时返回空串。
+ * @param {Element | null} target 按下事件的目标元素
+ * @param {string} [base] 相对地址的基准，默认当前页面
+ */
+export function resolveImageUrl(target, base = globalThis.location?.href) {
+  return resolveImageHit(target, base)?.url || '';
 }
 
 /** 位移是否已超出长按允许的范围（滚动、拖拽时取消） */

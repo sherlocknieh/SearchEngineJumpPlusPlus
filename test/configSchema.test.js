@@ -38,6 +38,11 @@ describe('createDefaultConfig', () => {
     expect(config.selectSearchInInput).toBe(true);
   });
 
+  it('默认从顶部滑出划词条，不跟随选区', () => {
+    const config = createDefaultConfig();
+    expect(config.selectionFollowPointer).toBe(false);
+  });
+
   it('默认开启长按搜图，并内置图片分类', () => {
     const config = createDefaultConfig();
     expect(config.imageSearch).toBe(true);
@@ -55,6 +60,7 @@ describe('normalizeConfig', () => {
         center: 'yes',
         selectSearch: 0,
         selectSearchInInput: 'yes',
+        selectionFollowPointer: 'yes',
         language: 'fr',
         engineCategories: [],
       },
@@ -63,6 +69,7 @@ describe('normalizeConfig', () => {
     expect(result.center).toBe(defaults.center);
     expect(result.selectSearch).toBe(defaults.selectSearch);
     expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
+    expect(result.selectionFollowPointer).toBe(defaults.selectionFollowPointer);
     expect(result.language).toBe('auto');
   });
 

@@ -1,4 +1,4 @@
-import { getHost } from './shadowDom.js';
+import { getHost, getHosts } from './shadowDom.js';
 
 const THEME_ATTRS = ['data-theme', 'data-color-scheme', 'data-color-mode', 'theme'];
 const DARK_HINT = /dark|night/;
@@ -67,14 +67,17 @@ export function isDarkMode() {
 
 // 暗色变量由 global.css 的 :host[qxintheme="dark"] 提供, 这里只负责开关
 export function applyDarkModeIfNeeded() {
-  const host = getHost();
   const dark = isDarkMode();
-  if (dark === host.hasAttribute('qxintheme')) return;
-
-  if (dark) {
-    host.setAttribute('qxintheme', 'dark');
-  } else {
-    host.removeAttribute('qxintheme');
+  // 内嵌条与划词条各有独立宿主, 都需要同样的主题属性；未挂载时先创建主宿主
+  const hosts = getHosts();
+  if (!hosts.length) hosts.push(getHost());
+  for (const host of hosts) {
+    if (dark === host.hasAttribute('qxintheme')) continue;
+    if (dark) {
+      host.setAttribute('qxintheme', 'dark');
+    } else {
+      host.removeAttribute('qxintheme');
+    }
   }
 }
 

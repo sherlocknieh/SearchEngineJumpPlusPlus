@@ -1,6 +1,6 @@
 import { GM_addStyle } from '$';
 import { getCSPNonce } from './csp.js';
-import { addStyle } from './shadowDom.js';
+import { addStyle, HOST_ROLE_MAIN } from './shadowDom.js';
 
 let pageStyleEl = null;
 
@@ -75,7 +75,8 @@ export function resolveRuleStyle(rule, settingData) {
     style += FORCE_CENTER_STYLE;
   }
 
-  addStyle(`#sej-container { ${style} }`);
+  // 站点规则只描述内嵌条的位置，注入划词条会破坏它的浮层定位
+  addStyle(`#sej-container { ${style} }`, HOST_ROLE_MAIN);
   return style;
 }
 
@@ -85,6 +86,6 @@ export function applyStylish(rule) {
 
   const scriptElementStyles = rule.stylish.match(/#sej-container(-wrapper)?\s*\{[^}]+\}/g);
   if (scriptElementStyles) {
-    scriptElementStyles.forEach((ruleText) => addStyle(ruleText));
+    scriptElementStyles.forEach((ruleText) => addStyle(ruleText, HOST_ROLE_MAIN));
   }
 }
