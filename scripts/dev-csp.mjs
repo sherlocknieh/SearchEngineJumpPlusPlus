@@ -102,7 +102,8 @@ function loaderSource() {
     }
     try {
       // eval 的代码默认归到调用者名下，补 sourceURL 让 DevTools 单独列出这份产物
-      eval(res.responseText + '\n//# sourceURL=sej.dev.bundle.js');
+      // 换行必须写成 \\n：这里是模板字符串，写成 \n 会在生成阶段就断行破坏产物语法
+      eval(res.responseText + '\\n//# sourceURL=sej.dev.bundle.js');
     } catch (e) {
       console.error('[SEJ dev] 执行调试产物失败', e);
       return;
