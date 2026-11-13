@@ -32,11 +32,11 @@ export const messages = {
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
-      '划词条出现在选中文字的正上方并贴住文字开头，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出',
+      '划词条出现在选中文字的正上方并与文字水平居中，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出',
     'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '极简模式',
-    'settings.selectionIconTip': '划词后在文字/链接同一行的开头出现一个图标，鼠标悬浮时展开搜索条',
+    'settings.selectionIconTip': '划词后在文字/链接同一行且水平居中显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.editConfig': '配置文件',
@@ -182,12 +182,12 @@ export const messages = {
       'Show the selection bar when text is selected inside an input',
     'settings.selectionFollowPointer': 'Follow selection',
     'settings.selectionFollowPointerTip':
-      'Show the selection bar above the selected text, aligned to its start, or next to the long-pressed image/link; otherwise it slides in from the top',
+      'Show the selection bar above the selected text, centered on it, or next to the long-pressed image/link; otherwise it slides in from the top',
     'settings.selectionCompact': 'Compact mode',
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.selectionIcon': 'Minimal mode',
     'settings.selectionIconTip':
-      'Show a single icon at the start of the selected text/link line; hover it to expand the search bar',
+      'Show a single icon centered on the selected text/link line; hover it to expand the search bar',
     'settings.center': 'Center search bar',
     'settings.centerTip': 'Always center the jump bar',
     'settings.editConfig': 'Config file',

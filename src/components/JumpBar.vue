@@ -445,51 +445,44 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 极简模式收起时只有图标：贴在文字/链接同一行的开头，展开时向右生长
+  // 极简模式收起时只有图标：与文字/链接同一行且水平居中，展开时向两侧对称生长
   if (iconMode.value && !isImageContext.value) {
-    const { top, left } = placeInlineIcon({
+    const { top } = placeInlineIcon({
       rect,
       iconSize: iconTriggerSize(),
       barHeight: barSize.height,
       viewport,
     });
+    // 用展开后整条的宽度算中心，收起与展开都不出视口
+    const { left } = placeAboveRect({ rect, bar: barSize, viewport });
+    const center = left + barSize.width / 2;
     bar.classList.remove('sej-top');
     bar.classList.add('sej-follow-anchor');
     floatStyle.value = {
       top: `${top}px`,
-      left: `${left}px`,
-      right: 'auto',
-      transform: 'none',
-    };
-    return;
-  }
-  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
-  // 文字与链接触发的整条放在锚点正上方
-  const imagePlacement = isImageContext.value
-    ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
-      placeAboveRect({ rect, bar: barSize, viewport }))
-    : null;
-  // 文字与链接触发的条一律左对齐贴住文本开头，向右展开
-  const placement =
-    imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align: 'left' });
-  const { top, left } = placement;
-  bar.classList.remove('sej-top');
-  bar.classList.add('sej-follow-anchor');
-  // 图片条以整条中心为锚点：宽度变化时向两侧对称展开，图标保持居中
-  if (isImageContext.value) {
-    const center = left + barSize.width / 2;
-    floatStyle.value = {
-      top: `${top}px`,
       left: `${Math.round(center)}px`,
+      right: 'auto',
       transform: 'translateX(-50%)',
     };
     return;
   }
+  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
+  // 文字与链接触发的整条放在锚点正上方并水平居中
+  const imagePlacement = isImageContext.value
+    ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
+      placeAboveRect({ rect, bar: barSize, viewport }))
+    : null;
+  const placement = imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport });
+  const { top, left } = placement;
+  // 以整条中心为锚点：内容宽度变化时向两侧对称生长，中心始终对准目标
+  const center = left + barSize.width / 2;
+  bar.classList.remove('sej-top');
+  bar.classList.add('sej-follow-anchor');
   floatStyle.value = {
     top: `${top}px`,
-    left: `${Math.round(left)}px`,
+    left: `${Math.round(center)}px`,
     right: 'auto',
-    transform: 'none',
+    transform: 'translateX(-50%)',
   };
 }
 

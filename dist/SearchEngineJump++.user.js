@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0737
+// @version            2026.11.14.0739
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5820,11 +5820,11 @@
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.selectionFollowPointer": "跟随选区",
-			"settings.selectionFollowPointerTip": "划词条出现在选中文字的正上方并贴住文字开头，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出",
+			"settings.selectionFollowPointerTip": "划词条出现在选中文字的正上方并与文字水平居中，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出",
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "极简模式",
-			"settings.selectionIconTip": "划词后在文字/链接同一行的开头出现一个图标，鼠标悬浮时展开搜索条",
+			"settings.selectionIconTip": "划词后在文字/链接同一行且水平居中显示一个图标，鼠标悬浮时展开搜索条",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
@@ -5958,11 +5958,11 @@
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.selectionFollowPointer": "Follow selection",
-			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, aligned to its start, or next to the long-pressed image/link; otherwise it slides in from the top",
+			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, centered on it, or next to the long-pressed image/link; otherwise it slides in from the top",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
-			"settings.selectionIconTip": "Show a single icon at the start of the selected text/link line; hover it to expand the search bar",
+			"settings.selectionIconTip": "Show a single icon centered on the selected text/link line; hover it to expand the search bar",
 			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.editConfig": "Config file",
@@ -6479,9 +6479,7 @@
 		const viewHeight = Math.max(0, viewport?.height ?? 0);
 		const lineHeight = Math.min(Math.max(0, rect.bottom - rect.top), iconSize);
 		const centerY = rect.top + lineHeight / 2;
-		const beforeLeft = rect.left - gap - iconSize;
-		const maxLeft = Math.max(gap, viewWidth - gap - iconSize);
-		const left = Math.min(Math.max(beforeLeft >= gap ? beforeLeft : rect.left, gap), maxLeft);
+		const left = alignedLeft(rect, iconSize, viewWidth, gap, "center");
 		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
 		const top = Math.min(Math.max(centerY - barHeight / 2, gap), maxTop);
 		return {
@@ -8640,19 +8638,25 @@
 					height: window.visualViewport?.height || window.innerHeight
 				};
 				if (iconMode.value && !isImageContext.value) {
-					const { top, left } = placeInlineIcon({
+					const { top } = placeInlineIcon({
 						rect,
 						iconSize: iconTriggerSize(),
 						barHeight: barSize.height,
 						viewport
 					});
+					const { left } = placeAboveRect({
+						rect,
+						bar: barSize,
+						viewport
+					});
+					const center = left + barSize.width / 2;
 					bar.classList.remove("sej-top");
 					bar.classList.add("sej-follow-anchor");
 					floatStyle.value = {
 						top: `${top}px`,
-						left: `${left}px`,
+						left: `${Math.round(center)}px`,
 						right: "auto",
-						transform: "none"
+						transform: "translateX(-50%)"
 					};
 					return;
 				}
@@ -8667,25 +8671,16 @@
 				}) : null) ?? placeAboveRect({
 					rect,
 					bar: barSize,
-					viewport,
-					align: "left"
+					viewport
 				});
+				const center = left + barSize.width / 2;
 				bar.classList.remove("sej-top");
 				bar.classList.add("sej-follow-anchor");
-				if (isImageContext.value) {
-					const center = left + barSize.width / 2;
-					floatStyle.value = {
-						top: `${top}px`,
-						left: `${Math.round(center)}px`,
-						transform: "translateX(-50%)"
-					};
-					return;
-				}
 				floatStyle.value = {
 					top: `${top}px`,
-					left: `${Math.round(left)}px`,
+					left: `${Math.round(center)}px`,
 					right: "auto",
-					transform: "none"
+					transform: "translateX(-50%)"
 				};
 			}
 			function selectionAnchorRect(selection) {

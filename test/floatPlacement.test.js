@@ -89,17 +89,17 @@ describe('placeInlineIcon', () => {
   const viewport = { width: 1200, height: 800 };
   const size = { iconSize: 30, barHeight: 32 };
 
-  it('贴在选区左侧、与这一行垂直居中', () => {
+  it('与选区水平居中、与这一行垂直居中', () => {
     const rect = { top: 300, left: 400, right: 500, bottom: 320 };
     expect(placeInlineIcon({ rect, ...size, viewport })).toEqual({
       top: 310 - 16,
-      left: 400 - 6 - 30,
+      left: 400 + (100 - 30) / 2,
     });
   });
 
-  it('左侧放不下时压住选区开头', () => {
-    const rect = { top: 300, left: 10, right: 200, bottom: 320 };
-    expect(placeInlineIcon({ rect, ...size, viewport }).left).toBe(10);
+  it('靠近左边界时图标收进视口', () => {
+    const rect = { top: 300, left: 0, right: 10, bottom: 320 };
+    expect(placeInlineIcon({ rect, ...size, viewport }).left).toBe(6);
   });
 
   it('多行选区按第一行对齐', () => {
@@ -110,7 +110,7 @@ describe('placeInlineIcon', () => {
   it('靠近右边界时图标仍在视口内', () => {
     const rect = { top: 300, left: 1190, right: 1195, bottom: 320 };
     const { left } = placeInlineIcon({ rect, ...size, viewport });
-    expect(left).toBe(1190 - 6 - 30);
+    expect(left).toBe(1200 - 6 - 30);
     expect(left + 30).toBeLessThanOrEqual(1200 - 6);
   });
 });

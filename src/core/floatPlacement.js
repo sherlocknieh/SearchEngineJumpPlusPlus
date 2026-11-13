@@ -1,8 +1,8 @@
 /**
  * 贴内容的浮层条定位计算。
  *
- * 文字/链接触发的跳转条放在锚点正上方、左侧贴住锚点开头；极简模式收起时图标贴在
- * 文字/链接同一行的开头；图片条优先放进图片内部顶部居中，
+ * 文字/链接触发的跳转条放在锚点正上方、与锚点水平居中；极简模式收起时图标与
+ * 文字/链接同一行且水平居中；图片条优先放进图片内部顶部居中，
  * 图片尺寸不足时放到图片上方居中。放不下时都会收进视口，始终留出最小边距。
  */
 
@@ -81,8 +81,8 @@ export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align
 }
 
 /**
- * 极简模式收起态图标：与锚点同一行，贴在锚点左侧的开头位置。
- * 左侧放不下时压住锚点开头；多行锚点按第一行对齐。
+ * 极简模式收起态图标：与锚点同一行且水平居中，多行锚点按第一行对齐。
+ * 靠近视口边界时收进视口。
  *
  * @param {object} options
  * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或链接的视口矩形
@@ -95,14 +95,12 @@ export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align
 export function placeInlineIcon({ rect, iconSize, barHeight, viewport, gap = PLACEMENT_GAP }) {
   const viewWidth = Math.max(0, viewport?.width ?? 0);
   const viewHeight = Math.max(0, viewport?.height ?? 0);
-  // 多行锚点只取第一行的高度，图标始终贴在这一行的开头
+  // 多行锚点只取第一行的高度，图标始终贴在这一行
   const lineHeight = Math.min(Math.max(0, rect.bottom - rect.top), iconSize);
   const centerY = rect.top + lineHeight / 2;
 
-  // 优先贴在锚点左侧，左侧放不下就压住锚点开头
-  const beforeLeft = rect.left - gap - iconSize;
-  const maxLeft = Math.max(gap, viewWidth - gap - iconSize);
-  const left = Math.min(Math.max(beforeLeft >= gap ? beforeLeft : rect.left, gap), maxLeft);
+  // 图标中心对齐锚点水平中心，靠近边界时收进视口
+  const left = alignedLeft(rect, iconSize, viewWidth, gap, 'center');
 
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
   const top = Math.min(Math.max(centerY - barHeight / 2, gap), maxTop);
