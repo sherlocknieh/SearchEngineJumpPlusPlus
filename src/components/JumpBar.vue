@@ -950,21 +950,16 @@ onBeforeUnmount(() => {
   gap: 0;
 }
 
-/* 图标模式：搜索条与图标同为全圆角，展开的第一帧就是图标本身的圆 */
+/* 图标模式：搜索条与图标同为全圆角；去掉边框让图标与条的边缘完全重合。
+   阴影沿用基础样式，展开/收起不会换一套投影 */
 #sej-container.selectSearch.sej-icon-mode {
-  /* 去掉 1px 边框，改用内阴影描边：图标与搜索条的左、上边因此完全重合 */
   border: 0;
   border-radius: 999px;
-  box-shadow:
-    inset 0 0 0 1px var(--border-color-sej),
-    0 1px 2px hsla(0, 0%, 0%, 0.06),
-    0 8px 24px -12px hsla(0, 0%, 0%, 0.35);
-  /* 底色、圆角与内边距随展开/收起平滑过渡，尺寸动画由脚本补足。
+  /* 底色与圆角随展开/收起平滑过渡，尺寸动画由脚本补足。
      内边距不能过渡：收起时图标回到普通流，padding 若还在动会带着图标一起滑 */
   transition:
     background-color 0.16s ease-out,
     border-radius 0.16s ease-out,
-    box-shadow 0.16s ease-out,
     backdrop-filter 0.16s ease-out;
 }
 
@@ -982,12 +977,6 @@ onBeforeUnmount(() => {
   /* logo 自带白色底与配色，容器不再铺底色，避免出现双层圆 */
   background-color: transparent;
   backdrop-filter: none;
-  /* 收起时改由 logo 自己投影，避免容器比 logo 大出一圈阴影 */
-  box-shadow: none;
-}
-
-#sej-container.sej-icon-mode.sej-icon-collapsed > .sej-icon-trigger {
-  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.3));
 }
 
 #sej-container.sej-icon-mode.sej-icon-collapsed > .sej-scroll-viewport,
