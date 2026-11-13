@@ -90,8 +90,6 @@ const iconMode = computed(() => isFloat && !isImageSearch.value && Boolean(data.
 // 展开态切换只改类名，宽度由 CSS 过渡；展开后的整条宽度写在 CSS 变量里
 const iconExpanded = ref(false);
 const iconOpenWidth = ref(0);
-// 展开后图标是否已让位给设置按钮：指针还停在图标上时保持图标
-const logoHidden = ref(false);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -455,7 +453,6 @@ async function showFloatBar() {
   if (!barVisible.value || keyword !== shownKeyword) {
     clearIconCollapse();
     iconExpanded.value = false;
-    logoHidden.value = false;
   }
   shownKeyword = keyword;
   // 等待渲染期间可能已经被收起，只有仍允许显示时才落地
@@ -495,7 +492,6 @@ function hideFloatBar() {
   showToken += 1;
   clearIconCollapse();
   iconExpanded.value = false;
-  logoHidden.value = false;
   barVisible.value = false;
   shownKeyword = '';
   iconFullSize = null;
@@ -520,27 +516,11 @@ function clearIconCollapse() {
 function setIconExpanded(expanded) {
   if (!iconMode.value || iconExpanded.value === expanded) return;
   iconExpanded.value = expanded;
-  // 展开时图标先留在原处，指针移开后才换成设置按钮
-  logoHidden.value = false;
 }
 
-/** 点图标展开；触屏没有悬停过程，直接让位给设置按钮 */
-function onIconTriggerClick(e) {
+/** 点图标展开；触屏没有悬停过程，直接展开并让图标让位给设置按钮 */
+function onIconTriggerClick() {
   setIconExpanded(true);
-  if (e?.pointerType && e.pointerType !== 'mouse') logoHidden.value = true;
-}
-
-/** 指针是否还落在收起的图标范围内（展开后图标盖住设置按钮） */
-function isPointerOnIcon(e) {
-  const trigger = containerEl.value?.querySelector('.sej-icon-trigger');
-  const rect = trigger?.getBoundingClientRect();
-  if (!rect || !rect.width) return false;
-  return (
-    e.clientX >= rect.left &&
-    e.clientX <= rect.right &&
-    e.clientY >= rect.top &&
-    e.clientY <= rect.bottom
-  );
 }
 
 /**
@@ -552,8 +532,6 @@ function onIconPointerMove(e) {
   if (isInsideBar(e)) {
     clearIconCollapse();
     setIconExpanded(true);
-    // 指针离开图标后把圆位让给设置按钮，移回图标则重新显示图标
-    if (iconExpanded.value) logoHidden.value = !isPointerOnIcon(e);
     return;
   }
   if (!iconExpanded.value || iconCollapseTimer) return;
@@ -757,7 +735,6 @@ onBeforeUnmount(() => {
         'sej-compact': compactBar,
         'sej-icon-mode': iconMode,
         'sej-icon-open': iconMode && iconExpanded,
-        'sej-icon-logo-hidden': iconMode && logoHidden,
       },
     ]"
     :aria-hidden="isFloat && !barVisible ? 'true' : undefined"
@@ -895,6 +872,12 @@ onBeforeUnmount(() => {
   justify-content: flex-start;
   background-color: transparent;
   backdrop-filter: none;
+  /* 四周加重的投影：白色页面上也能看出边界 */
+  box-shadow:
+    0 0 0 1px hsla(0, 0%, 0%, 0.06),
+    0 0 12px hsla(0, 0%, 0%, 0.1),
+    0 2px 8px hsla(0, 0%, 0%, 0.16),
+    0 14px 36px -10px hsla(0, 0%, 0%, 0.45);
   transition:
     width 0.16s ease-out,
     background-color 0.16s ease-out,
@@ -933,10 +916,15 @@ onBeforeUnmount(() => {
   pointer-events: auto;
 }
 
-/* 收起时内容藏在图标后面：设置按钮先隐身，图标始终可见 */
+/* 收起时只有图标；一展开图标就换成设置按钮，指针不用移开 */
 #sej-container.sej-icon-mode > #setBtn {
   opacity: 0;
   border-radius: 50%;
+  pointer-events: none;
+}
+
+#sej-container.sej-icon-mode.sej-icon-open > .sej-icon-trigger {
+  opacity: 0;
   pointer-events: none;
 }
 
@@ -945,25 +933,8 @@ onBeforeUnmount(() => {
   pointer-events: auto;
 }
 
-/* 展开但指针还压在图标上时，设置按钮让图标盖住 */
-#sej-container.sej-icon-mode.sej-icon-open:not(.sej-icon-logo-hidden) #setBtn {
-  opacity: 0;
-  pointer-events: none;
-}
-
 #sej-container.sej-icon-mode.sej-icon-open #setBtn:hover {
   opacity: 1;
-}
-
-/* 指针还停在图标上时，图标盖住设置按钮，避免误点 */
-#sej-container.sej-icon-mode.sej-icon-logo-hidden > .sej-icon-trigger {
-  opacity: 0;
-  pointer-events: none;
-}
-
-#sej-container.sej-icon-mode.sej-icon-logo-hidden #setBtn {
-  opacity: 0.65;
-  pointer-events: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
