@@ -33,7 +33,7 @@ export const messages = {
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
       '划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出',
-    'settings.selectionCompact': '精简模式',
+    'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '图标模式',
     'settings.selectionIconTip': '划词后只出现一个图标，鼠标悬浮时展开搜索条',
@@ -47,8 +47,6 @@ export const messages = {
     'settings.defaultOpenTargetTip': '引擎未单独设置打开方式时使用',
     'settings.defaultOpenTargetBlank': '新标签页',
     'settings.defaultOpenTargetSelf': '当前页',
-    'settings.language': '语言',
-    'settings.languageAuto': '跟随浏览器',
 
     'toast.autoSaveFailed': '自动保存失败：存储不可用，请用“配置文件”复制备份',
     'toast.autoSaved': '已保存',
@@ -201,8 +199,6 @@ export const messages = {
     'settings.defaultOpenTargetTip': 'Used when an engine has no open mode of its own',
     'settings.defaultOpenTargetBlank': 'New tab',
     'settings.defaultOpenTargetSelf': 'Current tab',
-    'settings.language': 'Language',
-    'settings.languageAuto': 'Auto (browser)',
 
     'toast.autoSaveFailed':
       'Auto-save failed: storage unavailable. Use “Config file” to copy a backup.',

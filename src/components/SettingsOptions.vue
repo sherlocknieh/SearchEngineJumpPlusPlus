@@ -93,19 +93,5 @@ const emit = defineEmits(['update-option']);
         </select>
       </label>
     </span>
-    <span id="xin-language">
-      <label
-        >{{ t('settings.language') }}
-        <select
-          class="sej-language-select"
-          :value="options.language"
-          @change="emit('update-option', 'language', $event.target.value)"
-        >
-          <option value="auto">{{ t('settings.languageAuto') }}</option>
-          <option value="zh-CN">简体中文</option>
-          <option value="en">English</option>
-        </select>
-      </label>
-    </span>
   </div>
 </template>

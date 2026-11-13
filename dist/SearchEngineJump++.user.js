@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0622
+// @version            2026.11.14.0626
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5821,7 +5821,7 @@
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.selectionFollowPointer": "跟随选区",
 			"settings.selectionFollowPointerTip": "划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出",
-			"settings.selectionCompact": "精简模式",
+			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "图标模式",
 			"settings.selectionIconTip": "划词后只出现一个图标，鼠标悬浮时展开搜索条",
@@ -5835,8 +5835,6 @@
 			"settings.defaultOpenTargetTip": "引擎未单独设置打开方式时使用",
 			"settings.defaultOpenTargetBlank": "新标签页",
 			"settings.defaultOpenTargetSelf": "当前页",
-			"settings.language": "语言",
-			"settings.languageAuto": "跟随浏览器",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
 			"toast.autoSaved": "已保存",
 			"toast.autoSavedLocal": "已自动保存（当前仅本网站生效）",
@@ -5975,8 +5973,6 @@
 			"settings.defaultOpenTargetTip": "Used when an engine has no open mode of its own",
 			"settings.defaultOpenTargetBlank": "New tab",
 			"settings.defaultOpenTargetSelf": "Current tab",
-			"settings.language": "Language",
-			"settings.languageAuto": "Auto (browser)",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
 			"toast.autoSaved": "Saved",
 			"toast.autoSavedLocal": "Saved automatically (this site only)",
@@ -10549,12 +10545,12 @@
 		class: "sej-preview-state"
 	};
 	var _hoisted_17$1 = ["title"];
-	var _hoisted_18$1 = {
+	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
-	var _hoisted_19$1 = ["href"];
-	var _hoisted_20$1 = {
+	var _hoisted_19 = ["href"];
+	var _hoisted_20 = {
 		key: 2,
 		class: "sej-field"
 	};
@@ -10744,7 +10740,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10752,9 +10748,9 @@
 							href: unref(extractorUrl),
 							target: "_blank",
 							rel: "noopener"
-						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19$1)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19)) : createCommentVNode("", true)])) : createCommentVNode("", true)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20$1, [
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20, [
 						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
 						createBaseVNode("div", _hoisted_22, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => isRef(previewData) ? previewData.value = $event : null),
@@ -11364,9 +11360,6 @@
 	var _hoisted_15 = ["value"];
 	var _hoisted_16 = { value: "_blank" };
 	var _hoisted_17 = { value: "_self" };
-	var _hoisted_18 = { id: "xin-language" };
-	var _hoisted_19 = ["value"];
-	var _hoisted_20 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11430,16 +11423,7 @@
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
 						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14),
-					createBaseVNode("span", _hoisted_18, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
-						class: "sej-language-select",
-						value: __props.options.language,
-						onChange: _cache[7] || (_cache[7] = ($event) => emit("update-option", "language", $event.target.value))
-					}, [
-						createBaseVNode("option", _hoisted_20, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[9] || (_cache[9] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_19)])])
+					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14)
 				]);
 			};
 		}
