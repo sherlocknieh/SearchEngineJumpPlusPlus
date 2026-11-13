@@ -37,7 +37,7 @@ const form = reactive({
   name: props.initial.name || '',
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
-  // 默认跟随站点：本站链接原地跳转，其他站点新标签页
+  // 默认新标签页打开，显式选择当前页才原地跳转
   target:
     props.initial.target === '_self' || props.initial.target === '_blank'
       ? props.initial.target
@@ -331,7 +331,7 @@ function submit() {
     <label v-if="!initialAction || initialAction === 'open'" class="sej-field">
       <!-- 字段名 -->
       <span>{{ t('engine.target') }}</span>
-      <!-- 打开方式下拉：默认（跟随站点） / 新标签页 / 当前页 -->
+      <!-- 打开方式下拉：默认（新标签页） / 新标签页 / 当前页 -->
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
         <option value="" :title="t('engine.targetAutoTip')">{{ t('engine.targetAuto') }}</option>
         <option value="_blank">{{ t('engine.targetBlank') }}</option>

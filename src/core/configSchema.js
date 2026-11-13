@@ -127,7 +127,7 @@ export function serializeEngine(raw) {
   if (action) engine.action = action;
   if (typeof raw.favicon === 'string') engine.favicon = raw.favicon;
   if (typeof raw.faviconData === 'string') engine.faviconData = raw.faviconData;
-  // 保存显式选择的打开方式，未选择时保持默认行为
+  // 保存显式选择的打开方式，未选择时默认新标签页
   const target = normalizeEngineTarget(raw.target);
   if (target) engine.target = target;
   if (raw.disable === true) engine.disable = true;

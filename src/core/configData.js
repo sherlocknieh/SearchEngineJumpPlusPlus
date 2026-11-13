@@ -21,7 +21,7 @@ export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }
 
-/** 打开方式：_blank 强制新标签页，_self 强制当前页；未设置时跟随站点默认 */
+/** 打开方式：_blank 新标签页，_self 当前页；未设置时默认新标签页 */
 export const ENGINE_TARGETS = ['_blank', '_self'];
 
 export function normalizeEngineTarget(value) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.12.1611
+// @version            2026.11.13.2223
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5852,7 +5852,7 @@
 			"engine.uploadReplace": "本地上传（替换当前图标）",
 			"engine.target": "打开方式",
 			"engine.targetAuto": "默认",
-			"engine.targetAutoTip": "本站链接在当前页跳转，其他站点新标签页打开",
+			"engine.targetAutoTip": "默认在新标签页打开链接",
 			"engine.targetBlank": "新标签页打开",
 			"engine.targetSelf": "当前页打开",
 			"engine.selectImage": "请选择图片文件",
@@ -5982,7 +5982,7 @@
 			"engine.uploadReplace": "Upload (replace current icon)",
 			"engine.target": "Open in",
 			"engine.targetAuto": "Default",
-			"engine.targetAutoTip": "Same-site links open in the current tab, others in a new tab",
+			"engine.targetAutoTip": "Open links in a new tab by default",
 			"engine.targetBlank": "New tab",
 			"engine.targetSelf": "Current tab",
 			"engine.selectImage": "Please select an image file",
@@ -6851,19 +6851,9 @@
 		}
 		return false;
 	}
-	function currentHref() {
-		return typeof window !== "undefined" ? window.location.href : "";
-	}
-	function isSameSiteUrl(url, href = currentHref()) {
-		const targetDomain = registrableDomain(hostFromUrl(url));
-		const pageDomain = registrableDomain(hostFromUrl(href));
-		return Boolean(targetDomain) && targetDomain === pageDomain;
-	}
-	function shouldOpenInNewTab(engine, forceNewTab = false, href = currentHref()) {
+	function shouldOpenInNewTab(engine, forceNewTab = false) {
 		if (forceNewTab) return true;
-		if (engine.target === "_blank") return true;
-		if (engine.target === "_self") return false;
-		return !isSameSiteUrl(engine.url, href);
+		return engine?.target !== "_self";
 	}
 	function openInNewTab(url) {
 		if (!url) return false;
@@ -6904,11 +6894,7 @@
 			return true;
 		}
 		const result = prepareJump(engine, keyword, { hideTheSameLink: settingData.HideTheSameLink });
-		const jumpUrl = result.type === "post" ? result.action : result.url;
-		const newTab = shouldOpenInNewTab({
-			...engine,
-			url: jumpUrl
-		}, forceNewTab);
+		const newTab = shouldOpenInNewTab(engine, forceNewTab);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
 			return true;
