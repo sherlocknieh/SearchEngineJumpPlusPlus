@@ -410,6 +410,9 @@ let keepOverlayUntil = 0;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
+  // 图片模式的关键词来自图片地址：长按松手时浏览器会补发空选区的
+  // mouseup / selectionchange，必须先于「无选区就收起」判断
+  if (isImageSearch.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
@@ -420,8 +423,6 @@ function onSelectionChange(e) {
     barVisible.value = false;
     return;
   }
-  // 图片模式下关键词是图片地址，不跟随页面选区
-  if (isImageSearch.value) return;
   selectionText.value = text;
   refreshAnchor(document.getSelection());
   showFloatBar();
@@ -432,6 +433,11 @@ function onOverlayPointerDown(e) {
   if (!barVisible.value) return;
   if (isInsideBar(e)) {
     keepOverlayUntil = performance.now() + 500;
+    return;
+  }
+  // 图片模式要一并清掉状态，否则下一次长按 active 仍是 true，浮层不会再出现
+  if (isImageSearch.value) {
+    closeImageMode();
     return;
   }
   barVisible.value = false;
@@ -820,9 +826,9 @@ onBeforeUnmount(() => {
   transform: translateY(calc(-100% - 10px));
   visibility: hidden;
   pointer-events: none;
-  transition:
-    transform 0.3s,
-    visibility 0s linear 0.3s;
+  /* 划词条直接在锚点原位显隐，不做滑入/淡入，也不延迟消失 */
+  animation: none;
+  transition: none;
 }
 
 /* 顶部居中：默认位置，横向由视口决定 */
@@ -841,21 +847,16 @@ onBeforeUnmount(() => {
   margin: 0;
   transform: none;
   transform-origin: top left;
-  /* 入场动画的位移会让首帧偏离锚点，跟随模式直接显示 */
-  animation: none;
 }
 
 #sej-container.selectSearch.sej-select-visible {
   transform: none;
   visibility: visible;
   pointer-events: auto;
-  transition:
-    transform 0.3s,
-    visibility 0s linear 0s;
 }
 
 /*
- * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，
+ * 图片模式：长按后直接显示，并显示当前要搜索的图片缩略图，
  * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。
  */
 #sej-container.sej-image-search {
