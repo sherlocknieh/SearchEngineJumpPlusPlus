@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue';
+import { nextTick, onMounted, ref, watch } from 'vue';
 import { t } from '../assets/i18n.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 
@@ -27,6 +27,17 @@ useModalA11y({
 const dirty = ref(false);
 // 导入方式互斥选择，默认合并
 const importMode = ref('merge');
+
+// 配置文件通常从头部开始阅读：聚焦时把光标和滚动位置都放到开头
+onMounted(async () => {
+  await nextTick();
+  const el = textareaEl.value;
+  if (!el) return;
+  el.focus();
+  el.setSelectionRange(0, 0);
+  el.scrollTop = 0;
+  el.scrollLeft = 0;
+});
 
 // 有未应用的改动时不再同步外部配置，避免覆盖预览内容
 watch(

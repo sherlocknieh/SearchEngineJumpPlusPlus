@@ -35,7 +35,7 @@ export const messages = {
     'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '极简模式',
-    'settings.selectionIconTip': '划词后在文字/链接正上方显示一个图标，鼠标悬浮时展开搜索条',
+    'settings.selectionIconTip': '划词后只显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.editConfig': '配置文件',

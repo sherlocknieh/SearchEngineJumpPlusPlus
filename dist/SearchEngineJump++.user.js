@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0753
+// @version            2026.11.14.0755
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5822,7 +5822,7 @@
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "极简模式",
-			"settings.selectionIconTip": "划词后在文字/链接正上方显示一个图标，鼠标悬浮时展开搜索条",
+			"settings.selectionIconTip": "划词后只显示一个图标，鼠标悬浮时展开搜索条",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
@@ -10943,6 +10943,15 @@
 			});
 			const dirty = ref(false);
 			const importMode = ref("merge");
+			onMounted(async () => {
+				await nextTick();
+				const el = textareaEl.value;
+				if (!el) return;
+				el.focus();
+				el.setSelectionRange(0, 0);
+				el.scrollTop = 0;
+				el.scrollLeft = 0;
+			});
 			watch(() => props.initialText, (value) => {
 				if (dirty.value || document.activeElement === textareaEl.value) return;
 				text.value = value;
