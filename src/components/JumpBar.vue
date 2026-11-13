@@ -424,9 +424,14 @@ async function showFloatBar() {
     barVisible.value = true;
     return;
   }
-  // 每次显示都从图标收起态开始，避免沿用上一条选区的展开状态
-  clearIconCollapse();
-  iconExpanded.value = false;
+  const keyword = getCurrentKeyword();
+  // 同一关键词的重复显示（点击搜索条自身会补发 mouseup）保持当前展开状态，
+  // 只有换了新的选区才回到图标态
+  if (!barVisible.value || keyword !== shownKeyword) {
+    clearIconCollapse();
+    iconExpanded.value = false;
+  }
+  shownKeyword = keyword;
   // 等待渲染期间可能已经被收起，只有仍允许显示时才落地
   const token = ++showToken;
   await nextTick();
@@ -441,11 +446,18 @@ function hideFloatBar() {
   clearIconCollapse();
   iconExpanded.value = false;
   barVisible.value = false;
+  shownKeyword = '';
 }
+
+// 当前显示的关键词：用于区分「新选区」与「同一条搜索条的重复显示」
+let shownKeyword = '';
 
 // 图标模式下指针停靠的宽限时间：斜向移动时短暂离开图标不该马上收起
 const ICON_COLLAPSE_DELAY = 180;
+// 图标与整条之间的展开/收起动画时长
+const ICON_ANIM_MS = 160;
 let iconCollapseTimer = 0;
+let iconAnim = null;
 
 function clearIconCollapse() {
   if (!iconCollapseTimer) return;
@@ -453,31 +465,48 @@ function clearIconCollapse() {
   iconCollapseTimer = 0;
 }
 
-/** 图标模式的展开/收起会改变整条尺寸，渲染完再重新贴回锚点 */
+/** 图标模式的展开/收起：先切状态再按新旧尺寸做一次拉伸动画 */
 async function setIconExpanded(expanded) {
   if (!iconMode.value || iconExpanded.value === expanded) return;
+  const bar = containerEl.value;
+  const first = bar?.getBoundingClientRect();
   iconExpanded.value = expanded;
   await nextTick();
   syncFloatPlacement();
   updateScrollHints();
-}
+  if (!bar || !first) return;
 
-/** 指针停在图标上即展开整条搜索条，无需点击 */
-function onIconPointerEnter() {
-  if (!iconMode.value) return;
-  clearIconCollapse();
-  setIconExpanded(true);
+  const last = bar.getBoundingClientRect();
+  const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  if (reduced || (first.width === last.width && first.height === last.height)) return;
+
+  // width 带 !important（max-content），改动画 max-width 让内容由 overflow 裁出展开感
+  iconAnim?.cancel();
+  const anim = bar.animate(
+    [
+      { maxWidth: `${first.width}px`, height: `${first.height}px` },
+      { maxWidth: `${last.width}px`, height: `${last.height}px` },
+    ],
+    { duration: ICON_ANIM_MS, easing: 'ease-out' },
+  );
+  iconAnim = anim;
+  anim.onfinish = () => {
+    if (iconAnim === anim) iconAnim = null;
+  };
 }
 
 /**
- * 指针离开整条（含展开后的搜索条）后收回到图标。
- * 移到分类下拉面板时保持展开；离开窗口时 relatedTarget 为空，仍然收起。
+ * 指针在整条内（含 Teleport 到同根的下拉面板）时保持展开，离开后才收回到图标。
+ * 用指针移动命中判断而不是 pointerleave：从下拉面板直接移出时不会补发边界事件。
  */
-function onIconPointerLeave(e) {
-  if (!iconMode.value || !iconExpanded.value) return;
-  const next = e?.relatedTarget;
-  if (next && next.getRootNode?.() === containerEl.value?.getRootNode?.()) return;
-  clearIconCollapse();
+function onIconPointerMove(e) {
+  if (!iconMode.value) return;
+  if (isInsideBar(e)) {
+    clearIconCollapse();
+    setIconExpanded(true);
+    return;
+  }
+  if (!iconExpanded.value || iconCollapseTimer) return;
   iconCollapseTimer = setTimeout(() => setIconExpanded(false), ICON_COLLAPSE_DELAY);
 }
 
@@ -614,6 +643,7 @@ onMounted(async () => {
   if (isFloat) {
     document.addEventListener('pointerdown', onImageModePointerDown, true);
     document.addEventListener('keydown', onOverlayKeydown, true);
+    document.addEventListener('pointermove', onIconPointerMove, { passive: true });
     window.addEventListener('scroll', onImageModeScroll, true);
     window.addEventListener('scroll', onFloatScroll, true);
   }
@@ -634,6 +664,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onImageModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
+  document.removeEventListener('pointermove', onIconPointerMove);
   window.removeEventListener('scroll', onImageModeScroll, true);
   window.removeEventListener('scroll', onFloatScroll, true);
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
@@ -674,8 +705,6 @@ onBeforeUnmount(() => {
     ]"
     :aria-hidden="isFloat && !barVisible ? 'true' : undefined"
     :style="barStyle"
-    @pointerenter="onIconPointerEnter"
-    @pointerleave="onIconPointerLeave"
   >
     <!-- 图标模式：收起时只露出这个触发图标，指针停靠或聚焦时展开整条 -->
     <button
@@ -794,12 +823,23 @@ onBeforeUnmount(() => {
   gap: 0;
 }
 
+/* 图标模式：底色、圆角与内边距随展开/收起平滑过渡，尺寸动画由脚本补足 */
+#sej-container.selectSearch.sej-icon-mode {
+  transition:
+    background-color 0.16s ease-out,
+    border-color 0.16s ease-out,
+    border-radius 0.16s ease-out,
+    box-shadow 0.16s ease-out,
+    padding 0.16s ease-out,
+    backdrop-filter 0.16s ease-out;
+}
+
 /* icon 模式：收起时只保留脚本 logo，展开后恢复正常搜索条 */
 #sej-container.sej-icon-mode.sej-icon-collapsed {
   padding: 0;
   border-color: transparent;
   /* logo 自带白色底与配色，容器不再铺底色，避免出现双层圆 */
-  background: none;
+  background-color: transparent;
   backdrop-filter: none;
   border-radius: 50%;
   box-shadow:
@@ -812,20 +852,19 @@ onBeforeUnmount(() => {
   display: none;
 }
 
-/* 展开后图标留在最左侧作为当前模式标识，指针始终落在整条内，不会因元素消失而误收起 */
+/* 展开后不再显示图标：保留元素但移出布局，避免指针下的元素消失触发误收起 */
 #sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
-  width: 18px;
-  height: 18px;
-  margin: 0 4px 0 2px;
-  cursor: default;
+  position: absolute;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 .sej-icon-trigger {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: 50%;
