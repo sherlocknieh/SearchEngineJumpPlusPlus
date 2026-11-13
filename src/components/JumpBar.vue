@@ -12,12 +12,7 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import {
-  PLACEMENT_GAP,
-  placeAboveRect,
-  placeInsideRect,
-  placeNearRect,
-} from '../core/floatPlacement.js';
+import { PLACEMENT_GAP, placeCenteredRect, placeInsideRect } from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -391,12 +386,6 @@ function isInsideBar(e) {
   return isEventInsideUi(containerEl.value, e);
 }
 
-/** 收起态图标边长：读取图标模式样式里的变量，取不到时用样式里的默认值 */
-function iconTriggerSize() {
-  const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue('--sej-icon-size'));
-  return Number.isFinite(value) ? value : 30;
-}
-
 /** 跟随模式下用选区/命中元素的矩形算出跳转条的视口坐标 */
 function syncFloatPlacement() {
   if (!isFloat) return;
@@ -449,43 +438,22 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 链接条贴在链接左侧：优先放在链接外，左侧没有空间时移到链接内左侧
-  if (!isImageContext.value && iconMode.value) {
-    const iconSize = iconTriggerSize();
-    const outsideLeft = rect.left - PLACEMENT_GAP - iconSize;
-    const preferredLeft = outsideLeft >= PLACEMENT_GAP ? outsideLeft : rect.left + PLACEMENT_GAP;
-    const maxLeft = Math.max(PLACEMENT_GAP, viewport.width - PLACEMENT_GAP - iconSize);
-    const left = Math.min(Math.max(preferredLeft, PLACEMENT_GAP), maxLeft);
-    // 展开高度决定盒子位置，收起态图标由样式居中到链接中线
-    const maxTop = Math.max(PLACEMENT_GAP, viewport.height - PLACEMENT_GAP - barSize.height);
-    const top = Math.min(
-      Math.max(rect.top + (rect.bottom - rect.top - barSize.height) / 2, PLACEMENT_GAP),
-      maxTop,
-    );
-    bar.classList.remove('sej-top');
-    bar.classList.add('sej-follow-anchor');
-    floatStyle.value = { top: `${Math.round(top)}px`, left: `${Math.round(left)}px` };
-    return;
-  }
-  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
+  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
+  // 文字与链接触发的条一律放在锚点正上方居中
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
-      placeAboveRect({ rect, bar: barSize, viewport }))
+      placeCenteredRect({ rect, bar: barSize, viewport }))
     : null;
-  const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
+  const { top, left } = imagePlacement ?? placeCenteredRect({ rect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
-  // 图片条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中
-  if (isImageContext.value) {
-    const center = left + barSize.width / 2;
-    floatStyle.value = {
-      top: `${top}px`,
-      left: `${Math.round(center)}px`,
-      transform: 'translateX(-50%)',
-    };
-    return;
-  }
-  floatStyle.value = { top: `${top}px`, left: `${left}px` };
+  // 以整条中心为锚点：极简模式展开时宽度向两侧对称增长，始终居中于锚点
+  const center = left + barSize.width / 2;
+  floatStyle.value = {
+    top: `${top}px`,
+    left: `${Math.round(center)}px`,
+    transform: 'translateX(-50%)',
+  };
 }
 
 /**

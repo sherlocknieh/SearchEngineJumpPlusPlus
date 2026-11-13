@@ -32,7 +32,7 @@ export const messages = {
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
-      '划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出',
+      '划词条出现在选中文字的正上方，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出',
     'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '极简模式',
@@ -121,7 +121,6 @@ export const messages = {
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '无法打开该内容',
 
-
     'config.warningLine1': '此处有更多的设置选项，自由度更高，',
     'config.warningLine2': '但设置错误会导致脚本无法运行',
     'config.parseFailed': 'JSON 解析失败',
@@ -183,7 +182,7 @@ export const messages = {
       'Show the selection bar when text is selected inside an input',
     'settings.selectionFollowPointer': 'Follow selection',
     'settings.selectionFollowPointerTip':
-      'Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top',
+      'Show the selection bar above the selected text, or next to the long-pressed image/link; otherwise it slides in from the top',
     'settings.selectionCompact': 'Compact mode',
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.selectionIcon': 'Minimal mode',
@@ -274,7 +273,6 @@ export const messages = {
     'action.hintOpenImage': 'Open image',
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'Unable to open this content',
-
 
     'config.warningLine1': 'More advanced options are available here,',
     'config.warningLine2': 'but invalid settings can break the script.',

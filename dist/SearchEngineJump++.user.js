@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0708
+// @version            2026.11.14.0711
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5820,7 +5820,7 @@
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.selectionFollowPointer": "跟随选区",
-			"settings.selectionFollowPointerTip": "划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出",
+			"settings.selectionFollowPointerTip": "划词条出现在选中文字的正上方，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出",
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "极简模式",
@@ -5958,7 +5958,7 @@
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.selectionFollowPointer": "Follow selection",
-			"settings.selectionFollowPointerTip": "Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top",
+			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, or next to the long-pressed image/link; otherwise it slides in from the top",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
@@ -6437,22 +6437,6 @@
 		if (!instance) instance = reactive(new Settings());
 		return instance;
 	}
-	function placeNearRect({ rect, bar, viewport, gap = 6 }) {
-		const viewWidth = Math.max(0, viewport?.width ?? 0);
-		const viewHeight = Math.max(0, viewport?.height ?? 0);
-		const barWidth = Math.max(0, bar?.width ?? 0);
-		const barHeight = Math.max(0, bar?.height ?? 0);
-		const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
-		const left = Math.min(Math.max(rect.right, gap), maxLeft);
-		let top = rect.top - gap - barHeight;
-		if (top < gap) top = rect.bottom + gap;
-		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
-		top = Math.min(Math.max(top, gap), maxTop);
-		return {
-			top: Math.round(top),
-			left: Math.round(left)
-		};
-	}
 	function centeredLeft(rect, barWidth, viewWidth, gap) {
 		const rectWidth = Math.max(0, rect.right - rect.left);
 		const center = rect.left + (rectWidth - barWidth) / 2;
@@ -6475,16 +6459,17 @@
 			left: Math.round(left)
 		};
 	}
-	function placeAboveRect({ rect, bar, viewport, gap = 6 }) {
+	function placeCenteredRect({ rect, bar, viewport, gap = 6 }) {
 		const viewWidth = Math.max(0, viewport?.width ?? 0);
 		const viewHeight = Math.max(0, viewport?.height ?? 0);
 		const barWidth = Math.max(0, bar?.width ?? 0);
 		const barHeight = Math.max(0, bar?.height ?? 0);
 		const left = centeredLeft(rect, barWidth, viewWidth, gap);
+		const above = rect.top - gap - barHeight;
+		const candidate = above >= gap ? above : rect.bottom + gap;
 		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
-		const top = Math.min(Math.max(rect.top - gap - barHeight, gap), maxTop);
 		return {
-			top: Math.round(top),
+			top: Math.round(Math.min(Math.max(candidate, gap), maxTop)),
 			left: Math.round(left)
 		};
 	}
@@ -8596,10 +8581,6 @@
 			function isInsideBar(e) {
 				return isEventInsideUi(containerEl.value, e);
 			}
-			function iconTriggerSize() {
-				const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue("--sej-icon-size"));
-				return Number.isFinite(value) ? value : 30;
-			}
 			function syncFloatPlacement() {
 				if (!isFloat) return;
 				const bar = containerEl.value;
@@ -8641,49 +8622,26 @@
 					width: document.documentElement.clientWidth,
 					height: window.visualViewport?.height || window.innerHeight
 				};
-				if (!isImageContext.value && iconMode.value) {
-					const iconSize = iconTriggerSize();
-					const outsideLeft = rect.left - 6 - iconSize;
-					const preferredLeft = outsideLeft >= 6 ? outsideLeft : rect.left + 6;
-					const maxLeft = Math.max(6, viewport.width - 6 - iconSize);
-					const left = Math.min(Math.max(preferredLeft, 6), maxLeft);
-					const maxTop = Math.max(6, viewport.height - 6 - barSize.height);
-					const top = Math.min(Math.max(rect.top + (rect.bottom - rect.top - barSize.height) / 2, 6), maxTop);
-					bar.classList.remove("sej-top");
-					bar.classList.add("sej-follow-anchor");
-					floatStyle.value = {
-						top: `${Math.round(top)}px`,
-						left: `${Math.round(left)}px`
-					};
-					return;
-				}
 				const { top, left } = (isImageContext.value ? placeInsideRect({
 					rect,
 					bar: barSize,
 					viewport
-				}) ?? placeAboveRect({
+				}) ?? placeCenteredRect({
 					rect,
 					bar: barSize,
 					viewport
-				}) : null) ?? placeNearRect({
+				}) : null) ?? placeCenteredRect({
 					rect,
 					bar: barSize,
 					viewport
 				});
 				bar.classList.remove("sej-top");
 				bar.classList.add("sej-follow-anchor");
-				if (isImageContext.value) {
-					const center = left + barSize.width / 2;
-					floatStyle.value = {
-						top: `${top}px`,
-						left: `${Math.round(center)}px`,
-						transform: "translateX(-50%)"
-					};
-					return;
-				}
+				const center = left + barSize.width / 2;
 				floatStyle.value = {
 					top: `${top}px`,
-					left: `${left}px`
+					left: `${Math.round(center)}px`,
+					transform: "translateX(-50%)"
 				};
 			}
 			function selectionAnchorRect(selection) {
