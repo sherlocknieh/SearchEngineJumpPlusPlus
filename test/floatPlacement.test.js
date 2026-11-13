@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeInsideRect, placeNearRect } from '../src/core/floatPlacement.js';
+import { placeAboveRect, placeInsideRect, placeNearRect } from '../src/core/floatPlacement.js';
 
 const viewport = { width: 1200, height: 800 };
 const bar = { width: 300, height: 32 };
@@ -39,10 +39,10 @@ describe('placeNearRect', () => {
 describe('placeInsideRect', () => {
   const imageRect = { top: 200, left: 300, right: 800, bottom: 600 };
 
-  it('放在图片内部顶部并与右边缘对齐', () => {
+  it('放在图片内部顶部居中', () => {
     expect(placeInsideRect({ rect: imageRect, bar, viewport })).toEqual({
       top: 200 + 6,
-      left: 800 - 6 - 300,
+      left: 300 + (500 - 300) / 2,
     });
   });
 
@@ -51,7 +51,7 @@ describe('placeInsideRect', () => {
     expect(placeInsideRect({ rect: small, bar, viewport })).toBeNull();
   });
 
-  it('图片贴住视口右侧时整体收进视口', () => {
+  it('图片超出视口右侧时居中坐标收进视口', () => {
     const rect = { top: 200, left: 950, right: 1350, bottom: 600 };
     expect(placeInsideRect({ rect, bar, viewport }).left).toBe(1200 - 6 - 300);
   });
@@ -59,5 +59,20 @@ describe('placeInsideRect', () => {
   it('图片顶部超出视口时收进视口顶部', () => {
     const rect = { top: -40, left: 300, right: 800, bottom: 600 };
     expect(placeInsideRect({ rect, bar, viewport }).top).toBe(6);
+  });
+});
+
+describe('placeAboveRect', () => {
+  it('图片上方居中', () => {
+    const rect = { top: 300, left: 300, right: 800, bottom: 400 };
+    expect(placeAboveRect({ rect, bar, viewport })).toEqual({
+      top: 300 - 6 - 32,
+      left: 300 + (500 - 300) / 2,
+    });
+  });
+
+  it('顶部空间不足时收进视口顶部', () => {
+    const rect = { top: 10, left: 300, right: 800, bottom: 100 };
+    expect(placeAboveRect({ rect, bar, viewport }).top).toBe(6);
   });
 });

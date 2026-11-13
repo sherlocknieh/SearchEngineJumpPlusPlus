@@ -12,7 +12,7 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import { placeInsideRect, placeNearRect } from '../core/floatPlacement.js';
+import { placeAboveRect, placeInsideRect, placeNearRect } from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -352,16 +352,13 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 图片条放进图片内部顶部，图片太小放不下时退回选区式的贴边定位
-  const inside = isImageSearch.value
-    ? placeInsideRect({
-        rect,
-        bar: { width: barRect.width, height: barRect.height },
-        viewport,
-      })
+  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
+  const imagePlacement = isImageSearch.value
+    ? (placeInsideRect({ rect, bar: { width: barRect.width, height: barRect.height }, viewport }) ??
+      placeAboveRect({ rect, bar: { width: barRect.width, height: barRect.height }, viewport }))
     : null;
   const { top, left } =
-    inside ??
+    imagePlacement ??
     placeNearRect({
       rect,
       bar: { width: barRect.width, height: barRect.height },

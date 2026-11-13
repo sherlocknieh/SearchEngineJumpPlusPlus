@@ -3,7 +3,7 @@
  *
  * 跳转条与选区/图片的右上角对齐，并收进视口：
  * 上方放不下时改到下方，右侧放不下时向左对齐，始终留出最小边距。
- * 图片条优先放进图片内部顶部，图片尺寸不足时再退回外部定位。
+ * 图片条优先放进图片内部顶部居中，图片尺寸不足时放到图片上方居中。
  */
 
 /** 跳转条与锚点矩形之间的间距 */
@@ -36,9 +36,17 @@ export function placeNearRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
   return { top: Math.round(top), left: Math.round(left) };
 }
 
+/** 锚点矩形在水平方向居中并收进视口后的左坐标 */
+function centeredLeft(rect, barWidth, viewWidth, gap) {
+  const rectWidth = Math.max(0, rect.right - rect.left);
+  const center = rect.left + (rectWidth - barWidth) / 2;
+  const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
+  return Math.min(Math.max(center, gap), maxLeft);
+}
+
 /**
- * 把跳转条放进锚点矩形内部顶部，右边缘贴住锚点右边缘并留出间距。
- * 图片放不下时返回 null，调用方退回 placeNearRect 的外部定位。
+ * 把跳转条放进锚点矩形内部顶部居中。
+ * 图片放不下时返回 null，调用方退回 placeAboveRect 的外部定位。
  *
  * @param {object} options
  * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或图片的视口矩形
@@ -58,13 +66,35 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
   const rectHeight = Math.max(0, rect.bottom - rect.top);
   if (rectWidth < barWidth + gap * 2 || rectHeight < barHeight + gap * 2) return null;
 
-  // 右边缘与图片右边缘对齐，图片贴住视口右侧时整体收进视口
-  const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
-  const left = Math.min(Math.max(rect.right - gap - barWidth, gap), maxLeft);
+  const left = centeredLeft(rect, barWidth, viewWidth, gap);
 
   // 顶部与图片顶部留出间距，图片顶部超出视口时收进视口
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
   const top = Math.min(Math.max(rect.top + gap, gap), maxTop);
+
+  return { top: Math.round(top), left: Math.round(left) };
+}
+
+/**
+ * 把跳转条放到锚点矩形上方居中，顶部空间不足时收进视口顶部。
+ *
+ * @param {object} options
+ * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或图片的视口矩形
+ * @param {{width:number, height:number}} options.bar 跳转条实测尺寸
+ * @param {{width:number, height:number}} options.viewport 视口尺寸
+ * @param {number} [options.gap] 与锚点、视口边界的间距
+ * @returns {{top:number, left:number}} 跳转条的视口坐标
+ */
+export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
+  const viewWidth = Math.max(0, viewport?.width ?? 0);
+  const viewHeight = Math.max(0, viewport?.height ?? 0);
+  const barWidth = Math.max(0, bar?.width ?? 0);
+  const barHeight = Math.max(0, bar?.height ?? 0);
+
+  const left = centeredLeft(rect, barWidth, viewWidth, gap);
+
+  const maxTop = Math.max(gap, viewHeight - gap - barHeight);
+  const top = Math.min(Math.max(rect.top - gap - barHeight, gap), maxTop);
 
   return { top: Math.round(top), left: Math.round(left) };
 }

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0336
+// @version            2026.11.14.0337
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6418,6 +6418,12 @@
 			left: Math.round(left)
 		};
 	}
+	function centeredLeft(rect, barWidth, viewWidth, gap) {
+		const rectWidth = Math.max(0, rect.right - rect.left);
+		const center = rect.left + (rectWidth - barWidth) / 2;
+		const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
+		return Math.min(Math.max(center, gap), maxLeft);
+	}
 	function placeInsideRect({ rect, bar, viewport, gap = 6 }) {
 		const viewWidth = Math.max(0, viewport?.width ?? 0);
 		const viewHeight = Math.max(0, viewport?.height ?? 0);
@@ -6426,10 +6432,22 @@
 		const rectWidth = Math.max(0, rect.right - rect.left);
 		const rectHeight = Math.max(0, rect.bottom - rect.top);
 		if (rectWidth < barWidth + gap * 2 || rectHeight < barHeight + gap * 2) return null;
-		const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
-		const left = Math.min(Math.max(rect.right - gap - barWidth, gap), maxLeft);
+		const left = centeredLeft(rect, barWidth, viewWidth, gap);
 		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
 		const top = Math.min(Math.max(rect.top + gap, gap), maxTop);
+		return {
+			top: Math.round(top),
+			left: Math.round(left)
+		};
+	}
+	function placeAboveRect({ rect, bar, viewport, gap = 6 }) {
+		const viewWidth = Math.max(0, viewport?.width ?? 0);
+		const viewHeight = Math.max(0, viewport?.height ?? 0);
+		const barWidth = Math.max(0, bar?.width ?? 0);
+		const barHeight = Math.max(0, bar?.height ?? 0);
+		const left = centeredLeft(rect, barWidth, viewWidth, gap);
+		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
+		const top = Math.min(Math.max(rect.top - gap - barHeight, gap), maxTop);
 		return {
 			top: Math.round(top),
 			left: Math.round(left)
@@ -8297,6 +8315,13 @@
 					height: window.visualViewport?.height || window.innerHeight
 				};
 				const { top, left } = (isImageSearch.value ? placeInsideRect({
+					rect,
+					bar: {
+						width: barRect.width,
+						height: barRect.height
+					},
+					viewport
+				}) ?? placeAboveRect({
 					rect,
 					bar: {
 						width: barRect.width,
