@@ -1,7 +1,7 @@
 /**
  * 贴内容的浮层条定位计算。
  *
- * 文字/链接触发的跳转条放在锚点正上方并右对齐；图片条优先放进图片内部顶部居中，
+ * 文字/链接触发的跳转条放在锚点正上方、左侧贴住锚点开头；图片条优先放进图片内部顶部居中，
  * 图片尺寸不足时放到图片上方居中。放不下时都会收进视口，始终留出最小边距。
  */
 
@@ -10,15 +10,12 @@ export const PLACEMENT_GAP = 6;
 
 /**
  * 锚点矩形在水平方向对齐后收进视口的左坐标。
- * @param {'center'|'left'|'right'} align center 居中；left 左边缘贴住锚点左边缘；right 贴住右边缘
+ * @param {'center'|'left'} align center 居中；left 左边缘贴住锚点左边缘
  */
 function alignedLeft(rect, barWidth, viewWidth, gap, align) {
   const rectLeft = Math.max(0, rect.left ?? 0);
   const rectRight = Math.max(rectLeft, rect.right ?? 0);
-  let preferred;
-  if (align === 'right') preferred = rectRight - barWidth;
-  else if (align === 'left') preferred = rectLeft;
-  else preferred = rectLeft + (rectRight - rectLeft - barWidth) / 2;
+  const preferred = align === 'left' ? rectLeft : rectLeft + (rectRight - rectLeft - barWidth) / 2;
   const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
   return Math.min(Math.max(preferred, gap), maxLeft);
 }
@@ -62,7 +59,7 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
  * @param {{width:number, height:number}} options.bar 跳转条实测尺寸
  * @param {{width:number, height:number}} options.viewport 视口尺寸
  * @param {number} [options.gap] 与锚点、视口边界的间距
- * @param {'center'|'left'|'right'} [options.align] 水平对齐方式，默认居中
+ * @param {'center'|'left'} [options.align] 水平对齐方式，默认居中
  * @returns {{top:number, left:number}} 跳转条的视口坐标
  */
 export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align = 'center' }) {

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0720
+// @version            2026.11.14.0723
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5820,7 +5820,7 @@
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.selectionFollowPointer": "跟随选区",
-			"settings.selectionFollowPointerTip": "划词条出现在选中文字的正上方，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出",
+			"settings.selectionFollowPointerTip": "划词条出现在选中文字的正上方并贴住文字开头，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出",
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
 			"settings.selectionIcon": "极简模式",
@@ -5958,7 +5958,7 @@
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.selectionFollowPointer": "Follow selection",
-			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, or next to the long-pressed image/link; otherwise it slides in from the top",
+			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, aligned to its start, or next to the long-pressed image/link; otherwise it slides in from the top",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
@@ -6440,10 +6440,7 @@
 	function alignedLeft(rect, barWidth, viewWidth, gap, align) {
 		const rectLeft = Math.max(0, rect.left ?? 0);
 		const rectRight = Math.max(rectLeft, rect.right ?? 0);
-		let preferred;
-		if (align === "right") preferred = rectRight - barWidth;
-		else if (align === "left") preferred = rectLeft;
-		else preferred = rectLeft + (rectRight - rectLeft - barWidth) / 2;
+		const preferred = align === "left" ? rectLeft : rectLeft + (rectRight - rectLeft - barWidth) / 2;
 		const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
 		return Math.min(Math.max(preferred, gap), maxLeft);
 	}
@@ -8626,7 +8623,7 @@
 					width: document.documentElement.clientWidth,
 					height: window.visualViewport?.height || window.innerHeight
 				};
-				const imagePlacement = isImageContext.value ? placeInsideRect({
+				const { top, left } = (isImageContext.value ? placeInsideRect({
 					rect,
 					bar: barSize,
 					viewport
@@ -8634,13 +8631,11 @@
 					rect,
 					bar: barSize,
 					viewport
-				}) : null;
-				const align = iconMode.value ? "left" : "right";
-				const { top, left } = imagePlacement ?? placeAboveRect({
+				}) : null) ?? placeAboveRect({
 					rect,
 					bar: barSize,
 					viewport,
-					align
+					align: "left"
 				});
 				bar.classList.remove("sej-top");
 				bar.classList.add("sej-follow-anchor");

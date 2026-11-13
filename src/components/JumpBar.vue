@@ -444,9 +444,9 @@ function syncFloatPlacement() {
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  // 极简模式收起时只有图标，贴在文本开头并向右展开；其余情况右边缘与锚点右边缘对齐
-  const align = iconMode.value ? 'left' : 'right';
-  const placement = imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align });
+  // 文字与链接触发的条一律左对齐贴住文本开头，向右展开
+  const placement =
+    imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align: 'left' });
   const { top, left } = placement;
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');

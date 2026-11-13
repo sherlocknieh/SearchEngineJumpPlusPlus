@@ -9,13 +9,6 @@ function rect(top, right, bottom) {
 }
 
 describe('placeAboveRect', () => {
-  it('文字选区正上方右对齐', () => {
-    expect(placeAboveRect({ rect: rect(300, 500, 320), bar, viewport, align: 'right' })).toEqual({
-      top: 300 - 6 - 32,
-      left: 500 - 300,
-    });
-  });
-
   it('左对齐时贴住锚点左边缘', () => {
     expect(placeAboveRect({ rect: rect(300, 500, 320), bar, viewport, align: 'left' })).toEqual({
       top: 300 - 6 - 32,

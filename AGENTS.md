@@ -127,7 +127,7 @@ src/main.js                 只做装配
 - `core/shadowDom.js`：按角色（`main` / `float`）多宿主、`addStyle` 广播、层叠偏移、`reset`；
   子组件通过 `inject(HOST_ROLE_KEY)` 取所属宿主（`getDropRoot` / `getHost`）
 - 划词条定位：`core/floatPlacement.js` 的 `placeAboveRect`（锚点正上方，放不下翻到下方；
-  文字/链接右对齐、极简模式左对齐贴文字开头、图片居中），
+  文字/链接左对齐贴文字开头、图片居中），
   跟随选区时由 JumpBar 写入内联坐标；
   滚动时重新量锚点矩形继续跟随，锚点消失（选区清空/图片移除）才回到顶部居中
 - `.build/vueStyleToShadow.js`：把 SFC `<style>` 改写为 `addStyle()`（脚本在 Shadow Root 内，document 样式不生效）
