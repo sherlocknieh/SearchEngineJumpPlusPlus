@@ -19,18 +19,8 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'center', $event.target.checked)"
       /></label>
     </span>
-    <span id="xin-selectSearch">
-      <label
-        >{{ t('settings.selectSearch')
-        }}<input
-          type="checkbox"
-          :checked="options.selectSearch"
-          @change="emit('update-option', 'selectSearch', $event.target.checked)"
-      /></label>
-    </span>
     <span
       id="xin-selectSearchInInput"
-      v-show="options.selectSearch"
       :title="t('settings.selectSearchInInputTip')"
     >
       <label
@@ -43,7 +33,6 @@ const emit = defineEmits(['update-option']);
     </span>
     <span
       id="xin-selectionFollowPointer"
-      v-show="options.selectSearch"
       :title="t('settings.selectionFollowPointerTip')"
     >
       <label
@@ -56,7 +45,7 @@ const emit = defineEmits(['update-option']);
     </span>
     <span
       id="xin-selectionCompact"
-      v-show="options.selectSearch && options.selectionFollowPointer"
+      v-show="options.selectionFollowPointer"
       :title="t('settings.selectionCompactTip')"
     >
       <label
@@ -69,7 +58,7 @@ const emit = defineEmits(['update-option']);
     </span>
     <span
       id="xin-selectionIcon"
-      v-show="options.selectSearch && options.selectionFollowPointer"
+      v-show="options.selectionFollowPointer"
       :title="t('settings.selectionIconTip')"
     >
       <label

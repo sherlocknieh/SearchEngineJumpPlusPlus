@@ -76,9 +76,8 @@ const ready = ref(false);
 // 浮层条（划词条 / 上下文操作条）始终脱离文档流显示，内嵌条跟随站点布局；
 // 这里只需一个固定值，供视图校正判断“是否浮层”
 const isOverlayBar = { value: isFloat };
-// 浮层条只在开启划词搜索时响应选区，上下文操作条与设置项无关
-const selectSearchEnabled = Boolean(data.selectSearch);
-const isSelectSearch = ref(isFloat && selectSearchEnabled);
+// 浮层条默认响应划词，上下文操作条在此基础上替换关键词
+const isSelectSearch = ref(isFloat);
 // 长按图片/链接时复用同一条划词条，只把关键词换成命中的内容
 const isContextAction = ref(false);
 // 当前上下文模式（image / link），图片模式有专属的定位方式
@@ -339,11 +338,11 @@ function initTargets() {
   // 划词条与上下文操作条共用同一个浮层条：长按触发时优先进入上下文模式
   if (isFloat) {
     if (contextAction.active) return { render: initContextAction() };
-    return { render: selectSearchEnabled && initSelectSearch() };
+    return { render: initSelectSearch() };
   }
 
   // 规则声明优先划词时（如 Wikipedia），内嵌条让位给独立的划词条
-  if (selectSearchEnabled && matchedRule?.enabled && matchedRule.selectSearchPriority) {
+  if (matchedRule?.enabled && matchedRule.selectSearchPriority) {
     return { render: false };
   }
 

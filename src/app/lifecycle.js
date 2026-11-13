@@ -1,4 +1,4 @@
-import { createApp, watch } from 'vue';
+import { createApp } from 'vue';
 import App from '../App.vue';
 import globalCss from '../assets/global.css?raw';
 import {
@@ -12,16 +12,12 @@ import {
   reset,
 } from '../core/shadowDom.js';
 import { applyDarkModeIfNeeded, watchDarkModeChanges } from '../core/darkMode.js';
-import { contextAction } from '../stores/contextAction.js';
-import { useSettings } from '../stores/settings.js';
 import { closeSettingPanel } from '../stores/ui.js';
 import { registerMenu } from './menu.js';
 
 // 内嵌条与设置面板共用一个应用实例；划词条是独立实例，互不影响
 let mainApp = null;
 let floatApp = null;
-// 上下文模式结束后，若未开启划词搜索就卸载浮层条，避免留一个空实例
-let stopFloatWatch = null;
 
 /**
  * 判断当前脚本实例是否已经挂载。
@@ -48,8 +44,6 @@ function unmountApp(app) {
  * 保证不会残留旧的 DOM、样式或事件监听。
  */
 export function teardown() {
-  stopFloatWatch?.();
-  stopFloatWatch = null;
   unmountApp(floatApp);
   unmountApp(mainApp);
   floatApp = null;
@@ -58,15 +52,12 @@ export function teardown() {
 }
 
 /**
- * 按需挂载划词条：只在开启划词搜索或正在搜图时才有意义。
- * 已挂载时直接复用，避免重复创建 Vue 应用。
+ * 按需挂载划词条：同一时刻只保留一个浮层实例。
  */
 export function ensureFloatBar() {
   if (floatApp) return;
   // 同一版本的另一份安装已经挂过划词条：不再重复挂载，避免出现两条划词条
   if (hasForeignHost(HOST_ROLE_FLOAT)) return;
-  const settings = useSettings();
-  if (!settings.settingData?.selectSearch && !contextAction.active) return;
 
   const root = initialize(HOST_ROLE_FLOAT);
   document.body.appendChild(getHost(HOST_ROLE_FLOAT));
@@ -75,25 +66,6 @@ export function ensureFloatBar() {
 
   floatApp = createApp(App, { role: HOST_ROLE_FLOAT });
   floatApp.mount(root);
-
-  // 只靠长按图片/链接唤起的浮层条在操作结束后不再有用
-  stopFloatWatch?.();
-  stopFloatWatch = watch(
-    () => contextAction.active,
-    (active) => {
-      if (active || useSettings().settingData?.selectSearch) return;
-      disposeFloatBar();
-    },
-  );
-}
-
-/** 卸载浮层条并移除宿主：关闭划词搜索后不留空 DOM */
-export function disposeFloatBar() {
-  stopFloatWatch?.();
-  stopFloatWatch = null;
-  unmountApp(floatApp);
-  floatApp = null;
-  getHost(HOST_ROLE_FLOAT).remove();
 }
 
 /**

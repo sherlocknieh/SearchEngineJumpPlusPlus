@@ -27,7 +27,6 @@ export const messages = {
     'settings.deleteEngine': '删除引擎',
     'settings.copyHere': '复制一份到此栏目',
     'settings.addCategory': '添加列表',
-    'settings.selectSearch': '划词搜索',
     'settings.selectSearchInInput': '输入框内划词',
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.selectionFollowPointer': '跟随选区',
@@ -133,7 +132,7 @@ export const messages = {
     'config.mergeTip': '把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置',
     'config.export': '导出',
 
-    'jump.searchAll': '一键搜索',
+    'jump.searchAll': '一键打开',
     'jump.collapseList': '收起列表：{name}',
     'bar.scrollLeft': '向左滚动',
     'bar.scrollRight': '向右滚动',
@@ -176,7 +175,6 @@ export const messages = {
     'settings.deleteEngine': 'Delete engine',
     'settings.copyHere': 'Copy here',
     'settings.addCategory': 'Add category',
-    'settings.selectSearch': 'Selection search',
     'settings.selectSearchInInput': 'Selection in inputs',
     'settings.selectSearchInInputTip':
       'Show the selection bar when text is selected inside an input',
@@ -287,7 +285,7 @@ export const messages = {
       'Append engines from the imported file or the text above to the current list, keeping current settings',
     'config.export': 'Export',
 
-    'jump.searchAll': 'Search all',
+    'jump.searchAll': 'Open all',
     'jump.collapseList': 'Collapse list: {name}',
     'bar.scrollLeft': 'Scroll left',
     'bar.scrollRight': 'Scroll right',

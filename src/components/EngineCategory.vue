@@ -32,7 +32,7 @@ const firstIconSrc = computed(() =>
   iconVisible.value && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
 );
 
-// 一键搜索只对能跳转的引擎有意义，「操作」这类纯快捷动作分类没有可批量打开的地址
+// 一键打开只对能跳转的引擎有意义，「操作」这类纯快捷动作分类没有可批量打开的地址
 const showSearchAll = computed(() => props.engines.some((engine) => engine.url));
 
 // 首个引擎没有图标时用分类名首字兜底，避免简洁模式下分类不可见
@@ -296,7 +296,7 @@ function unpin() {
 }
 
 function onTriggerClick() {
-  // 已固定时再次点击触发项只收起面板，一键搜索改由列表末尾的条目承担
+  // 已固定时再次点击触发项只收起面板，一键打开改由列表末尾的条目承担
   if (pinned.value) {
     unpin();
     return;
@@ -310,7 +310,7 @@ function onHoverLeave() {
   scheduleHide();
 }
 
-// 列表末尾的一键搜索条目：打开该分类下全部引擎，然后收起面板
+// 列表末尾的一键打开条目：打开该分类下全部引擎，然后收起面板
 function onSearchAll() {
   unpin();
   emit('jumpAll');
@@ -416,10 +416,9 @@ onBeforeUnmount(() => {
           stroke-linejoin="round"
           aria-hidden="true"
         >
-          <path d="M12 17v5" />
-          <path
-            d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
-          />
+          <path d="M6.5 4h11" />
+          <path d="M9 4v6.5L6.5 13v2h11v-2L15 10.5V4" />
+          <path d="M12 15v4.5" />
         </svg>
         <img
           v-else-if="firstIconSrc"
@@ -546,7 +545,7 @@ onBeforeUnmount(() => {
   translate: 0 0.75px;
 }
 
-/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */
+/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */
 .sej-search-all-icon {
   display: block;
   width: 14px;

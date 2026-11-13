@@ -46,13 +46,9 @@ function armStart() {
 
   const settings = useSettings();
 
-  // 没有站点规则：
-  // - 开启划词搜索时等第一次划词再启动；
-  // - 连划词条也关闭时完全不挂载，只在打开设置菜单时按需启动。
+  // 没有站点规则：等第一次划词再启动
   if (!settings.getMatchedRule()) {
-    if (settings.settingData.selectSearch) {
-      armLazyStart(settings.settingData.selectSearchInInput);
-    }
+    armLazyStart(settings.settingData.selectSearchInInput);
     return;
   }
 

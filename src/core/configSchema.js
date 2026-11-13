@@ -21,7 +21,6 @@ import {
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
 export const OPTION_KEYS = [
   'center',
-  'selectSearch',
   'selectSearchInInput',
   'selectionFollowPointer',
   'selectionCompact',
@@ -36,8 +35,7 @@ const LEGACY_ACTIONS_CATEGORY_NAME = '功能';
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
-    // 默认开启划词搜索，输入框内的选区同样触发
-    selectSearch: true,
+    // 输入框内的选区默认同样触发划词
     selectSearchInInput: true,
     // 划词条默认贴在选区旁，而不是从页面顶部滑出
     selectionFollowPointer: true,

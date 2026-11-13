@@ -36,7 +36,6 @@ describe('createDefaultConfig', () => {
 
   it('划词相关选项默认全部开启', () => {
     const config = createDefaultConfig();
-    expect(config.selectSearch).toBe(true);
     expect(config.selectSearchInInput).toBe(true);
     expect(config.selectionFollowPointer).toBe(true);
     expect(config.selectionCompact).toBe(true);
@@ -59,7 +58,6 @@ describe('normalizeConfig', () => {
     const result = normalizeConfig(
       {
         center: 'yes',
-        selectSearch: 0,
         selectSearchInInput: 'yes',
         selectionFollowPointer: 'yes',
         selectionCompact: 'yes',
@@ -69,7 +67,6 @@ describe('normalizeConfig', () => {
       defaults,
     );
     expect(result.center).toBe(defaults.center);
-    expect(result.selectSearch).toBe(defaults.selectSearch);
     expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
     expect(result.selectionFollowPointer).toBe(defaults.selectionFollowPointer);
     expect(result.selectionCompact).toBe(defaults.selectionCompact);

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0742
+// @version            2026.11.14.0753
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5733,7 +5733,6 @@
 	}
 	var engines_default = {
 		version: "2026-10-24 08:47:49",
-		selectSearch: true,
 		selectSearchInInput: true,
 		selectionFollowPointer: false,
 		selectionCompact: false,
@@ -5816,7 +5815,6 @@
 			"settings.deleteEngine": "删除引擎",
 			"settings.copyHere": "复制一份到此栏目",
 			"settings.addCategory": "添加列表",
-			"settings.selectSearch": "划词搜索",
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.selectionFollowPointer": "跟随选区",
@@ -5915,7 +5913,7 @@
 			"config.mergeImport": "合并导入",
 			"config.mergeTip": "把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置",
 			"config.export": "导出",
-			"jump.searchAll": "一键搜索",
+			"jump.searchAll": "一键打开",
 			"jump.collapseList": "收起列表：{name}",
 			"bar.scrollLeft": "向左滚动",
 			"bar.scrollRight": "向右滚动",
@@ -5954,7 +5952,6 @@
 			"settings.deleteEngine": "Delete engine",
 			"settings.copyHere": "Copy here",
 			"settings.addCategory": "Add category",
-			"settings.selectSearch": "Selection search",
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.selectionFollowPointer": "Follow selection",
@@ -6053,7 +6050,7 @@
 			"config.mergeImport": "Merge import",
 			"config.mergeTip": "Append engines from the imported file or the text above to the current list, keeping current settings",
 			"config.export": "Export",
-			"jump.searchAll": "Search all",
+			"jump.searchAll": "Open all",
 			"jump.collapseList": "Collapse list: {name}",
 			"bar.scrollLeft": "Scroll left",
 			"bar.scrollRight": "Scroll right",
@@ -6244,7 +6241,6 @@
 	}
 	var OPTION_KEYS = [
 		"center",
-		"selectSearch",
 		"selectSearchInInput",
 		"selectionFollowPointer",
 		"selectionCompact",
@@ -6255,7 +6251,6 @@
 	var LEGACY_ACTIONS_CATEGORY_NAME = "功能";
 	function createDefaultConfig() {
 		return {
-			selectSearch: true,
 			selectSearchInInput: true,
 			selectionFollowPointer: true,
 			selectionCompact: true,
@@ -8005,7 +8000,7 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */\n  translate: 0 0.75px;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */\n  translate: 0 0.75px;\n}\n\n/* 简洁模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n  translate: 0 0.75px;\n}\n\n/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */\n  translate: 0 0.75px;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */\n  translate: 0 0.75px;\n}\n\n/* 简洁模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n  translate: 0 0.75px;\n}\n\n/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const props = __props;
 			const emit = __emit;
 			const iconVisible = computed(() => props.showIcon || props.compact);
@@ -8273,7 +8268,11 @@
 					title: triggerTitle.value,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
-				}, [iconVisible.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("svg", _hoisted_3$8, [..._cache[2] || (_cache[2] = [createBaseVNode("path", { d: "M12 17v5" }, null, -1), createBaseVNode("path", { d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" }, null, -1)])])) : firstIconSrc.value ? (openBlock(), createElementBlock("img", {
+				}, [iconVisible.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("svg", _hoisted_3$8, [..._cache[2] || (_cache[2] = [
+					createBaseVNode("path", { d: "M6.5 4h11" }, null, -1),
+					createBaseVNode("path", { d: "M9 4v6.5L6.5 13v2h11v-2L15 10.5V4" }, null, -1),
+					createBaseVNode("path", { d: "M12 15v4.5" }, null, -1)
+				])])) : firstIconSrc.value ? (openBlock(), createElementBlock("img", {
 					key: 1,
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
@@ -8383,8 +8382,7 @@
 			const inlineStyleBlocked = isInlineStyleBlocked();
 			const ready = ref(false);
 			const isOverlayBar = { value: isFloat };
-			const selectSearchEnabled = Boolean(data.selectSearch);
-			const isSelectSearch = ref(isFloat && selectSearchEnabled);
+			const isSelectSearch = ref(isFloat);
 			const isContextAction = ref(false);
 			const contextMode = ref("");
 			const contextTarget = ref(null);
@@ -8545,9 +8543,9 @@
 			function initTargets() {
 				if (isFloat) {
 					if (contextAction.active) return { render: initContextAction() };
-					return { render: selectSearchEnabled && initSelectSearch() };
+					return { render: initSelectSearch() };
 				}
-				if (selectSearchEnabled && matchedRule?.enabled && matchedRule.selectSearchPriority) return { render: false };
+				if (matchedRule?.enabled && matchedRule.selectSearchPriority) return { render: false };
 				if (matchedRule?.enabled) {
 					inputTarget = getInputTarget(matchedRule);
 					insertTarget = getInsertTarget(matchedRule);
@@ -10536,11 +10534,11 @@
 		key: 2,
 		class: "sej-preview-size"
 	};
-	var _hoisted_16$1 = {
+	var _hoisted_16 = {
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17$1 = ["title"];
+	var _hoisted_17 = ["title"];
 	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
@@ -10731,12 +10729,12 @@
 									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
 								}, toDisplayString(step.url), 9, _hoisted_14$2),
 								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -11342,7 +11340,7 @@
 	var _hoisted_1$1 = { class: "sej-footer-options" };
 	var _hoisted_2$1 = ["title"];
 	var _hoisted_3$1 = ["checked"];
-	var _hoisted_4$1 = { id: "xin-selectSearch" };
+	var _hoisted_4$1 = ["title"];
 	var _hoisted_5$1 = ["checked"];
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
@@ -11351,11 +11349,9 @@
 	var _hoisted_10 = ["title"];
 	var _hoisted_11 = ["checked"];
 	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["checked"];
-	var _hoisted_14 = ["title"];
-	var _hoisted_15 = ["value"];
-	var _hoisted_16 = { value: "_blank" };
-	var _hoisted_17 = { value: "_self" };
+	var _hoisted_13 = ["value"];
+	var _hoisted_14 = { value: "_blank" };
+	var _hoisted_15 = { value: "_self" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11375,51 +11371,46 @@
 						checked: __props.options.center,
 						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "center", $event.target.checked))
 					}, null, 40, _hoisted_3$1)])], 8, _hoisted_2$1),
-					createBaseVNode("span", _hoisted_4$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectSearch,
-						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
-					}, null, 40, _hoisted_5$1)])]),
-					withDirectives(createBaseVNode("span", {
+					createBaseVNode("span", {
 						id: "xin-selectSearchInInput",
 						title: unref(t)("settings.selectSearchInInputTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearchInInput")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectSearchInInput,
-						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
-					}, null, 40, _hoisted_7)])], 8, _hoisted_6), [[vShow, __props.options.selectSearch]]),
-					withDirectives(createBaseVNode("span", {
+						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
+					}, null, 40, _hoisted_5$1)])], 8, _hoisted_4$1),
+					createBaseVNode("span", {
 						id: "xin-selectionFollowPointer",
 						title: unref(t)("settings.selectionFollowPointerTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionFollowPointer")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectionFollowPointer,
-						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
-					}, null, 40, _hoisted_9)])], 8, _hoisted_8), [[vShow, __props.options.selectSearch]]),
+						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
+					}, null, 40, _hoisted_7)])], 8, _hoisted_6),
 					withDirectives(createBaseVNode("span", {
 						id: "xin-selectionCompact",
 						title: unref(t)("settings.selectionCompactTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionCompact")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectionCompact,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
-					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
+						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
+					}, null, 40, _hoisted_9)])], 8, _hoisted_8), [[vShow, __props.options.selectionFollowPointer]]),
 					withDirectives(createBaseVNode("span", {
 						id: "xin-selectionIcon",
 						title: unref(t)("settings.selectionIconTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionIcon")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectionIcon,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
-					}, null, 40, _hoisted_13)])], 8, _hoisted_12), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
+					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectionFollowPointer]]),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14)
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_15, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_13)])], 8, _hoisted_12)
 				]);
 			};
 		}
@@ -11950,7 +11941,6 @@
 	}
 	var mainApp = null;
 	var floatApp = null;
-	var stopFloatWatch = null;
 	function isRunning() {
 		return Boolean(document.getElementById(HOST_ID));
 	}
@@ -11961,8 +11951,6 @@
 		} catch (e) {}
 	}
 	function teardown() {
-		stopFloatWatch?.();
-		stopFloatWatch = null;
 		unmountApp(floatApp);
 		unmountApp(mainApp);
 		floatApp = null;
@@ -11972,24 +11960,11 @@
 	function ensureFloatBar() {
 		if (floatApp) return;
 		if (hasForeignHost("float")) return;
-		if (!useSettings().settingData?.selectSearch && !contextAction.active) return;
 		const root = initialize(HOST_ROLE_FLOAT);
 		document.body.appendChild(getHost(HOST_ROLE_FLOAT));
 		applyDarkModeIfNeeded();
 		floatApp = createApp(_sfc_main, { role: HOST_ROLE_FLOAT });
 		floatApp.mount(root);
-		stopFloatWatch?.();
-		stopFloatWatch = watch(() => contextAction.active, (active) => {
-			if (active || useSettings().settingData?.selectSearch) return;
-			disposeFloatBar();
-		});
-	}
-	function disposeFloatBar() {
-		stopFloatWatch?.();
-		stopFloatWatch = null;
-		unmountApp(floatApp);
-		floatApp = null;
-		getHost(HOST_ROLE_FLOAT).remove();
 	}
 	function boot({ force = false } = {}) {
 		if (!force && hasForeignHost("main")) {
@@ -12128,7 +12103,7 @@
 		disarmLazyStart();
 		const settings = useSettings();
 		if (!settings.getMatchedRule()) {
-			if (settings.settingData.selectSearch) armLazyStart(settings.settingData.selectSearchInInput);
+			armLazyStart(settings.settingData.selectSearchInInput);
 			return;
 		}
 		scheduleBoot();
