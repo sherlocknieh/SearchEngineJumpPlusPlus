@@ -40,6 +40,10 @@
   3. 脚本管理器需允许 eval（Tampermonkey / Violentmonkey 默认允许）；
      把注入方式设成“页面上下文”会重新受站点 CSP 限制。
 
+  插件官方给的办法是装 [Disable-CSP](https://github.com/lisonge/Disable-CSP) 扩展全局关掉 CSP，
+  会对所有站点生效、有安全代价；本地服务方案只影响调试脚本自己的加载路径，
+  且请求由脚本管理器发起、不经过页面，也不受 Chrome 142 起的本地网络访问授权限制。
+
 - 打包构建与发布
 
   本仓库按「每次提交即发布」执行。版本号由 `scripts/release.mjs` 按系统日期时间

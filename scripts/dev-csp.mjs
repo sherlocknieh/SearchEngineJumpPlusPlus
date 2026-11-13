@@ -101,7 +101,8 @@ function loaderSource() {
       return;
     }
     try {
-      eval(res.responseText);
+      // eval 的代码默认归到调用者名下，补 sourceURL 让 DevTools 单独列出这份产物
+      eval(res.responseText + '\n//# sourceURL=sej.dev.bundle.js');
     } catch (e) {
       console.error('[SEJ dev] 执行调试产物失败', e);
       return;
