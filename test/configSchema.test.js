@@ -43,10 +43,11 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(false);
   });
 
-  it('默认开启长按搜图，并内置图片分类', () => {
+  it('默认开启长按搜图，并内置搜图分类', () => {
     const config = createDefaultConfig();
     expect(config.imageSearch).toBe(true);
-    expect(config.engineCategories.some(([, key]) => key === 'image')).toBe(true);
+    // 搜图分类命名为「搜图」，紧跟「功能」分类
+    expect(config.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
     expect(config.engineList.image.length).toBeGreaterThan(0);
   });
 });
@@ -178,7 +179,7 @@ describe('normalizeConfig', () => {
     expect(normalizeConfig({ imageSearch: 'alt' }, defaults).imageSearch).toBe(true);
   });
 
-  it('旧配置缺少图片分类时补回默认分类与引擎', () => {
+  it('旧配置缺少搜图分类时补回默认分类与引擎', () => {
     const result = normalizeConfig(
       {
         engineCategories: [['搜索', 'web', true]],
@@ -186,14 +187,18 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories.some(([, key]) => key === 'image')).toBe(true);
+    // 补回的搜图分类紧跟「功能」分类
+    expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual([
+      'actions',
+      'image',
+    ]);
     expect(result.engineList.image).toEqual(defaults.engineList.image);
   });
 
-  it('用户清空图片引擎后保持为空，不强行补回', () => {
+  it('用户清空搜图引擎后保持为空，不强行补回', () => {
     const result = normalizeConfig(
       {
-        engineCategories: [['图片', 'image', false]],
+        engineCategories: [['搜图', 'image', false]],
         engineList: { image: [] },
       },
       defaults,

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0344
+// @version            2026.11.14.0346
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5739,6 +5739,11 @@
 				false
 			],
 			[
+				"搜图",
+				"image",
+				false
+			],
+			[
 				"搜索",
 				"web",
 				true
@@ -5762,11 +5767,6 @@
 				"工具",
 				"tools",
 				true
-			],
-			[
-				"图片",
-				"image",
-				false
 			],
 			[
 				"资源",
@@ -6076,8 +6076,8 @@
 			en: "Tools"
 		},
 		image: {
-			"zh-CN": "图片",
-			en: "Images"
+			"zh-CN": "搜图",
+			en: "Image Search"
 		},
 		actions: {
 			"zh-CN": "功能",
@@ -6276,7 +6276,9 @@
 	function ensureImageCategory(categories, engineList) {
 		if (categories.some(([, key]) => key === "image")) return;
 		const defaultCategory = engines_default.engineCategories.find(([, key]) => key === IMAGE_CATEGORY_KEY);
-		categories.push([
+		const actionsIndex = categories.findIndex(([, key]) => key === BUILTIN_CATEGORY_KEY);
+		const insertAt = actionsIndex === -1 ? categories.length : actionsIndex + 1;
+		categories.splice(insertAt, 0, [
 			defaultCategory?.[0] || "image",
 			IMAGE_CATEGORY_KEY,
 			defaultCategory?.[2] ?? true
