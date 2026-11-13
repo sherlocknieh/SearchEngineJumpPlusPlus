@@ -106,6 +106,24 @@ export function isOwnHostNode(node) {
   return Boolean(node?.dataset?.sejRole);
 }
 
+/**
+ * 事件是否发生在 el 所在的 Shadow UI 内。
+ * Teleport 出去的下拉面板与 el 不在同一棵子树，但共享同一个 Shadow Root，
+ * 因此按根节点归属判断，而不是只看 el.contains。
+ */
+export function isEventInsideUi(el, event) {
+  if (!el) return false;
+  const root = el.getRootNode?.();
+  // 不在 Shadow Root 里（理论上不会出现）时只能按子树判断
+  if (!root || root === el || typeof root.host === 'undefined') {
+    const path = event?.composedPath?.();
+    return path ? path.includes(el) : Boolean(el.contains?.(event?.target));
+  }
+  const belongs = (node) => node != null && node.getRootNode?.() === root;
+  const path = event?.composedPath?.();
+  return path ? path.some(belongs) : belongs(event?.target);
+}
+
 export function getDropRoot(role = HOST_ROLE_MAIN) {
   const root = initialize(role);
   const entry = roots.get(role);

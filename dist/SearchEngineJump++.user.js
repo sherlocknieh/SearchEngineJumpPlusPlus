@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0224
+// @version            2026.11.14.0228
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -4960,6 +4960,17 @@
 	function isOwnHostNode(node) {
 		return Boolean(node?.dataset?.sejRole);
 	}
+	function isEventInsideUi(el, event) {
+		if (!el) return false;
+		const root = el.getRootNode?.();
+		if (!root || root === el || typeof root.host === "undefined") {
+			const path = event?.composedPath?.();
+			return path ? path.includes(el) : Boolean(el.contains?.(event?.target));
+		}
+		const belongs = (node) => node != null && node.getRootNode?.() === root;
+		const path = event?.composedPath?.();
+		return path ? path.some(belongs) : belongs(event?.target);
+	}
 	function getDropRoot(role = HOST_ROLE_MAIN) {
 		const root = initialize(role);
 		const entry = roots.get(role);
@@ -8230,8 +8241,7 @@
 				applyWrapperClass();
 			}
 			function isInsideBar(e) {
-				const path = e?.composedPath?.();
-				return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
+				return isEventInsideUi(containerEl.value, e);
 			}
 			function syncFloatPlacement() {
 				if (!isFloat) return;

@@ -119,6 +119,7 @@ src/main.js                 只做装配
 - 面板样式：`components/settingPanelStyles.js` 按 shell → list → footer → controls → dialogs 顺序拼接
 - `composables/useEventIsolation.js`：面板内的指针/键盘事件在 mask 处截断，避免触发页面自身监听器
 - 需要监听 document 时注意：阴影事件会重定向，用 `e.composedPath()`；面板已截断冒泡，必要时用捕获阶段
+- 判断事件是否属于 UI 内用 `isEventInsideUi(el, e)`：下拉面板 Teleport 到 `#sej-drop-lists`，不在 `el` 子树内，只能按 Shadow Root 归属判断
 
 ## UI 状态与提示
 
@@ -146,7 +147,7 @@ src/main.js                 只做装配
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
 `engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
-`selectionGesture` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
+`selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 
 > Vitest 未接入 Vue 插件，`.vue` 组件不能直接挂载测试；可测试逻辑请放 `core/` 或 `composables/`。

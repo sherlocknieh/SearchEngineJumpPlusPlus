@@ -7,6 +7,7 @@ import { isInlineStyleBlocked } from '../core/csp.js';
 import {
   getHost,
   insertHost,
+  isEventInsideUi,
   HOST_ROLE_FLOAT,
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
@@ -327,10 +328,9 @@ function injectHost() {
   applyWrapperClass();
 }
 
-/** 事件是否发生在跳转条（Shadow DOM）内部 */
+/** 事件是否发生在跳转条内部（含 Teleport 到容器外的分类下拉面板） */
 function isInsideBar(e) {
-  const path = e?.composedPath?.();
-  return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
+  return isEventInsideUi(containerEl.value, e);
 }
 
 /** 跟随模式下用选区/图片的矩形算出跳转条的视口坐标 */
