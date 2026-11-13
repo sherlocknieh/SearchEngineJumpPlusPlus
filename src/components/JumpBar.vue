@@ -74,6 +74,10 @@ const selectSearchEnabled = Boolean(data.selectSearch);
 const isSelectSearch = ref(isFloat && selectSearchEnabled);
 // 长按图片时复用同一条划词条，只把关键词换成图片地址
 const isImageSearch = ref(false);
+// 精简模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
+const compactBar = computed(
+  () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
+);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -500,10 +504,13 @@ function onDocumentSelectionChange() {
   onSelectionChange(null);
 }
 
-// 页面滚动后原来的选区坐标已失效，跟随模式改为贴着视口顶部
-function onFloatScroll() {
+// 滚动只改变锚点的视口坐标，重新量一次矩形就能继续跟随；
+// 锚点已经消失（选区被清空、图片被移除）时才退回顶部居中
+function onFloatScroll(e) {
   if (!isFloat || !anchorRect.value) return;
-  anchorRect.value = null;
+  // 跳转条自身的横向滚动不改变锚点位置，不参与跟随重算
+  if (isInsideBar(e)) return;
+  refreshAnchor(document.getSelection());
   syncFloatPlacement();
 }
 
@@ -611,6 +618,7 @@ onBeforeUnmount(() => {
         'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
         'sej-image-search': isImageSearch,
+        'sej-compact': compactBar,
       },
     ]"
     :aria-hidden="isFloat && !barVisible ? 'true' : undefined"
@@ -627,13 +635,14 @@ onBeforeUnmount(() => {
       >
         <template v-for="category in categories" :key="category.key">
           <template v-if="inlineStyleBlocked">
-            <span class="sej-category-title">
+            <span v-if="!compactBar" class="sej-category-title">
               {{ category.name }}
             </span>
             <EngineItem
               v-for="engine in category.engines"
               :key="engine.url + engine.name"
               :engine="engine"
+              :compact="compactBar"
               @jump="onJump"
             />
           </template>
@@ -642,6 +651,7 @@ onBeforeUnmount(() => {
             :name="category.name"
             :engines="category.engines"
             :show-icon="ui.categoryIcon"
+            :compact="compactBar"
             @jump="onJump"
             @jump-all="onJumpAll(category.engines)"
           />
@@ -709,6 +719,13 @@ onBeforeUnmount(() => {
   margin-right: auto !important;
   grid-column: 1 / -1 !important;
   justify-self: center !important;
+}
+
+/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */
+#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,
+#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {
+  padding: 0 7px;
+  gap: 0;
 }
 
 /* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */
