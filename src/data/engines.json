@@ -4,6 +4,7 @@
   "selectSearchInInput": true,
   "selectionFollowPointer": false,
   "selectionCompact": false,
+  "selectionIcon": false,
   "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [

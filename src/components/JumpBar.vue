@@ -40,6 +40,7 @@ import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
+import { SEARCH } from '../assets/icons.js';
 import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';
@@ -78,6 +79,10 @@ const isImageSearch = ref(false);
 const compactBar = computed(
   () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
 );
+// 图标模式：划词后只露出一个图标，指针停到图标上才展开整条搜索条；
+// 搜图条需要显示图片缩略图与引擎，始终维持整条
+const iconMode = computed(() => isFloat && !isImageSearch.value && Boolean(data.selectionIcon));
+const iconExpanded = ref(false);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -419,6 +424,9 @@ async function showFloatBar() {
     barVisible.value = true;
     return;
   }
+  // 每次显示都从图标收起态开始，避免沿用上一条选区的展开状态
+  clearIconCollapse();
+  iconExpanded.value = false;
   // 等待渲染期间可能已经被收起，只有仍允许显示时才落地
   const token = ++showToken;
   await nextTick();
@@ -430,7 +438,47 @@ async function showFloatBar() {
 function hideFloatBar() {
   // 递增令牌取消排队中的显示，避免收起后被上一帧的显示重新拉起
   showToken += 1;
+  clearIconCollapse();
+  iconExpanded.value = false;
   barVisible.value = false;
+}
+
+// 图标模式下指针停靠的宽限时间：斜向移动时短暂离开图标不该马上收起
+const ICON_COLLAPSE_DELAY = 180;
+let iconCollapseTimer = 0;
+
+function clearIconCollapse() {
+  if (!iconCollapseTimer) return;
+  clearTimeout(iconCollapseTimer);
+  iconCollapseTimer = 0;
+}
+
+/** 图标模式的展开/收起会改变整条尺寸，渲染完再重新贴回锚点 */
+async function setIconExpanded(expanded) {
+  if (!iconMode.value || iconExpanded.value === expanded) return;
+  iconExpanded.value = expanded;
+  await nextTick();
+  syncFloatPlacement();
+  updateScrollHints();
+}
+
+/** 指针停在图标上即展开整条搜索条，无需点击 */
+function onIconPointerEnter() {
+  if (!iconMode.value) return;
+  clearIconCollapse();
+  setIconExpanded(true);
+}
+
+/**
+ * 指针离开整条（含展开后的搜索条）后收回到图标。
+ * 移到分类下拉面板时保持展开；离开窗口时 relatedTarget 为空，仍然收起。
+ */
+function onIconPointerLeave(e) {
+  if (!iconMode.value || !iconExpanded.value) return;
+  const next = e?.relatedTarget;
+  if (next && next.getRootNode?.() === containerEl.value?.getRootNode?.()) return;
+  clearIconCollapse();
+  iconCollapseTimer = setTimeout(() => setIconExpanded(false), ICON_COLLAPSE_DELAY);
 }
 
 // 异步显示的令牌：收起时作废所有未落地的显示
@@ -599,6 +647,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerup', endScrollDrag);
   window.removeEventListener('pointercancel', endScrollDrag);
   cancelScrollAnim();
+  clearIconCollapse();
   disposeScrollDrag();
   disposeViewport();
   stopStackSync();
@@ -619,11 +668,28 @@ onBeforeUnmount(() => {
         'sej-select-visible': barVisible,
         'sej-image-search': isImageSearch,
         'sej-compact': compactBar,
+        'sej-icon-mode': iconMode,
+        'sej-icon-collapsed': iconMode && !iconExpanded,
       },
     ]"
     :aria-hidden="isFloat && !barVisible ? 'true' : undefined"
     :style="barStyle"
+    @pointerenter="onIconPointerEnter"
+    @pointerleave="onIconPointerLeave"
   >
+    <!-- 图标模式：收起时只露出这个触发图标，指针停靠或聚焦时展开整条 -->
+    <button
+      v-if="iconMode"
+      type="button"
+      class="sej-icon-trigger"
+      :title="iconExpanded ? null : t('bar.expand')"
+      :aria-label="t('bar.expand')"
+      :aria-hidden="iconExpanded ? 'true' : undefined"
+      :tabindex="iconExpanded ? -1 : 0"
+      @click.stop="setIconExpanded(true)"
+      @focus="setIconExpanded(true)"
+      v-html="SEARCH"
+    ></button>
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
         ref="scrollEl"
@@ -726,6 +792,58 @@ onBeforeUnmount(() => {
 #sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {
   padding: 0 7px;
   gap: 0;
+}
+
+/* icon 模式：收起时只保留触发图标，展开后恢复正常搜索条 */
+#sej-container.sej-icon-mode.sej-icon-collapsed {
+  padding: 4px;
+  border-radius: 50%;
+}
+
+#sej-container.sej-icon-mode.sej-icon-collapsed > .sej-scroll-viewport,
+#sej-container.sej-icon-mode.sej-icon-collapsed > #setBtn {
+  display: none;
+}
+
+/* 展开后图标留在最左侧作为当前模式标识，指针始终落在整条内，不会因元素消失而误收起 */
+#sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
+  margin-right: 2px;
+  cursor: default;
+}
+
+#sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger:hover {
+  background: none;
+}
+
+.sej-icon-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  appearance: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.sej-icon-trigger:hover {
+  background: var(--sej-hover-bg, var(--background-hover-color-qxin));
+}
+
+.sej-icon-trigger svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.sej-icon-trigger:focus-visible {
+  outline: 2px solid var(--sej-accent, #4285f4);
+  outline-offset: 0;
 }
 
 /* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */

@@ -35,6 +35,8 @@ export const messages = {
       '划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出',
     'settings.selectionCompact': '精简模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
+    'settings.selectionIcon': '图标模式',
+    'settings.selectionIconTip': '划词后只出现一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '强制居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.editConfig': '配置文件',
@@ -134,6 +136,7 @@ export const messages = {
     'jump.collapseList': '收起列表：{name}',
     'bar.scrollLeft': '向左滚动',
     'bar.scrollRight': '向右滚动',
+    'bar.expand': '展开搜索条',
 
     'favicon.noRequestApi': '缺少 GM 请求接口',
     'favicon.networkError': '网络错误',
@@ -181,6 +184,9 @@ export const messages = {
       'Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top',
     'settings.selectionCompact': 'Compact mode',
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
+    'settings.selectionIcon': 'Icon mode',
+    'settings.selectionIconTip':
+      'Show a single icon after selecting text; hover it to expand the search bar',
     'settings.center': 'Force center',
     'settings.centerTip': 'Always center the jump bar',
     'settings.editConfig': 'Config file',
@@ -283,6 +289,7 @@ export const messages = {
     'jump.collapseList': 'Collapse list: {name}',
     'bar.scrollLeft': 'Scroll left',
     'bar.scrollRight': 'Scroll right',
+    'bar.expand': 'Expand search bar',
 
     'favicon.noRequestApi': 'GM request API unavailable',
     'favicon.networkError': 'Network error',

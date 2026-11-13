@@ -1,6 +1,12 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
-import { getDropRoot, isEventInsideUi, reset } from '../src/core/shadowDom.js';
+import {
+  getDropRoot,
+  getHost,
+  hasForeignHost,
+  isEventInsideUi,
+  reset,
+} from '../src/core/shadowDom.js';
 
 function createUi() {
   const host = document.createElement('div');
@@ -57,5 +63,25 @@ describe('isEventInsideUi', () => {
     drop.getRootNode().appendChild(container);
     expect(container.getRootNode()).toBe(engine.getRootNode());
     expect(isEventInsideUi(container, eventWithPath([engine]))).toBe(true);
+  });
+});
+describe('hasForeignHost', () => {
+  it('自己创建的宿主不算另一份安装', () => {
+    document.body.appendChild(getHost('main'));
+    expect(hasForeignHost('main')).toBe(false);
+  });
+
+  it('同 id 宿主来自另一份安装时命中', () => {
+    const host = getHost('main');
+    document.body.appendChild(host);
+    host.dataset.sejOwner = 'another-install';
+    expect(hasForeignHost('main')).toBe(true);
+  });
+
+  it('不同角色与不存在宿主时都不命中', () => {
+    document.body.appendChild(getHost('main'));
+    expect(hasForeignHost('float')).toBe(false);
+    reset();
+    expect(hasForeignHost('main')).toBe(false);
   });
 });

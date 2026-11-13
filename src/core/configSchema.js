@@ -25,6 +25,7 @@ export const OPTION_KEYS = [
   'selectSearchInInput',
   'selectionFollowPointer',
   'selectionCompact',
+  'selectionIcon',
   'defaultOpenTarget',
   'language',
 ];
@@ -39,6 +40,8 @@ export function createDefaultConfig() {
     selectionFollowPointer: false,
     // 跟随选区的划词条默认显示文字，不启用只显示图标的精简模式
     selectionCompact: false,
+    // 划词后默认直接显示整条搜索条，不启用只露一个图标的图标模式
+    selectionIcon: false,
     // 默认跟随各站点规则排版，不强制居中
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开

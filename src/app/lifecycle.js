@@ -4,6 +4,7 @@ import globalCss from '../assets/global.css?raw';
 import {
   addStyle,
   getHost,
+  hasForeignHost,
   HOST_ID,
   HOST_ROLE_FLOAT,
   HOST_ROLE_MAIN,
@@ -62,6 +63,8 @@ export function teardown() {
  */
 export function ensureFloatBar() {
   if (floatApp) return;
+  // 同一版本的另一份安装已经挂过划词条：不再重复挂载，避免出现两条划词条
+  if (hasForeignHost(HOST_ROLE_FLOAT)) return;
   const settings = useSettings();
   if (!settings.settingData?.selectSearch && !imageSearch.active) return;
 
@@ -101,6 +104,11 @@ export function disposeFloatBar() {
  *   设置保存后的原地重启需要 true；普通启动保持 false，避免重复挂载。
  */
 export function boot({ force = false } = {}) {
+  // 同一版本被重复安装时，页面里已有另一份脚本的宿主：不再重复挂载
+  if (!force && hasForeignHost(HOST_ROLE_MAIN)) {
+    console.warn('[SEJ] 检测到另一份相同版本的脚本已在运行，本次不再重复挂载');
+    return;
+  }
   // 普通启动时如果已经运行，只需补齐按需挂载的部分（如划词条）
   if (!force && isRunning()) {
     ensureFloatBar();

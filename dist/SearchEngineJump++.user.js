@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0422
+// @version            2026.11.14.0433
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -4905,6 +4905,7 @@
 	};
 	var STACK_GAP = 8;
 	var TOAST_STACK_STEP = 43;
+	var INSTANCE_OWNER = Math.random().toString(36).slice(2);
 	var roots = new Map();
 	var styleTexts = [];
 	var stackSheets = new Map();
@@ -4937,6 +4938,7 @@
 		host.id = hostIdFor(role);
 		host.dataset.sejInstance = INSTANCE_ROLE;
 		host.dataset.sejRole = role;
+		host.dataset.sejOwner = INSTANCE_OWNER;
 		const root = host.attachShadow({ mode: "open" });
 		const entry = {
 			host,
@@ -4953,6 +4955,10 @@
 	function getHost(role = HOST_ROLE_MAIN) {
 		initialize(role);
 		return roots.get(role)?.host ?? null;
+	}
+	function hasForeignHost(role = HOST_ROLE_MAIN) {
+		const existing = document.getElementById(hostIdFor(role));
+		return Boolean(existing) && existing.dataset.sejOwner !== INSTANCE_OWNER;
 	}
 	function getHosts() {
 		return Array.from(roots.values(), (entry) => entry.host);
@@ -5731,6 +5737,7 @@
 		selectSearchInInput: true,
 		selectionFollowPointer: false,
 		selectionCompact: false,
+		selectionIcon: false,
 		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
@@ -5816,6 +5823,8 @@
 			"settings.selectionFollowPointerTip": "划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出",
 			"settings.selectionCompact": "精简模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
+			"settings.selectionIcon": "图标模式",
+			"settings.selectionIconTip": "划词后只出现一个图标，鼠标悬浮时展开搜索条",
 			"settings.center": "强制居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
@@ -5908,6 +5917,7 @@
 			"jump.collapseList": "收起列表：{name}",
 			"bar.scrollLeft": "向左滚动",
 			"bar.scrollRight": "向右滚动",
+			"bar.expand": "展开搜索条",
 			"favicon.noRequestApi": "缺少 GM 请求接口",
 			"favicon.networkError": "网络错误",
 			"favicon.timeout": "请求超时",
@@ -5949,6 +5959,8 @@
 			"settings.selectionFollowPointerTip": "Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
+			"settings.selectionIcon": "Icon mode",
+			"settings.selectionIconTip": "Show a single icon after selecting text; hover it to expand the search bar",
 			"settings.center": "Force center",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.editConfig": "Config file",
@@ -6041,6 +6053,7 @@
 			"jump.collapseList": "Collapse list: {name}",
 			"bar.scrollLeft": "Scroll left",
 			"bar.scrollRight": "Scroll right",
+			"bar.expand": "Expand search bar",
 			"favicon.noRequestApi": "GM request API unavailable",
 			"favicon.networkError": "Network error",
 			"favicon.timeout": "Request timed out",
@@ -6216,6 +6229,7 @@
 		"selectSearchInInput",
 		"selectionFollowPointer",
 		"selectionCompact",
+		"selectionIcon",
 		"defaultOpenTarget",
 		"language"
 	];
@@ -6225,6 +6239,7 @@
 			selectSearchInInput: true,
 			selectionFollowPointer: false,
 			selectionCompact: false,
+			selectionIcon: false,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
@@ -7362,6 +7377,12 @@
 			stop
 		};
 	}
+	var COPY = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>";
+	var EYE = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>";
+	var EYE_OFF = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94\"/><path d=\"M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19\"/><path d=\"M14.12 14.12a3 3 0 1 1-4.24-4.24\"/><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"/></svg>";
+	var PENCIL = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z\"/></svg>";
+	var TRASH = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/><line x1=\"10\" y1=\"11\" x2=\"10\" y2=\"17\"/><line x1=\"14\" y1=\"11\" x2=\"14\" y2=\"17\"/></svg>";
+	var SEARCH = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"7\"/><path d=\"m21 21-4.35-4.35\"/></svg>";
 	var ICON_TIMEOUT = 4e3;
 	var MAX_ICON_BYTES = 65536;
 	var COMPRESS_START_SIZE = 64;
@@ -7751,7 +7772,7 @@
 		"aria-hidden": "true"
 	};
 	var _hoisted_4$8 = ["src"];
-	var _hoisted_5$7 = {
+	var _hoisted_5$8 = {
 		key: 2,
 		class: "sej-category-glyph",
 		"aria-hidden": "true"
@@ -8061,7 +8082,7 @@
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_4$8)) : __props.compact ? (openBlock(), createElementBlock("span", _hoisted_5$7, toDisplayString(glyph.value), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true), !__props.compact ? (openBlock(), createElementBlock("span", _hoisted_6$6, toDisplayString(__props.name), 1)) : createCommentVNode("", true)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
+				}, null, 8, _hoisted_4$8)) : __props.compact ? (openBlock(), createElementBlock("span", _hoisted_5$8, toDisplayString(glyph.value), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true), !__props.compact ? (openBlock(), createElementBlock("span", _hoisted_6$6, toDisplayString(__props.name), 1)) : createCommentVNode("", true)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
 					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
@@ -8127,14 +8148,22 @@
 		}
 	};
 	var _hoisted_1$7 = ["aria-hidden"];
-	var _hoisted_2$7 = {
+	var _hoisted_2$7 = [
+		"title",
+		"aria-label",
+		"aria-hidden",
+		"tabindex",
+		"innerHTML"
+	];
+	var _hoisted_3$7 = {
 		key: 0,
 		class: "sej-category-title"
 	};
-	var _hoisted_3$7 = ["title", "aria-label"];
 	var _hoisted_4$7 = ["title", "aria-label"];
+	var _hoisted_5$7 = ["title", "aria-label"];
 	var PAGE_STEP_RATIO = .875;
 	var PAGE_SCROLL_DURATION = 150;
+	var ICON_COLLAPSE_DELAY = 180;
 	var _sfc_main$9 = {
 		__name: "JumpBar",
 		props: { role: {
@@ -8142,7 +8171,7 @@
 			default: HOST_ROLE_MAIN
 		} },
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {\n  padding: 0 7px;\n  gap: 0;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */\n#sej-container.selectSearch {\n  position: fixed;\n  z-index: 99999999;\n  margin: 0;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  max-width: min(calc(100vw - 8px), max-content);\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  /* 划词条直接在锚点原位显隐，不做滑入/淡入，也不延迟消失 */\n  animation: none;\n  transition: none;\n}\n\n/* 顶部居中：默认位置，横向由视口决定 */\n#sej-container.selectSearch.sej-top {\n  top: 2px;\n  left: 0;\n  right: 0;\n  margin: 0 auto;\n}\n\n/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */\n#sej-container.selectSearch.sej-follow-anchor {\n  top: 0;\n  left: 0;\n  right: auto;\n  margin: 0;\n  transform: none;\n  transform-origin: top left;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n/*\n * 图片模式：长按后直接显示，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {\n  padding: 0 7px;\n  gap: 0;\n}\n\n/* icon 模式：收起时只保留触发图标，展开后恢复正常搜索条 */\n#sej-container.sej-icon-mode.sej-icon-collapsed {\n  padding: 4px;\n  border-radius: 50%;\n}\n\n#sej-container.sej-icon-mode.sej-icon-collapsed > .sej-scroll-viewport,\n#sej-container.sej-icon-mode.sej-icon-collapsed > #setBtn {\n  display: none;\n}\n\n/* 展开后图标留在最左侧作为当前模式标识，指针始终落在整条内，不会因元素消失而误收起 */\n#sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {\n  margin-right: 2px;\n  cursor: default;\n}\n\n#sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger:hover {\n  background: none;\n}\n\n.sej-icon-trigger {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  padding: 0;\n  border: 0;\n  border-radius: 50%;\n  appearance: none;\n  background: none;\n  color: inherit;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n}\n\n.sej-icon-trigger:hover {\n  background: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\n.sej-icon-trigger svg {\n  width: 16px;\n  height: 16px;\n  display: block;\n}\n\n.sej-icon-trigger:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: 0;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */\n#sej-container.selectSearch {\n  position: fixed;\n  z-index: 99999999;\n  margin: 0;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  max-width: min(calc(100vw - 8px), max-content);\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  /* 划词条直接在锚点原位显隐，不做滑入/淡入，也不延迟消失 */\n  animation: none;\n  transition: none;\n}\n\n/* 顶部居中：默认位置，横向由视口决定 */\n#sej-container.selectSearch.sej-top {\n  top: 2px;\n  left: 0;\n  right: 0;\n  margin: 0 auto;\n}\n\n/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */\n#sej-container.selectSearch.sej-follow-anchor {\n  top: 0;\n  left: 0;\n  right: auto;\n  margin: 0;\n  transform: none;\n  transform-origin: top left;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n/*\n * 图片模式：长按后直接显示，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
 			const props = __props;
 			const isFloat = props.role === HOST_ROLE_FLOAT;
 			provide(HOST_ROLE_KEY, props.role);
@@ -8161,6 +8190,8 @@
 			const isSelectSearch = ref(isFloat && selectSearchEnabled);
 			const isImageSearch = ref(false);
 			const compactBar = computed(() => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact));
+			const iconMode = computed(() => isFloat && !isImageSearch.value && Boolean(data.selectionIcon));
+			const iconExpanded = ref(false);
 			const selectionText = ref("");
 			const barVisible = ref(false);
 			const containerEl = ref(null);
@@ -8397,6 +8428,8 @@
 					barVisible.value = true;
 					return;
 				}
+				clearIconCollapse();
+				iconExpanded.value = false;
 				const token = ++showToken;
 				await nextTick();
 				if (token !== showToken) return;
@@ -8405,7 +8438,34 @@
 			}
 			function hideFloatBar() {
 				showToken += 1;
+				clearIconCollapse();
+				iconExpanded.value = false;
 				barVisible.value = false;
+			}
+			let iconCollapseTimer = 0;
+			function clearIconCollapse() {
+				if (!iconCollapseTimer) return;
+				clearTimeout(iconCollapseTimer);
+				iconCollapseTimer = 0;
+			}
+			async function setIconExpanded(expanded) {
+				if (!iconMode.value || iconExpanded.value === expanded) return;
+				iconExpanded.value = expanded;
+				await nextTick();
+				syncFloatPlacement();
+				updateScrollHints();
+			}
+			function onIconPointerEnter() {
+				if (!iconMode.value) return;
+				clearIconCollapse();
+				setIconExpanded(true);
+			}
+			function onIconPointerLeave(e) {
+				if (!iconMode.value || !iconExpanded.value) return;
+				const next = e?.relatedTarget;
+				if (next && next.getRootNode?.() === containerEl.value?.getRootNode?.()) return;
+				clearIconCollapse();
+				iconCollapseTimer = setTimeout(() => setIconExpanded(false), ICON_COLLAPSE_DELAY);
 			}
 			let showToken = 0;
 			let keepOverlayUntil = 0;
@@ -8522,6 +8582,7 @@
 				window.removeEventListener("pointerup", endScrollDrag);
 				window.removeEventListener("pointercancel", endScrollDrag);
 				cancelScrollAnim();
+				clearIconCollapse();
 				disposeScrollDrag();
 				disposeViewport();
 				stopStackSync();
@@ -8538,61 +8599,80 @@
 						"sej-follow-anchor": isFloat && Boolean(anchorRect.value),
 						"sej-select-visible": barVisible.value,
 						"sej-image-search": isImageSearch.value,
-						"sej-compact": compactBar.value
+						"sej-compact": compactBar.value,
+						"sej-icon-mode": iconMode.value,
+						"sej-icon-collapsed": iconMode.value && !iconExpanded.value
 					}]),
 					"aria-hidden": isFloat && !barVisible.value ? "true" : void 0,
-					style: normalizeStyle(barStyle.value)
-				}, [createBaseVNode("div", {
-					class: "sej-scroll-viewport",
-					onWheel: onBarWheel
+					style: normalizeStyle(barStyle.value),
+					onPointerenter: onIconPointerEnter,
+					onPointerleave: onIconPointerLeave
 				}, [
+					iconMode.value ? (openBlock(), createElementBlock("button", {
+						key: 0,
+						type: "button",
+						class: "sej-icon-trigger",
+						title: iconExpanded.value ? null : unref(t)("bar.expand"),
+						"aria-label": unref(t)("bar.expand"),
+						"aria-hidden": iconExpanded.value ? "true" : void 0,
+						tabindex: iconExpanded.value ? -1 : 0,
+						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => setIconExpanded(true), ["stop"])),
+						onFocus: _cache[1] || (_cache[1] = ($event) => setIconExpanded(true)),
+						innerHTML: unref(SEARCH)
+					}, null, 40, _hoisted_2$7)) : createCommentVNode("", true),
 					createBaseVNode("div", {
-						ref_key: "scrollEl",
-						ref: scrollEl,
-						class: "sej-scroll",
-						onPointerdown: onBarPointerDown,
-						onClickCapture: _cache[0] || (_cache[0] = (...args) => unref(onScrollClickCapture) && unref(onScrollClickCapture)(...args)),
-						onDragstart: _cache[1] || (_cache[1] = withModifiers(() => {}, ["prevent"])),
-						onScrollPassive: _cache[2] || (_cache[2] = (...args) => unref(updateScrollHints) && unref(updateScrollHints)(...args))
-					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(categories.value, (category) => {
-						return openBlock(), createElementBlock(Fragment, { key: category.key }, [unref(inlineStyleBlocked) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [!compactBar.value ? (openBlock(), createElementBlock("span", _hoisted_2$7, toDisplayString(category.name), 1)) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(category.engines, (engine) => {
-							return openBlock(), createBlock(_sfc_main$12, {
-								key: engine.url + engine.name,
-								engine,
+						class: "sej-scroll-viewport",
+						onWheel: onBarWheel
+					}, [
+						createBaseVNode("div", {
+							ref_key: "scrollEl",
+							ref: scrollEl,
+							class: "sej-scroll",
+							onPointerdown: onBarPointerDown,
+							onClickCapture: _cache[2] || (_cache[2] = (...args) => unref(onScrollClickCapture) && unref(onScrollClickCapture)(...args)),
+							onDragstart: _cache[3] || (_cache[3] = withModifiers(() => {}, ["prevent"])),
+							onScrollPassive: _cache[4] || (_cache[4] = (...args) => unref(updateScrollHints) && unref(updateScrollHints)(...args))
+						}, [(openBlock(true), createElementBlock(Fragment, null, renderList(categories.value, (category) => {
+							return openBlock(), createElementBlock(Fragment, { key: category.key }, [unref(inlineStyleBlocked) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [!compactBar.value ? (openBlock(), createElementBlock("span", _hoisted_3$7, toDisplayString(category.name), 1)) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(category.engines, (engine) => {
+								return openBlock(), createBlock(_sfc_main$12, {
+									key: engine.url + engine.name,
+									engine,
+									compact: compactBar.value,
+									onJump
+								}, null, 8, ["engine", "compact"]);
+							}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$11, {
+								key: 1,
+								name: category.name,
+								engines: category.engines,
+								"show-icon": unref(ui).categoryIcon,
 								compact: compactBar.value,
-								onJump
-							}, null, 8, ["engine", "compact"]);
-						}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$11, {
-							key: 1,
-							name: category.name,
-							engines: category.engines,
-							"show-icon": unref(ui).categoryIcon,
-							compact: compactBar.value,
-							onJump,
-							onJumpAll: ($event) => onJumpAll(category.engines)
-						}, null, 8, [
-							"name",
-							"engines",
-							"show-icon",
-							"compact",
-							"onJumpAll"
-						]))], 64);
-					}), 128))], 544),
-					createBaseVNode("button", {
-						type: "button",
-						class: "sej-scroll-hint sej-scroll-hint-left",
-						title: unref(t)("bar.scrollLeft"),
-						"aria-label": unref(t)("bar.scrollLeft"),
-						onClick: _cache[3] || (_cache[3] = withModifiers(($event) => scrollBar(-1), ["stop"]))
-					}, null, 8, _hoisted_3$7),
-					createBaseVNode("button", {
-						type: "button",
-						class: "sej-scroll-hint sej-scroll-hint-right",
-						title: unref(t)("bar.scrollRight"),
-						"aria-label": unref(t)("bar.scrollRight"),
-						onClick: _cache[4] || (_cache[4] = withModifiers(($event) => scrollBar(1), ["stop"]))
-					}, null, 8, _hoisted_4$7)
-				], 32), createVNode(_sfc_main$10)], 14, _hoisted_1$7)) : createCommentVNode("", true);
+								onJump,
+								onJumpAll: ($event) => onJumpAll(category.engines)
+							}, null, 8, [
+								"name",
+								"engines",
+								"show-icon",
+								"compact",
+								"onJumpAll"
+							]))], 64);
+						}), 128))], 544),
+						createBaseVNode("button", {
+							type: "button",
+							class: "sej-scroll-hint sej-scroll-hint-left",
+							title: unref(t)("bar.scrollLeft"),
+							"aria-label": unref(t)("bar.scrollLeft"),
+							onClick: _cache[5] || (_cache[5] = withModifiers(($event) => scrollBar(-1), ["stop"]))
+						}, null, 8, _hoisted_4$7),
+						createBaseVNode("button", {
+							type: "button",
+							class: "sej-scroll-hint sej-scroll-hint-right",
+							title: unref(t)("bar.scrollRight"),
+							"aria-label": unref(t)("bar.scrollRight"),
+							onClick: _cache[6] || (_cache[6] = withModifiers(($event) => scrollBar(1), ["stop"]))
+						}, null, 8, _hoisted_5$7)
+					], 32),
+					createVNode(_sfc_main$10)
+				], 46, _hoisted_1$7)) : createCommentVNode("", true);
 			};
 		}
 	};
@@ -10206,8 +10286,8 @@
 		key: 5,
 		class: "sej-preview-state"
 	};
-	var _hoisted_19 = ["href"];
-	var _hoisted_20 = {
+	var _hoisted_19$1 = ["href"];
+	var _hoisted_20$1 = {
 		key: 2,
 		class: "sej-field"
 	};
@@ -10405,9 +10485,9 @@
 							href: unref(extractorUrl),
 							target: "_blank",
 							rel: "noopener"
-						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19$1)) : createCommentVNode("", true)])) : createCommentVNode("", true)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20, [
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20$1, [
 						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
 						createBaseVNode("div", _hoisted_22, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => isRef(previewData) ? previewData.value = $event : null),
@@ -10694,11 +10774,6 @@
 			};
 		}
 	};
-	var COPY = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><rect x=\"9\" y=\"9\" width=\"12\" height=\"12\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>";
-	var EYE = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z\"/><circle cx=\"12\" cy=\"12\" r=\"3\"/></svg>";
-	var EYE_OFF = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94\"/><path d=\"M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19\"/><path d=\"M14.12 14.12a3 3 0 1 1-4.24-4.24\"/><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"/></svg>";
-	var PENCIL = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z\"/></svg>";
-	var TRASH = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/><line x1=\"10\" y1=\"11\" x2=\"10\" y2=\"17\"/><line x1=\"14\" y1=\"11\" x2=\"14\" y2=\"17\"/></svg>";
 	var _hoisted_1$3 = ["id", "data-sej-drag-el"];
 	var _hoisted_2$3 = [
 		"data-xin",
@@ -11012,12 +11087,14 @@
 	var _hoisted_10 = ["title"];
 	var _hoisted_11 = ["checked"];
 	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["value"];
-	var _hoisted_14 = { value: "_blank" };
-	var _hoisted_15 = { value: "_self" };
-	var _hoisted_16 = { id: "xin-language" };
-	var _hoisted_17 = ["value"];
-	var _hoisted_18 = { value: "auto" };
+	var _hoisted_13 = ["checked"];
+	var _hoisted_14 = ["title"];
+	var _hoisted_15 = ["value"];
+	var _hoisted_16 = { value: "_blank" };
+	var _hoisted_17 = { value: "_self" };
+	var _hoisted_18 = { id: "xin-language" };
+	var _hoisted_19 = ["value"];
+	var _hoisted_20 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11058,31 +11135,39 @@
 						checked: __props.options.selectionCompact,
 						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
 					}, null, 40, _hoisted_9)])], 8, _hoisted_8), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionIcon",
+						title: unref(t)("settings.selectionIconTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionIcon")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionIcon,
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
+					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectSearch]]),
 					createBaseVNode("span", {
 						id: "xin-centerDisplay",
 						title: unref(t)("settings.centerTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.center")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.center,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "center", $event.target.checked))
-					}, null, 40, _hoisted_11)])], 8, _hoisted_10),
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "center", $event.target.checked))
+					}, null, 40, _hoisted_13)])], 8, _hoisted_12),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_15, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_13)])], 8, _hoisted_12),
-					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14),
+					createBaseVNode("span", _hoisted_18, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[7] || (_cache[7] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_17)])])
+						createBaseVNode("option", _hoisted_20, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[9] || (_cache[9] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_19)])])
 				]);
 			};
 		}
@@ -11634,6 +11719,7 @@
 	}
 	function ensureFloatBar() {
 		if (floatApp) return;
+		if (hasForeignHost("float")) return;
 		if (!useSettings().settingData?.selectSearch && !imageSearch.active) return;
 		const root = initialize(HOST_ROLE_FLOAT);
 		document.body.appendChild(getHost(HOST_ROLE_FLOAT));
@@ -11654,6 +11740,10 @@
 		getHost(HOST_ROLE_FLOAT).remove();
 	}
 	function boot({ force = false } = {}) {
+		if (!force && hasForeignHost("main")) {
+			console.warn("[SEJ] 检测到另一份相同版本的脚本已在运行，本次不再重复挂载");
+			return;
+		}
 		if (!force && isRunning()) {
 			ensureFloatBar();
 			return;

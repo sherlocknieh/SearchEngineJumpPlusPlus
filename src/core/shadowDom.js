@@ -28,6 +28,13 @@ const ROLE_RANK = { prod: 0, dev: 1 };
 const STACK_GAP = 8;
 const TOAST_STACK_STEP = 43;
 
+/**
+ * 本次脚本实例的身份标记。
+ * 同一份脚本被重复安装（例如 dev 版与 dev:csp 版并存）时会创建同 id 的宿主，
+ * 用它区分“自己”和“另一份安装”，后者不再重复挂载。
+ */
+const INSTANCE_OWNER = Math.random().toString(36).slice(2);
+
 // role -> { host, root, dropRoot }；两种角色各自拥有独立的 Shadow Root
 const roots = new Map();
 // 已注入的样式文本，后创建的宿主需要补齐：null 表示注入到全部宿主
@@ -81,6 +88,7 @@ export function initialize(role = HOST_ROLE_MAIN) {
   host.id = hostIdFor(role);
   host.dataset.sejInstance = INSTANCE_ROLE;
   host.dataset.sejRole = role;
+  host.dataset.sejOwner = INSTANCE_OWNER;
   const root = host.attachShadow({ mode: 'open' });
   const entry = { host, root, dropRoot: null };
   roots.set(role, entry);
@@ -96,6 +104,15 @@ export function initialize(role = HOST_ROLE_MAIN) {
 export function getHost(role = HOST_ROLE_MAIN) {
   initialize(role);
   return roots.get(role)?.host ?? null;
+}
+
+/**
+ * 页面里是否已有同一角色的宿主，且它来自另一份安装。
+ * 开发版与正式版的宿主 id 不同，所以只有重复安装同一版本时才会命中。
+ */
+export function hasForeignHost(role = HOST_ROLE_MAIN) {
+  const existing = document.getElementById(hostIdFor(role));
+  return Boolean(existing) && existing.dataset.sejOwner !== INSTANCE_OWNER;
 }
 
 /** 已创建的全部宿主（内嵌条与划词条） */

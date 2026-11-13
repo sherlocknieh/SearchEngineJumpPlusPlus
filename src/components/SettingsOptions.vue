@@ -58,6 +58,19 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'selectionCompact', $event.target.checked)"
       /></label>
     </span>
+    <span
+      id="xin-selectionIcon"
+      v-show="options.selectSearch"
+      :title="t('settings.selectionIconTip')"
+    >
+      <label
+        >{{ t('settings.selectionIcon')
+        }}<input
+          type="checkbox"
+          :checked="options.selectionIcon"
+          @change="emit('update-option', 'selectionIcon', $event.target.checked)"
+      /></label>
+    </span>
     <span id="xin-centerDisplay" :title="t('settings.centerTip')">
       <label
         >{{ t('settings.center')

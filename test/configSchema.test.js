@@ -49,6 +49,11 @@ describe('createDefaultConfig', () => {
     expect(config.selectionCompact).toBe(false);
   });
 
+  it('默认不启用划词图标模式', () => {
+    const config = createDefaultConfig();
+    expect(config.selectionIcon).toBe(false);
+  });
+
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
