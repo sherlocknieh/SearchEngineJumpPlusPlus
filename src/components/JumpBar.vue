@@ -943,7 +943,7 @@ onBeforeUnmount(() => {
     backdrop-filter 0.16s ease-out;
 }
 
-/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界。
+/* 收起态：去掉边框，换成四周加重的投影，白色页面上也能看出边界。
    盒子下移（整条高 - 图标高）/2，图标圆心正好落在展开后整条的中心，
    展开前后搜索项的位置不移动 */
 #sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
@@ -951,7 +951,8 @@ onBeforeUnmount(() => {
   height: var(--sej-icon-size);
   margin-top: calc((var(--sej-icon-open-height, var(--sej-icon-size)) - var(--sej-icon-size)) / 2);
   border: 0;
-  background-color: transparent;
+  /* 铺白填满整圆：图标自带的白色圆底只有 26px，留空的 2px 圆环会把页面文字与图案透出来 */
+  background-color: #fff;
   backdrop-filter: none;
   box-shadow:
     0 0 0 1px hsla(0, 0%, 0%, 0.06),
