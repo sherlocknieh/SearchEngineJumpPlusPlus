@@ -6,10 +6,16 @@ import vueStyleToShadow from './.build/vueStyleToShadow.js';
 
 const icon = `data:image/svg+xml;base64,${readFileSync(new URL('./assets/icon.svg', import.meta.url)).toString('base64')}`;
 
+// `pnpm dev:csp` 的调试构建：产物给脚本管理器直接拉取执行，不写进随源码提交的 dist
+const devBundle = process.env.SEJ_DEV_BUNDLE === '1';
+
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
   build: {
-    emptyOutDir: false, // emptyOutDir 关闭：dist 里还有随源码提交的 images，构建时不能清空
+    // dist 里还有随源码提交的 images，只有独立输出目录 .dev 才能清空
+    outDir: devBundle ? '.dev' : 'dist',
+    emptyOutDir: devBundle,
+    ...(devBundle ? { minify: false } : {}),
   },
   plugins: [
     vue(),
@@ -21,7 +27,7 @@ export default defineConfig({
       userscript: {
         name: 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.14.0253',
+        version: '2026.11.14.0306',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': 'Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。',

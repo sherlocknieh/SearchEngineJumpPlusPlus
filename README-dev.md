@@ -19,11 +19,26 @@
   ```
 
 - dev 版的注入方式与构建版不同：它往页面插入外部 module 脚本
-  (`http://localhost:5173/__vite-plugin-monkey.entry.js`)。站点 CSP 的 `script-src`
-  不含该地址时浏览器会直接拒绝加载，脚本完全不运行（控制台报
-  `Loading the script ... violates the following Content Security Policy directive`）。
-  调试这类严格 CSP 的站点（如 sex.com）请改用 `pnpm build` 的产物，构建版是内联脚本，
-  受 `'unsafe-inline'` 放行。
+  (`http://localhost:5173/__vite-plugin-monkey.entry.js`)。
+  站点 CSP 的 `script-src` 不含该地址时浏览器会直接拒绝加载，脚本完全不运行
+  （控制台报 `Loading the script ... violates the following Content Security Policy directive`）。
+
+- 严格 CSP 站点用 `pnpm dev:csp` 调试
+
+  这套流程页面不加载任何外部脚本：`pnpm dev:csp` 一边 watch 构建自包含产物到 `.dev/`，
+  一边起本地服务（默认 `http://127.0.0.1:5180`，可用 `--port` 或 `SEJ_DEV_PORT` 改），
+  由脚本管理器直接拉取产物并在自己的沙箱里执行，因此不受站点 CSP 限制。
+
+  ```bash
+  pnpm dev:csp            # watch 构建 + 本地服务
+  pnpm dev:csp --port 5181
+  ```
+
+  1. 首次打开 `http://127.0.0.1:5180/install.user.js` 安装 `SearchEngineJump++ (dev)`。
+     脚本名带 (dev)，与正式版共存；两者共用同一份配置，宿主 id 也不冲突。
+  2. 之后任意页面都会自动加载最新产物，代码改动会重建并整页刷新（替代 HMR）。
+  3. 脚本管理器需允许 eval（Tampermonkey / Violentmonkey 默认允许）；
+     把注入方式设成“页面上下文”会重新受站点 CSP 限制。
 
 - 打包构建与发布
 

@@ -7,6 +7,7 @@
 
 ```bash
 pnpm dev            # 开发调试（浏览器打开 http://localhost:5173）
+pnpm dev:csp        # 严格 CSP 站点的调试（watch 构建 + 本地服务，管理器直连拉取产物）
 pnpm build          # 只重新构建 dist，不动版本号
 pnpm lint           # ESLint
 pnpm test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
@@ -161,7 +162,8 @@ src/main.js                 只做装配
 - 删除操作默认走 `useUndoDelete`（可撤销）
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
-- dev 版靠插入外部 module 脚本注入，严格 CSP 的站点会直接拦掉（控制台报 violates CSP）；
-  这类站点用 `pnpm build` 的内联产物验证
+- `pnpm dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
+  （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/`，
+  由脚本管理器拉取执行，页面不加载外部脚本
 - 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
 - 发布前会跑 lint/test，改完先本地 `pnpm test`

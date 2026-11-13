@@ -1,7 +1,9 @@
 import { getCSPNonce, resetCSPNonce } from './csp.js';
 
-// 开发脚本(server:)与正式版可能同时注入同一页面，用不同的宿主 id 共存
-export const INSTANCE_ROLE = import.meta.env.DEV ? 'dev' : 'prod';
+// 开发脚本与正式版可能同时注入同一页面，用不同的宿主 id 共存。
+// VITE_SEJ_ROLE 供 `pnpm dev:csp` 的构建产物使用：那是构建版，但角色仍是 dev
+export const INSTANCE_ROLE =
+  import.meta.env.DEV || import.meta.env.VITE_SEJ_ROLE === 'dev' ? 'dev' : 'prod';
 
 /** 宿主角色：站点内嵌的跳转条（设置面板也挂在这里） */
 export const HOST_ROLE_MAIN = 'main';
