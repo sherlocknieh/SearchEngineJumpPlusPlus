@@ -394,7 +394,7 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
+  // 图片条放进图片内部左上角，图片太小放不下时放到图片上方居中
   const imagePlacement = isImageSearch.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))

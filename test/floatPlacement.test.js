@@ -39,10 +39,10 @@ describe('placeNearRect', () => {
 describe('placeInsideRect', () => {
   const imageRect = { top: 200, left: 300, right: 800, bottom: 600 };
 
-  it('放在图片内部顶部居中', () => {
+  it('放在图片内部左上角', () => {
     expect(placeInsideRect({ rect: imageRect, bar, viewport })).toEqual({
       top: 200 + 6,
-      left: 300 + (500 - 300) / 2,
+      left: 300 + 6,
     });
   });
 
@@ -51,9 +51,14 @@ describe('placeInsideRect', () => {
     expect(placeInsideRect({ rect: small, bar, viewport })).toBeNull();
   });
 
-  it('图片超出视口右侧时居中坐标收进视口', () => {
+  it('图片超出视口右侧时坐标收进视口', () => {
     const rect = { top: 200, left: 950, right: 1350, bottom: 600 };
     expect(placeInsideRect({ rect, bar, viewport }).left).toBe(1200 - 6 - 300);
+  });
+
+  it('图片超出视口左侧时收进视口', () => {
+    const rect = { top: 200, left: -80, right: 500, bottom: 600 };
+    expect(placeInsideRect({ rect, bar, viewport }).left).toBe(6);
   });
 
   it('图片顶部超出视口时收进视口顶部', () => {
