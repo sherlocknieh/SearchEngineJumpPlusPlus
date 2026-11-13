@@ -514,8 +514,10 @@ function onIconTriggerClick() {
 /**
  * 悬停图标或搜索条只负责展开。
  * 展开后一直保持，指针移开也不收回；点页面别处时按原有逻辑收起。
+ * 必须用 mousemove：展开后左侧就是第一个搜索项，分类的悬停判定依赖
+ * 同一个事件里的命中路径，用 pointermove 会让它读到展开后的路径而误开下拉。
  */
-function onIconPointerMove(e) {
+function onIconMouseMove(e) {
   if (!iconMode.value || iconExpanded.value) return;
   if (isInsideBar(e)) setIconExpanded(true);
 }
@@ -659,7 +661,7 @@ onMounted(async () => {
   if (isFloat) {
     document.addEventListener('pointerdown', onImageModePointerDown, true);
     document.addEventListener('keydown', onOverlayKeydown, true);
-    document.addEventListener('pointermove', onIconPointerMove, { passive: true });
+    document.addEventListener('mousemove', onIconMouseMove, { passive: true });
     window.addEventListener('scroll', onImageModeScroll, true);
     window.addEventListener('scroll', onFloatScroll, true);
   }
@@ -680,7 +682,7 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onImageModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
-  document.removeEventListener('pointermove', onIconPointerMove);
+  document.removeEventListener('mousemove', onIconMouseMove);
   window.removeEventListener('scroll', onImageModeScroll, true);
   window.removeEventListener('scroll', onFloatScroll, true);
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
@@ -735,8 +737,7 @@ onBeforeUnmount(() => {
       @focus="setIconExpanded(true)"
       v-html="scriptIcon"
     ></button>
-    <!-- 图标模式下设置按钮占住最左侧，展开后正好接替图标的位置 -->
-    <SettingButton v-if="iconMode" />
+    <!-- 图标模式：展开后图标让位，设置按钮收在末尾，与搜索条右端圆角贴合 -->
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
         ref="scrollEl"
@@ -786,7 +787,7 @@ onBeforeUnmount(() => {
       ></button>
     </div>
 
-    <SettingButton v-if="!iconMode" />
+    <SettingButton />
   </div>
 </template>
 <style>
@@ -865,13 +866,18 @@ onBeforeUnmount(() => {
     backdrop-filter 0.16s ease-out;
 }
 
-/* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩 */
+/* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩；
+   收起态只有图标可交互，压着的第一个搜索项不接收指针，避免悬停/点击误触 */
 #sej-container.sej-icon-mode > .sej-scroll-viewport {
   flex: 0 0 auto;
 }
 
+#sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-viewport {
+  pointer-events: none;
+}
+
 /* 展开态：宽度过渡到脚本量好的整条宽度；左右两端都由圆角元素填满，
-   左侧是设置按钮的整圆，右侧是最后一个搜索项的圆角，不再留白 */
+   左侧是第一个搜索项，右侧是设置按钮，不再留白 */
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
   padding: 0;
@@ -890,15 +896,17 @@ onBeforeUnmount(() => {
   padding: 0;
 }
 
-/* 图标钉在左端圆内（与设置按钮同圆心），展开/收起都不动 */
+/* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
+   压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项 */
 #sej-container.sej-icon-mode > .sej-icon-trigger {
   position: absolute;
+  z-index: 1;
   top: 2px;
   left: 2px;
   pointer-events: auto;
 }
 
-/* 收起时只有图标；一展开图标就换成设置按钮，指针不用移开 */
+/* 收起时只有图标；展开后图标让位，设置按钮在末尾出现 */
 #sej-container.sej-icon-mode > #setBtn {
   opacity: 0;
   border-radius: 50%;

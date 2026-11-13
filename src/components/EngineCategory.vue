@@ -301,14 +301,7 @@ function onTriggerClick() {
   pin();
 }
 
-// 进入触发项即可展开。这里不再用进入瞬间的坐标做命中检测：
-// 指针从触发项边缘进入时坐标正好落在边界上，命中检测会误判为被遮挡
-function onHoverShow() {
-  if (pinnedCategory && pinnedCategory !== unpin) return;
-  if (hoverSuppressed) return;
-  show();
-}
-
+// 指针离开触发项：解除抑制状态，并安排延时收起
 function onHoverLeave() {
   hoverSuppressed = false;
   scheduleHide();
@@ -344,8 +337,8 @@ function onDocMouseMove(e, path) {
   if (!overTrigger) hoverSuppressed = false;
 
   if (!shown.value) {
-    // mouseenter 只在进入瞬间触发一次：若那次因边缘命中误差或被面板遮挡而放弃，
-    // 指针再在触发项内移动也不会重新触发，面板就一直不显示。这里用移动事件兜底。
+    // 悬停展开只认真的指针移动：布局变化把触发项挪到指针下时不会自动弹面板，
+    // 指针在触发项内一动就展开，不依赖 mouseenter 的触发时机。
     if (!overTrigger || hoverSuppressed) return;
     if (pinnedCategory && pinnedCategory !== unpin) return;
     show();
@@ -391,7 +384,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <span class="sej-category" @mouseenter="onHoverShow" @mouseleave="onHoverLeave">
+  <span class="sej-category" @mouseleave="onHoverLeave">
     <a
       ref="triggerEl"
       class="sej-engine sej-drop-list-trigger"
