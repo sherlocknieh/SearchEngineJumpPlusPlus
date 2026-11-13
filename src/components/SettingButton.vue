@@ -29,7 +29,7 @@ const SETTING =
   height: 30px;
   flex: 0 0 auto;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 999px;
   align-items: center;
   justify-content: center;
   cursor: pointer;

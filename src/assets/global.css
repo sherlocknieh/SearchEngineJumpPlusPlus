@@ -27,8 +27,8 @@
   --sej-active-bg: rgba(0, 0, 0, 0.1);
   --sej-accent: #4285f4;
   --sej-accent-weak: rgba(66, 133, 244, 0.12);
-  --sej-radius-bar: 12px;
-  --sej-radius-item: 8px;
+  --sej-radius-bar: 999px;
+  --sej-radius-item: 999px;
   --sej-radius-menu: 12px;
   --sej-shadow-bar: 0 1px 2px hsla(0, 0%, 0%, 0.06), 0 8px 24px -12px hsla(0, 0%, 0%, 0.35);
   --sej-shadow-menu: 0 2px 6px hsla(0, 0%, 0%, 0.06), 0 16px 40px -12px hsla(0, 0%, 0%, 0.3);

@@ -845,7 +845,7 @@ onBeforeUnmount(() => {
   width: max-content !important;
   max-width: min(100%, calc(100vw - 8px));
   box-sizing: border-box;
-  border-radius: var(--sej-radius-bar, 12px);
+  border-radius: var(--sej-radius-bar, 999px);
   border: 1px solid var(--border-color-sej);
   overflow: hidden;
   box-shadow: var(
@@ -904,14 +904,17 @@ onBeforeUnmount(() => {
 
 /* icon 模式：收起时只保留脚本 logo，展开后恢复正常搜索条 */
 #sej-container.sej-icon-mode.sej-icon-collapsed {
-  padding: 0;
+  /* 与展开后的高度一致，logo 在 30px 圆里居中，位置才和设置按钮完全重合 */
+  padding: 2px;
   /* logo 自带白色底与配色，容器不再铺底色，避免出现双层圆 */
   background-color: transparent;
   backdrop-filter: none;
-  /* 收起时不需要描边，保持 logo 边缘干净 */
-  box-shadow:
-    0 1px 2px hsla(0, 0%, 0%, 0.12),
-    0 6px 16px -8px hsla(0, 0%, 0%, 0.4);
+  /* 收起时改由 logo 自己投影，避免容器比 logo 大出一圈阴影 */
+  box-shadow: none;
+}
+
+#sej-container.sej-icon-mode.sej-icon-collapsed > .sej-icon-trigger {
+  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.3));
 }
 
 #sej-container.sej-icon-mode.sej-icon-collapsed > .sej-scroll-viewport,
@@ -924,11 +927,11 @@ onBeforeUnmount(() => {
   padding: 0 6px 0 0;
 }
 
-/* 图标钉在搜索条左上角不动，展开时由搜索条从它底下向右拉出 */
+/* 图标钉在收起时的位置（30px 圆内居中）不动，展开时由搜索条从它底下向右拉出 */
 #sej-container.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
   position: absolute;
-  top: 0;
-  left: 0;
+  top: 2px;
+  left: 2px;
   pointer-events: none;
   cursor: default;
 }

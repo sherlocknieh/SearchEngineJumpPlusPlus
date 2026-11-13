@@ -54,7 +54,7 @@ const emit = defineEmits(['jump']);
   height: 30px;
   padding: 0 11px;
   gap: 6px;
-  border-radius: var(--sej-radius-item, 8px);
+  border-radius: var(--sej-radius-item, 999px);
   font-weight: 500;
 }
 

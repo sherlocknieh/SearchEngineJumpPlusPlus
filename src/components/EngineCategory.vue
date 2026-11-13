@@ -576,7 +576,7 @@ onBeforeUnmount(() => {
   height: 30px;
   padding: 0 10px;
   gap: 8px;
-  border-radius: var(--sej-radius-item, 8px);
+  border-radius: var(--sej-radius-item, 999px);
   font-weight: 400;
 }
 
