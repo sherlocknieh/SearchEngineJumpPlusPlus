@@ -10,6 +10,15 @@ const emit = defineEmits(['update-option']);
 
 <template>
   <div class="sej-footer-options">
+    <span id="xin-centerDisplay" :title="t('settings.centerTip')">
+      <label
+        >{{ t('settings.center')
+        }}<input
+          type="checkbox"
+          :checked="options.center"
+          @change="emit('update-option', 'center', $event.target.checked)"
+      /></label>
+    </span>
     <span id="xin-selectSearch">
       <label
         >{{ t('settings.selectSearch')
@@ -60,7 +69,7 @@ const emit = defineEmits(['update-option']);
     </span>
     <span
       id="xin-selectionIcon"
-      v-show="options.selectSearch"
+      v-show="options.selectSearch && options.selectionFollowPointer"
       :title="t('settings.selectionIconTip')"
     >
       <label
@@ -69,15 +78,6 @@ const emit = defineEmits(['update-option']);
           type="checkbox"
           :checked="options.selectionIcon"
           @change="emit('update-option', 'selectionIcon', $event.target.checked)"
-      /></label>
-    </span>
-    <span id="xin-centerDisplay" :title="t('settings.centerTip')">
-      <label
-        >{{ t('settings.center')
-        }}<input
-          type="checkbox"
-          :checked="options.center"
-          @change="emit('update-option', 'center', $event.target.checked)"
       /></label>
     </span>
     <span id="xin-defaultOpenTarget" :title="t('settings.defaultOpenTargetTip')">

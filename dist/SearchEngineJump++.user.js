@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0642
+// @version            2026.11.14.0654
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5823,9 +5823,9 @@
 			"settings.selectionFollowPointerTip": "划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出",
 			"settings.selectionCompact": "简洁模式",
 			"settings.selectionCompactTip": "划词条只显示图标，不显示文字",
-			"settings.selectionIcon": "图标模式",
+			"settings.selectionIcon": "极简模式",
 			"settings.selectionIconTip": "划词后只出现一个图标，鼠标悬浮时展开搜索条",
-			"settings.center": "强制居中",
+			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.editConfig": "配置文件",
 			"settings.feedbackGreasyFork": "在 GreasyFork 进行反馈",
@@ -5961,9 +5961,9 @@
 			"settings.selectionFollowPointerTip": "Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
-			"settings.selectionIcon": "Icon mode",
+			"settings.selectionIcon": "Minimal mode",
 			"settings.selectionIconTip": "Show a single icon after selecting text; hover it to expand the search bar",
-			"settings.center": "Force center",
+			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.editConfig": "Config file",
 			"settings.feedbackGreasyFork": "Feedback on GreasyFork",
@@ -6257,9 +6257,9 @@
 		return {
 			selectSearch: true,
 			selectSearchInInput: true,
-			selectionFollowPointer: false,
-			selectionCompact: false,
-			selectionIcon: false,
+			selectionFollowPointer: true,
+			selectionCompact: true,
+			selectionIcon: true,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
@@ -11380,9 +11380,9 @@
 		}
 	};
 	var _hoisted_1$1 = { class: "sej-footer-options" };
-	var _hoisted_2$1 = { id: "xin-selectSearch" };
+	var _hoisted_2$1 = ["title"];
 	var _hoisted_3$1 = ["checked"];
-	var _hoisted_4$1 = ["title"];
+	var _hoisted_4$1 = { id: "xin-selectSearch" };
 	var _hoisted_5$1 = ["checked"];
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
@@ -11407,51 +11407,51 @@
 			const emit = __emit;
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("div", _hoisted_1$1, [
-					createBaseVNode("span", _hoisted_2$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectSearch,
-						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
-					}, null, 40, _hoisted_3$1)])]),
-					withDirectives(createBaseVNode("span", {
-						id: "xin-selectSearchInInput",
-						title: unref(t)("settings.selectSearchInInputTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearchInInput")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectSearchInInput,
-						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
-					}, null, 40, _hoisted_5$1)])], 8, _hoisted_4$1), [[vShow, __props.options.selectSearch]]),
-					withDirectives(createBaseVNode("span", {
-						id: "xin-selectionFollowPointer",
-						title: unref(t)("settings.selectionFollowPointerTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionFollowPointer")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectionFollowPointer,
-						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
-					}, null, 40, _hoisted_7)])], 8, _hoisted_6), [[vShow, __props.options.selectSearch]]),
-					withDirectives(createBaseVNode("span", {
-						id: "xin-selectionCompact",
-						title: unref(t)("settings.selectionCompactTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionCompact")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectionCompact,
-						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
-					}, null, 40, _hoisted_9)])], 8, _hoisted_8), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
-					withDirectives(createBaseVNode("span", {
-						id: "xin-selectionIcon",
-						title: unref(t)("settings.selectionIconTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionIcon")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.selectionIcon,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
-					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectSearch]]),
 					createBaseVNode("span", {
 						id: "xin-centerDisplay",
 						title: unref(t)("settings.centerTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.center")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.center,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "center", $event.target.checked))
-					}, null, 40, _hoisted_13)])], 8, _hoisted_12),
+						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "center", $event.target.checked))
+					}, null, 40, _hoisted_3$1)])], 8, _hoisted_2$1),
+					createBaseVNode("span", _hoisted_4$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectSearch,
+						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
+					}, null, 40, _hoisted_5$1)])]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectSearchInInput",
+						title: unref(t)("settings.selectSearchInInputTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearchInInput")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectSearchInInput,
+						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
+					}, null, 40, _hoisted_7)])], 8, _hoisted_6), [[vShow, __props.options.selectSearch]]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionFollowPointer",
+						title: unref(t)("settings.selectionFollowPointerTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionFollowPointer")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionFollowPointer,
+						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
+					}, null, 40, _hoisted_9)])], 8, _hoisted_8), [[vShow, __props.options.selectSearch]]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionCompact",
+						title: unref(t)("settings.selectionCompactTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionCompact")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionCompact,
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
+					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
+					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionIcon",
+						title: unref(t)("settings.selectionIconTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionIcon")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionIcon,
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
+					}, null, 40, _hoisted_13)])], 8, _hoisted_12), [[vShow, __props.options.selectSearch && __props.options.selectionFollowPointer]]),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")

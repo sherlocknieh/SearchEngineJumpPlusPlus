@@ -39,13 +39,13 @@ export function createDefaultConfig() {
     // 默认开启划词搜索，输入框内的选区同样触发
     selectSearch: true,
     selectSearchInInput: true,
-    // 划词条默认从页面顶部滑出，不跟随选区位置
-    selectionFollowPointer: false,
-    // 跟随选区的划词条默认显示文字，不启用只显示图标的简洁模式
-    selectionCompact: false,
-    // 划词后默认直接显示整条搜索条，不启用只露一个图标的图标模式
-    selectionIcon: false,
-    // 默认跟随各站点规则排版，不强制居中
+    // 划词条默认贴在选区旁，而不是从页面顶部滑出
+    selectionFollowPointer: true,
+    // 划词条默认只显示图标，不显示文字
+    selectionCompact: true,
+    // 划词后默认只露一个图标，指针悬浮时展开整条搜索条
+    selectionIcon: true,
+    // 搜索条默认居中显示，优先于站点的横向对齐
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开
     defaultOpenTarget: DEFAULT_OPEN_TARGET,

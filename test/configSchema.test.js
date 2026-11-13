@@ -34,24 +34,13 @@ describe('createDefaultConfig', () => {
     expect(config.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
   });
 
-  it('默认允许输入框内划词', () => {
+  it('划词相关选项默认全部开启', () => {
     const config = createDefaultConfig();
+    expect(config.selectSearch).toBe(true);
     expect(config.selectSearchInInput).toBe(true);
-  });
-
-  it('默认从顶部滑出划词条，不跟随选区', () => {
-    const config = createDefaultConfig();
-    expect(config.selectionFollowPointer).toBe(false);
-  });
-
-  it('默认不启用只显示图标的简洁模式', () => {
-    const config = createDefaultConfig();
-    expect(config.selectionCompact).toBe(false);
-  });
-
-  it('默认不启用划词图标模式', () => {
-    const config = createDefaultConfig();
-    expect(config.selectionIcon).toBe(false);
+    expect(config.selectionFollowPointer).toBe(true);
+    expect(config.selectionCompact).toBe(true);
+    expect(config.selectionIcon).toBe(true);
   });
 
   it('内置搜图分类，长按搜图无需开关', () => {
