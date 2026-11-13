@@ -919,13 +919,7 @@ onBeforeUnmount(() => {
   background: none;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition:
-    transform 0.12s ease-out,
-    opacity 0.12s ease-out;
-}
-
-.sej-icon-trigger:hover {
-  transform: scale(1.06);
+  transition: opacity 0.12s ease-out;
 }
 
 .sej-icon-trigger svg {
