@@ -8,9 +8,11 @@ import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
 import {
   BUILTIN_CATEGORY_KEY,
+  DEFAULT_OPEN_TARGET,
   isPlainObject,
   normalizeCategories,
   normalizeEngine,
+  normalizeDefaultOpenTarget,
   normalizeEngineAction,
   normalizeEngineTarget,
 } from './configData.js';
@@ -22,6 +24,7 @@ export const OPTION_KEYS = [
   'center',
   'selectSearch',
   'selectSearchInInput',
+  'defaultOpenTarget',
   'language',
 ];
 
@@ -36,6 +39,8 @@ export function createDefaultConfig() {
     selectSearchInInput: false,
     // 默认跟随各站点规则排版，不强制居中
     center: false,
+    // 引擎未单独设置打开方式时，默认在新标签页打开
+    defaultOpenTarget: DEFAULT_OPEN_TARGET,
     // 默认跟随浏览器/系统语言
     language: 'auto',
     // [名称, 键名, 是否在跳转条中显示]
@@ -59,6 +64,11 @@ export function normalizeConfig(raw, defaults) {
 
   for (const key of OPTION_KEYS) {
     if (key === 'language') continue;
+    // 打开方式是枚举值，需要白名单校验后再回退默认
+    if (key === 'defaultOpenTarget') {
+      settings[key] = normalizeDefaultOpenTarget(data[key] ?? defaults[key]);
+      continue;
+    }
     settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
   }
   // 语言偏好：auto 跟随浏览器，否则限定在支持的语言内

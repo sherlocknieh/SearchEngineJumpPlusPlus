@@ -4,6 +4,7 @@
   "fixedTopUpward": false,
   "selectSearch": true,
   "selectSearchInInput": false,
+  "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [
     ["功能", "actions", false],

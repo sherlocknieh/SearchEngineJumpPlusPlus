@@ -52,12 +52,14 @@ describe('shouldOpenInNewTab', () => {
     expect(shouldOpenInNewTab({ target: '_self' }, true)).toBe(true);
   });
 
-  it('未配置打开方式时默认新标签页', () => {
+  it('未配置打开方式时跟随全局默认', () => {
     expect(shouldOpenInNewTab({})).toBe(true);
-    expect(shouldOpenInNewTab({ url: 'https://a.test/?q=%s', target: '_blank' })).toBe(true);
+    expect(shouldOpenInNewTab({}, false, '_self')).toBe(false);
+    expect(shouldOpenInNewTab({}, false, '_blank')).toBe(true);
   });
 
-  it('显式选择当前页时才原地跳转', () => {
-    expect(shouldOpenInNewTab({ target: '_self' })).toBe(false);
+  it('引擎的打开方式优先于全局默认', () => {
+    expect(shouldOpenInNewTab({ target: '_blank' }, false, '_self')).toBe(true);
+    expect(shouldOpenInNewTab({ target: '_self' }, false, '_blank')).toBe(false);
   });
 });

@@ -21,11 +21,19 @@ export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }
 
-/** 打开方式：_blank 新标签页，_self 当前页；未设置时默认新标签页 */
+/** 打开方式：_blank 新标签页，_self 当前页；引擎未设置时使用全局默认 */
 export const ENGINE_TARGETS = ['_blank', '_self'];
+
+/** 全局默认打开方式，默认新标签页 */
+export const DEFAULT_OPEN_TARGET = '_blank';
 
 export function normalizeEngineTarget(value) {
   return ENGINE_TARGETS.includes(value) ? value : '';
+}
+
+/** 全局默认打开方式的规范化：非法值回退到新标签页 */
+export function normalizeDefaultOpenTarget(value) {
+  return normalizeEngineTarget(value) || DEFAULT_OPEN_TARGET;
 }
 
 // 规范化单个搜索引擎

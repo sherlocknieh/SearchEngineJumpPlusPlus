@@ -18,7 +18,7 @@ describe('performJump', () => {
   });
 
   it('新标签页打开时对 URL 编码并调用 GM_openInTab', () => {
-    expect(performJump({ url: 'https://a.test/?q=%s' }, 'a b')).toBe(true);
+    expect(performJump({ url: 'https://a.test/?q=%s' }, 'a b', {})).toBe(true);
     expect(openInTab).toHaveBeenCalledWith('https://a.test/?q=a%20b', {
       active: true,
       insert: true,
@@ -27,7 +27,18 @@ describe('performJump', () => {
   });
 
   it('批量打开时忽略打开方式强制新标签', () => {
-    performJump({ url: 'https://a.test/?q=%s', target: '_self' }, 'x', true);
+    performJump({ url: 'https://a.test/?q=%s', target: '_self' }, 'x', {}, true);
+    expect(openInTab).toHaveBeenCalledTimes(1);
+  });
+
+  it('未设置打开方式时跟随全局默认（当前页）', () => {
+    performJump({ url: 'https://b.test/?q=%s' }, 'x', { defaultOpenTarget: '_self' });
+    expect(openInTab).not.toHaveBeenCalled();
+    expect(window.location.href).toBe('https://b.test/?q=x');
+  });
+
+  it('默认新标签页时不受全局默认缺失影响', () => {
+    performJump({ url: 'https://a.test/?q=%s' }, 'x', { defaultOpenTarget: '_blank' });
     expect(openInTab).toHaveBeenCalledTimes(1);
   });
 });
@@ -98,7 +109,7 @@ describe('动作引擎', () => {
   });
 
   it('performJump 对动作引擎直接返回已处理', () => {
-    expect(performJump({ action: 'copy' }, 'x')).toBe(true);
+    expect(performJump({ action: 'copy' }, 'x', {})).toBe(true);
     expect(openInTab).not.toHaveBeenCalled();
   });
 

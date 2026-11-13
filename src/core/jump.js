@@ -1,5 +1,5 @@
 import { GM_openInTab } from '$';
-import { normalizeEngineAction } from './configData.js';
+import { DEFAULT_OPEN_TARGET, normalizeEngineAction, normalizeDefaultOpenTarget } from './configData.js';
 import { normalizeKeywordUrl } from './engineUrl.js';
 import { copyText } from './clipboard.js';
 
@@ -49,7 +49,7 @@ export function isActionEngine(engine) {
  * 执行动作引擎，返回是否成功处理。
  * copy 复制当前关键词/划词内容；open 把当前内容当作链接打开。
  */
-export async function performEngineAction(engine, keyword) {
+export async function performEngineAction(engine, keyword, defaultTarget = DEFAULT_OPEN_TARGET) {
   const action = normalizeEngineAction(engine?.action);
   if (action === 'copy') {
     return copyText(keyword);
@@ -57,7 +57,7 @@ export async function performEngineAction(engine, keyword) {
   if (action === 'open') {
     const url = normalizeKeywordUrl(keyword);
     if (!url) return false;
-    if (shouldOpenInNewTab(engine)) {
+    if (shouldOpenInNewTab(engine, false, defaultTarget)) {
       if (!openInNewTab(url)) window.open(url, '_blank');
     } else {
       window.location.href = url;
@@ -68,12 +68,18 @@ export async function performEngineAction(engine, keyword) {
 }
 
 /**
- * 是否在新标签页打开：默认新标签页，只有引擎显式选择当前页时才原地跳转。
+ * 是否在新标签页打开：引擎的打开方式优先，未设置时跟随全局默认。
  * @param {boolean} forceNewTab 批量打开多个引擎时必须强制新标签页，否则会互相覆盖
+ * @param {string} defaultTarget 全局默认打开方式（_blank / _self）
  */
-export function shouldOpenInNewTab(engine, forceNewTab = false) {
+export function shouldOpenInNewTab(
+  engine,
+  forceNewTab = false,
+  defaultTarget = DEFAULT_OPEN_TARGET,
+) {
   if (forceNewTab) return true;
-  return engine?.target !== '_self';
+  const target = engine?.target || normalizeDefaultOpenTarget(defaultTarget);
+  return target !== '_self';
 }
 
 export function openInNewTab(url) {
@@ -112,15 +118,15 @@ export function submitPostForm(action, field, value, targetName) {
  * 执行跳转。返回 true 表示已处理，调用方无需再走默认导航。
  * 是否新标签页由引擎的打开方式决定，forceNewTab 仅用于一键打开全部引擎。
  */
-export function performJump(engine, keyword, forceNewTab = false) {
+export function performJump(engine, keyword, settingData = {}, forceNewTab = false) {
   // 动作引擎不拼接搜索 URL，直接执行复制/打开链接
   if (isActionEngine(engine)) {
-    performEngineAction(engine, keyword);
+    performEngineAction(engine, keyword, settingData.defaultOpenTarget);
     return true;
   }
 
   const result = prepareJump(engine, keyword);
-  const newTab = shouldOpenInNewTab(engine, forceNewTab);
+  const newTab = shouldOpenInNewTab(engine, forceNewTab, settingData.defaultOpenTarget);
 
   if (result.type === 'post') {
     submitPostForm(result.action, result.field, result.value, newTab ? '_blank' : '_top');
@@ -143,15 +149,17 @@ export function performJump(engine, keyword, forceNewTab = false) {
  * 批量打开会强制使用新标签页，避免引擎之间互相覆盖页面。
  * GM_openInTab 不可用时 performJump 会回退到 window.open，避免静默失败。
  */
-export function openAllEngines(engines, keyword) {
+export function openAllEngines(engines, keyword, settingData = {}) {
   for (const engine of engines) {
     if (engine.disable) continue;
     // 动作引擎没有 URL，不参与“与当前站点相同”的判断；
     // 批量打开时只执行打开链接，避免静默覆盖剪贴板
     if (isActionEngine(engine)) {
-      if (engine.action !== 'copy') performEngineAction(engine, keyword);
+      if (engine.action !== 'copy') {
+        performEngineAction(engine, keyword, settingData.defaultOpenTarget);
+      }
       continue;
     }
-    performJump(engine, keyword, true);
+    performJump(engine, keyword, settingData, true);
   }
 }

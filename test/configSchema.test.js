@@ -54,6 +54,16 @@ describe('normalizeConfig', () => {
     expect(result.language).toBe('auto');
   });
 
+  it('默认打开方式非法时回退新标签页，合法值原样保留', () => {
+    expect(normalizeConfig({ defaultOpenTarget: 'dialog' }, defaults).defaultOpenTarget).toBe(
+      '_blank',
+    );
+    expect(normalizeConfig({ defaultOpenTarget: '_self' }, defaults).defaultOpenTarget).toBe(
+      '_self',
+    );
+    expect(normalizeConfig({}, defaults).defaultOpenTarget).toBe('_blank');
+  });
+
   it('保留字符串 version 并丢弃其他类型', () => {
     expect(normalizeConfig({ version: 'v1' }, defaults).version).toBe('v1');
     expect(normalizeConfig({ version: 2 }, defaults).version).toBe('');

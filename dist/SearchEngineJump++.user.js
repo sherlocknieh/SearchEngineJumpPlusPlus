@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2226
+// @version            2026.11.13.2234
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5708,6 +5708,7 @@
 		fixedTopUpward: false,
 		selectSearch: true,
 		selectSearchInInput: false,
+		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
 			[
@@ -5793,6 +5794,10 @@
 			"settings.feedbackGreasyFork": "在 GreasyFork 进行反馈",
 			"settings.feedbackGitHub": "在 Github 进行反馈",
 			"settings.saving": "关闭中…",
+			"settings.defaultOpenTarget": "默认打开方式",
+			"settings.defaultOpenTargetTip": "引擎未单独设置打开方式时使用",
+			"settings.defaultOpenTargetBlank": "新标签页",
+			"settings.defaultOpenTargetSelf": "当前页",
 			"settings.language": "语言",
 			"settings.languageAuto": "跟随浏览器",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
@@ -5849,7 +5854,7 @@
 			"engine.uploadReplace": "本地上传（替换当前图标）",
 			"engine.target": "打开方式",
 			"engine.targetAuto": "默认",
-			"engine.targetAutoTip": "默认在新标签页打开链接",
+			"engine.targetAutoTip": "跟随设置中的“默认打开方式”",
 			"engine.targetBlank": "新标签页打开",
 			"engine.targetSelf": "当前页打开",
 			"engine.selectImage": "请选择图片文件",
@@ -5921,6 +5926,10 @@
 			"settings.feedbackGreasyFork": "Feedback on GreasyFork",
 			"settings.feedbackGitHub": "Feedback on GitHub",
 			"settings.saving": "Closing…",
+			"settings.defaultOpenTarget": "Default open in",
+			"settings.defaultOpenTargetTip": "Used when an engine has no open mode of its own",
+			"settings.defaultOpenTargetBlank": "New tab",
+			"settings.defaultOpenTargetSelf": "Current tab",
 			"settings.language": "Language",
 			"settings.languageAuto": "Auto (browser)",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
@@ -5977,7 +5986,7 @@
 			"engine.uploadReplace": "Upload (replace current icon)",
 			"engine.target": "Open in",
 			"engine.targetAuto": "Default",
-			"engine.targetAutoTip": "Open links in a new tab by default",
+			"engine.targetAutoTip": "Follow the default open mode in settings",
 			"engine.targetBlank": "New tab",
 			"engine.targetSelf": "Current tab",
 			"engine.selectImage": "Please select an image file",
@@ -6119,8 +6128,12 @@
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
 	var ENGINE_TARGETS = ["_blank", "_self"];
+	var DEFAULT_OPEN_TARGET = "_blank";
 	function normalizeEngineTarget(value) {
 		return ENGINE_TARGETS.includes(value) ? value : "";
+	}
+	function normalizeDefaultOpenTarget(value) {
+		return normalizeEngineTarget(value) || "_blank";
 	}
 	function normalizeEngine(raw) {
 		if (!isPlainObject(raw)) return null;
@@ -6163,6 +6176,7 @@
 		"center",
 		"selectSearch",
 		"selectSearchInInput",
+		"defaultOpenTarget",
 		"language"
 	];
 	function createDefaultConfig() {
@@ -6172,6 +6186,7 @@
 			selectSearch: true,
 			selectSearchInInput: false,
 			center: false,
+			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
 			engineCategories: engines_default.engineCategories.map((entry) => entry.slice()),
 			engineList: Object.fromEntries(Object.entries(engines_default.engineList).map(([key, engines]) => [key, engines.map((engine) => ({ ...engine }))]))
@@ -6183,6 +6198,10 @@
 		settings.version = typeof data.version === "string" ? data.version : "";
 		for (const key of OPTION_KEYS) {
 			if (key === "language") continue;
+			if (key === "defaultOpenTarget") {
+				settings[key] = normalizeDefaultOpenTarget(data[key] ?? defaults[key]);
+				continue;
+			}
 			settings[key] = typeof data[key] === "boolean" ? data[key] : defaults[key];
 		}
 		settings.language = normalizeLanguage(data.language ?? defaults.language);
@@ -6829,22 +6848,22 @@
 	function isActionEngine(engine) {
 		return Boolean(normalizeEngineAction(engine?.action));
 	}
-	async function performEngineAction(engine, keyword) {
+	async function performEngineAction(engine, keyword, defaultTarget = DEFAULT_OPEN_TARGET) {
 		const action = normalizeEngineAction(engine?.action);
 		if (action === "copy") return copyText(keyword);
 		if (action === "open") {
 			const url = normalizeKeywordUrl(keyword);
 			if (!url) return false;
-			if (shouldOpenInNewTab(engine)) {
+			if (shouldOpenInNewTab(engine, false, defaultTarget)) {
 				if (!openInNewTab(url)) window.open(url, "_blank");
 			} else window.location.href = url;
 			return true;
 		}
 		return false;
 	}
-	function shouldOpenInNewTab(engine, forceNewTab = false) {
+	function shouldOpenInNewTab(engine, forceNewTab = false, defaultTarget = DEFAULT_OPEN_TARGET) {
 		if (forceNewTab) return true;
-		return engine?.target !== "_self";
+		return (engine?.target || normalizeDefaultOpenTarget(defaultTarget)) !== "_self";
 	}
 	function openInNewTab(url) {
 		if (!url) return false;
@@ -6879,13 +6898,13 @@
 		document.body.appendChild(form);
 		form.submit();
 	}
-	function performJump(engine, keyword, forceNewTab = false) {
+	function performJump(engine, keyword, settingData = {}, forceNewTab = false) {
 		if (isActionEngine(engine)) {
-			performEngineAction(engine, keyword);
+			performEngineAction(engine, keyword, settingData.defaultOpenTarget);
 			return true;
 		}
 		const result = prepareJump(engine, keyword);
-		const newTab = shouldOpenInNewTab(engine, forceNewTab);
+		const newTab = shouldOpenInNewTab(engine, forceNewTab, settingData.defaultOpenTarget);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
 			return true;
@@ -6898,14 +6917,14 @@
 		window.location.href = result.url;
 		return true;
 	}
-	function openAllEngines(engines, keyword) {
+	function openAllEngines(engines, keyword, settingData = {}) {
 		for (const engine of engines) {
 			if (engine.disable) continue;
 			if (isActionEngine(engine)) {
-				if (engine.action !== "copy") performEngineAction(engine, keyword);
+				if (engine.action !== "copy") performEngineAction(engine, keyword, settingData.defaultOpenTarget);
 				continue;
 			}
-			performJump(engine, keyword, true);
+			performJump(engine, keyword, settingData, true);
 		}
 	}
 	function isEditableElement(el) {
@@ -8068,14 +8087,14 @@
 			async function onJump(engine) {
 				const keyword = getCurrentKeyword();
 				if (isActionEngine(engine)) {
-					if (await performEngineAction(engine, keyword)) showToast(t(engine.action === "copy" ? "action.copied" : "action.opened"));
+					if (await performEngineAction(engine, keyword, data.defaultOpenTarget)) showToast(t(engine.action === "copy" ? "action.copied" : "action.opened"));
 					else showToast(t(engine.action === "copy" ? "action.copyFailed" : "action.openFailed"));
 					return;
 				}
-				performJump(engine, keyword);
+				performJump(engine, keyword, data);
 			}
 			function onJumpAll(engines) {
-				openAllEngines(engines, getCurrentKeyword());
+				openAllEngines(engines, getCurrentKeyword(), data);
 			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
@@ -9867,16 +9886,16 @@
 		class: "sej-preview-dot"
 	};
 	var _hoisted_14$2 = ["href"];
-	var _hoisted_15$1 = {
+	var _hoisted_15$2 = {
 		key: 2,
 		class: "sej-preview-size"
 	};
-	var _hoisted_16 = {
+	var _hoisted_16$1 = {
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17 = ["title"];
-	var _hoisted_18 = {
+	var _hoisted_17$1 = ["title"];
+	var _hoisted_18$1 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -10065,13 +10084,13 @@
 									rel: "noopener",
 									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
 								}, toDisplayString(step.url), 9, _hoisted_14$2),
-								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(step.size), 1)) : createCommentVNode("", true),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10410,7 +10429,7 @@
 		"innerHTML"
 	];
 	var _hoisted_14$1 = ["innerHTML"];
-	var _hoisted_15 = {
+	var _hoisted_15$1 = {
 		key: 2,
 		class: "sej-copy-hint"
 	};
@@ -10542,7 +10561,7 @@
 					key: 0,
 					class: "sej-copy-icon",
 					innerHTML: unref(COPY)
-				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
+				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
 			};
 		}
 	};
@@ -10680,9 +10699,13 @@
 	var _hoisted_9 = ["checked"];
 	var _hoisted_10 = ["title"];
 	var _hoisted_11 = ["checked"];
-	var _hoisted_12 = { id: "xin-language" };
+	var _hoisted_12 = ["title"];
 	var _hoisted_13 = ["value"];
-	var _hoisted_14 = { value: "auto" };
+	var _hoisted_14 = { value: "_blank" };
+	var _hoisted_15 = { value: "_self" };
+	var _hoisted_16 = { id: "xin-language" };
+	var _hoisted_17 = ["value"];
+	var _hoisted_18 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -10731,15 +10754,23 @@
 						checked: __props.options.fixedTopUpward,
 						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "fixedTopUpward", $event.target.checked))
 					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.fixedTop]]),
-					createBaseVNode("span", _hoisted_12, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+					createBaseVNode("span", {
+						id: "xin-defaultOpenTarget",
+						title: unref(t)("settings.defaultOpenTargetTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
+						class: "sej-language-select",
+						value: __props.options.defaultOpenTarget,
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_15, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_13)])], 8, _hoisted_12),
+					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_13)])])
+						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_17)])])
 				]);
 			};
 		}

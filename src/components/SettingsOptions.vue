@@ -63,6 +63,19 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'fixedTopUpward', $event.target.checked)"
       /></label>
     </span>
+    <span id="xin-defaultOpenTarget" :title="t('settings.defaultOpenTargetTip')">
+      <label
+        >{{ t('settings.defaultOpenTarget') }}
+        <select
+          class="sej-language-select"
+          :value="options.defaultOpenTarget"
+          @change="emit('update-option', 'defaultOpenTarget', $event.target.value)"
+        >
+          <option value="_blank">{{ t('settings.defaultOpenTargetBlank') }}</option>
+          <option value="_self">{{ t('settings.defaultOpenTargetSelf') }}</option>
+        </select>
+      </label>
+    </span>
     <span id="xin-language">
       <label
         >{{ t('settings.language') }}

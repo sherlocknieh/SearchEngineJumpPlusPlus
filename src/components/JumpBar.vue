@@ -105,7 +105,7 @@ function getCurrentKeyword() {
 async function onJump(engine) {
   const keyword = getCurrentKeyword();
   if (isActionEngine(engine)) {
-    const ok = await performEngineAction(engine, keyword);
+    const ok = await performEngineAction(engine, keyword, data.defaultOpenTarget);
     if (ok) {
       showToast(t(engine.action === 'copy' ? 'action.copied' : 'action.opened'));
     } else {
@@ -113,11 +113,11 @@ async function onJump(engine) {
     }
     return;
   }
-  performJump(engine, keyword);
+  performJump(engine, keyword, data);
 }
 
 function onJumpAll(engines) {
-  openAllEngines(engines, getCurrentKeyword());
+  openAllEngines(engines, getCurrentKeyword(), data);
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文

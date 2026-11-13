@@ -59,7 +59,7 @@ src/main.js                 只做装配
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
   - `performJump` / `openAllEngines`
-  - 打开方式：未配置 `target` 时默认新标签页；`target: '_self'` 才原地跳转；
+  - 打开方式：引擎未配置 `target` 时跟随设置项 `defaultOpenTarget`（默认新标签页）；
     批量打开始终强制新标签页
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
