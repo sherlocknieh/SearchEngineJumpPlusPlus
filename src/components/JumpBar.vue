@@ -61,7 +61,6 @@ const { start: startStackSync, stop: stopStackSync } = useStackSync();
 const {
   constrainBarToViewport,
   onScroll,
-  onWheel,
   onViewportResize,
   captureOriginTop,
   scheduleConstrainCheck,
@@ -285,11 +284,7 @@ onMounted(async () => {
 
   if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isSelectSearch.value) {
     captureOriginTop();
-    if (data.fixedTopUpward) {
-      window.addEventListener('wheel', onWheel);
-    } else {
-      window.addEventListener('scroll', onScroll);
-    }
+    window.addEventListener('scroll', onScroll);
   }
 });
 
@@ -298,7 +293,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);
   window.removeEventListener('scroll', onScroll);
-  window.removeEventListener('wheel', onWheel);
   window.removeEventListener('resize', onViewportResize);
   window.removeEventListener('pointermove', onWindowPointerMove);
   window.removeEventListener('pointerup', endScrollDrag);

@@ -50,19 +50,6 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'fixedTop', $event.target.checked)"
       /></label>
     </span>
-    <span
-      v-show="options.fixedTop"
-      id="iqxin-fixedTopUpward"
-      :title="t('settings.fixedTopUpwardTip')"
-    >
-      <label
-        >{{ t('settings.fixedTopUpward')
-        }}<input
-          type="checkbox"
-          :checked="options.fixedTopUpward"
-          @change="emit('update-option', 'fixedTopUpward', $event.target.checked)"
-      /></label>
-    </span>
     <span id="xin-defaultOpenTarget" :title="t('settings.defaultOpenTargetTip')">
       <label
         >{{ t('settings.defaultOpenTarget') }}

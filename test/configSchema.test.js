@@ -32,6 +32,12 @@ describe('createDefaultConfig', () => {
     expect(Object.keys(config.engineList).length).toBeGreaterThan(0);
     expect(config.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
   });
+
+  it('默认固定跳转条并允许输入框内划词', () => {
+    const config = createDefaultConfig();
+    expect(config.fixedTop).toBe(true);
+    expect(config.selectSearchInInput).toBe(true);
+  });
 });
 
 describe('normalizeConfig', () => {
@@ -154,7 +160,7 @@ describe('normalizeConfig', () => {
 describe('serializeConfig', () => {
   it('按白名单序列化草稿，并保留草稿内部字段之外的数据', () => {
     const config = serializeConfig({
-      options: { fixedTop: true, fixedTopUpward: false, language: 'en' },
+      options: { fixedTop: true, language: 'en' },
       categories: [
         {
           name: '分类',

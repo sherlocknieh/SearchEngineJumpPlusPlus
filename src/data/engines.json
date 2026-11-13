@@ -1,9 +1,8 @@
 {
   "version": "2026-10-24 08:47:49",
-  "fixedTop": false,
-  "fixedTopUpward": false,
+  "fixedTop": true,
   "selectSearch": true,
-  "selectSearchInInput": false,
+  "selectSearchInInput": true,
   "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [

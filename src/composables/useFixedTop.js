@@ -298,10 +298,6 @@ export function useFixedTop({
     });
   }
 
-  function onWheel(e) {
-    if (e.wheelDelta > 0) refreshFixedTop();
-  }
-
   function onViewportResize() {
     // 视口或布局变化后，缓存的吸顶头部高度可能失效
     headerBottomCache = null;
@@ -338,7 +334,6 @@ export function useFixedTop({
     constrainBarToViewport,
     fixedToTop,
     onScroll,
-    onWheel,
     onViewportResize,
     captureOriginTop,
     scheduleConstrainCheck,

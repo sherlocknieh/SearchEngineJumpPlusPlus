@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2234
+// @version            2026.11.13.2236
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5704,10 +5704,9 @@
 	}
 	var engines_default = {
 		version: "2026-10-24 08:47:49",
-		fixedTop: false,
-		fixedTopUpward: false,
+		fixedTop: true,
 		selectSearch: true,
-		selectSearchInInput: false,
+		selectSearchInInput: true,
 		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
@@ -5788,8 +5787,6 @@
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.fixedTop": "固顶显示",
 			"settings.fixedTopTip": "页面下滑时搜索条固定在顶部显示",
-			"settings.fixedTopUpward": "下滑不显示",
-			"settings.fixedTopUpwardTip": "仅在向上滚动页面时显示",
 			"settings.editConfig": "配置文件",
 			"settings.feedbackGreasyFork": "在 GreasyFork 进行反馈",
 			"settings.feedbackGitHub": "在 Github 进行反馈",
@@ -5920,8 +5917,6 @@
 			"settings.centerTip": "Always center the jump bar",
 			"settings.fixedTop": "Pin to top",
 			"settings.fixedTopTip": "Keep the jump bar at the top while scrolling",
-			"settings.fixedTopUpward": "Hide on scroll down",
-			"settings.fixedTopUpwardTip": "Show only while scrolling up",
 			"settings.editConfig": "Config file",
 			"settings.feedbackGreasyFork": "Feedback on GreasyFork",
 			"settings.feedbackGitHub": "Feedback on GitHub",
@@ -6172,7 +6167,6 @@
 	}
 	var OPTION_KEYS = [
 		"fixedTop",
-		"fixedTopUpward",
 		"center",
 		"selectSearch",
 		"selectSearchInInput",
@@ -6181,10 +6175,9 @@
 	];
 	function createDefaultConfig() {
 		return {
-			fixedTop: false,
-			fixedTopUpward: false,
+			fixedTop: true,
 			selectSearch: true,
-			selectSearchInInput: false,
+			selectSearchInInput: true,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
@@ -7152,9 +7145,6 @@
 				refreshFixedTop();
 			});
 		}
-		function onWheel(e) {
-			if (e.wheelDelta > 0) refreshFixedTop();
-		}
 		function onViewportResize() {
 			headerBottomCache = null;
 			if (getHost().style.position === "fixed") refreshFixedTop();
@@ -7182,7 +7172,6 @@
 			constrainBarToViewport,
 			fixedToTop,
 			onScroll,
-			onWheel,
 			onViewportResize,
 			captureOriginTop,
 			scheduleConstrainCheck,
@@ -8057,7 +8046,7 @@
 			const containerClass = ref("rwl-exempt");
 			const { updateScrollHints, onScrollPointerDown, onWindowPointerMove, endScrollDrag, onScrollClickCapture, onScrollWheel, dispose: disposeScrollDrag } = useScrollDrag({ scrollEl });
 			const { start: startStackSync, stop: stopStackSync } = useStackSync();
-			const { constrainBarToViewport, onScroll, onWheel, onViewportResize, captureOriginTop, scheduleConstrainCheck, dispose: disposeFixedTop } = useFixedTop({
+			const { constrainBarToViewport, onScroll, onViewportResize, captureOriginTop, scheduleConstrainCheck, dispose: disposeFixedTop } = useFixedTop({
 				containerEl,
 				isSelectSearch,
 				inlineStyleBlocked,
@@ -8209,8 +8198,7 @@
 				}
 				if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isSelectSearch.value) {
 					captureOriginTop();
-					if (data.fixedTopUpward) window.addEventListener("wheel", onWheel);
-					else window.addEventListener("scroll", onScroll);
+					window.addEventListener("scroll", onScroll);
 				}
 			});
 			onBeforeUnmount(() => {
@@ -8218,7 +8206,6 @@
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
 				window.removeEventListener("scroll", onScroll);
-				window.removeEventListener("wheel", onWheel);
 				window.removeEventListener("resize", onViewportResize);
 				window.removeEventListener("pointermove", onWindowPointerMove);
 				window.removeEventListener("pointerup", endScrollDrag);
@@ -9894,8 +9881,8 @@
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17$1 = ["title"];
-	var _hoisted_18$1 = {
+	var _hoisted_17 = ["title"];
+	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -10090,7 +10077,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10698,14 +10685,12 @@
 	var _hoisted_8 = ["title"];
 	var _hoisted_9 = ["checked"];
 	var _hoisted_10 = ["title"];
-	var _hoisted_11 = ["checked"];
-	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["value"];
-	var _hoisted_14 = { value: "_blank" };
-	var _hoisted_15 = { value: "_self" };
-	var _hoisted_16 = { id: "xin-language" };
-	var _hoisted_17 = ["value"];
-	var _hoisted_18 = { value: "auto" };
+	var _hoisted_11 = ["value"];
+	var _hoisted_12 = { value: "_blank" };
+	var _hoisted_13 = { value: "_self" };
+	var _hoisted_14 = { id: "xin-language" };
+	var _hoisted_15 = ["value"];
+	var _hoisted_16 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -10746,31 +10731,23 @@
 						checked: __props.options.fixedTop,
 						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "fixedTop", $event.target.checked))
 					}, null, 40, _hoisted_9)])], 8, _hoisted_8),
-					withDirectives(createBaseVNode("span", {
-						id: "iqxin-fixedTopUpward",
-						title: unref(t)("settings.fixedTopUpwardTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTopUpward")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.fixedTopUpward,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "fixedTopUpward", $event.target.checked))
-					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.fixedTop]]),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_15, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_13)])], 8, _hoisted_12),
-					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_12, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_13, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_11)])], 8, _hoisted_10),
+					createBaseVNode("span", _hoisted_14, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_17)])])
+						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_15)])])
 				]);
 			};
 		}
