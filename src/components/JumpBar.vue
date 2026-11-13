@@ -451,7 +451,6 @@ async function showFloatBar() {
   // 同一关键词的重复显示（点击搜索条自身会补发 mouseup）保持当前展开状态，
   // 只有换了新的选区才回到图标态
   if (!barVisible.value || keyword !== shownKeyword) {
-    clearIconCollapse();
     iconExpanded.value = false;
   }
   shownKeyword = keyword;
@@ -490,7 +489,6 @@ async function measureExpandedSize() {
 function hideFloatBar() {
   // 递增令牌取消排队中的显示，避免收起后被上一帧的显示重新拉起
   showToken += 1;
-  clearIconCollapse();
   iconExpanded.value = false;
   barVisible.value = false;
   shownKeyword = '';
@@ -501,16 +499,6 @@ function hideFloatBar() {
 let shownKeyword = '';
 // 图标模式下展开后的整条尺寸：图标与搜索条共用同一落点
 let iconFullSize = null;
-
-// 图标模式下指针停靠的宽限时间：斜向移动时短暂离开图标不该马上收起
-const ICON_COLLAPSE_DELAY = 180;
-let iconCollapseTimer = 0;
-
-function clearIconCollapse() {
-  if (!iconCollapseTimer) return;
-  clearTimeout(iconCollapseTimer);
-  iconCollapseTimer = 0;
-}
 
 /** 图标模式展开/收起：宽度交给 CSS 过渡，这里只切换状态 */
 function setIconExpanded(expanded) {
@@ -524,18 +512,12 @@ function onIconTriggerClick() {
 }
 
 /**
- * 指针在整条内（含 Teleport 到同根的下拉面板）时保持展开，离开后才收回到图标。
- * 用指针移动命中判断而不是 pointerleave：从下拉面板直接移出时不会补发边界事件。
+ * 悬停图标或搜索条只负责展开。
+ * 展开后一直保持，指针移开也不收回；点页面别处时按原有逻辑收起。
  */
 function onIconPointerMove(e) {
-  if (!iconMode.value) return;
-  if (isInsideBar(e)) {
-    clearIconCollapse();
-    setIconExpanded(true);
-    return;
-  }
-  if (!iconExpanded.value || iconCollapseTimer) return;
-  iconCollapseTimer = setTimeout(() => setIconExpanded(false), ICON_COLLAPSE_DELAY);
+  if (!iconMode.value || iconExpanded.value) return;
+  if (isInsideBar(e)) setIconExpanded(true);
 }
 
 /** 宽度过渡结束后按新宽度更新横向滚动提示 */
@@ -712,7 +694,6 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerup', endScrollDrag);
   window.removeEventListener('pointercancel', endScrollDrag);
   cancelScrollAnim();
-  clearIconCollapse();
   disposeScrollDrag();
   disposeViewport();
   stopStackSync();

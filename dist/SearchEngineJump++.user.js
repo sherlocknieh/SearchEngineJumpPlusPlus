@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0523
+// @version            2026.11.14.0526
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8158,7 +8158,6 @@
 	var _hoisted_5$7 = ["title", "aria-label"];
 	var PAGE_STEP_RATIO = .875;
 	var PAGE_SCROLL_DURATION = 150;
-	var ICON_COLLAPSE_DELAY = 180;
 	var _sfc_main$9 = {
 		__name: "JumpBar",
 		props: { role: {
@@ -8432,10 +8431,7 @@
 					return;
 				}
 				const keyword = getCurrentKeyword();
-				if (!barVisible.value || keyword !== shownKeyword) {
-					clearIconCollapse();
-					iconExpanded.value = false;
-				}
+				if (!barVisible.value || keyword !== shownKeyword) iconExpanded.value = false;
 				shownKeyword = keyword;
 				const token = ++showToken;
 				await nextTick();
@@ -8465,7 +8461,6 @@
 			}
 			function hideFloatBar() {
 				showToken += 1;
-				clearIconCollapse();
 				iconExpanded.value = false;
 				barVisible.value = false;
 				shownKeyword = "";
@@ -8473,12 +8468,6 @@
 			}
 			let shownKeyword = "";
 			let iconFullSize = null;
-			let iconCollapseTimer = 0;
-			function clearIconCollapse() {
-				if (!iconCollapseTimer) return;
-				clearTimeout(iconCollapseTimer);
-				iconCollapseTimer = 0;
-			}
 			function setIconExpanded(expanded) {
 				if (!iconMode.value || iconExpanded.value === expanded) return;
 				iconExpanded.value = expanded;
@@ -8487,14 +8476,8 @@
 				setIconExpanded(true);
 			}
 			function onIconPointerMove(e) {
-				if (!iconMode.value) return;
-				if (isInsideBar(e)) {
-					clearIconCollapse();
-					setIconExpanded(true);
-					return;
-				}
-				if (!iconExpanded.value || iconCollapseTimer) return;
-				iconCollapseTimer = setTimeout(() => setIconExpanded(false), ICON_COLLAPSE_DELAY);
+				if (!iconMode.value || iconExpanded.value) return;
+				if (isInsideBar(e)) setIconExpanded(true);
 			}
 			function onBarTransitionEnd(e) {
 				if (e?.propertyName !== "width" || e.target !== containerEl.value) return;
@@ -8617,7 +8600,6 @@
 				window.removeEventListener("pointerup", endScrollDrag);
 				window.removeEventListener("pointercancel", endScrollDrag);
 				cancelScrollAnim();
-				clearIconCollapse();
 				disposeScrollDrag();
 				disposeViewport();
 				stopStackSync();
