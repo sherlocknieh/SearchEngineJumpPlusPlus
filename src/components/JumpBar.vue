@@ -906,6 +906,12 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 
+/* 顶部居中时整条向两侧长大，图标要钉在中心，不能跟着左边缘一起滑 */
+#sej-container.sej-top.sej-icon-mode:not(.sej-icon-collapsed) > .sej-icon-trigger {
+  left: 50%;
+  margin-left: -13px;
+}
+
 .sej-icon-trigger {
   display: flex;
   align-items: center;
