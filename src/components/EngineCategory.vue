@@ -392,7 +392,29 @@ onBeforeUnmount(() => {
     >
       <!-- 固定 16×16 的图标槽，保证所有分类的文字起点一致；分类无图标时也保留占位 -->
       <span v-if="showIcon" class="sej-category-icon">
-        <img v-if="firstIconSrc" class="sej-category-icon-img" :src="firstIconSrc" alt="" />
+        <!-- 已固定展开时用图钉替代引擎图标，标明点击会收起列表 -->
+        <svg
+          v-if="pinned"
+          class="sej-category-pin-icon"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 17v5" />
+          <path
+            d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+          />
+        </svg>
+        <img
+          v-else-if="firstIconSrc"
+          class="sej-category-icon-img"
+          :src="firstIconSrc"
+          alt=""
+        />
       </span>
       <span>{{ name }}</span>
     </a>
@@ -476,6 +498,14 @@ onBeforeUnmount(() => {
   height: 16px;
   margin: 0;
   object-fit: cover;
+}
+
+/* 已固定展开的分类用图钉图标替代引擎图标 */
+.sej-category-pin-icon {
+  display: block;
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 
 /* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0040
+// @version            2026.11.14.0109
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7569,8 +7569,19 @@
 		key: 0,
 		class: "sej-category-icon"
 	};
-	var _hoisted_3$8 = ["src"];
-	var _hoisted_4$8 = ["onKeydown"];
+	var _hoisted_3$8 = {
+		key: 0,
+		class: "sej-category-pin-icon",
+		viewBox: "0 0 24 24",
+		fill: "none",
+		stroke: "currentColor",
+		"stroke-width": "2",
+		"stroke-linecap": "round",
+		"stroke-linejoin": "round",
+		"aria-hidden": "true"
+	};
+	var _hoisted_4$8 = ["src"];
+	var _hoisted_5$7 = ["onKeydown"];
 	var pinnedCategory = null;
 	var openCategory = null;
 	var anchorSeq = 0;
@@ -7592,7 +7603,7 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/* 已固定展开的分类用图钉图标替代引擎图标 */\n.sej-category-pin-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n}\n\n/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const props = __props;
 			const emit = __emit;
 			const firstIconSrc = computed(() => props.showIcon && props.engines[0] ? getFaviconSrc(props.engines[0]) : "");
@@ -7858,12 +7869,12 @@
 					title: pinned.value ? unref(t)("jump.collapseList", { name: __props.name }) : null,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
-				}, [__props.showIcon ? (openBlock(), createElementBlock("span", _hoisted_2$8, [firstIconSrc.value ? (openBlock(), createElementBlock("img", {
-					key: 0,
+				}, [__props.showIcon ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("svg", _hoisted_3$8, [..._cache[2] || (_cache[2] = [createBaseVNode("path", { d: "M12 17v5" }, null, -1), createBaseVNode("path", { d: "M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" }, null, -1)])])) : firstIconSrc.value ? (openBlock(), createElementBlock("img", {
+					key: 1,
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_3$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
+				}, null, 8, _hoisted_4$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
 					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
@@ -7894,7 +7905,7 @@
 					tabindex: "0",
 					onClick: withModifiers(onSearchAll, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onSearchAll, ["prevent"]), ["enter"]), withKeys(withModifiers(onSearchAll, ["prevent"]), ["space"])]
-				}, [_cache[2] || (_cache[2] = createBaseVNode("span", {
+				}, [_cache[3] || (_cache[3] = createBaseVNode("span", {
 					class: "sej-category-icon",
 					"aria-hidden": "true"
 				}, [createBaseVNode("svg", {
@@ -7904,7 +7915,7 @@
 					createBaseVNode("path", { d: "M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" }),
 					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
 					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
-				])], -1)), createBaseVNode("span", null, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_4$8)], 38)], 8, ["to"]))], 32);
+				])], -1)), createBaseVNode("span", null, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_5$7)], 38)], 8, ["to"]))], 32);
 			};
 		}
 	};
