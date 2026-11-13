@@ -6,10 +6,20 @@ import { boot } from './lifecycle.js';
 import { registerMenu } from './menu.js';
 import { getSelectedText } from '../core/selection.js';
 import { isPointerPressed, trackSelectionPointer } from '../core/selectionGesture.js';
+import { findSelectionBlocker, removeSelectionBlockers } from '../core/overlayGuard.js';
+import { showToast } from '../stores/ui.js';
+import { t } from '../assets/i18n.js';
 import { armImageContextMenu } from './imageContextMenu.js';
 
 let startTimer = 0;
 let lazyListeners = null;
+// 已提示过的遮罩：同一层只提示一次，广告刷新换成新节点后才会再提示
+let promptedBlocker = null;
+
+// 广告插屏常常在页面加载后才注入，隔一段时间探测一次
+const OVERLAY_PROBE_INTERVAL_MS = 3000;
+// 连续命中说明这层遮罩不是一闪而过的弹层，探测也有个上限
+const OVERLAY_PROBE_MAX_TRIES = 10;
 
 /**
  * 脚本启动流程。
@@ -103,11 +113,38 @@ function armLazyStart(includeInput) {
   document.addEventListener('mouseup', onSelectionChange);
   document.addEventListener('keyup', onSelectionChange);
 
+  // 全屏透明遮罩会接走鼠标事件，页面连选区都不会有，上面的事件压根不会触发；
+  // 只能在旁边持续探测，确认遮罩稳定存在后给用户移除入口
+  let probedBlocker = null;
+  let probeTries = 0;
+  const probeTimer = setInterval(() => {
+    probeTries += 1;
+    const blocker = findSelectionBlocker();
+    const confirmed = Boolean(blocker) && blocker === probedBlocker;
+    probedBlocker = blocker;
+    if (confirmed) promptOverlayBlocked(blocker);
+    else if (probeTries >= OVERLAY_PROBE_MAX_TRIES) clearInterval(probeTimer);
+  }, OVERLAY_PROBE_INTERVAL_MS);
+
   lazyListeners = () => {
+    clearInterval(probeTimer);
     document.removeEventListener('selectionchange', onSelectionChange);
     document.removeEventListener('mouseup', onSelectionChange);
     document.removeEventListener('keyup', onSelectionChange);
   };
+}
+
+/** 提示页面被遮罩挡住，并提供一键移除；Toast 属于脚本自己的应用，先挂载再提示 */
+function promptOverlayBlocked(blocker) {
+  if (blocker === promptedBlocker) return;
+  promptedBlocker = blocker;
+  requestBoot();
+  showToast(t('toast.overlayBlocked'), 8000, {
+    label: t('toast.overlayBlockedAction'),
+    onClick: () => {
+      if (removeSelectionBlockers()) showToast(t('toast.overlayRemoved'));
+    },
+  });
 }
 
 function disarmLazyStart() {

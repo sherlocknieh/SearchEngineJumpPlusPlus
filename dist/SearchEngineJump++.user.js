@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0228
+// @version            2026.11.14.0240
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5852,6 +5852,9 @@
 			"toast.syncedFromOtherPages": "SearchEngineJump: 已从其他页面同步配置",
 			"toast.searchTemplateApplied": "已自动把链接中的关键词替换为 %s",
 			"toast.searchTemplateManual": "未能识别关键词，请手动把链接中的关键词替换为 %s",
+			"toast.overlayBlocked": "页面被全屏遮罩挡住，划词无效",
+			"toast.overlayBlockedAction": "移除遮罩",
+			"toast.overlayRemoved": "已移除遮挡层",
 			"category.title": "编辑分类",
 			"category.delete": "删除分类",
 			"category.emptyName": "空",
@@ -5985,6 +5988,9 @@
 			"toast.syncedFromOtherPages": "SearchEngineJump: Settings synced from another page",
 			"toast.searchTemplateApplied": "Keyword in the link was replaced with %s",
 			"toast.searchTemplateManual": "Could not detect the keyword; replace it in the link with %s",
+			"toast.overlayBlocked": "A full-screen overlay is blocking text selection",
+			"toast.overlayBlockedAction": "Remove overlay",
+			"toast.overlayRemoved": "Overlay removed",
 			"category.title": "Edit category",
 			"category.delete": "Delete category",
 			"category.emptyName": "Untitled",
@@ -7040,21 +7046,40 @@
 		return selection.toString();
 	}
 	var pressed = false;
+	var dragged = false;
 	var gestureId = 0;
+	var pointerStart = null;
 	var trackedTargets = new WeakSet();
+	var DRAG_THRESHOLD$1 = 4;
 	function onPointerDown(event) {
 		if (event.button !== 0) return;
 		pressed = true;
+		dragged = false;
+		pointerStart = {
+			x: event.clientX,
+			y: event.clientY
+		};
 		gestureId += 1;
+	}
+	function onPointerMove(event) {
+		if (!pressed || dragged || !pointerStart) return;
+		const dx = Math.abs((event.clientX ?? 0) - pointerStart.x);
+		const dy = Math.abs((event.clientY ?? 0) - pointerStart.y);
+		if (dx > DRAG_THRESHOLD$1 || dy > DRAG_THRESHOLD$1) dragged = true;
 	}
 	function onPointerEnd() {
 		pressed = false;
+		pointerStart = null;
 	}
 	function onKeyDown() {
 		gestureId += 1;
+		dragged = false;
 	}
 	function isPointerPressed() {
 		return pressed;
+	}
+	function isSelectionDrag() {
+		return dragged;
 	}
 	function currentGestureId() {
 		return gestureId;
@@ -7063,6 +7088,7 @@
 		if (!target || trackedTargets.has(target)) return;
 		trackedTargets.add(target);
 		target.addEventListener("pointerdown", onPointerDown, true);
+		target.addEventListener("pointermove", onPointerMove, true);
 		target.addEventListener("pointerup", onPointerEnd, true);
 		target.addEventListener("pointercancel", onPointerEnd, true);
 		target.addEventListener("keydown", onKeyDown, true);
@@ -8138,6 +8164,7 @@
 				hideFloatBar();
 			});
 			function onImageModePointerDown(e) {
+				if (!isImageSearch.value) return;
 				if (e.button !== 0) return;
 				if (!isInsideBar(e)) closeImageMode();
 			}
@@ -8306,13 +8333,16 @@
 			let showToken = 0;
 			let keepOverlayUntil = 0;
 			let dismissedGesture = -1;
+			let pendingHide = false;
+			let settledGesture = -1;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
 				if (isImageSearch.value) return;
 				if (isPointerPressed()) return;
-				if (dismissedGesture === currentGestureId()) return;
+				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (!text) {
+					if (settledGesture === currentGestureId()) return;
 					if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
 					hideFloatBar();
 					return;
@@ -8332,6 +8362,15 @@
 					return;
 				}
 				dismissedGesture = currentGestureId();
+				pendingHide = true;
+			}
+			function settleOverlay(e) {
+				if (!pendingHide) return;
+				pendingHide = false;
+				if (!isSelectSearch.value || isImageSearch.value) return;
+				settledGesture = currentGestureId();
+				if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
+				if (e && performance.now() < keepOverlayUntil) return;
 				hideFloatBar();
 			}
 			function onDocumentSelectionChange() {
@@ -8384,6 +8423,8 @@
 					document.addEventListener("selectionchange", onDocumentSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
+					document.addEventListener("pointerup", settleOverlay, true);
+					document.addEventListener("pointercancel", settleOverlay, true);
 					document.addEventListener("pointerdown", onOverlayPointerDown, true);
 				}
 			});
@@ -8393,6 +8434,8 @@
 				window.removeEventListener("scroll", onImageModeScroll, true);
 				window.removeEventListener("scroll", onFloatScroll, true);
 				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
+				document.removeEventListener("pointerup", settleOverlay, true);
+				document.removeEventListener("pointercancel", settleOverlay, true);
 				document.removeEventListener("selectionchange", onDocumentSelectionChange);
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
@@ -11306,10 +11349,25 @@
 	var _sfc_main$1 = {
 		__name: "Toast",
 		setup(__props) {
-			addStyle("\n/* 给用户的提示 */\n#iqixn-global-tip {\n  box-sizing: content-box !important;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  opacity: 0;\n  height: 25px;\n  line-height: 25px;\n  letter-spacing: 1px;\n  font-size: 14px;\n  color: #fff;\n  padding: 5px 20px;\n  border-radius: 8px;\n  background-color: #666;\n  position: fixed;\n  z-index: 200000001;\n  left: 50%;\n  bottom: 5%;\n  transform: translate(-50%);\n  pointer-events: none;\n  transition: opacity 0.15s ease-out;\n}\n\n#iqixn-global-tip.sej-toast-visible {\n  pointer-events: auto;\n}\n\n#iqixn-global-tip .sej-toast-action {\n  pointer-events: auto;\n  border: none;\n  border-radius: 6px;\n  padding: 2px 10px;\n  background: rgba(255, 255, 255, 0.2);\n  color: #fff;\n  font: inherit;\n  letter-spacing: inherit;\n  line-height: 20px;\n  cursor: pointer;\n  transition: background-color 0.12s ease-out;\n}\n\n#iqixn-global-tip .sej-toast-action:hover {\n  background: rgba(255, 255, 255, 0.34);\n}\n");
+			addStyle("\n/* 给用户的提示 */\n#iqixn-global-tip {\n  box-sizing: content-box !important;\n  display: flex;\n  align-items: center;\n  gap: 10px;\n  opacity: 0;\n  height: 25px;\n  line-height: 25px;\n  letter-spacing: 1px;\n  font-size: 14px;\n  color: #fff;\n  padding: 5px 20px;\n  border-radius: 8px;\n  background-color: #666;\n  position: fixed;\n  z-index: 200000001;\n  left: 50%;\n  bottom: 5%;\n  transform: translate(-50%);\n  pointer-events: none;\n  transition: opacity 0.15s ease-out;\n}\n\n#iqixn-global-tip.sej-toast-visible {\n  pointer-events: auto;\n}\n\n/*\n * popover 把提示放进 top layer，才能盖在页面自己的全屏遮罩之上；\n * UA 的 inset:0 / margin:auto / border 会改掉位置和外观，这里只保留自己的坐标与样式。\n * 不支持 popover 的浏览器会忽略这些选择器，仍由 sej-toast-visible 控制显隐。\n */\n#iqixn-global-tip[popover]:not(:popover-open) {\n  display: none;\n}\n\n#iqixn-global-tip[popover] {\n  top: auto;\n  right: auto;\n  margin: 0;\n  border: none;\n}\n\n#iqixn-global-tip .sej-toast-action {\n  pointer-events: auto;\n  border: none;\n  border-radius: 6px;\n  padding: 2px 10px;\n  background: rgba(255, 255, 255, 0.2);\n  color: #fff;\n  font: inherit;\n  letter-spacing: inherit;\n  line-height: 20px;\n  cursor: pointer;\n  transition: background-color 0.12s ease-out;\n}\n\n#iqixn-global-tip .sej-toast-action:hover {\n  background: rgba(255, 255, 255, 0.34);\n}\n");
+			const tipEl = ref(null);
+			function syncTopLayer(visible) {
+				const el = tipEl.value;
+				if (!el || typeof el.showPopover !== "function") return;
+				try {
+					const open = el.matches(":popover-open");
+					if (visible && !open) el.showPopover();
+					else if (!visible && open) el.hidePopover();
+				} catch (e) {}
+			}
+			watch(() => ui.toastVisible, syncTopLayer, { immediate: true });
+			onBeforeUnmount(() => syncTopLayer(false));
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("div", {
 					id: "iqixn-global-tip",
+					ref_key: "tipEl",
+					ref: tipEl,
+					popover: "manual",
 					class: normalizeClass({ "sej-toast-visible": unref(ui).toastVisible }),
 					style: normalizeStyle({ opacity: unref(ui).toastVisible ? 1 : 0 })
 				}, [createBaseVNode("span", null, toDisplayString(unref(ui).toastText), 1), unref(ui).toastActionLabel ? (openBlock(), createElementBlock("button", {
@@ -11543,6 +11601,37 @@
 	function shouldDelayStart(href = location.href) {
 		return DELAY_START_PATTERNS.some((re) => re.test(href));
 	}
+	var MIN_COVERAGE = .9;
+	function isViewportOverlay(el, view) {
+		if (el.tagName !== "IFRAME") return false;
+		const style = view.getComputedStyle(el);
+		if (style.display === "none" || style.visibility === "hidden") return false;
+		if (style.pointerEvents === "none") return false;
+		if (style.position !== "fixed" || !(Number(style.zIndex) >= 1e5)) return false;
+		const rect = el.getBoundingClientRect();
+		return rect.width >= view.innerWidth * MIN_COVERAGE && rect.height >= view.innerHeight * MIN_COVERAGE;
+	}
+	function viewportOverlays(doc, view) {
+		return Array.from(doc.querySelectorAll("iframe")).filter((el) => isViewportOverlay(el, view));
+	}
+	function findSelectionBlocker(doc = document) {
+		const view = doc.defaultView;
+		if (!view) return null;
+		const overlays = viewportOverlays(doc, view);
+		if (!overlays.length) return null;
+		if (typeof doc.elementFromPoint === "function") {
+			const hit = doc.elementFromPoint(view.innerWidth / 2, view.innerHeight / 2);
+			return overlays.includes(hit) ? hit : null;
+		}
+		return overlays[0];
+	}
+	function removeSelectionBlockers(doc = document) {
+		const view = doc.defaultView;
+		if (!view) return 0;
+		const overlays = viewportOverlays(doc, view);
+		overlays.forEach((el) => el.remove());
+		return overlays.length;
+	}
 	var LAZY_SRC_ATTRS = [
 		"data-src",
 		"data-original",
@@ -11681,6 +11770,9 @@
 	}
 	var startTimer = 0;
 	var lazyListeners = null;
+	var promptedBlocker = null;
+	var OVERLAY_PROBE_INTERVAL_MS = 3e3;
+	var OVERLAY_PROBE_MAX_TRIES = 10;
 	async function startScript() {
 		if (window.self !== window.top) return;
 		printBanner();
@@ -11724,11 +11816,33 @@
 		document.addEventListener("selectionchange", onSelectionChange);
 		document.addEventListener("mouseup", onSelectionChange);
 		document.addEventListener("keyup", onSelectionChange);
+		let probedBlocker = null;
+		let probeTries = 0;
+		const probeTimer = setInterval(() => {
+			probeTries += 1;
+			const blocker = findSelectionBlocker();
+			const confirmed = Boolean(blocker) && blocker === probedBlocker;
+			probedBlocker = blocker;
+			if (confirmed) promptOverlayBlocked(blocker);
+			else if (probeTries >= OVERLAY_PROBE_MAX_TRIES) clearInterval(probeTimer);
+		}, OVERLAY_PROBE_INTERVAL_MS);
 		lazyListeners = () => {
+			clearInterval(probeTimer);
 			document.removeEventListener("selectionchange", onSelectionChange);
 			document.removeEventListener("mouseup", onSelectionChange);
 			document.removeEventListener("keyup", onSelectionChange);
 		};
+	}
+	function promptOverlayBlocked(blocker) {
+		if (blocker === promptedBlocker) return;
+		promptedBlocker = blocker;
+		requestBoot();
+		showToast(t("toast.overlayBlocked"), 8e3, {
+			label: t("toast.overlayBlockedAction"),
+			onClick: () => {
+				if (removeSelectionBlockers()) showToast(t("toast.overlayRemoved"));
+			}
+		});
 	}
 	function disarmLazyStart() {
 		if (lazyListeners) {

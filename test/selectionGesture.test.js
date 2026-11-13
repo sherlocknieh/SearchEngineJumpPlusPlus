@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   currentGestureId,
   isPointerPressed,
+  isSelectionDrag,
   trackSelectionPointer,
 } from '../src/core/selectionGesture.js';
 
@@ -75,5 +76,43 @@ describe('selectionGesture 操作序号', () => {
     const before = currentGestureId();
     target.dispatch('keydown', { key: 'ArrowRight' });
     expect(currentGestureId()).toBeGreaterThan(before);
+  });
+});
+
+describe('selectionGesture 拖动判定', () => {
+  it('按下后移动超过阈值才视为拖动', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    expect(isSelectionDrag()).toBe(false);
+    target.dispatch('pointermove', { clientX: 40, clientY: 10 });
+    expect(isSelectionDrag()).toBe(true);
+  });
+
+  it('小位移仍是点击，不算拖动', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    target.dispatch('pointermove', { clientX: 12, clientY: 11 });
+    expect(isSelectionDrag()).toBe(false);
+  });
+
+  it('松手后保留本次拖动结论，供同一操作的 mouseup 判断', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    target.dispatch('pointermove', { clientX: 60, clientY: 10 });
+    target.dispatch('pointerup', { button: 0 });
+    expect(isSelectionDrag()).toBe(true);
+  });
+
+  it('下一次按下重新开始判定', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    target.dispatch('pointermove', { clientX: 60, clientY: 10 });
+    target.dispatch('pointerup', { button: 0 });
+    target.dispatch('pointerdown', { button: 0, clientX: 10, clientY: 10 });
+    expect(isSelectionDrag()).toBe(false);
   });
 });

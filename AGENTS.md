@@ -59,6 +59,8 @@ src/main.js                 只做装配
 
 - 取词：`core/selection.js`（文档选区 + 输入框 `selectionStart/End`）
 - 划词时机：`core/selectionGesture.js` 记录左键是否按住，拖动过程中不弹条，松手后才显示
+- 选区被遮：`core/overlayGuard.js` 识别盖住视口的全屏透明 iframe（广告插屏会吞掉鼠标事件，页面拿不到选区），
+  懒启动期间探测到稳定遮罩时提示，并可按提示一键移除
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
   - `performJump` / `openAllEngines`
@@ -135,6 +137,7 @@ src/main.js                 只做装配
 | 改设置面板          | `SettingPanel.vue` → 对应 `composables/useSettings*` → `components/styles/*.css`                               |
 | 加站点适配          | `data/sites/<站名>.js`（照抄 `bing.js`/`zhihu.js`）→ `core/applyRule.js`                                       |
 | 改跳转/取词         | `core/jump.js` → `core/selection.js` → `core/selectionGesture.js` → `JumpBar.getCurrentKeyword`                |
+| 划词被页面挡住      | `core/overlayGuard.js` → `app/start.js` 的懒启动探测 → `stores/ui.js` 的 `showToast(text, ms, action)`          |
 | 改配置格式/导入导出 | `core/configSchema.js` → `configData.js` → `useConfigIO.js` → `configMerge.js`                                 |
 | 改存储/同步         | `core/storage.js` → `storageBackend.js` → `app/settingsSync.js`                                                |
 | 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
@@ -146,7 +149,7 @@ src/main.js                 只做装配
 ## 测试索引（`test/`，纯 JS）
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
-`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
+`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `overlayGuard` `performJump` `selection` `sharedPointer`
 `selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 

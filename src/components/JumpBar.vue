@@ -31,6 +31,7 @@ import { getSelectedText } from '../core/selection.js';
 import {
   currentGestureId,
   isPointerPressed,
+  isSelectionDrag,
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
@@ -184,6 +185,8 @@ watch(
 
 // 图片模式是临时浮层：点外部、按 Escape 或滚动页面时收起
 function onImageModePointerDown(e) {
+  // 划词模式不在这里收起：拖选时按下就藏、松手又显示会闪一下
+  if (!isImageSearch.value) return;
   // 右键用于重新指定图片，交给 contextmenu 处理，避免先收起再重建
   if (e.button !== 0) return;
   if (!isInsideBar(e)) closeImageMode();
@@ -424,6 +427,10 @@ let showToken = 0;
 let keepOverlayUntil = 0;
 // 本次输入操作里已主动收起，残余的选区变化不应再弹出
 let dismissedGesture = -1;
+// 按下时先不收起：若是重新划词，松手后仍要显示，收起再弹出就是闪烁
+let pendingHide = false;
+// 本次操作已由松手判定过显隐，之后迟到的空选区是拖动中间态，不再改变结果
+let settledGesture = -1;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
@@ -432,11 +439,14 @@ function onSelectionChange(e) {
   if (isImageSearch.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
-  // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出
-  if (dismissedGesture === currentGestureId()) return;
+  // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
+  // 但拖动选区属于重新划词，应照常显示
+  if (dismissedGesture === currentGestureId() && !isSelectionDrag()) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
   if (!text) {
+    // 松手时已判定过显隐：拖动过程中迟到的空选区不能把刚划好的条收掉
+    if (settledGesture === currentGestureId()) return;
     // 点跳转条本身会清掉页面选区，浮层要留到这次点击结束
     if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
     hideFloatBar();
@@ -447,20 +457,33 @@ function onSelectionChange(e) {
   showFloatBar();
 }
 
-// 在页面其他位置按下鼠标即收起划词条；selectionchange 无法区分点击目标
+// 在页面其他位置按下鼠标先挂起收起，等这次操作结束再决定：
+// 重新划词时保持显示，单纯点击空白才收起
 function onOverlayPointerDown(e) {
   if (!barVisible.value) return;
   if (isInsideBar(e)) {
     keepOverlayUntil = performance.now() + 500;
     return;
   }
-  // 图片模式要一并清掉状态，否则下一次长按 active 仍是 true，浮层不会再出现
+  // 图片模式一并清掉状态，否则下一次长按 active 仍是 true，浮层不会再出现
   if (isImageSearch.value) {
     closeImageMode();
     return;
   }
   // 记下本次操作，避免同一击的 mouseup/selectionchange 把刚收起的浮层又拉回来
   dismissedGesture = currentGestureId();
+  pendingHide = true;
+}
+
+// 一次输入操作结束：挂起的收起在确认没有新选区后才生效
+function settleOverlay(e) {
+  if (!pendingHide) return;
+  pendingHide = false;
+  if (!isSelectSearch.value || isImageSearch.value) return;
+  settledGesture = currentGestureId();
+  // 拖动产生了新选区，交给 onSelectionChange 更新内容与位置
+  if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
+  if (e && performance.now() < keepOverlayUntil) return;
   hideFloatBar();
 }
 
@@ -539,6 +562,8 @@ onMounted(async () => {
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
     document.addEventListener('mouseup', onSelectionChange);
     document.addEventListener('keyup', onSelectionChange);
+    document.addEventListener('pointerup', settleOverlay, true);
+    document.addEventListener('pointercancel', settleOverlay, true);
     document.addEventListener('pointerdown', onOverlayPointerDown, true);
   }
 });
@@ -549,6 +574,8 @@ onBeforeUnmount(() => {
   window.removeEventListener('scroll', onImageModeScroll, true);
   window.removeEventListener('scroll', onFloatScroll, true);
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
+  document.removeEventListener('pointerup', settleOverlay, true);
+  document.removeEventListener('pointercancel', settleOverlay, true);
   document.removeEventListener('selectionchange', onDocumentSelectionChange);
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);
