@@ -121,7 +121,7 @@ export const messages = {
     'action.openFailed': '当前内容不是有效链接',
 
     'imageSearch.title': '搜索这张图片',
-    'imageSearch.searchAll': '全部搜索',
+    'imageSearch.openAll': '一键打开',
 
     'config.warningLine1': '此处有更多的设置选项，自由度更高，',
     'config.warningLine2': '但设置错误会导致脚本无法运行',
@@ -273,7 +273,7 @@ export const messages = {
     'action.openFailed': 'The current text is not a valid link',
 
     'imageSearch.title': 'Search this image',
-    'imageSearch.searchAll': 'Search all',
+    'imageSearch.openAll': 'Open all',
 
     'config.warningLine1': 'More advanced options are available here,',
     'config.warningLine2': 'but invalid settings can break the script.',

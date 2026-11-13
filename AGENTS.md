@@ -71,7 +71,7 @@ src/main.js                 只做装配
   `shouldHandleImageContextMenu`（`imageSearch` 选项：`off` / `menu` / `alt`；触屏设备无 Alt 键，`alt` 等同直接触发）
 - 引擎来源：内置「图片」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；没有可用引擎时不接管
 - 浮层：`components/ImageSearchMenu.vue` + `stores/imageSearch.js`，光标定位、点击外部/Escape/滚动关闭；
-  顶部「全部搜索」复用 `openAllEngines`（批量打开强制新标签页），引擎不足两个时不显示
+  顶部「一键打开」复用 `openAllEngines`（批量打开强制新标签页），引擎不足两个时不显示
 
 ## 站点适配（新增站点只改这里）
 

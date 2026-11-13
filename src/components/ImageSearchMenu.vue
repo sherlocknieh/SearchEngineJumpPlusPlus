@@ -95,7 +95,7 @@ onBeforeUnmount(() => {
           <path d="M13.4 2.6 8.6 7.4" />
         </svg>
       </span>
-      <span>{{ t('imageSearch.searchAll') }}</span>
+      <span>{{ t('imageSearch.openAll') }}</span>
     </a>
     <a
       v-for="engine in engines"

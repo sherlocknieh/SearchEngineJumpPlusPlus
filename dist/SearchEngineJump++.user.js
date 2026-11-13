@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2322
+// @version            2026.11.13.2323
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5893,7 +5893,7 @@
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "当前内容不是有效链接",
 			"imageSearch.title": "搜索这张图片",
-			"imageSearch.searchAll": "全部搜索",
+			"imageSearch.openAll": "一键打开",
 			"config.warningLine1": "此处有更多的设置选项，自由度更高，",
 			"config.warningLine2": "但设置错误会导致脚本无法运行",
 			"config.parseFailed": "JSON 解析失败",
@@ -6030,7 +6030,7 @@
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "The current text is not a valid link",
 			"imageSearch.title": "Search this image",
-			"imageSearch.searchAll": "Search all",
+			"imageSearch.openAll": "Open all",
 			"config.warningLine1": "More advanced options are available here,",
 			"config.warningLine2": "but invalid settings can break the script.",
 			"config.parseFailed": "Failed to parse JSON",
@@ -11316,7 +11316,7 @@
 					class: "sej-engine sej-image-menu-item sej-image-menu-all",
 					role: "menuitem",
 					onClick: withModifiers(onJumpAll, ["prevent", "stop"])
-				}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.searchAll")), 1)])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
+				}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.openAll")), 1)])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
 					return openBlock(), createElementBlock("a", {
 						key: engine.name + engine.url,
 						class: "sej-engine sej-image-menu-item",
