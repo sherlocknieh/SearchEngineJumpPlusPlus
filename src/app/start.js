@@ -5,6 +5,7 @@ import { DELAY_START_MS, shouldDelayStart } from './delay.js';
 import { boot } from './lifecycle.js';
 import { registerMenu } from './menu.js';
 import { getSelectedText } from '../core/selection.js';
+import { armImageContextMenu } from './imageContextMenu.js';
 
 let startTimer = 0;
 let lazyListeners = null;
@@ -27,6 +28,9 @@ export async function startScript() {
 
   // 菜单命令要在挂载之前就可用：延迟启动时先按需启动，再打开设置面板
   registerMenu(requestBoot);
+
+  // 右键图片搜图同样要在挂载前就可用：命中时先启动脚本再弹浮层
+  armImageContextMenu(requestBoot);
 
   armStart();
 }

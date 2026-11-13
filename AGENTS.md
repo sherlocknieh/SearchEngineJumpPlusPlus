@@ -64,6 +64,14 @@ src/main.js                 只做装配
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
+## 右键图片搜图
+
+- 入口：`app/imageContextMenu.js` 在 `document` 捕获阶段接管 `contextmenu`（只注册一次，懒启动时先 `requestBoot` 再弹浮层）
+- 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`currentSrc` → `src` → 懒加载 `data-*`）与
+  `shouldHandleImageContextMenu`（`imageSearch` 选项：`off` / `menu` / `alt`；触屏设备无 Alt 键，`alt` 等同直接触发）
+- 引擎来源：内置「图片」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；没有可用引擎时不接管
+- 浮层：`components/ImageSearchMenu.vue` + `stores/imageSearch.js`，光标定位、点击外部/Escape/滚动关闭
+
 ## 站点适配（新增站点只改这里）
 
 - `src/data/sites/*.js` 被 `import.meta.glob` 自动收录，文件名参与排序，无需注册
@@ -118,12 +126,13 @@ src/main.js                 只做装配
 | 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
 | 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                  |
 | 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                             |
+| 改右键搜图          | `app/imageContextMenu.js` → `core/imageSearch.js` → `components/ImageSearchMenu.vue`                           |
 | 发布                | `scripts/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
 
 ## 测试索引（`test/`，纯 JS）
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
-`engineUrl` `eventIsolation` `favicon` `jump` `matchRule` `performJump` `selection` `sharedPointer`
+`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useFixedTop` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 
@@ -134,6 +143,7 @@ src/main.js                 只做装配
 - `%s` 是关键词占位符（可多次出现），不要做 URL 编码，否则替换逻辑失效
 - 所有配置读写必须经过 `configSchema` / `configData`，避免多处解释不一致
 - 新增默认引擎：`src/data/engines.json`；新增站点适配：`src/data/sites/`
+- 内置分类（`actions` / `image`）不可删除，`isBuiltinCategory` 统一判断；`image` 分类缺失时由 `normalizeConfig` 补回
 - 删除操作默认走 `useUndoDelete`（可撤销）
 - 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
 - 发布前会跑 lint/test，改完先本地 `pnpm test`

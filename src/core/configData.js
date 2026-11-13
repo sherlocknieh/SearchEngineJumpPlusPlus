@@ -13,8 +13,27 @@ export const ENGINE_ACTIONS = ['copy', 'open'];
 /** 内置的快捷动作分类键名：始终存在，只能移动和隐藏 */
 export const BUILTIN_CATEGORY_KEY = 'actions';
 
+/** 内置的图片搜索分类键名：供右键图片搜图使用，缺失时自动补回 */
+export const IMAGE_CATEGORY_KEY = 'image';
+
+/** 内置分类只能编辑内容与排序，不能删除，避免依赖它的功能失去入口 */
+const BUILTIN_CATEGORY_KEYS = [BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY];
+
 export function isBuiltinCategory(category) {
-  return category?.key === BUILTIN_CATEGORY_KEY;
+  return BUILTIN_CATEGORY_KEYS.includes(category?.key);
+}
+
+/**
+ * 右键图片搜图的触发方式：
+ * off 关闭；menu 右键图片直接弹出；alt 按 Alt 再右键图片才弹出，保留原生菜单。
+ */
+export const IMAGE_SEARCH_MODES = ['off', 'menu', 'alt'];
+
+/** 默认用 Alt+右键，既不抢占原生右键菜单，又能直接使用 */
+export const DEFAULT_IMAGE_SEARCH_MODE = 'alt';
+
+export function normalizeImageSearchMode(value) {
+  return IMAGE_SEARCH_MODES.includes(value) ? value : DEFAULT_IMAGE_SEARCH_MODE;
 }
 
 export function normalizeEngineAction(value) {

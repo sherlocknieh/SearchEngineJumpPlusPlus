@@ -38,6 +38,13 @@ describe('createDefaultConfig', () => {
     expect(config.fixedTop).toBe(true);
     expect(config.selectSearchInInput).toBe(true);
   });
+
+  it('默认用 Alt+右键搜图，并内置图片分类', () => {
+    const config = createDefaultConfig();
+    expect(config.imageSearch).toBe('alt');
+    expect(config.engineCategories.some(([, key]) => key === 'image')).toBe(true);
+    expect(config.engineList.image.length).toBeGreaterThan(0);
+  });
 });
 
 describe('normalizeConfig', () => {
@@ -154,6 +161,35 @@ describe('normalizeConfig', () => {
   it('分类损坏时整体回退默认分类', () => {
     const result = normalizeConfig({ engineCategories: 'broken' }, defaults);
     expect(result.engineCategories).toEqual(defaults.engineCategories);
+  });
+
+  it('右键搜图模式非法时回退默认值，合法值原样保留', () => {
+    expect(normalizeConfig({ imageSearch: 'always' }, defaults).imageSearch).toBe('alt');
+    expect(normalizeConfig({ imageSearch: 'off' }, defaults).imageSearch).toBe('off');
+    expect(normalizeConfig({ imageSearch: 'menu' }, defaults).imageSearch).toBe('menu');
+  });
+
+  it('旧配置缺少图片分类时补回默认分类与引擎', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['搜索', 'web', true]],
+        engineList: { web: [{ name: 'A', url: 'https://a.test/?q=%s' }] },
+      },
+      defaults,
+    );
+    expect(result.engineCategories.some(([, key]) => key === 'image')).toBe(true);
+    expect(result.engineList.image).toEqual(defaults.engineList.image);
+  });
+
+  it('用户清空图片引擎后保持为空，不强行补回', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['图片', 'image', false]],
+        engineList: { image: [] },
+      },
+      defaults,
+    );
+    expect(result.engineList.image).toEqual([]);
   });
 });
 

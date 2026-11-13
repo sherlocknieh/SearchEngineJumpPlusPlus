@@ -139,6 +139,8 @@ const GENERIC_KEYWORD_PARAMS = [
   'key',
   'k',
   'text',
+  // 识图站点（TinEye / SauceNAO 等）用 url 传图片链接
+  'url',
 ];
 
 const GENERIC_SEARCH_PATH = /^\/(?:search|results?|web|find|word)\b/i;
@@ -148,13 +150,16 @@ const SITE_RULES = [
   { host: /(^|\.)google\.[^/]+$/i, path: /^\/search\b/i, params: ['q'] },
   {
     host: /(^|\.)bing\.com$/i,
-    path: /^\/(?:search|images\/search|dict\/search)\b/i,
-    params: ['q'],
+    path: /^\/(?:search|images\/search|images\/searchbyimage|dict\/search)\b/i,
+    params: ['q', 'imgurl'],
   },
+  // 识图引擎：关键词是图片链接，参数名各不相同
+  { host: /^lens\.google\.com$/i, params: ['url'] },
+  { host: /^graph\.baidu\.com$/i, params: ['image'] },
   { host: /(^|\.)baidu\.com$/i, path: /^\/(?:s|baidu)\b/i, params: ['wd', 'word'] },
   { host: /(^|\.)sogou\.com$/i, params: ['query', 'keyword'] },
   { host: /(^|\.)so\.com$/i, params: ['q'] },
-  { host: /(^|\.)yandex\.[^/]+$/i, params: ['text'] },
+  { host: /(^|\.)yandex\.[^/]+$/i, params: ['text', 'url'] },
   { host: /(^|\.)duckduckgo\.com$/i, params: ['q'] },
   { host: /^search\.bilibili\.com$/i, params: ['keyword'] },
   { host: /(^|\.)youtube\.com$/i, path: /^\/results\b/i, params: ['search_query'] },

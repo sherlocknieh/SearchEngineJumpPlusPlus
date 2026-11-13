@@ -12,6 +12,7 @@
     ["影视", "video", true],
     ["书籍", "books", true],
     ["工具", "tools", true],
+    ["图片", "image", false],
     ["资源", "download", true],
     ["资源+", "download+", false],
     ["国产AI", "ai+", false]
@@ -106,6 +107,18 @@
         "url": "https://search.kongfz.com/product_result/?key=%s&order=100",
         "favicon": "https://www.kongfz.com/img/pclogo.jpg",
         "faviconData": "data:image/webp;base64,UklGRtoDAABXRUJQVlA4IM4DAADwFQCdASpAAEAAPjEWiUKiISEYDfyAIAMEsQBllO0eh/dOUoAC8htk/MB+p/UT3kD0AP0r9Mz2Nf3I/ar2qLmT0UfZv1wzh31r+zfj3+W+oS/sH44/wDMMvkX+Z3TP0G/8B+WnMDRd/477gPip/x/Kt85/6z3A/41/PP9B/Zv3S/wnageyT+zKF+qlMTcgo4QRnRU24DfqGtyFvEaPmwYHrYXZneb3rO8pj1BohCaAwmCdWFNKZuSAAP774XvrY788AH/iQv+JC/4kL/hAgCdmwa9c8tgd4O2wnQ2u03UHD//If+7Nei2m4p/7x3hRV1dklt2CD1zrdT7DKgPZ+5uhfwz8G3ZKHxQvumn4/44jd38jVsBit6vFANpu1PjMx5XtdRyTyAPbeyCEUvviLZiRlGvvDhWXeqgmN57zrirsEe/0lU32zWRxJVRiT3UV6gRIbc8UZc5yJoRHXOHNbR4ShSnh6P04rxGC4r2OwaXyw78HPkqyZlDehvwMw6IL2A+typZIM3/z+2XeSbsX/krFjZ61q9//+S3FfYahksMj1v4zujhRV/+3qX6v5/6bwv+AlqY6bIPTcZNMNVhZhGOq3VzCm4186d0d/4Ovyf6Y5jVDNh7cMENw81HioZGn6gjSsZX0I5dGtmf/C0H8ed/8afH97fKtNB/wHx0spFtp3LanTOvfUb1wCG1jsXsBYaQpEbTJgBe/M8MDQdR6OWnLChTkgFkNIF0QI6NmVA/zLNADpHMGr/2jXu4LpNrG/hITh+T9tekgG5wqtI/74gt8Tt17sUVuGfpXztBFApITtsWYx74WX3hKzjaS36fN6B/rxQEVlCwfuS16cfr1I+Wka+GZfnsE6binSKWGG8QbMxPtvqTwm2UjnJXb9Wv//y8d8etpHjcllINn7LW7olojqO5WatHuVvkal1v+FIvC4fCS7zrEnTonfdaP0Rw8NIBdFaKowb2P3P3txQriCa29JUDpWBRcIvQrOnkho36bGuIWrOoQ3dq3Cgvyp4e5svt3aKQXoOpHlOvXOXw27m/Ol6YT+JQ1yMymKihubh5UCQi9Jz4R81h8ED0ngLueNA1ZT+K/QoZP/tpbHtwB2C3eXq6Zqq8QBe64uV2pxucjz7jzfzpYUgKFQ2IwJsTDyIv+M11hQH7pEYK7FDVxzPiPc2TYuEyws8LizurRGtKmhbpz9HgQscY/KjPEPmWUak/WkpznWtwmiOW6WRFF95y6aAqC3zYlHZB89wNi06INnR4Z/4Sv+unIreNYu3kE5BUntpN9Hx34xVN0AAAAAA=="
+      }
+    ],
+    "image": [
+      {
+        "name": "Google Lens",
+        "url": "https://lens.google.com/uploadbyurl?url=%s",
+        "favicon": "https://www.google.com/favicon.ico"
+      },
+      {
+        "name": "Yandex Image",
+        "url": "https://yandex.ru/images/search?rpt=imageview&url=%s",
+        "favicon": "https://yandex.ru/favicon.ico"
       }
     ],
     "tools": [

@@ -8,13 +8,16 @@ import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
 import {
   BUILTIN_CATEGORY_KEY,
+  DEFAULT_IMAGE_SEARCH_MODE,
   DEFAULT_OPEN_TARGET,
+  IMAGE_CATEGORY_KEY,
   isPlainObject,
   normalizeCategories,
   normalizeEngine,
   normalizeDefaultOpenTarget,
   normalizeEngineAction,
   normalizeEngineTarget,
+  normalizeImageSearchMode,
 } from './configData.js';
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
@@ -24,6 +27,7 @@ export const OPTION_KEYS = [
   'selectSearch',
   'selectSearchInInput',
   'defaultOpenTarget',
+  'imageSearch',
   'language',
 ];
 
@@ -39,6 +43,8 @@ export function createDefaultConfig() {
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开
     defaultOpenTarget: DEFAULT_OPEN_TARGET,
+    // 默认 Alt+右键图片搜图，不抢占原生右键菜单
+    imageSearch: DEFAULT_IMAGE_SEARCH_MODE,
     // 默认跟随浏览器/系统语言
     language: 'auto',
     // [名称, 键名, 是否在跳转条中显示]
@@ -67,6 +73,11 @@ export function normalizeConfig(raw, defaults) {
       settings[key] = normalizeDefaultOpenTarget(data[key] ?? defaults[key]);
       continue;
     }
+    // 右键搜图同样是枚举值：off / menu / alt
+    if (key === 'imageSearch') {
+      settings[key] = normalizeImageSearchMode(data[key] ?? defaults[key]);
+      continue;
+    }
     settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];
   }
   // 语言偏好：auto 跟随浏览器，否则限定在支持的语言内
@@ -91,6 +102,8 @@ export function normalizeConfig(raw, defaults) {
   // 内置快捷动作分类始终存在：旧配置缺少时补回，分类被删除时重新创建；
   // 内置动作也按 action 补齐，避免手工改配置或旧数据丢失快捷入口
   ensureBuiltinActions(categories, engineList);
+  // 图片分类是右键搜图的入口，同样始终存在
+  ensureImageCategory(categories, engineList);
 
   settings.engineCategories = categories;
   settings.engineList = engineList;
@@ -119,6 +132,27 @@ function ensureBuiltinActions(categories, engineList) {
     if (!presentActions.has(engine.action)) engines.push({ ...engine });
   }
   engineList[BUILTIN_CATEGORY_KEY] = engines;
+}
+
+/**
+ * 保证「图片」分类存在，右键搜图才有可用的引擎列表。
+ * 只在分类缺失时补回默认分类与默认识图引擎；用户清空引擎后保持为空，
+ * 此时右键不接管，原生菜单照常可用。
+ */
+function ensureImageCategory(categories, engineList) {
+  if (categories.some(([, key]) => key === IMAGE_CATEGORY_KEY)) return;
+
+  const defaultCategory = defaultConfig.engineCategories.find(
+    ([, key]) => key === IMAGE_CATEGORY_KEY,
+  );
+  categories.push([
+    defaultCategory?.[0] || IMAGE_CATEGORY_KEY,
+    IMAGE_CATEGORY_KEY,
+    defaultCategory?.[2] ?? true,
+  ]);
+  engineList[IMAGE_CATEGORY_KEY] = (defaultConfig.engineList[IMAGE_CATEGORY_KEY] || []).map(
+    (engine) => ({ ...engine }),
+  );
 }
 
 /**

@@ -207,6 +207,24 @@ describe('analyzeSearchUrl', () => {
     expect(analyzeSearchUrl('https://example.com/search$post$q').status).toBe('ready');
   });
 
+  it('识图链接把图片地址替换为 %s', () => {
+    expect(analyzeSearchUrl('https://lens.google.com/uploadbyurl?url=https%3A%2F%2Fa.test%2Fx.png'))
+      .toEqual({
+        url: 'https://lens.google.com/uploadbyurl?url=%s',
+        status: 'replaced',
+      });
+    expect(
+      analyzeSearchUrl('https://www.bing.com/images/searchbyimage/upload?cbir=sbi&imgurl=https%3A%2F%2Fa.test%2Fx.png'),
+    ).toEqual({
+      url: 'https://www.bing.com/images/searchbyimage/upload?cbir=sbi&imgurl=%s',
+      status: 'replaced',
+    });
+    expect(analyzeSearchUrl('https://tineye.com/search?url=https%3A%2F%2Fa.test%2Fx.png')).toEqual({
+      url: 'https://tineye.com/search?url=%s',
+      status: 'replaced',
+    });
+  });
+
   it('搜索特征明显但认不出关键词时返回 manual', () => {
     // hash 路由
     expect(analyzeSearchUrl('https://music.163.com/#/search/m/?s=%E5%A4%A9%E6%B0%94').status).toBe(
