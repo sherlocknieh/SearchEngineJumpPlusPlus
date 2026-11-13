@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2323
+// @version            2026.11.13.2347
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -4001,11 +4001,6 @@
 	function createTextVNode(text = " ", flag = 0) {
 		return createVNode(Text, null, text, flag);
 	}
-	function createStaticVNode(content, numberOfNodes) {
-		const vnode = createVNode(Static, null, content);
-		vnode.staticCount = numberOfNodes;
-		return vnode;
-	}
 	function createCommentVNode(text = "", asBlock = false) {
 		return asBlock ? (openBlock(), createBlock(Comment, null, text)) : createVNode(Comment, null, text);
 	}
@@ -4861,21 +4856,6 @@
 	}
 	function closeSettingPanel() {
 		ui.settingPanelOpen = false;
-	}
-	var imageSearch = reactive({
-		open: false,
-		x: 0,
-		y: 0,
-		imageUrl: ""
-	});
-	function openImageSearch({ x, y, imageUrl }) {
-		imageSearch.x = x;
-		imageSearch.y = y;
-		imageSearch.imageUrl = imageUrl;
-		imageSearch.open = true;
-	}
-	function closeImageSearch() {
-		imageSearch.open = false;
 	}
 	var inlineStyleBlocked = null;
 	var cspNonce = null;
@@ -5820,11 +5800,8 @@
 			"settings.defaultOpenTargetTip": "引擎未单独设置打开方式时使用",
 			"settings.defaultOpenTargetBlank": "新标签页",
 			"settings.defaultOpenTargetSelf": "当前页",
-			"settings.imageSearch": "右键搜图",
-			"settings.imageSearchTip": "在图片上右键（手机长按）时用「图片」分类的引擎搜索图片链接；Alt 模式在触屏设备上等同直接触发",
-			"settings.imageSearchOff": "关闭",
-			"settings.imageSearchMenu": "右键图片",
-			"settings.imageSearchAlt": "Alt+右键图片",
+			"settings.imageSearch": "长按搜图",
+			"settings.imageSearchTip": "按住图片（手机长按）时用「图片」分类的引擎搜索图片链接，支持背景图",
 			"settings.language": "语言",
 			"settings.languageAuto": "跟随浏览器",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
@@ -5892,8 +5869,6 @@
 			"action.opened": "已打开链接",
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "当前内容不是有效链接",
-			"imageSearch.title": "搜索这张图片",
-			"imageSearch.openAll": "一键打开",
 			"config.warningLine1": "此处有更多的设置选项，自由度更高，",
 			"config.warningLine2": "但设置错误会导致脚本无法运行",
 			"config.parseFailed": "JSON 解析失败",
@@ -5957,11 +5932,8 @@
 			"settings.defaultOpenTargetTip": "Used when an engine has no open mode of its own",
 			"settings.defaultOpenTargetBlank": "New tab",
 			"settings.defaultOpenTargetSelf": "Current tab",
-			"settings.imageSearch": "Image search",
-			"settings.imageSearchTip": "Search an image URL with the Image category engines on right-click (long-press on phones); Alt mode triggers directly on touch devices",
-			"settings.imageSearchOff": "Off",
-			"settings.imageSearchMenu": "Right-click image",
-			"settings.imageSearchAlt": "Alt + right-click",
+			"settings.imageSearch": "Long-press search",
+			"settings.imageSearchTip": "Hold an image (long-press on phones) to search its URL with the Image category engines; background images are supported",
 			"settings.language": "Language",
 			"settings.languageAuto": "Auto (browser)",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
@@ -6029,8 +6001,6 @@
 			"action.opened": "Link opened",
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "The current text is not a valid link",
-			"imageSearch.title": "Search this image",
-			"imageSearch.openAll": "Open all",
 			"config.warningLine1": "More advanced options are available here,",
 			"config.warningLine2": "but invalid settings can break the script.",
 			"config.parseFailed": "Failed to parse JSON",
@@ -6164,13 +6134,10 @@
 	function isBuiltinCategory(category) {
 		return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 	}
-	var IMAGE_SEARCH_MODES = [
-		"off",
-		"menu",
-		"alt"
-	];
-	function normalizeImageSearchMode(value) {
-		return IMAGE_SEARCH_MODES.includes(value) ? value : "alt";
+	function normalizeImageSearch(value) {
+		if (typeof value === "boolean") return value;
+		if (typeof value === "string") return value !== "off";
+		return true;
 	}
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
@@ -6234,7 +6201,7 @@
 			selectSearchInInput: true,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
-			imageSearch: "alt",
+			imageSearch: true,
 			language: "auto",
 			engineCategories: engines_default.engineCategories.map((entry) => entry.slice()),
 			engineList: Object.fromEntries(Object.entries(engines_default.engineList).map(([key, engines]) => [key, engines.map((engine) => ({ ...engine }))]))
@@ -6251,7 +6218,7 @@
 				continue;
 			}
 			if (key === "imageSearch") {
-				settings[key] = normalizeImageSearchMode(data[key] ?? defaults[key]);
+				settings[key] = normalizeImageSearch(data[key] ?? defaults[key]);
 				continue;
 			}
 			settings[key] = typeof data[key] === "boolean" ? data[key] : defaults[key];
@@ -7031,6 +6998,17 @@
 		if (isOwnUiSelection(selection)) return "";
 		return selection.toString();
 	}
+	var imageSearch = reactive({
+		active: false,
+		imageUrl: ""
+	});
+	function openImageSearch(imageUrl) {
+		imageSearch.imageUrl = imageUrl;
+		imageSearch.active = true;
+	}
+	function closeImageSearch() {
+		imageSearch.active = false;
+	}
 	var FIXED_GAP = 8;
 	var VIEWPORT_GAP = 4;
 	var NARROW_BAR_MAX = 640;
@@ -7658,8 +7636,8 @@
 		const { data } = await resolveFavicon(source);
 		return data || source;
 	}
-	var _hoisted_1$11 = ["src"];
-	var _sfc_main$13 = {
+	var _hoisted_1$10 = ["src"];
+	var _sfc_main$12 = {
 		__name: "EngineItem",
 		props: {
 			engine: {
@@ -7686,7 +7664,7 @@
 					class: "sej-engine-icon",
 					src: iconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_1$11)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(__props.engine.name)), 1)]);
+				}, null, 8, _hoisted_1$10)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(__props.engine.name)), 1)]);
 			};
 		}
 	};
@@ -7740,16 +7718,16 @@
 			}
 		};
 	}
-	var _hoisted_1$10 = [
+	var _hoisted_1$9 = [
 		"aria-expanded",
 		"title",
 		"onKeydown"
 	];
-	var _hoisted_2$9 = {
+	var _hoisted_2$8 = {
 		key: 0,
 		class: "sej-category-icon"
 	};
-	var _hoisted_3$9 = {
+	var _hoisted_3$8 = {
 		key: 0,
 		class: "sej-category-search-icon",
 		"aria-hidden": "true"
@@ -7758,7 +7736,7 @@
 	var pinnedCategory = null;
 	var openCategory = null;
 	var anchorSeq = 0;
-	var _sfc_main$12 = {
+	var _sfc_main$11 = {
 		__name: "EngineCategory",
 		props: {
 			name: {
@@ -8042,7 +8020,7 @@
 					title: pinned.value ? unref(t)("jump.searchAll", { name: __props.name }) : null,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
-				}, [__props.showIcon || pinned.value ? (openBlock(), createElementBlock("span", _hoisted_2$9, [pinned.value ? (openBlock(), createElementBlock("span", _hoisted_3$9, [..._cache[2] || (_cache[2] = [createBaseVNode("svg", {
+				}, [__props.showIcon || pinned.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("span", _hoisted_3$8, [..._cache[2] || (_cache[2] = [createBaseVNode("svg", {
 					viewBox: "0 0 16 16",
 					"aria-hidden": "true"
 				}, [
@@ -8054,7 +8032,7 @@
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_4$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$10), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
+				}, null, 8, _hoisted_4$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
 					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
@@ -8074,7 +8052,7 @@
 					onMouseenter: _cache[0] || (_cache[0] = ($event) => show()),
 					onMouseleave: _cache[1] || (_cache[1] = ($event) => scheduleHide())
 				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.engines, (engine) => {
-					return openBlock(), createBlock(_sfc_main$13, {
+					return openBlock(), createBlock(_sfc_main$12, {
 						key: engine.name + engine.url,
 						engine,
 						onJump: onEngineJump
@@ -8083,9 +8061,9 @@
 			};
 		}
 	};
-	var _hoisted_1$9 = ["title", "aria-label"];
+	var _hoisted_1$8 = ["title", "aria-label"];
 	var SETTING = "<svg width=\"16\" height=\"16\" class=\"icon\" id=\"sej-setting-button\" viewBox=\"0 0 512 512\" aria-hidden=\"true\" focusable=\"false\"><path d=\"M262.29 192.31a64 64 0 1057.4 57.4 64.13 64.13 0 00-57.4-57.4zM416.39 256a154.34 154.34 0 01-1.53 20.79l45.21 35.46a10.81 10.81 0 012.45 13.75l-42.77 74a10.81 10.81 0 01-13.14 4.59l-44.9-18.08a16.11 16.11 0 00-15.17 1.75A164.48 164.48 0 01325 400.8a15.94 15.94 0 00-8.82 12.14l-6.73 47.89a11.08 11.08 0 01-10.68 9.17h-85.54a11.11 11.11 0 01-10.69-8.87l-6.72-47.82a16.07 16.07 0 00-9-12.22 155.3 155.3 0 01-21.46-12.57 16 16 0 00-15.11-1.71l-44.89 18.07a10.81 10.81 0 01-13.14-4.58l-42.77-74a10.8 10.8 0 012.45-13.75l38.21-30a16.05 16.05 0 006-14.08c-.36-4.17-.58-8.33-.58-12.5s.21-8.27.58-12.35a16 16 0 00-6.07-13.94l-38.19-30A10.81 10.81 0 0149.48 186l42.77-74a10.81 10.81 0 0113.14-4.59l44.9 18.08a16.11 16.11 0 0015.17-1.75A164.48 164.48 0 01187 111.2a15.94 15.94 0 008.82-12.14l6.73-47.89A11.08 11.08 0 01213.23 42h85.54a11.11 11.11 0 0110.69 8.87l6.72 47.82a16.07 16.07 0 009 12.22 155.3 155.3 0 0121.46 12.57 16 16 0 0015.11 1.71l44.89-18.07a10.81 10.81 0 0113.14 4.58l42.77 74a10.8 10.8 0 01-2.45 13.75l-38.21 30a16.05 16.05 0 00-6.05 14.08c.33 4.14.55 8.3.55 12.47z\" fill=\"none\" stroke=\"var(--font-color-qxin)\" stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"42\"/></svg>";
-	var _sfc_main$11 = {
+	var _sfc_main$10 = {
 		__name: "SettingButton",
 		setup(__props) {
 			addStyle("\n#setBtn {\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  width: 30px;\n  height: 30px;\n  flex: 0 0 auto;\n  padding: 0;\n  border-radius: 8px;\n  align-items: center;\n  justify-content: center;\n  cursor: pointer;\n  display: flex;\n  opacity: 0.65;\n}\n\nspan#setBtn:hover {\n  opacity: 1;\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\nspan#setBtn:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n#setBtn svg {\n  width: 16px;\n  height: 16px;\n  display: block;\n}\n\n#setBtn:focus-visible {\n  opacity: 1;\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n");
@@ -8099,20 +8077,20 @@
 					onClick: _cache[0] || (_cache[0] = (...args) => unref(openSettingPanel) && unref(openSettingPanel)(...args)),
 					onKeydown: [_cache[1] || (_cache[1] = withKeys(withModifiers((...args) => unref(openSettingPanel) && unref(openSettingPanel)(...args), ["prevent"]), ["enter"])), _cache[2] || (_cache[2] = withKeys(withModifiers((...args) => unref(openSettingPanel) && unref(openSettingPanel)(...args), ["prevent"]), ["space"]))],
 					innerHTML: SETTING
-				}, null, 40, _hoisted_1$9);
+				}, null, 40, _hoisted_1$8);
 			};
 		}
 	};
-	var _hoisted_1$8 = ["aria-hidden"];
-	var _hoisted_2$8 = { class: "sej-category-title" };
-	var _hoisted_3$8 = ["title", "aria-label"];
+	var _hoisted_1$7 = ["aria-hidden"];
+	var _hoisted_2$7 = { class: "sej-category-title" };
+	var _hoisted_3$7 = ["title", "aria-label"];
 	var _hoisted_4$7 = ["title", "aria-label"];
 	var PAGE_STEP_RATIO = .875;
 	var PAGE_SCROLL_DURATION = 150;
-	var _sfc_main$10 = {
+	var _sfc_main$9 = {
 		__name: "JumpBar",
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n/*\n * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
 			const settings = useSettings();
 			const data = settings.settingData;
 			const matchedRule = settings.getMatchedRule();
@@ -8122,6 +8100,8 @@
 			const inlineStyleBlocked = isInlineStyleBlocked();
 			const ready = ref(false);
 			const isSelectSearch = ref(false);
+			const isImageSearch = ref(false);
+			const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value);
 			const selectionText = ref("");
 			const barVisible = ref(false);
 			const containerEl = ref(null);
@@ -8131,7 +8111,7 @@
 			const { start: startStackSync, stop: stopStackSync } = useStackSync();
 			const { constrainBarToViewport, onScroll, onViewportResize, captureOriginTop, scheduleConstrainCheck, dispose: disposeFixedTop } = useFixedTop({
 				containerEl,
-				isSelectSearch,
+				isSelectSearch: isOverlay,
 				inlineStyleBlocked,
 				sitePatches,
 				matchedRule,
@@ -8147,12 +8127,13 @@
 			let insertTarget = null;
 			let insertPosition = "beforeend";
 			let resolvedStyle = "";
-			const categories = computed(() => data.engineCategories.filter(([, , enabled]) => enabled).map(([name, key]) => ({
+			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isImageSearch.value ? key === IMAGE_CATEGORY_KEY : enabled).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
 				engines: (data.engineList[key] || []).filter((engine) => !engine.disable)
 			})).filter((category) => category.engines.length));
 			function getCurrentKeyword() {
+				if (isImageSearch.value) return imageSearch.imageUrl;
 				if (isSelectSearch.value) return selectionText.value;
 				return extractKeyword(inputTarget);
 			}
@@ -8164,9 +8145,26 @@
 					return;
 				}
 				performJump(engine, keyword, data);
+				if (isImageSearch.value) closeImageMode();
 			}
 			function onJumpAll(engines) {
 				openAllEngines(engines, getCurrentKeyword(), data);
+				if (isImageSearch.value) closeImageMode();
+			}
+			function closeImageMode() {
+				barVisible.value = false;
+				closeImageSearch();
+			}
+			watch(() => imageSearch.active, (active) => {
+				if (active === isImageSearch.value) return;
+				setTimeout(() => requestRestart(), 0);
+			});
+			function onImageModePointerDown(e) {
+				const path = e.composedPath?.();
+				if (!(path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target))) closeImageMode();
+			}
+			function onImageModeKeydown(e) {
+				if (e.key === "Escape") closeImageMode();
 			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
@@ -8220,7 +8218,15 @@
 				insertPosition = "beforeend";
 				return true;
 			}
+			function initImageSearch() {
+				isImageSearch.value = true;
+				inputTarget = () => imageSearch.imageUrl;
+				insertTarget = document.body;
+				insertPosition = "beforeend";
+				return true;
+			}
 			function initTargets() {
+				if (imageSearch.active) return initImageSearch();
 				if (data.selectSearch && matchedRule?.enabled && matchedRule.selectSearchPriority) return initSelectSearch();
 				if (matchedRule?.enabled) {
 					inputTarget = getInputTarget(matchedRule);
@@ -8238,7 +8244,7 @@
 				return false;
 			}
 			function injectHost() {
-				if (isSelectSearch.value) {
+				if (isOverlay.value) {
 					insertHost(document.body, "beforeend");
 					return;
 				}
@@ -8259,6 +8265,7 @@
 				settings.barMounted = true;
 				ready.value = true;
 				if (isSelectSearch.value) onSelectionChange();
+				if (isImageSearch.value) barVisible.value = true;
 				if (matchedRule) {
 					applyStylish(matchedRule);
 					resolvedStyle = resolveRuleStyle(matchedRule, data) || "";
@@ -8274,17 +8281,25 @@
 				window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
 				window.addEventListener("pointerup", endScrollDrag);
 				window.addEventListener("pointercancel", endScrollDrag);
+				if (isImageSearch.value) {
+					document.addEventListener("pointerdown", onImageModePointerDown, true);
+					document.addEventListener("keydown", onImageModeKeydown, true);
+					window.addEventListener("scroll", closeImageMode, true);
+				}
 				if (isSelectSearch.value) {
 					document.addEventListener("selectionchange", onSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
 				}
-				if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isSelectSearch.value) {
+				if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isOverlay.value) {
 					captureOriginTop();
 					window.addEventListener("scroll", onScroll);
 				}
 			});
 			onBeforeUnmount(() => {
+				document.removeEventListener("pointerdown", onImageModePointerDown, true);
+				document.removeEventListener("keydown", onImageModeKeydown, true);
+				window.removeEventListener("scroll", closeImageMode, true);
 				document.removeEventListener("selectionchange", onSelectionChange);
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
@@ -8305,10 +8320,12 @@
 					ref: containerEl,
 					id: "sej-container",
 					class: normalizeClass([containerClass.value, {
-						selectSearch: isSelectSearch.value,
-						"sej-select-visible": barVisible.value
+						selectSearch: isOverlay.value,
+						"sej-select-visible": barVisible.value,
+						"sej-image-search": isImageSearch.value
 					}]),
-					"aria-hidden": isSelectSearch.value && !barVisible.value ? "true" : void 0
+					"aria-hidden": isOverlay.value && !barVisible.value ? "true" : void 0,
+					style: normalizeStyle(isImageSearch.value ? { "--sej-image-thumb": `url(${unref(imageSearch).imageUrl})` } : void 0)
 				}, [createBaseVNode("div", {
 					class: "sej-scroll-viewport",
 					onWheel: onBarWheel
@@ -8322,13 +8339,13 @@
 						onDragstart: _cache[1] || (_cache[1] = withModifiers(() => {}, ["prevent"])),
 						onScrollPassive: _cache[2] || (_cache[2] = (...args) => unref(updateScrollHints) && unref(updateScrollHints)(...args))
 					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(categories.value, (category) => {
-						return openBlock(), createElementBlock(Fragment, { key: category.key }, [unref(inlineStyleBlocked) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createBaseVNode("span", _hoisted_2$8, toDisplayString(category.name), 1), (openBlock(true), createElementBlock(Fragment, null, renderList(category.engines, (engine) => {
-							return openBlock(), createBlock(_sfc_main$13, {
+						return openBlock(), createElementBlock(Fragment, { key: category.key }, [unref(inlineStyleBlocked) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [createBaseVNode("span", _hoisted_2$7, toDisplayString(category.name), 1), (openBlock(true), createElementBlock(Fragment, null, renderList(category.engines, (engine) => {
+							return openBlock(), createBlock(_sfc_main$12, {
 								key: engine.url + engine.name,
 								engine,
 								onJump
 							}, null, 8, ["engine"]);
-						}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$12, {
+						}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$11, {
 							key: 1,
 							name: category.name,
 							engines: category.engines,
@@ -8348,7 +8365,7 @@
 						title: unref(t)("bar.scrollLeft"),
 						"aria-label": unref(t)("bar.scrollLeft"),
 						onClick: _cache[3] || (_cache[3] = withModifiers(($event) => scrollBar(-1), ["stop"]))
-					}, null, 8, _hoisted_3$8),
+					}, null, 8, _hoisted_3$7),
 					createBaseVNode("button", {
 						type: "button",
 						class: "sej-scroll-hint sej-scroll-hint-right",
@@ -8356,7 +8373,7 @@
 						"aria-label": unref(t)("bar.scrollRight"),
 						onClick: _cache[4] || (_cache[4] = withModifiers(($event) => scrollBar(1), ["stop"]))
 					}, null, 8, _hoisted_4$7)
-				], 32), createVNode(_sfc_main$11)], 10, _hoisted_1$8)) : createCommentVNode("", true);
+				], 32), createVNode(_sfc_main$10)], 14, _hoisted_1$7)) : createCommentVNode("", true);
 			};
 		}
 	};
@@ -9921,15 +9938,15 @@
 		};
 	}
 	var EngineEditDialog_default = ".sej-icon-preview-btn {\n  flex: 0 0 auto;\n  padding: 7px 12px;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  background: var(--sej-btn-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  cursor: pointer;\n  transition:\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-icon-preview-btn:hover:not(:disabled) {\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\n.sej-icon-preview-btn:disabled {\n  opacity: 0.5;\n  cursor: not-allowed;\n}\n\n/* 已有图标时按钮只显示缩略图 */\n.sej-icon-preview-btn.sej-has-icon {\n  box-sizing: border-box;\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 32px;\n  height: 32px;\n  padding: 0;\n}\n\n.sej-icon-preview {\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  object-fit: contain;\n  background: var(--sej-surface-hover);\n}\n\n.sej-data-line {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  min-width: 0;\n}\n\n.sej-data-line input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n/* 图标获取来源列表：容器不留白，行内元素自行控制左右间距 */\n.sej-preview-steps {\n  display: flex;\n  flex-direction: column;\n  gap: 2px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n}\n\n.sej-preview-step {\n  display: flex;\n  align-items: center;\n  gap: 6px;\n  padding: 3px 8px;\n  line-height: 18px;\n  color: var(--font-color-qxin);\n  border-radius: 4px;\n}\n\n/* 有多条成功来源时整行可点击切换，当前采用的来源高亮 */\n.sej-preview-step.is-selectable {\n  cursor: pointer;\n}\n\n.sej-preview-step.is-selectable:hover{\n  background: var(--sej-surface-hover);\n}\n\n.sej-preview-step.is-selectable:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n/* 成功来源显示实际图标缩略图，替换默认的状态圆点 */\n.sej-preview-thumb {\n  flex: 0 0 auto;\n  width: 16px;\n  height: 16px;\n  object-fit: contain;\n}\n\n.sej-preview-dot {\n  flex: 0 0 auto;\n  width: 6px;\n  height: 6px;\n  border-radius: 50%;\n  background: var(--sej-checkbox-border);\n}\n\n.sej-preview-step.is-loading .sej-preview-dot {\n  background: var(--sej-accent);\n}\n\n.sej-preview-step.is-ok .sej-preview-dot {\n  background: #34a853;\n}\n\n.sej-preview-step.is-failed .sej-preview-dot {\n  background: var(--sej-danger);\n}\n\n.sej-preview-step.is-failed,\n.sej-preview-step.is-pending,\n.sej-preview-step.is-canceled {\n  opacity: 0.6;\n}\n\n/* 来源地址本身是链接：只占文字宽度，其后的空白仍归整行，点击即选用 */\n.sej-preview-url {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n  color: inherit;\n  text-decoration: none;\n  cursor: pointer;\n  /* 链接地址允许光标选择/复制 */\n  -webkit-user-select: text;\n  user-select: text;\n}\n\n.sej-preview-url:hover {\n  text-decoration: underline;\n}\n\n.sej-preview-state {\n  flex: 0 0 auto;\n  /* 链接只占文字宽度，剩余空白由尾部元素吸收，大小与状态保持居右 */\n  margin-left: auto;\n  opacity: 0.7;\n}\n\n/* 获取成功后的原始下载大小，弱化显示避免抢走地址文本的注意力 */\n.sej-preview-size {\n  flex: 0 0 auto;\n  margin-left: auto;\n  opacity: 0.55;\n  font-variant-numeric: tabular-nums;\n}\n\n/* 大小与状态同时出现时由大小项吸收空白，避免两者之间被撑开 */\n.sej-preview-size + .sej-preview-state {\n  margin-left: 0;\n}\n\n/* 图标数据字段名旁的当前图标存储体积（转码后） */\n.sej-icon-size {\n  margin-left: 4px;\n  font-style: normal;\n  font-variant-numeric: tabular-nums;\n  opacity: 0.55;\n}\n\n.sej-preview-state.sej-preview-icon {\n  display: inline-flex;\n  align-items: center;\n  color: var(--sej-success);\n  opacity: 0.6;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-preview-icon svg {\n  display: block;\n}\n\n/* 未选用：绿色空心圆，中间留空，悬停时提示可点击 */\n.sej-preview-icon svg path {\n  opacity: 0;\n}\n\n.sej-preview-step.is-selectable:hover .sej-preview-icon {\n  opacity: 1;\n}\n\n/* 已选用：绿色圆圈内显示勾 */\n.sej-preview-icon.is-selected {\n  opacity: 1;\n}\n\n.sej-preview-icon.is-selected svg circle {\n  fill: currentColor;\n}\n\n.sej-preview-icon.is-selected svg path {\n  opacity: 1;\n  stroke: var(--sej-accent-contrast);\n}\n\n.sej-preview-extractor {\n  align-self: flex-start;\n  margin: 2px 8px 0;\n  color: var(--sej-accent);\n  font-size: 12px;\n  text-decoration: none;\n}\n\n.sej-preview-extractor:hover {\n  text-decoration: underline;\n}\n\n#newSearchBox #iqxin-newTarget {\n  width: 100%;\n  border-radius: 8px;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  outline: none;\n}\n";
-	var _hoisted_1$7 = {
+	var _hoisted_1$6 = {
 		id: "sej-engine-title",
 		class: "sej-dialog-title"
 	};
-	var _hoisted_2$7 = {
+	var _hoisted_2$6 = {
 		key: 0,
 		class: "sej-field"
 	};
-	var _hoisted_3$7 = ["placeholder", "disabled"];
+	var _hoisted_3$6 = ["placeholder", "disabled"];
 	var _hoisted_4$6 = { class: "sej-field" };
 	var _hoisted_5$6 = ["placeholder", "disabled"];
 	var _hoisted_6$5 = {
@@ -9969,12 +9986,12 @@
 		key: 5,
 		class: "sej-preview-state"
 	};
-	var _hoisted_19$1 = ["href"];
-	var _hoisted_20$1 = {
+	var _hoisted_19 = ["href"];
+	var _hoisted_20 = {
 		key: 2,
 		class: "sej-field"
 	};
-	var _hoisted_21$1 = {
+	var _hoisted_21 = {
 		key: 0,
 		class: "sej-icon-size"
 	};
@@ -9995,7 +10012,7 @@
 	var _hoisted_33 = ["disabled"];
 	var _hoisted_34 = ["disabled"];
 	var ICON_SELECT = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>";
-	var _sfc_main$9 = {
+	var _sfc_main$8 = {
 		__name: "EngineEditDialog",
 		props: {
 			mode: {
@@ -10100,15 +10117,15 @@
 					"aria-modal": "true",
 					"aria-labelledby": "sej-engine-title"
 				}, [
-					createBaseVNode("div", _hoisted_1$7, toDisplayString(__props.mode === "edit" ? unref(t)("engine.editTitle") : unref(t)("engine.addTitle")), 1),
-					!unref(initialAction) ? (openBlock(), createElementBlock("label", _hoisted_2$7, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.url")), 1), withDirectives(createBaseVNode("input", {
+					createBaseVNode("div", _hoisted_1$6, toDisplayString(__props.mode === "edit" ? unref(t)("engine.editTitle") : unref(t)("engine.addTitle")), 1),
+					!unref(initialAction) ? (openBlock(), createElementBlock("label", _hoisted_2$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.url")), 1), withDirectives(createBaseVNode("input", {
 						ref_key: "urlInput",
 						ref: urlInput,
 						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => form.url = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
 						onBlur: applySearchTemplate
-					}, null, 40, _hoisted_3$7), [[vModelText, form.url]])])) : createCommentVNode("", true),
+					}, null, 40, _hoisted_3$6), [[vModelText, form.url]])])) : createCommentVNode("", true),
 					createBaseVNode("label", _hoisted_4$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
 						"onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => form.name = $event),
 						placeholder: unref(t)("common.required"),
@@ -10168,10 +10185,10 @@
 							href: unref(extractorUrl),
 							target: "_blank",
 							rel: "noopener"
-						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19$1)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_19)) : createCommentVNode("", true)])) : createCommentVNode("", true)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20$1, [
-						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21$1, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_20, [
+						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_21, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
 						createBaseVNode("div", _hoisted_22, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => isRef(previewData) ? previewData.value = $event : null),
 							class: "sej-data-input",
@@ -10234,17 +10251,17 @@
 			};
 		}
 	};
-	var _hoisted_1$6 = {
+	var _hoisted_1$5 = {
 		id: "sej-category-title",
 		class: "sej-dialog-title"
 	};
-	var _hoisted_2$6 = { class: "sej-field" };
-	var _hoisted_3$6 = ["placeholder", "disabled"];
+	var _hoisted_2$5 = { class: "sej-field" };
+	var _hoisted_3$5 = ["placeholder", "disabled"];
 	var _hoisted_4$5 = { class: "sej-dialog-actions" };
 	var _hoisted_5$5 = ["disabled"];
 	var _hoisted_6$4 = ["disabled"];
 	var _hoisted_7$3 = ["disabled"];
-	var _sfc_main$8 = {
+	var _sfc_main$7 = {
 		__name: "CategoryEditDialog",
 		props: {
 			name: {
@@ -10292,15 +10309,15 @@
 					"aria-modal": "true",
 					"aria-labelledby": "sej-category-title"
 				}, [
-					createBaseVNode("div", _hoisted_1$6, toDisplayString(unref(t)("category.title")), 1),
-					createBaseVNode("label", _hoisted_2$6, [createBaseVNode("span", null, toDisplayString(unref(t)("common.name")), 1), withDirectives(createBaseVNode("input", {
+					createBaseVNode("div", _hoisted_1$5, toDisplayString(unref(t)("category.title")), 1),
+					createBaseVNode("label", _hoisted_2$5, [createBaseVNode("span", null, toDisplayString(unref(t)("common.name")), 1), withDirectives(createBaseVNode("input", {
 						ref_key: "input",
 						ref: input,
 						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => value.value = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
 						onKeydown: withKeys(submit, ["enter"])
-					}, null, 40, _hoisted_3$6), [[vModelText, value.value]])]),
+					}, null, 40, _hoisted_3$5), [[vModelText, value.value]])]),
 					createBaseVNode("div", _hoisted_4$5, [
 						createBaseVNode("button", {
 							type: "button",
@@ -10325,16 +10342,16 @@
 			};
 		}
 	};
-	var _hoisted_1$5 = ["aria-label"];
-	var _hoisted_2$5 = { class: "sej-config-textarea" };
-	var _hoisted_3$5 = { class: "sej-dialog-actions" };
+	var _hoisted_1$4 = ["aria-label"];
+	var _hoisted_2$4 = { class: "sej-config-textarea" };
+	var _hoisted_3$4 = { class: "sej-dialog-actions" };
 	var _hoisted_4$4 = ["title"];
 	var _hoisted_5$4 = {
 		key: 1,
 		class: "sej-import-mode"
 	};
 	var _hoisted_6$3 = ["disabled"];
-	var _sfc_main$7 = {
+	var _sfc_main$6 = {
 		__name: "ConfigEditor",
 		props: {
 			initialText: {
@@ -10416,7 +10433,7 @@
 						_cache[6] || (_cache[6] = createBaseVNode("br", null, null, -1)),
 						createTextVNode(" " + toDisplayString(unref(t)("config.warningLine2")), 1)
 					]),
-					createBaseVNode("div", _hoisted_2$5, [withDirectives(createBaseVNode("textarea", {
+					createBaseVNode("div", _hoisted_2$4, [withDirectives(createBaseVNode("textarea", {
 						ref_key: "textareaEl",
 						ref: textareaEl,
 						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => text.value = $event),
@@ -10425,7 +10442,7 @@
 						rows: "20",
 						onInput: _cache[1] || (_cache[1] = ($event) => dirty.value = true)
 					}, null, 544), [[vModelText, text.value]])]),
-					createBaseVNode("div", _hoisted_3$5, [
+					createBaseVNode("div", _hoisted_3$4, [
 						createBaseVNode("button", {
 							class: "sej-dialog-left",
 							onClick: reset
@@ -10453,7 +10470,7 @@
 						}, toDisplayString(unref(t)("common.apply")), 9, _hoisted_6$3),
 						createBaseVNode("button", { onClick: cancel }, toDisplayString(unref(t)("common.cancel")), 1)
 					])
-				], 8, _hoisted_1$5);
+				], 8, _hoisted_1$4);
 			};
 		}
 	};
@@ -10462,13 +10479,13 @@
 	var EYE_OFF = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94\"/><path d=\"M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19\"/><path d=\"M14.12 14.12a3 3 0 1 1-4.24-4.24\"/><line x1=\"1\" y1=\"1\" x2=\"23\" y2=\"23\"/></svg>";
 	var PENCIL = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M12 20h9\"/><path d=\"M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z\"/></svg>";
 	var TRASH = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><path d=\"M3 6h18\"/><path d=\"M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2\"/><path d=\"M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6\"/><line x1=\"10\" y1=\"11\" x2=\"10\" y2=\"17\"/><line x1=\"14\" y1=\"11\" x2=\"14\" y2=\"17\"/></svg>";
-	var _hoisted_1$4 = ["id", "data-sej-drag-el"];
-	var _hoisted_2$4 = [
+	var _hoisted_1$3 = ["id", "data-sej-drag-el"];
+	var _hoisted_2$3 = [
 		"data-xin",
 		"data-iqxintitle",
 		"title"
 	];
-	var _hoisted_3$4 = { class: "iqxin-pointer-events" };
+	var _hoisted_3$3 = { class: "iqxin-pointer-events" };
 	var _hoisted_4$3 = ["innerHTML"];
 	var _hoisted_5$3 = ["title", "innerHTML"];
 	var _hoisted_6$2 = ["title", "innerHTML"];
@@ -10503,7 +10520,7 @@
 		key: 2,
 		class: "sej-copy-hint"
 	};
-	var _sfc_main$6 = {
+	var _sfc_main$5 = {
 		__name: "SettingsCategoryCard",
 		props: {
 			category: {
@@ -10559,7 +10576,7 @@
 					onPointerdown: _cache[3] || (_cache[3] = ($event) => emit("drag-start", $event, "category", __props.ci)),
 					onClick: _cache[4] || (_cache[4] = withModifiers(($event) => emit("open-category", __props.ci), ["stop"]))
 				}, [
-					createBaseVNode("span", _hoisted_3$4, toDisplayString(__props.displayName), 1),
+					createBaseVNode("span", _hoisted_3$3, toDisplayString(__props.displayName), 1),
 					createBaseVNode("span", {
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
@@ -10578,7 +10595,7 @@
 						onClick: _cache[2] || (_cache[2] = withModifiers(($event) => emit("delete-category", __props.ci), ["stop"])),
 						innerHTML: unref(TRASH)
 					}, null, 40, _hoisted_6$2)) : createCommentVNode("", true)
-				], 42, _hoisted_2$4), createBaseVNode("div", {
+				], 42, _hoisted_2$3), createBaseVNode("div", {
 					class: "sejcon",
 					"data-sej-drag-el": "list-" + __props.category._id
 				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.category.engines, (engine, ei) => {
@@ -10631,13 +10648,13 @@
 					key: 0,
 					class: "sej-copy-icon",
 					innerHTML: unref(COPY)
-				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$4);
+				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
 			};
 		}
 	};
-	var _hoisted_1$3 = { class: "sej-footer-bar" };
-	var _hoisted_2$3 = { class: "sej-footer-selects" };
-	var _hoisted_3$3 = {
+	var _hoisted_1$2 = { class: "sej-footer-bar" };
+	var _hoisted_2$2 = { class: "sej-footer-selects" };
+	var _hoisted_3$2 = {
 		id: "xin-modification",
 		class: "sej-config-box"
 	};
@@ -10649,7 +10666,7 @@
 	var _hoisted_9$1 = ["title"];
 	var _hoisted_10$1 = { class: "sej-footer-actions" };
 	var _hoisted_11$1 = ["title"];
-	var _sfc_main$5 = {
+	var _sfc_main$4 = {
 		__name: "SettingsFooter",
 		props: { saving: {
 			type: Boolean,
@@ -10664,8 +10681,8 @@
 		setup(__props, { emit: __emit }) {
 			const emit = __emit;
 			return (_ctx, _cache) => {
-				return openBlock(), createElementBlock("div", _hoisted_1$3, [
-					createBaseVNode("div", _hoisted_2$3, [createBaseVNode("div", _hoisted_3$3, [
+				return openBlock(), createElementBlock("div", _hoisted_1$2, [
+					createBaseVNode("div", _hoisted_2$2, [createBaseVNode("div", _hoisted_3$2, [
 						createBaseVNode("button", {
 							type: "button",
 							class: "sej-config-open",
@@ -10758,9 +10775,9 @@
 			};
 		}
 	};
-	var _hoisted_1$2 = { class: "sej-footer-options" };
-	var _hoisted_2$2 = { id: "xin-selectSearch" };
-	var _hoisted_3$2 = ["checked"];
+	var _hoisted_1$1 = { class: "sej-footer-options" };
+	var _hoisted_2$1 = { id: "xin-selectSearch" };
+	var _hoisted_3$1 = ["checked"];
 	var _hoisted_4$1 = ["title"];
 	var _hoisted_5$1 = ["checked"];
 	var _hoisted_6 = ["title"];
@@ -10772,14 +10789,11 @@
 	var _hoisted_12 = { value: "_blank" };
 	var _hoisted_13 = { value: "_self" };
 	var _hoisted_14 = ["title"];
-	var _hoisted_15 = ["value"];
-	var _hoisted_16 = { value: "off" };
-	var _hoisted_17 = { value: "menu" };
-	var _hoisted_18 = { value: "alt" };
-	var _hoisted_19 = { id: "xin-language" };
-	var _hoisted_20 = ["value"];
-	var _hoisted_21 = { value: "auto" };
-	var _sfc_main$4 = {
+	var _hoisted_15 = ["checked"];
+	var _hoisted_16 = { id: "xin-language" };
+	var _hoisted_17 = ["value"];
+	var _hoisted_18 = { value: "auto" };
+	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
 			type: Object,
@@ -10789,12 +10803,12 @@
 		setup(__props, { emit: __emit }) {
 			const emit = __emit;
 			return (_ctx, _cache) => {
-				return openBlock(), createElementBlock("div", _hoisted_1$2, [
-					createBaseVNode("span", _hoisted_2$2, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
+				return openBlock(), createElementBlock("div", _hoisted_1$1, [
+					createBaseVNode("span", _hoisted_2$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectSearch,
 						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
-					}, null, 40, _hoisted_3$2)])]),
+					}, null, 40, _hoisted_3$1)])]),
 					withDirectives(createBaseVNode("span", {
 						id: "xin-selectSearchInInput",
 						title: unref(t)("settings.selectSearchInInputTip")
@@ -10830,41 +10844,37 @@
 					createBaseVNode("span", {
 						id: "xin-imageSearch",
 						title: unref(t)("settings.imageSearchTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.imageSearch")) + " ", 1), createBaseVNode("select", {
-						class: "sej-language-select",
-						value: __props.options.imageSearch,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "imageSearch", $event.target.value))
-					}, [
-						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.imageSearchOff")), 1),
-						createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.imageSearchMenu")), 1),
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.imageSearchAlt")), 1)
-					], 40, _hoisted_15)])], 8, _hoisted_14),
-					createBaseVNode("span", _hoisted_19, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.imageSearch")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.imageSearch,
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
+					}, null, 40, _hoisted_15)])], 8, _hoisted_14),
+					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
 						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_21, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
 						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
 						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_20)])])
+					], 40, _hoisted_17)])])
 				]);
 			};
 		}
 	};
-	var _hoisted_1$1 = {
+	var _hoisted_1 = {
 		id: "sej-settings-title",
 		class: "sej-panel-title"
 	};
-	var _hoisted_2$1 = ["title", "aria-label"];
-	var _hoisted_3$1 = [
+	var _hoisted_2 = ["title", "aria-label"];
+	var _hoisted_3 = [
 		"title",
 		"aria-label",
 		"onKeydown"
 	];
 	var _hoisted_4 = { id: "btnEle" };
 	var _hoisted_5 = { class: "btnEleLayer" };
-	var _sfc_main$3 = {
+	var _sfc_main$2 = {
 		__name: "SettingPanel",
 		setup(__props) {
 			addStyle(settingPanelStyles_default);
@@ -11075,20 +11085,20 @@
 						class: "sej-panel-header",
 						onPointerdown: _cache[1] || (_cache[1] = (...args) => unref(startDrag) && unref(startDrag)(...args)),
 						onContextmenu: _cache[2] || (_cache[2] = withModifiers(() => {}, ["prevent"]))
-					}, [createBaseVNode("span", _hoisted_1$1, toDisplayString(unref(t)("settings.title")), 1), createBaseVNode("button", {
+					}, [createBaseVNode("span", _hoisted_1, toDisplayString(unref(t)("settings.title")), 1), createBaseVNode("button", {
 						type: "button",
 						class: "sej-panel-close",
 						title: unref(t)("settings.close"),
 						"aria-label": unref(t)("settings.close"),
 						onClick: withModifiers(close, ["stop"]),
 						onPointerdown: _cache[0] || (_cache[0] = withModifiers(() => {}, ["stop"]))
-					}, " ✕ ", 40, _hoisted_2$1)], 32),
+					}, " ✕ ", 40, _hoisted_2)], 32),
 					createBaseVNode("div", {
 						id: "sej-settings-body",
 						onDragstart: _cache[3] || (_cache[3] = withModifiers(() => {}, ["prevent"])),
 						onContextmenu: _cache[4] || (_cache[4] = withModifiers(() => {}, ["prevent"]))
 					}, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(draft).categories, (category, ci) => {
-						return openBlock(), createBlock(_sfc_main$6, {
+						return openBlock(), createBlock(_sfc_main$5, {
 							key: category._id,
 							category,
 							ci,
@@ -11126,11 +11136,11 @@
 						"aria-label": unref(t)("settings.addCategory"),
 						onClick: addCategory,
 						onKeydown: [withKeys(addCategory, ["enter"]), withKeys(withModifiers(addCategory, ["prevent"]), ["space"])]
-					}, [..._cache[7] || (_cache[7] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_3$1)], 32),
-					createBaseVNode("div", _hoisted_4, [createBaseVNode("div", _hoisted_5, [createVNode(_sfc_main$4, {
+					}, [..._cache[7] || (_cache[7] = [createBaseVNode("span", { class: "sej-add-category-plus" }, "+", -1)])], 40, _hoisted_3)], 32),
+					createBaseVNode("div", _hoisted_4, [createBaseVNode("div", _hoisted_5, [createVNode(_sfc_main$3, {
 						options: unref(draft),
 						onUpdateOption: updateOption
-					}, null, 8, ["options"]), createVNode(_sfc_main$5, {
+					}, null, 8, ["options"]), createVNode(_sfc_main$4, {
 						saving: unref(saving),
 						onOpenConfig: unref(openConfig),
 						onPickConfigFile: unref(pickConfigFile),
@@ -11149,7 +11159,7 @@
 						accept: "application/json,.json",
 						onChange: _cache[5] || (_cache[5] = (...args) => unref(importConfigFile) && unref(importConfigFile)(...args))
 					}, null, 544)]),
-					engineDialog.value ? (openBlock(), createBlock(_sfc_main$9, {
+					engineDialog.value ? (openBlock(), createBlock(_sfc_main$8, {
 						key: 0,
 						mode: engineDialog.value.mode,
 						initial: engineDialog.value.initial,
@@ -11167,7 +11177,7 @@
 						"onDelete",
 						"onCancel"
 					])) : createCommentVNode("", true),
-					categoryDialog.value ? (openBlock(), createBlock(_sfc_main$8, {
+					categoryDialog.value ? (openBlock(), createBlock(_sfc_main$7, {
 						key: 1,
 						name: unref(displayCategoryName)(unref(draft).categories[categoryDialog.value.index]) || "",
 						onSubmit: unref(submitCategory),
@@ -11179,7 +11189,7 @@
 						"onDelete",
 						"onCancel"
 					])) : createCommentVNode("", true),
-					unref(configOpen) ? (openBlock(), createBlock(_sfc_main$7, {
+					unref(configOpen) ? (openBlock(), createBlock(_sfc_main$6, {
 						key: 2,
 						"initial-text": unref(configText),
 						"default-text": unref(defaultConfigText),
@@ -11196,139 +11206,6 @@
 						"onCancel"
 					])) : createCommentVNode("", true)
 				], 4)], 36);
-			};
-		}
-	};
-	var LAZY_SRC_ATTRS = [
-		"data-src",
-		"data-original",
-		"data-lazy-src",
-		"data-actualsrc"
-	];
-	function toHttpUrl(raw, base) {
-		const value = typeof raw === "string" ? raw.trim() : "";
-		if (!value) return "";
-		try {
-			const url = new URL(value, base);
-			return /^https?:$/.test(url.protocol) ? url.href : "";
-		} catch (e) {
-			return "";
-		}
-	}
-	function resolveImageUrl(target, base = globalThis.location?.href) {
-		const img = typeof target?.closest === "function" ? target.closest("img") : null;
-		if (!img) return "";
-		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
-		if (primary) return primary;
-		for (const attr of LAZY_SRC_ATTRS) {
-			const url = toHttpUrl(img.getAttribute?.(attr), base);
-			if (url) return url;
-		}
-		return "";
-	}
-	function shouldHandleImageContextMenu({ mode, altKey, imageUrl, touchOnly } = {}) {
-		const normalized = normalizeImageSearchMode(mode);
-		if (normalized === "off" || !imageUrl) return false;
-		if (normalized === "menu") return true;
-		return Boolean(altKey) || Boolean(touchOnly);
-	}
-	function isTouchOnlyDevice() {
-		if (typeof window === "undefined") return false;
-		const noHover = window.matchMedia?.("(hover: none)")?.matches;
-		return Boolean(noHover) && (navigator.maxTouchPoints || 0) > 0;
-	}
-	function getImageEngines(settingData) {
-		const list = settingData?.engineList?.[IMAGE_CATEGORY_KEY];
-		if (!Array.isArray(list)) return [];
-		return list.filter((engine) => !engine.disable && engine.url);
-	}
-	var _hoisted_1 = ["aria-label"];
-	var _hoisted_2 = ["onClick"];
-	var _hoisted_3 = ["src"];
-	var _sfc_main$2 = {
-		__name: "ImageSearchMenu",
-		setup(__props) {
-			addStyle("\n#sej-image-menu {\n  position: fixed;\n  z-index: 100000001;\n  min-width: 148px;\n  max-width: min(280px, calc(100vw - 16px));\n  padding: 4px;\n  box-sizing: border-box;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  border-radius: var(--sej-radius-menu, 12px);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  overflow: hidden;\n  user-select: none;\n  animation: sej-image-menu-in 0.1s ease-out;\n}\n\n#sej-image-menu .sej-image-menu-item {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n#sej-image-menu .sej-image-menu-item + .sej-image-menu-item {\n  margin-top: 1px;\n}\n\n/* 一键搜索固定在顶部，与下面的单个引擎之间加分隔线，避免误点 */\n#sej-image-menu .sej-image-menu-all {\n  position: relative;\n  margin-bottom: 5px;\n}\n\n#sej-image-menu .sej-image-menu-all::after {\n  content: '';\n  position: absolute;\n  bottom: -3px;\n  left: 6px;\n  right: 6px;\n  height: 1px;\n  background: var(--border-color-sej);\n}\n\n/* 图标槽与引擎图标的 16px 保持一致，文字不因有无图标而错位 */\n#sej-image-menu .sej-image-menu-all-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  color: var(--font-color-qxin);\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-all-icon svg {\n  width: 100%;\n  height: 100%;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n@keyframes sej-image-menu-in {\n  from {\n    opacity: 0;\n    transform: scale(0.98);\n  }\n}\n");
-			const data = useSettings().settingData;
-			const engines = computed(() => getImageEngines(data).map((engine) => ({
-				...engine,
-				icon: getFaviconSrc(engine)
-			})));
-			const rootEl = ref(null);
-			const position = ref({
-				left: `${imageSearch.x}px`,
-				top: `${imageSearch.y}px`
-			});
-			useEventIsolation(rootEl);
-			async function placeAtCursor() {
-				await nextTick();
-				const el = rootEl.value;
-				if (!el) return;
-				const rect = el.getBoundingClientRect();
-				const gap = 8;
-				const left = Math.max(gap, Math.min(imageSearch.x, window.innerWidth - rect.width - gap));
-				const top = Math.max(gap, Math.min(imageSearch.y, window.innerHeight - rect.height - gap));
-				position.value = {
-					left: `${Math.round(left)}px`,
-					top: `${Math.round(top)}px`
-				};
-			}
-			function onJump(engine) {
-				performJump(engine, imageSearch.imageUrl, data);
-				closeImageSearch();
-			}
-			function onJumpAll() {
-				openAllEngines(engines.value, imageSearch.imageUrl, data);
-				closeImageSearch();
-			}
-			function onDocumentPointerDown(e) {
-				const path = e.composedPath?.();
-				if (path ? path.includes(rootEl.value) : rootEl.value?.contains(e.target)) return;
-				closeImageSearch();
-			}
-			function onKeydown(e) {
-				if (e.key === "Escape") closeImageSearch();
-			}
-			onMounted(() => {
-				placeAtCursor();
-				document.addEventListener("pointerdown", onDocumentPointerDown, true);
-				document.addEventListener("keydown", onKeydown, true);
-				window.addEventListener("scroll", closeImageSearch, true);
-				window.addEventListener("resize", closeImageSearch);
-			});
-			onBeforeUnmount(() => {
-				document.removeEventListener("pointerdown", onDocumentPointerDown, true);
-				document.removeEventListener("keydown", onKeydown, true);
-				window.removeEventListener("scroll", closeImageSearch, true);
-				window.removeEventListener("resize", closeImageSearch);
-			});
-			return (_ctx, _cache) => {
-				return openBlock(), createElementBlock("div", {
-					ref_key: "rootEl",
-					ref: rootEl,
-					id: "sej-image-menu",
-					role: "menu",
-					"aria-label": unref(t)("imageSearch.title"),
-					style: normalizeStyle(position.value),
-					onContextmenu: _cache[0] || (_cache[0] = withModifiers(() => {}, ["prevent"]))
-				}, [engines.value.length > 1 ? (openBlock(), createElementBlock("a", {
-					key: 0,
-					class: "sej-engine sej-image-menu-item sej-image-menu-all",
-					role: "menuitem",
-					onClick: withModifiers(onJumpAll, ["prevent", "stop"])
-				}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.openAll")), 1)])) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
-					return openBlock(), createElementBlock("a", {
-						key: engine.name + engine.url,
-						class: "sej-engine sej-image-menu-item",
-						role: "menuitem",
-						onClick: withModifiers(($event) => onJump(engine), ["prevent", "stop"])
-					}, [engine.icon ? (openBlock(), createElementBlock("img", {
-						key: 0,
-						class: "sej-engine-icon",
-						src: engine.icon,
-						alt: ""
-					}, null, 8, _hoisted_3)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_2);
-				}), 128))], 44, _hoisted_1);
 			};
 		}
 	};
@@ -11355,9 +11232,8 @@
 		setup(__props) {
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock(Fragment, null, [
-					createVNode(_sfc_main$10),
-					unref(ui).settingPanelOpen ? (openBlock(), createBlock(_sfc_main$3, { key: 0 })) : createCommentVNode("", true),
-					unref(imageSearch).open ? (openBlock(), createBlock(_sfc_main$2, { key: 1 })) : createCommentVNode("", true),
+					createVNode(_sfc_main$9),
+					unref(ui).settingPanelOpen ? (openBlock(), createBlock(_sfc_main$2, { key: 0 })) : createCommentVNode("", true),
 					createVNode(_sfc_main$1)
 				], 64);
 			};
@@ -11500,7 +11376,6 @@
 			} catch (e) {}
 			app = null;
 		}
-		closeImageSearch();
 		reset();
 	}
 	function boot({ force = false } = {}) {
@@ -11537,28 +11412,118 @@
 	function shouldDelayStart(href = location.href) {
 		return DELAY_START_PATTERNS.some((re) => re.test(href));
 	}
+	var LAZY_SRC_ATTRS = [
+		"data-src",
+		"data-original",
+		"data-lazy-src",
+		"data-actualsrc"
+	];
+	var MAX_BG_DEPTH = 4;
+	var MIN_BG_SIZE = 32;
+	var BG_URL_RE = /url\((['"]?)(.*?)\1\)/g;
+	function toHttpUrl(raw, base) {
+		const value = typeof raw === "string" ? raw.trim() : "";
+		if (!value) return "";
+		try {
+			const url = new URL(value, base);
+			return /^https?:$/.test(url.protocol) ? url.href : "";
+		} catch (e) {
+			return "";
+		}
+	}
+	function imgUrl(img, base) {
+		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
+		if (primary) return primary;
+		for (const attr of LAZY_SRC_ATTRS) {
+			const url = toHttpUrl(img.getAttribute?.(attr), base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function backgroundUrl(el, base) {
+		const value = getComputedStyle(el)?.backgroundImage;
+		if (!value || value === "none") return "";
+		for (const match of value.matchAll(BG_URL_RE)) {
+			const url = toHttpUrl(match[2], base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function resolveImageUrl(target, base = globalThis.location?.href) {
+		const img = typeof target?.closest === "function" ? target.closest("img") : null;
+		if (img) {
+			const url = imgUrl(img, base);
+			if (url) return url;
+		}
+		const doc = target?.ownerDocument;
+		let el = target?.nodeType === 1 ? target : target?.parentElement;
+		for (let depth = 0; el && depth < MAX_BG_DEPTH; depth += 1, el = el.parentElement) {
+			if (el === doc?.body || el === doc?.documentElement) break;
+			const rect = el.getBoundingClientRect?.();
+			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
+			const url = backgroundUrl(el, base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function isLongPressMove(startX, startY, x, y) {
+		return Math.hypot(x - startX, y - startY) > 10;
+	}
+	function getImageEngines(settingData) {
+		const list = settingData?.engineList?.[IMAGE_CATEGORY_KEY];
+		if (!Array.isArray(list)) return [];
+		return list.filter((engine) => !engine.disable && engine.url);
+	}
 	var armed = false;
 	function armImageContextMenu(ensureBoot) {
 		if (armed) return;
 		armed = true;
-		document.addEventListener("contextmenu", (e) => {
+		let timer = 0;
+		let startX = 0;
+		let startY = 0;
+		let pressed = null;
+		let suppressUntil = 0;
+		function cancel() {
+			clearTimeout(timer);
+			timer = 0;
+			pressed = null;
+		}
+		function onPointerDown(e) {
+			if (e.button !== 0 || !e.isPrimary) return;
 			const settings = useSettings();
+			if (!settings.settingData?.imageSearch) return;
+			if (!getImageEngines(settings.settingData).length) return;
 			const imageUrl = resolveImageUrl(e.target);
-			if (!shouldHandleImageContextMenu({
-				mode: settings.settingData.imageSearch,
-				altKey: e.altKey,
-				imageUrl,
-				touchOnly: isTouchOnlyDevice()
-			}) || !getImageEngines(settings.settingData).length) return;
+			if (!imageUrl) return;
+			startX = e.clientX;
+			startY = e.clientY;
+			pressed = imageUrl;
+			clearTimeout(timer);
+			timer = setTimeout(() => {
+				timer = 0;
+				if (!pressed) return;
+				suppressUntil = performance.now() + 800;
+				openImageSearch(pressed);
+				ensureBoot?.();
+				pressed = null;
+				navigator.vibrate?.(10);
+			}, 450);
+		}
+		function onPointerMove(e) {
+			if (!pressed) return;
+			if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
+		}
+		function onSuppress(e) {
+			if (performance.now() > suppressUntil) return;
 			e.preventDefault();
 			e.stopPropagation();
-			ensureBoot?.();
-			openImageSearch({
-				x: e.clientX,
-				y: e.clientY,
-				imageUrl
-			});
-		}, true);
+		}
+		document.addEventListener("pointerdown", onPointerDown, true);
+		document.addEventListener("pointermove", onPointerMove, true);
+		document.addEventListener("pointerup", cancel, true);
+		document.addEventListener("pointercancel", cancel, true);
+		document.addEventListener("click", onSuppress, true);
+		document.addEventListener("contextmenu", onSuppress, true);
 	}
 	var startTimer = 0;
 	var lazyListeners = null;

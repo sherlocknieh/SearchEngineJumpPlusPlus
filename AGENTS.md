@@ -64,14 +64,19 @@ src/main.js                 只做装配
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
-## 右键图片搜图
+## 长按图片搜图
 
-- 入口：`app/imageContextMenu.js` 在 `document` 捕获阶段接管 `contextmenu`（只注册一次，懒启动时先 `requestBoot` 再弹浮层）
-- 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`currentSrc` → `src` → 懒加载 `data-*`）与
-  `shouldHandleImageContextMenu`（`imageSearch` 选项：`off` / `menu` / `alt`；触屏设备无 Alt 键，`alt` 等同直接触发）
-- 引擎来源：内置「图片」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；没有可用引擎时不接管
-- 浮层：`components/ImageSearchMenu.vue` + `stores/imageSearch.js`，光标定位、点击外部/Escape/滚动关闭；
-  顶部「一键打开」复用 `openAllEngines`（批量打开强制新标签页），引擎不足两个时不显示
+- 入口：`app/imageContextMenu.js` 在 `document` 捕获阶段识别长按手势（`LONG_PRESS_MS` 内无位移），
+  只注册一次；懒启动时先 `openImageSearch()` 再 `requestBoot`，保证挂载时能读到图片状态
+- 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
+  再向上 4 层找 `background-image`，忽略渐变与 `data:` 图）与 `isLongPressMove`（位移超阈值取消）
+- 引擎来源：内置「图片」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；
+  `imageSearch` 关闭或没有可用引擎时不接管
+- 呈现：复用跳转条（`JumpBar` 的图片模式），`stores/imageSearch.js` 提供 `{ active, imageUrl }`；
+  只显示「图片」分类并忽略其隐藏状态，顶部缩略图用 `--sej-image-thumb`；
+  点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
+- 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听 `imageSearch.active` 与当前挂载模式不一致时
+  `requestRestart()` 重建，让同一条跳转条在「站点内嵌」与「顶部图片浮层」之间切换
 
 ## 站点适配（新增站点只改这里）
 
@@ -127,7 +132,7 @@ src/main.js                 只做装配
 | 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
 | 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                  |
 | 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                             |
-| 改右键搜图          | `app/imageContextMenu.js` → `core/imageSearch.js` → `components/ImageSearchMenu.vue`                           |
+| 改长按搜图          | `app/imageContextMenu.js` → `core/imageSearch.js` → `JumpBar.vue` 图片模式                                    |
 | 发布                | `scripts/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
 
 ## 测试索引（`test/`，纯 JS）

@@ -65,17 +65,11 @@ const emit = defineEmits(['update-option']);
     </span>
     <span id="xin-imageSearch" :title="t('settings.imageSearchTip')">
       <label
-        >{{ t('settings.imageSearch') }}
-        <select
-          class="sej-language-select"
-          :value="options.imageSearch"
-          @change="emit('update-option', 'imageSearch', $event.target.value)"
-        >
-          <option value="off">{{ t('settings.imageSearchOff') }}</option>
-          <option value="menu">{{ t('settings.imageSearchMenu') }}</option>
-          <option value="alt">{{ t('settings.imageSearchAlt') }}</option>
-        </select>
-      </label>
+        >{{ t('settings.imageSearch') }}<input
+          type="checkbox"
+          :checked="options.imageSearch"
+          @change="emit('update-option', 'imageSearch', $event.target.checked)"
+      /></label>
     </span>
     <span id="xin-language">
       <label

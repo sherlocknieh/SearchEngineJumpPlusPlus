@@ -23,17 +23,17 @@ export function isBuiltinCategory(category) {
   return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 }
 
+/** 长按图片搜图默认开启：桌面按住鼠标、手机长按都能触发 */
+export const DEFAULT_IMAGE_SEARCH = true;
+
 /**
- * 右键图片搜图的触发方式：
- * off 关闭；menu 右键图片直接弹出；alt 按 Alt 再右键图片才弹出，保留原生菜单。
+ * 长按搜图开关的规范化。
+ * 兼容旧配置里的字符串模式：off 视为关闭，其余（menu / alt）视为开启。
  */
-export const IMAGE_SEARCH_MODES = ['off', 'menu', 'alt'];
-
-/** 默认用 Alt+右键，既不抢占原生右键菜单，又能直接使用 */
-export const DEFAULT_IMAGE_SEARCH_MODE = 'alt';
-
-export function normalizeImageSearchMode(value) {
-  return IMAGE_SEARCH_MODES.includes(value) ? value : DEFAULT_IMAGE_SEARCH_MODE;
+export function normalizeImageSearch(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') return value !== 'off';
+  return DEFAULT_IMAGE_SEARCH;
 }
 
 export function normalizeEngineAction(value) {

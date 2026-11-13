@@ -8,7 +8,7 @@ import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
 import {
   BUILTIN_CATEGORY_KEY,
-  DEFAULT_IMAGE_SEARCH_MODE,
+  DEFAULT_IMAGE_SEARCH,
   DEFAULT_OPEN_TARGET,
   IMAGE_CATEGORY_KEY,
   isPlainObject,
@@ -17,7 +17,7 @@ import {
   normalizeDefaultOpenTarget,
   normalizeEngineAction,
   normalizeEngineTarget,
-  normalizeImageSearchMode,
+  normalizeImageSearch,
 } from './configData.js';
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
@@ -43,8 +43,8 @@ export function createDefaultConfig() {
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开
     defaultOpenTarget: DEFAULT_OPEN_TARGET,
-    // 默认 Alt+右键图片搜图，不抢占原生右键菜单
-    imageSearch: DEFAULT_IMAGE_SEARCH_MODE,
+    // 默认开启长按图片搜图
+    imageSearch: DEFAULT_IMAGE_SEARCH,
     // 默认跟随浏览器/系统语言
     language: 'auto',
     // [名称, 键名, 是否在跳转条中显示]
@@ -73,9 +73,9 @@ export function normalizeConfig(raw, defaults) {
       settings[key] = normalizeDefaultOpenTarget(data[key] ?? defaults[key]);
       continue;
     }
-    // 右键搜图同样是枚举值：off / menu / alt
+    // 长按搜图是开关，兼容旧配置里的字符串模式
     if (key === 'imageSearch') {
-      settings[key] = normalizeImageSearchMode(data[key] ?? defaults[key]);
+      settings[key] = normalizeImageSearch(data[key] ?? defaults[key]);
       continue;
     }
     settings[key] = typeof data[key] === 'boolean' ? data[key] : defaults[key];

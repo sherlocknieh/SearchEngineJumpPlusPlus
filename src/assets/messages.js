@@ -42,12 +42,9 @@ export const messages = {
     'settings.defaultOpenTargetTip': '引擎未单独设置打开方式时使用',
     'settings.defaultOpenTargetBlank': '新标签页',
     'settings.defaultOpenTargetSelf': '当前页',
-    'settings.imageSearch': '右键搜图',
+    'settings.imageSearch': '长按搜图',
     'settings.imageSearchTip':
-      '在图片上右键（手机长按）时用「图片」分类的引擎搜索图片链接；Alt 模式在触屏设备上等同直接触发',
-    'settings.imageSearchOff': '关闭',
-    'settings.imageSearchMenu': '右键图片',
-    'settings.imageSearchAlt': 'Alt+右键图片',
+      '按住图片（手机长按）时用「图片」分类的引擎搜索图片链接，支持背景图',
     'settings.language': '语言',
     'settings.languageAuto': '跟随浏览器',
 
@@ -120,8 +117,6 @@ export const messages = {
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '当前内容不是有效链接',
 
-    'imageSearch.title': '搜索这张图片',
-    'imageSearch.openAll': '一键打开',
 
     'config.warningLine1': '此处有更多的设置选项，自由度更高，',
     'config.warningLine2': '但设置错误会导致脚本无法运行',
@@ -192,12 +187,9 @@ export const messages = {
     'settings.defaultOpenTargetTip': 'Used when an engine has no open mode of its own',
     'settings.defaultOpenTargetBlank': 'New tab',
     'settings.defaultOpenTargetSelf': 'Current tab',
-    'settings.imageSearch': 'Image search',
+    'settings.imageSearch': 'Long-press search',
     'settings.imageSearchTip':
-      'Search an image URL with the Image category engines on right-click (long-press on phones); Alt mode triggers directly on touch devices',
-    'settings.imageSearchOff': 'Off',
-    'settings.imageSearchMenu': 'Right-click image',
-    'settings.imageSearchAlt': 'Alt + right-click',
+      'Hold an image (long-press on phones) to search its URL with the Image category engines; background images are supported',
     'settings.language': 'Language',
     'settings.languageAuto': 'Auto (browser)',
 
@@ -272,8 +264,6 @@ export const messages = {
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'The current text is not a valid link',
 
-    'imageSearch.title': 'Search this image',
-    'imageSearch.openAll': 'Open all',
 
     'config.warningLine1': 'More advanced options are available here,',
     'config.warningLine2': 'but invalid settings can break the script.',

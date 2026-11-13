@@ -4,7 +4,6 @@ import globalCss from '../assets/global.css?raw';
 import { addStyle, getHost, HOST_ID, initialize, reset } from '../core/shadowDom.js';
 import { applyDarkModeIfNeeded, watchDarkModeChanges } from '../core/darkMode.js';
 import { closeSettingPanel } from '../stores/ui.js';
-import { closeImageSearch } from '../stores/imageSearch.js';
 import { registerMenu } from './menu.js';
 
 let app = null; // 当前挂载的 Vue 应用实例
@@ -33,8 +32,6 @@ export function teardown() {
     }
     app = null;
   }
-  // 浮层状态不随应用卸载保留，否则重建后会停在过期位置
-  closeImageSearch();
   reset();
 }
 

@@ -1,9 +1,7 @@
 <script setup>
 import { ui } from './stores/ui.js';
-import { imageSearch } from './stores/imageSearch.js';
 import JumpBar from './components/JumpBar.vue';
 import SettingPanel from './components/SettingPanel.vue';
-import ImageSearchMenu from './components/ImageSearchMenu.vue';
 import Toast from './components/Toast.vue';
 </script>
 
@@ -12,8 +10,6 @@ import Toast from './components/Toast.vue';
   <JumpBar />
   <!-- 设置面板组件, 外置 v-if 实现按需挂载, 减少资源占用 -->
   <SettingPanel v-if="ui.settingPanelOpen" />
-  <!-- 右键图片搜图浮层 -->
-  <ImageSearchMenu v-if="imageSearch.open" />
   <!-- 气泡通知组件 -->
   <Toast />
 </template>

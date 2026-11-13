@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
 import { localizeCategoryName, t } from '../assets/i18n.js';
@@ -20,6 +20,9 @@ import {
   performEngineAction,
 } from '../core/jump.js';
 import { getSelectedText } from '../core/selection.js';
+import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
+import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
+import { requestRestart } from '../core/appControl.js';
 import { showToast } from '../stores/ui.js';
 import { useFixedTop } from '../composables/useFixedTop.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
@@ -40,6 +43,9 @@ const inlineStyleBlocked = isInlineStyleBlocked();
 
 const ready = ref(false);
 const isSelectSearch = ref(false);
+// 长按图片时复用同一条跳转条，只把关键词换成图片地址
+const isImageSearch = ref(false);
+const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -67,7 +73,7 @@ const {
   dispose: disposeFixedTop,
 } = useFixedTop({
   containerEl,
-  isSelectSearch,
+  isSelectSearch: isOverlay,
   inlineStyleBlocked,
   sitePatches,
   matchedRule,
@@ -87,7 +93,9 @@ let resolvedStyle = '';
 
 const categories = computed(() =>
   data.engineCategories
-    .filter(([, , enabled]) => enabled)
+    // 图片模式只保留「图片」分类：用图片地址去搜网页没有意义；
+    // 该分类默认不在跳转条显示，图片模式下不受隐藏状态限制
+    .filter(([, key, enabled]) => (isImageSearch.value ? key === IMAGE_CATEGORY_KEY : enabled))
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
       key,
@@ -97,6 +105,7 @@ const categories = computed(() =>
 );
 
 function getCurrentKeyword() {
+  if (isImageSearch.value) return imageSearch.imageUrl;
   if (isSelectSearch.value) return selectionText.value;
   return extractKeyword(inputTarget);
 }
@@ -113,10 +122,39 @@ async function onJump(engine) {
     return;
   }
   performJump(engine, keyword, data);
+  if (isImageSearch.value) closeImageMode();
 }
 
 function onJumpAll(engines) {
   openAllEngines(engines, getCurrentKeyword(), data);
+  if (isImageSearch.value) closeImageMode();
+}
+
+/** 收起图片模式：清掉图片状态后重建，跳转条回到原本的站点布局 */
+function closeImageMode() {
+  barVisible.value = false;
+  closeImageSearch();
+}
+
+// 长按可能发生在跳转条已挂载之后：状态与当前挂载模式不一致时重建，
+// 让同一条跳转条在「站点内嵌」与「顶部图片浮层」之间切换
+watch(
+  () => imageSearch.active,
+  (active) => {
+    if (active === isImageSearch.value) return;
+    setTimeout(() => requestRestart(), 0);
+  },
+);
+
+// 图片模式是临时浮层：点外部、按 Escape 或滚动页面时收起
+function onImageModePointerDown(e) {
+  const path = e.composedPath?.();
+  const inside = path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target);
+  if (!inside) closeImageMode();
+}
+
+function onImageModeKeydown(e) {
+  if (e.key === 'Escape') closeImageMode();
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文
@@ -188,7 +226,22 @@ function initSelectSearch() {
   return true;
 }
 
+/**
+ * 长按图片时以图片模式挂载：跳转条固定在视口顶部，关键词是图片地址。
+ * 与划词条共用同一套定位与样式，只是内容换成「图片」分类。
+ */
+function initImageSearch() {
+  isImageSearch.value = true;
+  inputTarget = () => imageSearch.imageUrl;
+  insertTarget = document.body;
+  insertPosition = 'beforeend';
+  return true;
+}
+
 function initTargets() {
+  // 长按图片触发的懒启动优先进入图片模式，避免先按站点规则找输入框
+  if (imageSearch.active) return initImageSearch();
+
   // 此类站点（如 Wikipedia）的规则只适合作为标题跳转，
   // 开启划词搜索时优先使用划词模式，避免规则目标失效或无输入框
   if (data.selectSearch && matchedRule?.enabled && matchedRule.selectSearchPriority) {
@@ -221,7 +274,7 @@ function initTargets() {
 }
 
 function injectHost() {
-  if (isSelectSearch.value) {
+  if (isOverlay.value) {
     insertHost(document.body, 'beforeend');
     return;
   }
@@ -252,6 +305,8 @@ onMounted(async () => {
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
   if (isSelectSearch.value) onSelectionChange();
+  // 图片模式由长按触发，挂载后直接显示
+  if (isImageSearch.value) barVisible.value = true;
 
   if (matchedRule) {
     applyStylish(matchedRule);
@@ -275,6 +330,12 @@ onMounted(async () => {
   window.addEventListener('pointerup', endScrollDrag);
   window.addEventListener('pointercancel', endScrollDrag);
 
+  if (isImageSearch.value) {
+    document.addEventListener('pointerdown', onImageModePointerDown, true);
+    document.addEventListener('keydown', onImageModeKeydown, true);
+    window.addEventListener('scroll', closeImageMode, true);
+  }
+
   if (isSelectSearch.value) {
     document.addEventListener('selectionchange', onSelectionChange);
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
@@ -282,13 +343,16 @@ onMounted(async () => {
     document.addEventListener('keyup', onSelectionChange);
   }
 
-  if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isSelectSearch.value) {
+  if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isOverlay.value) {
     captureOriginTop();
     window.addEventListener('scroll', onScroll);
   }
 });
 
 onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onImageModePointerDown, true);
+  document.removeEventListener('keydown', onImageModeKeydown, true);
+  window.removeEventListener('scroll', closeImageMode, true);
   document.removeEventListener('selectionchange', onSelectionChange);
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);
@@ -309,8 +373,16 @@ onBeforeUnmount(() => {
     v-if="ready"
     ref="containerEl"
     id="sej-container"
-    :class="[containerClass, { selectSearch: isSelectSearch, 'sej-select-visible': barVisible }]"
-    :aria-hidden="isSelectSearch && !barVisible ? 'true' : undefined"
+    :class="[
+      containerClass,
+      {
+        selectSearch: isOverlay,
+        'sej-select-visible': barVisible,
+        'sej-image-search': isImageSearch,
+      },
+    ]"
+    :aria-hidden="isOverlay && !barVisible ? 'true' : undefined"
+    :style="isImageSearch ? { '--sej-image-thumb': `url(${imageSearch.imageUrl})` } : undefined"
   >
     <div class="sej-scroll-viewport" @wheel="onBarWheel">
       <div
@@ -591,6 +663,26 @@ onBeforeUnmount(() => {
   transition:
     transform 0.3s,
     visibility 0s linear 0s;
+}
+
+/*
+ * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，
+ * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。
+ */
+#sej-container.sej-image-search {
+  padding-left: 6px;
+}
+
+#sej-container.sej-image-search::before {
+  content: '';
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+  border-radius: 4px;
+  background: var(--sej-surface-2) center / cover no-repeat;
+  background-image: var(--sej-image-thumb, none);
+  box-shadow: inset 0 0 0 1px var(--border-color-sej);
 }
 
 .sej-category-title {

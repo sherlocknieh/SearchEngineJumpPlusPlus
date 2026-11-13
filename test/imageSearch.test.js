@@ -1,9 +1,10 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import {
+  LONG_PRESS_MOVE_TOLERANCE,
   getImageEngines,
+  isLongPressMove,
   resolveImageUrl,
-  shouldHandleImageContextMenu,
 } from '../src/core/imageSearch.js';
 
 function img(attrs = {}) {
@@ -12,8 +13,25 @@ function img(attrs = {}) {
   return el;
 }
 
+function box(style = {}, size = 120) {
+  const el = document.createElement('div');
+  Object.assign(el.style, style);
+  el.getBoundingClientRect = () => ({
+    width: size,
+    height: size,
+    top: 0,
+    left: 0,
+    right: size,
+    bottom: size,
+    x: 0,
+    y: 0,
+  });
+  document.body.appendChild(el);
+  return el;
+}
+
 describe('resolveImageUrl', () => {
-  it('取图片的绝对地址，支持相对路径与 srcset 选中的地址', () => {
+  it('取图片的绝对地址，支持相对路径', () => {
     // 浏览器会把 src 解析成绝对地址，currentSrc 因此优先于原始属性
     expect(resolveImageUrl(img({ src: '/a.png' }), 'https://site.test/post')).toBe(
       new URL('/a.png', document.baseURI).href,
@@ -39,28 +57,37 @@ describe('resolveImageUrl', () => {
     expect(resolveImageUrl(img({ src: 'data:image/png;base64,AAA' }))).toBe('');
     expect(resolveImageUrl(img({ src: 'javascript:alert(1)' }))).toBe('');
   });
+
+  it('没有 img 时向上查找背景图容器', () => {
+    const card = box({ backgroundImage: 'url("https://cdn.test/cover.jpg")' });
+    const inner = document.createElement('span');
+    card.appendChild(inner);
+    expect(resolveImageUrl(inner)).toBe('https://cdn.test/cover.jpg');
+  });
+
+  it('忽略渐变、data: 背景图与过小的容器', () => {
+    const gradient = box({ backgroundImage: 'linear-gradient(#fff, #000)' });
+    expect(resolveImageUrl(gradient)).toBe('');
+
+    const inline = box({ backgroundImage: 'url("data:image/png;base64,AAA")' });
+    expect(resolveImageUrl(inline)).toBe('');
+
+    const tiny = box({ backgroundImage: 'url("https://cdn.test/icon.png")' }, 16);
+    expect(resolveImageUrl(tiny)).toBe('');
+  });
+
+  it('img 地址不可用时继续向上找背景图', () => {
+    const card = box({ backgroundImage: 'url(https://cdn.test/cover.jpg)' });
+    const el = img({ src: 'data:image/gif;base64,R0lGOD' });
+    card.appendChild(el);
+    expect(resolveImageUrl(el)).toBe('https://cdn.test/cover.jpg');
+  });
 });
 
-describe('shouldHandleImageContextMenu', () => {
-  const imageUrl = 'https://cdn.test/a.png';
-
-  it('关闭时不接管', () => {
-    expect(shouldHandleImageContextMenu({ mode: 'off', imageUrl })).toBe(false);
-  });
-
-  it('menu 模式直接接管，alt 模式只在按住 Alt 时接管', () => {
-    expect(shouldHandleImageContextMenu({ mode: 'menu', imageUrl })).toBe(true);
-    expect(shouldHandleImageContextMenu({ mode: 'alt', imageUrl })).toBe(false);
-    expect(shouldHandleImageContextMenu({ mode: 'alt', altKey: true, imageUrl })).toBe(true);
-  });
-
-  it('触屏设备没有 Alt 键，alt 模式按直接触发处理', () => {
-    expect(shouldHandleImageContextMenu({ mode: 'alt', imageUrl, touchOnly: true })).toBe(true);
-    expect(shouldHandleImageContextMenu({ mode: 'off', imageUrl, touchOnly: true })).toBe(false);
-  });
-
-  it('没有图片地址时一律不接管', () => {
-    expect(shouldHandleImageContextMenu({ mode: 'menu', imageUrl: '' })).toBe(false);
+describe('isLongPressMove', () => {
+  it('小范围抖动不算移动，超过阈值才算', () => {
+    expect(isLongPressMove(100, 100, 103, 104)).toBe(false);
+    expect(isLongPressMove(100, 100, 100 + LONG_PRESS_MOVE_TOLERANCE + 1, 100)).toBe(true);
   });
 });
 

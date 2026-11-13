@@ -39,9 +39,9 @@ describe('createDefaultConfig', () => {
     expect(config.selectSearchInInput).toBe(true);
   });
 
-  it('默认用 Alt+右键搜图，并内置图片分类', () => {
+  it('默认开启长按搜图，并内置图片分类', () => {
     const config = createDefaultConfig();
-    expect(config.imageSearch).toBe('alt');
+    expect(config.imageSearch).toBe(true);
     expect(config.engineCategories.some(([, key]) => key === 'image')).toBe(true);
     expect(config.engineList.image.length).toBeGreaterThan(0);
   });
@@ -163,10 +163,13 @@ describe('normalizeConfig', () => {
     expect(result.engineCategories).toEqual(defaults.engineCategories);
   });
 
-  it('右键搜图模式非法时回退默认值，合法值原样保留', () => {
-    expect(normalizeConfig({ imageSearch: 'always' }, defaults).imageSearch).toBe('alt');
-    expect(normalizeConfig({ imageSearch: 'off' }, defaults).imageSearch).toBe('off');
-    expect(normalizeConfig({ imageSearch: 'menu' }, defaults).imageSearch).toBe('menu');
+  it('长按搜图开关非法时回退默认值，并兼容旧的字符串模式', () => {
+    expect(normalizeConfig({ imageSearch: 'always' }, defaults).imageSearch).toBe(true);
+    expect(normalizeConfig({ imageSearch: false }, defaults).imageSearch).toBe(false);
+    // 旧配置：off 关闭，menu / alt 视为开启
+    expect(normalizeConfig({ imageSearch: 'off' }, defaults).imageSearch).toBe(false);
+    expect(normalizeConfig({ imageSearch: 'menu' }, defaults).imageSearch).toBe(true);
+    expect(normalizeConfig({ imageSearch: 'alt' }, defaults).imageSearch).toBe(true);
   });
 
   it('旧配置缺少图片分类时补回默认分类与引擎', () => {
