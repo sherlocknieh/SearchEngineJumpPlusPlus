@@ -500,11 +500,15 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
-/* 已固定展开的分类用图钉图标替代引擎图标 */
+/*
+ * 已固定展开的分类用图钉图标替代引擎图标。
+ * 图钉图形本身占 viewBox 的 20/24，缩到 12px 后含描边的墨迹约 11px，
+ * 与 13px 中文的行高墨迹齐平，不会显得比文字高一截。
+ */
 .sej-category-pin-icon {
   display: block;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   margin: 0;
 }
 
