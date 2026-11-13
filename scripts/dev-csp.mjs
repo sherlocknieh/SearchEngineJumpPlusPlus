@@ -203,7 +203,8 @@ server.listen(port, '127.0.0.1', () => {
   console.log(`\n[SEJ dev] 调试脚本已就绪：${origin}/install.user.js`);
   console.log('[SEJ dev] 首次安装后无需重装，改代码会自动重建并刷新页面\n');
   if (noOpen) return;
-  openInBrowser(origin);
+  // 直接打开安装地址，由脚本管理器接管并弹出安装框，不用再点页内链接
+  openInBrowser(`${origin}/install.user.js`);
 });
 
 function shutdown() {

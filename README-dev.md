@@ -35,8 +35,9 @@
   pnpm dev:csp --no-open  # 不自动开浏览器
   ```
 
-  1. 服务就绪后会自动用系统默认浏览器打开 `http://127.0.0.1:5180/`（不是 VS Code 内部浏览器），
-     首次点击页面里的链接安装 `SearchEngineJump++ (dev)`。
+  1. 服务就绪后会自动用系统默认浏览器打开 `http://127.0.0.1:5180/install.user.js`
+     （不是 VS Code 内部浏览器），脚本管理器接管后直接弹出安装框，
+     确认安装 `SearchEngineJump++ (dev)` 即可。
      脚本名带 (dev)，与正式版共存；两者共用同一份配置，宿主 id 也不冲突。
   2. 之后任意页面都会自动加载最新产物，代码改动会重建并整页刷新（替代 HMR）。
   3. 脚本管理器需允许 eval（Tampermonkey / Violentmonkey 默认允许）；
