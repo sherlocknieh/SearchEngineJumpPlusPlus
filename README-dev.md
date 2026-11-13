@@ -18,6 +18,13 @@
   # 使用 `--host` 将开发环境开放到外部网络，实现远程调试。
   ```
 
+- dev 版的注入方式与构建版不同：它往页面插入外部 module 脚本
+  (`http://localhost:5173/__vite-plugin-monkey.entry.js`)。站点 CSP 的 `script-src`
+  不含该地址时浏览器会直接拒绝加载，脚本完全不运行（控制台报
+  `Loading the script ... violates the following Content Security Policy directive`）。
+  调试这类严格 CSP 的站点（如 sex.com）请改用 `pnpm build` 的产物，构建版是内联脚本，
+  受 `'unsafe-inline'` 放行。
+
 - 打包构建与发布
 
   本仓库按「每次提交即发布」执行。版本号由 `scripts/release.mjs` 按系统日期时间

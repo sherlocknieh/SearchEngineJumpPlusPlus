@@ -59,8 +59,6 @@ src/main.js                 只做装配
 
 - 取词：`core/selection.js`（文档选区 + 输入框 `selectionStart/End`）
 - 划词时机：`core/selectionGesture.js` 记录左键是否按住，拖动过程中不弹条，松手后才显示
-- 选区被遮：`core/overlayGuard.js` 识别盖住视口的全屏透明 iframe（广告插屏会吞掉鼠标事件，页面拿不到选区），
-  懒启动期间探测到稳定遮罩时提示，并可按提示一键移除
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
   - `performJump` / `openAllEngines`
@@ -126,7 +124,7 @@ src/main.js                 只做装配
 ## UI 状态与提示
 
 - `stores/ui.js`：`ui` 响应式状态、`showToast(text, duration, action, { priority })`、`openSettingPanel`
-- `components/Toast.vue` 挂在 `App.vue`，z-index 高于设置面板遮罩
+- `components/Toast.vue` 挂在 `App.vue`，用 popover 进入 top layer：页面把 z-index 拉满（广告层）时提示仍可见可点
 - 所有文案走 `assets/i18n.js` 的 `t(key, params)`（`{name}` 插值），中英文在 `assets/messages.js`
 
 ## 常见任务 → 先读哪些文件
@@ -137,7 +135,6 @@ src/main.js                 只做装配
 | 改设置面板          | `SettingPanel.vue` → 对应 `composables/useSettings*` → `components/styles/*.css`                               |
 | 加站点适配          | `data/sites/<站名>.js`（照抄 `bing.js`/`zhihu.js`）→ `core/applyRule.js`                                       |
 | 改跳转/取词         | `core/jump.js` → `core/selection.js` → `core/selectionGesture.js` → `JumpBar.getCurrentKeyword`                |
-| 划词被页面挡住      | `core/overlayGuard.js` → `app/start.js` 的懒启动探测 → `stores/ui.js` 的 `showToast(text, ms, action)`          |
 | 改配置格式/导入导出 | `core/configSchema.js` → `configData.js` → `useConfigIO.js` → `configMerge.js`                                 |
 | 改存储/同步         | `core/storage.js` → `storageBackend.js` → `app/settingsSync.js`                                                |
 | 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
@@ -149,7 +146,7 @@ src/main.js                 只做装配
 ## 测试索引（`test/`，纯 JS）
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
-`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `overlayGuard` `performJump` `selection` `sharedPointer`
+`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 
@@ -162,5 +159,9 @@ src/main.js                 只做装配
 - 新增默认引擎：`src/data/engines.json`；新增站点适配：`src/data/sites/`
 - 内置分类（`actions` / `image`）不可删除，`isBuiltinCategory` 统一判断；`image` 分类缺失时由 `normalizeConfig` 补回
 - 删除操作默认走 `useUndoDelete`（可撤销）
+- 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
+  浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
+- dev 版靠插入外部 module 脚本注入，严格 CSP 的站点会直接拦掉（控制台报 violates CSP）；
+  这类站点用 `pnpm build` 的内联产物验证
 - 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
 - 发布前会跑 lint/test，改完先本地 `pnpm test`

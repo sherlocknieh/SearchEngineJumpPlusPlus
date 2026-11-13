@@ -74,9 +74,6 @@ export const messages = {
     'toast.syncedFromOtherPages': 'SearchEngineJump: 已从其他页面同步配置',
     'toast.searchTemplateApplied': '已自动把链接中的关键词替换为 %s',
     'toast.searchTemplateManual': '未能识别关键词，请手动把链接中的关键词替换为 %s',
-    'toast.overlayBlocked': '页面被全屏遮罩挡住，划词无效',
-    'toast.overlayBlockedAction': '移除遮罩',
-    'toast.overlayRemoved': '已移除遮挡层',
 
     'category.title': '编辑分类',
     'category.delete': '删除分类',
@@ -226,9 +223,6 @@ export const messages = {
     'toast.syncedFromOtherPages': 'SearchEngineJump: Settings synced from another page',
     'toast.searchTemplateApplied': 'Keyword in the link was replaced with %s',
     'toast.searchTemplateManual': 'Could not detect the keyword; replace it in the link with %s',
-    'toast.overlayBlocked': 'A full-screen overlay is blocking text selection',
-    'toast.overlayBlockedAction': 'Remove overlay',
-    'toast.overlayRemoved': 'Overlay removed',
 
     'category.title': 'Edit category',
     'category.delete': 'Delete category',
