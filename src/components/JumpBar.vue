@@ -84,6 +84,8 @@ const isSelectSearch = ref(isFloat && selectSearchEnabled);
 const isContextAction = ref(false);
 // 当前上下文模式（image / link），图片模式有专属的定位方式
 const contextMode = ref('');
+// 当前命中的元素：再次长按另一个目标时据此重新定位浮层
+const contextTarget = ref(null);
 const isImageContext = computed(() => isContextAction.value && contextMode.value === 'image');
 // 简洁模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
 const compactBar = computed(
@@ -215,11 +217,13 @@ function closeContextMode() {
 }
 
 // 长按可能发生在浮层条已挂载之后：上下文模式与划词共用同一个浮层条，
-// 切换模式只需刷新关键词与显隐，无需重建 Vue 应用
+// 命中新目标时刷新关键词、锚点与显隐，无需重建 Vue 应用
 watch(
-  () => (contextAction.active ? contextAction.mode : ''),
-  (mode) => {
-    if (!isFloat || mode === contextMode.value) return;
+  () => (contextAction.active ? contextAction.element : null),
+  (element) => {
+    if (!isFloat || element === contextTarget.value) return;
+    contextTarget.value = element;
+    const mode = element ? contextAction.mode : '';
     contextMode.value = mode;
     isContextAction.value = Boolean(mode);
     if (mode) {
@@ -325,6 +329,7 @@ function initSelectSearch() {
 
 function initContextAction() {
   contextMode.value = contextAction.mode;
+  contextTarget.value = contextAction.element;
   isContextAction.value = true;
   inputTarget = () => contextAction.keyword;
   return true;
@@ -386,6 +391,12 @@ function isInsideBar(e) {
   return isEventInsideUi(containerEl.value, e);
 }
 
+/** 收起态图标边长：读取图标模式样式里的变量，取不到时用样式里的默认值 */
+function iconTriggerSize() {
+  const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue('--sej-icon-size'));
+  return Number.isFinite(value) ? value : 30;
+}
+
 /** 跟随模式下用选区/命中元素的矩形算出跳转条的视口坐标 */
 function syncFloatPlacement() {
   if (!isFloat) return;
@@ -438,19 +449,30 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
+  // 链接条贴在链接左侧：优先放在链接外，左侧没有空间时移到链接内左侧
+  if (!isImageContext.value && iconMode.value) {
+    const iconSize = iconTriggerSize();
+    const outsideLeft = rect.left - PLACEMENT_GAP - iconSize;
+    const preferredLeft = outsideLeft >= PLACEMENT_GAP ? outsideLeft : rect.left + PLACEMENT_GAP;
+    const maxLeft = Math.max(PLACEMENT_GAP, viewport.width - PLACEMENT_GAP - iconSize);
+    const left = Math.min(Math.max(preferredLeft, PLACEMENT_GAP), maxLeft);
+    // 展开高度决定盒子位置，收起态图标由样式居中到链接中线
+    const maxTop = Math.max(PLACEMENT_GAP, viewport.height - PLACEMENT_GAP - barSize.height);
+    const top = Math.min(
+      Math.max(rect.top + (rect.bottom - rect.top - barSize.height) / 2, PLACEMENT_GAP),
+      maxTop,
+    );
+    bar.classList.remove('sej-top');
+    bar.classList.add('sej-follow-anchor');
+    floatStyle.value = { top: `${Math.round(top)}px`, left: `${Math.round(left)}px` };
+    return;
+  }
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  // 链接可能撑满整行：图标贴住实际按下位置，而不是链接的右边缘
-  const point = contextAction.point;
-  const placementRect =
-    !isImageContext.value && point
-      ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
-      : rect;
-  const { top, left } =
-    imagePlacement ?? placeNearRect({ rect: placementRect, bar: barSize, viewport });
+  const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
   // 图片条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0632
+// @version            2026.11.14.0635
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7343,14 +7343,12 @@
 		mode: "",
 		keyword: "",
 		url: "",
-		point: null,
 		element: null
 	});
-	function openContextAction({ mode, keyword, url, point = null, element = null }) {
+	function openContextAction({ mode, keyword, url, element = null }) {
 		contextAction.mode = mode;
 		contextAction.keyword = keyword;
 		contextAction.url = url;
-		contextAction.point = point;
 		contextAction.element = element;
 		contextAction.active = true;
 	}
@@ -8392,6 +8390,7 @@
 			const isSelectSearch = ref(isFloat && selectSearchEnabled);
 			const isContextAction = ref(false);
 			const contextMode = ref("");
+			const contextTarget = ref(null);
 			const isImageContext = computed(() => isContextAction.value && contextMode.value === "image");
 			const compactBar = computed(() => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact));
 			const iconMode = computed(() => isFloat && (isContextAction.value || Boolean(data.selectionIcon)));
@@ -8461,8 +8460,10 @@
 				hideFloatBar();
 				closeContextAction();
 			}
-			watch(() => contextAction.active ? contextAction.mode : "", (mode) => {
-				if (!isFloat || mode === contextMode.value) return;
+			watch(() => contextAction.active ? contextAction.element : null, (element) => {
+				if (!isFloat || element === contextTarget.value) return;
+				contextTarget.value = element;
+				const mode = element ? contextAction.mode : "";
 				contextMode.value = mode;
 				isContextAction.value = Boolean(mode);
 				if (mode) {
@@ -8541,6 +8542,7 @@
 			}
 			function initContextAction() {
 				contextMode.value = contextAction.mode;
+				contextTarget.value = contextAction.element;
 				isContextAction.value = true;
 				inputTarget = () => contextAction.keyword;
 				return true;
@@ -8580,6 +8582,10 @@
 			}
 			function isInsideBar(e) {
 				return isEventInsideUi(containerEl.value, e);
+			}
+			function iconTriggerSize() {
+				const value = parseFloat(getComputedStyle(containerEl.value).getPropertyValue("--sej-icon-size"));
+				return Number.isFinite(value) ? value : 30;
 			}
 			function syncFloatPlacement() {
 				if (!isFloat) return;
@@ -8622,7 +8628,23 @@
 					width: document.documentElement.clientWidth,
 					height: window.visualViewport?.height || window.innerHeight
 				};
-				const imagePlacement = isImageContext.value ? placeInsideRect({
+				if (!isImageContext.value && iconMode.value) {
+					const iconSize = iconTriggerSize();
+					const outsideLeft = rect.left - 6 - iconSize;
+					const preferredLeft = outsideLeft >= 6 ? outsideLeft : rect.left + 6;
+					const maxLeft = Math.max(6, viewport.width - 6 - iconSize);
+					const left = Math.min(Math.max(preferredLeft, 6), maxLeft);
+					const maxTop = Math.max(6, viewport.height - 6 - barSize.height);
+					const top = Math.min(Math.max(rect.top + (rect.bottom - rect.top - barSize.height) / 2, 6), maxTop);
+					bar.classList.remove("sej-top");
+					bar.classList.add("sej-follow-anchor");
+					floatStyle.value = {
+						top: `${Math.round(top)}px`,
+						left: `${Math.round(left)}px`
+					};
+					return;
+				}
+				const { top, left } = (isImageContext.value ? placeInsideRect({
 					rect,
 					bar: barSize,
 					viewport
@@ -8630,16 +8652,8 @@
 					rect,
 					bar: barSize,
 					viewport
-				}) : null;
-				const point = contextAction.point;
-				const placementRect = !isImageContext.value && point ? {
-					top: point.y,
-					bottom: point.y,
-					left: point.x,
-					right: point.x
-				} : rect;
-				const { top, left } = imagePlacement ?? placeNearRect({
-					rect: placementRect,
+				}) : null) ?? placeNearRect({
+					rect,
 					bar: barSize,
 					viewport
 				});
@@ -12088,10 +12102,7 @@
 				timer = 0;
 				if (!pressed) return;
 				suppressUntil = performance.now() + 800;
-				showContextAction(pressed, {
-					x: startX,
-					y: startY
-				});
+				showContextAction(pressed);
 				pressed = null;
 				navigator.vibrate?.(10);
 			}, 450);
@@ -12100,13 +12111,12 @@
 			if (!pressed) return;
 			if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
 		}
-		function showContextAction(hit, point) {
+		function showContextAction(hit) {
 			if (!hit.url) return;
 			openContextAction({
 				mode: hit.mode,
 				keyword: hit.text || hit.url,
 				url: hit.url,
-				point,
 				element: hit.element
 			});
 			ensureBoot?.();
@@ -12123,10 +12133,7 @@
 			}
 			if ((e.composedPath?.() || []).some((node) => isOwnHostNode(node))) return;
 			const hit = resolveHit(e.target);
-			if (hit) showContextAction(hit, {
-				x: e.clientX,
-				y: e.clientY
-			});
+			if (hit) showContextAction(hit);
 		}
 		document.addEventListener("pointerdown", onPointerDown, true);
 		document.addEventListener("pointermove", onPointerMove, true);
