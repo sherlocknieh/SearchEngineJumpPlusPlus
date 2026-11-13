@@ -13,6 +13,7 @@ import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
+import { Script } from 'node:vm';
 
 const root = path.resolve(import.meta.dirname, '..');
 const bundlePath = path.join(root, '.dev', 'SearchEngineJump++.user.js');
@@ -28,6 +29,19 @@ function readPort() {
 
 const port = readPort();
 const origin = `http://127.0.0.1:${port}`;
+const noOpen = process.argv.includes('--no-open');
+
+/** 用系统默认浏览器打开安装页，和 `pnpm dev` 一样不落在 VS Code 内部浏览器里 */
+function openInBrowser(url) {
+  const [command, args] =
+    process.platform === 'darwin'
+      ? ['open', [url]]
+      : process.platform === 'win32'
+        ? ['cmd', ['/c', 'start', '', url]]
+        : ['xdg-open', [url]];
+  // 打不开只影响这一下，服务继续跑；地址已经打印在终端里
+  spawn(command, args, { detached: true, stdio: 'ignore' }).on('error', () => {}).unref();
+}
 
 /** watch 构建自包含产物，页面侧的脚本管理器负责取最新一份 */
 function startBuild() {
@@ -102,7 +116,7 @@ function loaderSource() {
     }
     try {
       // eval 的代码默认归到调用者名下，补 sourceURL 让 DevTools 单独列出这份产物
-      // 换行必须写成 \\n：这里是模板字符串，写成 \n 会在生成阶段就断行破坏产物语法
+      // 这段是模板字符串，任何转义序列都会在生成阶段生效：换行必须双写反斜杠才会留到运行期
       eval(res.responseText + '\\n//# sourceURL=sej.dev.bundle.js');
     } catch (e) {
       console.error('[SEJ dev] 执行调试产物失败', e);
@@ -127,6 +141,18 @@ const installHtml = `<!DOCTYPE html>
     <p>安装后任意页面都会加载最新构建产物，产物变化时整页刷新。</p>
   </body>
 </html>`;
+
+// 加载器由模板字符串拼出，转义写坏时只有在管理器里才会暴露成「语法错误」：启动时先解析一遍
+function assertLoaderParses() {
+  try {
+    new Script(loaderSource());
+  } catch (e) {
+    console.error(`[SEJ dev] 生成的加载器代码无法解析，请检查模板字符串里的转义：${e.message}`);
+    process.exit(1);
+  }
+}
+
+assertLoaderParses();
 
 const server = createServer(async (req, res) => {
   const { pathname } = new URL(req.url, origin);
@@ -176,6 +202,8 @@ server.on('error', (e) => {
 server.listen(port, '127.0.0.1', () => {
   console.log(`\n[SEJ dev] 调试脚本已就绪：${origin}/install.user.js`);
   console.log('[SEJ dev] 首次安装后无需重装，改代码会自动重建并刷新页面\n');
+  if (noOpen) return;
+  openInBrowser(origin);
 });
 
 function shutdown() {
