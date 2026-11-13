@@ -36,7 +36,7 @@ export const messages = {
     'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '极简模式',
-    'settings.selectionIconTip': '划词后在文字/链接同一行且水平居中显示一个图标，鼠标悬浮时展开搜索条',
+    'settings.selectionIconTip': '划词后在文字/链接正上方显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.editConfig': '配置文件',
@@ -187,7 +187,7 @@ export const messages = {
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.selectionIcon': 'Minimal mode',
     'settings.selectionIconTip':
-      'Show a single icon centered on the selected text/link line; hover it to expand the search bar',
+      'Show a single icon above the selected text/link; hover it to expand the search bar',
     'settings.center': 'Center search bar',
     'settings.centerTip': 'Always center the jump bar',
     'settings.editConfig': 'Config file',

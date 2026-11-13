@@ -1,8 +1,8 @@
 /**
  * 贴内容的浮层条定位计算。
  *
- * 文字/链接触发的跳转条放在锚点正上方、与锚点水平居中；极简模式收起时图标与
- * 文字/链接同一行且水平居中；图片条优先放进图片内部顶部居中，
+ * 文字/链接触发的跳转条放在锚点正上方、与锚点水平居中；极简模式收起时只露图标，
+ * 与展开后的整条共用同一落点；图片条优先放进图片内部顶部居中，
  * 图片尺寸不足时放到图片上方居中。放不下时都会收进视口，始终留出最小边距。
  */
 
@@ -10,13 +10,12 @@
 export const PLACEMENT_GAP = 6;
 
 /**
- * 锚点矩形在水平方向对齐后收进视口的左坐标。
- * @param {'center'|'left'} align center 居中；left 左边缘贴住锚点左边缘
+ * 锚点矩形水平居中后收进视口的左坐标。
  */
-function alignedLeft(rect, barWidth, viewWidth, gap, align) {
+function centeredLeft(rect, barWidth, viewWidth, gap) {
   const rectLeft = Math.max(0, rect.left ?? 0);
   const rectRight = Math.max(rectLeft, rect.right ?? 0);
-  const preferred = align === 'left' ? rectLeft : rectLeft + (rectRight - rectLeft - barWidth) / 2;
+  const preferred = rectLeft + (rectRight - rectLeft - barWidth) / 2;
   const maxLeft = Math.max(gap, viewWidth - gap - barWidth);
   return Math.min(Math.max(preferred, gap), maxLeft);
 }
@@ -43,7 +42,7 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
   const rectHeight = Math.max(0, rect.bottom - rect.top);
   if (rectWidth < barWidth + gap * 2 || rectHeight < barHeight + gap * 2) return null;
 
-  const left = alignedLeft(rect, barWidth, viewWidth, gap, 'center');
+  const left = centeredLeft(rect, barWidth, viewWidth, gap);
 
   // 顶部与图片顶部留出间距，图片顶部超出视口时收进视口
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
@@ -60,50 +59,21 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
  * @param {{width:number, height:number}} options.bar 跳转条实测尺寸
  * @param {{width:number, height:number}} options.viewport 视口尺寸
  * @param {number} [options.gap] 与锚点、视口边界的间距
- * @param {'center'|'left'} [options.align] 水平对齐方式，默认居中
  * @returns {{top:number, left:number}} 跳转条的视口坐标
  */
-export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP, align = 'center' }) {
+export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
   const viewWidth = Math.max(0, viewport?.width ?? 0);
   const viewHeight = Math.max(0, viewport?.height ?? 0);
   const barWidth = Math.max(0, bar?.width ?? 0);
   const barHeight = Math.max(0, bar?.height ?? 0);
 
-  const left = alignedLeft(rect, barWidth, viewWidth, gap, align);
+  const left = centeredLeft(rect, barWidth, viewWidth, gap);
 
   // 上方放得下就放上方，否则翻到锚点下方；两种情况都收进视口
   const above = rect.top - gap - barHeight;
   const candidate = above >= gap ? above : rect.bottom + gap;
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
   const top = Math.min(Math.max(candidate, gap), maxTop);
-
-  return { top: Math.round(top), left: Math.round(left) };
-}
-
-/**
- * 极简模式收起态图标：与锚点同一行且水平居中，多行锚点按第一行对齐。
- * 靠近视口边界时收进视口。
- *
- * @param {object} options
- * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或链接的视口矩形
- * @param {number} options.iconSize 收起态图标边长
- * @param {number} options.barHeight 展开后整条的高度，用于把图标圆心对齐到这一行
- * @param {{width:number, height:number}} options.viewport 视口尺寸
- * @param {number} [options.gap] 与锚点、视口边界的间距
- * @returns {{top:number, left:number}} 跳转条的视口坐标
- */
-export function placeInlineIcon({ rect, iconSize, barHeight, viewport, gap = PLACEMENT_GAP }) {
-  const viewWidth = Math.max(0, viewport?.width ?? 0);
-  const viewHeight = Math.max(0, viewport?.height ?? 0);
-  // 多行锚点只取第一行的高度，图标始终贴在这一行
-  const lineHeight = Math.min(Math.max(0, rect.bottom - rect.top), iconSize);
-  const centerY = rect.top + lineHeight / 2;
-
-  // 图标中心对齐锚点水平中心，靠近边界时收进视口
-  const left = alignedLeft(rect, iconSize, viewWidth, gap, 'center');
-
-  const maxTop = Math.max(gap, viewHeight - gap - barHeight);
-  const top = Math.min(Math.max(centerY - barHeight / 2, gap), maxTop);
 
   return { top: Math.round(top), left: Math.round(left) };
 }
