@@ -321,7 +321,7 @@ export const DEFAULT_CATEGORY_NAMES = {
   books: { 'zh-CN': '书籍', en: 'Books' },
   tools: { 'zh-CN': '工具', en: 'Tools' },
   image: { 'zh-CN': '搜图', en: 'Image Search' },
-  actions: { 'zh-CN': '功能', en: 'Actions' },
+  actions: { 'zh-CN': '操作', en: 'Actions' },
   download: { 'zh-CN': '资源', en: 'Resources' },
   user1792802683546: { 'zh-CN': '资源+', en: 'Resources+' },
   user1792793110006: { 'zh-CN': '国产AI', en: 'Chinese AI' },

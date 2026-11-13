@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0635
+// @version            2026.11.14.0637
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5742,7 +5742,7 @@
 		center: false,
 		engineCategories: [
 			[
-				"功能",
+				"操作",
 				"actions",
 				false
 			],
@@ -6098,7 +6098,7 @@
 			en: "Image Search"
 		},
 		actions: {
-			"zh-CN": "功能",
+			"zh-CN": "操作",
 			en: "Actions"
 		},
 		download: {
@@ -6252,6 +6252,7 @@
 		"defaultOpenTarget",
 		"language"
 	];
+	var LEGACY_ACTIONS_CATEGORY_NAME = "功能";
 	function createDefaultConfig() {
 		return {
 			selectSearch: true,
@@ -6291,14 +6292,14 @@
 		return settings;
 	}
 	function ensureBuiltinActions(categories, engineList) {
-		if (!categories.some(([, key]) => key === "actions")) {
-			const defaultCategory = engines_default.engineCategories.find(([, key]) => key === BUILTIN_CATEGORY_KEY);
-			categories.unshift([
-				defaultCategory?.[0] || "actions",
-				BUILTIN_CATEGORY_KEY,
-				defaultCategory?.[2] ?? true
-			]);
-		}
+		const defaultCategory = engines_default.engineCategories.find(([, key]) => key === BUILTIN_CATEGORY_KEY);
+		const category = categories.find(([, key]) => key === BUILTIN_CATEGORY_KEY);
+		if (!category) categories.unshift([
+			defaultCategory?.[0] || "actions",
+			BUILTIN_CATEGORY_KEY,
+			defaultCategory?.[2] ?? true
+		]);
+		else if (defaultCategory && category[0] === LEGACY_ACTIONS_CATEGORY_NAME) category[0] = defaultCategory[0];
 		const engines = engineList["actions"] || [];
 		const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
 		for (const engine of engines_default.engineList["actions"] || []) if (!presentActions.has(engine.action)) engines.push({ ...engine });

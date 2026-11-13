@@ -89,7 +89,7 @@ export function useUndoDelete({ draft, scheduleAutoSave, isDialogOpen, closeCate
     if (!category) return;
     const engine = category.engines?.[ei];
     if (!engine) return;
-    // 内置功能分类本身不可删，但它里面的内置快捷动作同样受保护；
+    // 内置操作分类本身不可删，但它里面的内置快捷动作同样受保护；
     // 用户自己添加的搜索引擎可以正常删除
     if (isBuiltinCategory(category) && engine.action) return;
     notifyDeleted(

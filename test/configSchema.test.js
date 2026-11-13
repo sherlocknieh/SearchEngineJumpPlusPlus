@@ -31,7 +31,7 @@ describe('createDefaultConfig', () => {
     const config = createDefaultConfig();
     for (const key of OPTION_KEYS) expect(config).toHaveProperty(key);
     expect(Object.keys(config.engineList).length).toBeGreaterThan(0);
-    expect(config.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
+    expect(config.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
   });
 
   it('默认允许输入框内划词', () => {
@@ -57,7 +57,7 @@ describe('createDefaultConfig', () => {
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
-    // 搜图分类命名为「搜图」，紧跟「功能」分类，默认不隐藏
+    // 搜图分类命名为「搜图」，紧跟「操作」分类，默认不隐藏
     expect(config.engineCategories[1]).toEqual(['搜图', 'image', true]);
     expect(config.engineList.image.length).toBeGreaterThan(0);
   });
@@ -148,7 +148,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
+    expect(result.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
   });
 
@@ -156,7 +156,7 @@ describe('normalizeConfig', () => {
     const result = normalizeConfig(
       {
         engineCategories: [
-          ['功能', 'actions', false],
+          ['我的操作', 'actions', false],
           ['搜索', 'web', true],
         ],
         engineList: {
@@ -166,10 +166,29 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0]).toEqual(['功能', 'actions', false]);
+    expect(result.engineCategories[0]).toEqual(['我的操作', 'actions', false]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
       { name: '打开', url: '', action: 'open' },
+    ]);
+  });
+
+  it('旧版默认名「功能」跟随改名，自定义分类名保持原样', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [
+          ['功能', 'actions', false],
+          ['我自己的分类', 'web', true],
+        ],
+        engineList: { actions: [], web: [] },
+      },
+      defaults,
+    );
+    expect(result.engineCategories[0]).toEqual(['操作', 'actions', false]);
+    expect(result.engineCategories.find(([, key]) => key === 'web')).toEqual([
+      '我自己的分类',
+      'web',
+      true,
     ]);
   });
 
@@ -210,7 +229,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    // 补回的搜图分类紧跟「功能」分类
+    // 补回的搜图分类紧跟「操作」分类
     expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual(['actions', 'image']);
     expect(result.engineList.image).toEqual(defaults.engineList.image);
   });
@@ -331,12 +350,12 @@ describe('isBarCategoryVisible', () => {
     expect(isBarCategoryVisible('image', false, 'image')).toBe(true);
   });
 
-  it('功能分类在图片模式下按显示开关出现', () => {
+  it('操作分类在图片模式下按显示开关出现', () => {
     expect(isBarCategoryVisible('actions', true, 'image')).toBe(true);
     expect(isBarCategoryVisible('actions', false, 'image')).toBe(false);
   });
 
-  it('链接模式只显示功能分类，且不受普通跳转条的显示开关影响', () => {
+  it('链接模式只显示操作分类，且不受普通跳转条的显示开关影响', () => {
     expect(isBarCategoryVisible('actions', true, 'link')).toBe(true);
     expect(isBarCategoryVisible('actions', false, 'link')).toBe(true);
     expect(isBarCategoryVisible('image', true, 'link')).toBe(false);

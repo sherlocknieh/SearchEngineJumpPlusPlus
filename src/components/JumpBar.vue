@@ -150,7 +150,7 @@ const barStyle = computed(() => {
 
 const categories = computed(() =>
   data.engineCategories
-    // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「功能」动作
+    // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「操作」动作
     .filter(([, key, enabled]) =>
       isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
     )

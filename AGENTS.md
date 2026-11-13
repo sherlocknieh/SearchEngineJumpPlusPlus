@@ -81,7 +81,7 @@ src/main.js                 只做装配
   图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
   再向上 4 层找 `background-image`），链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
-  图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「功能」分类
+  图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；没有可用引擎时该模式不接管
 - 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, element }`；
   与划词共用图标模式，长按唤起时以图标收起、悬停或点击图标展开；
@@ -90,7 +90,7 @@ src/main.js                 只做装配
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；
   链接模式「复制」复制标题加地址、「打开」新标签打开链接（纯图片链接没有标题时只复制地址）
 - 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式显示「搜图」分类，
-  并允许「功能」分类按显示开关出现；链接模式只显示「功能」；
+  并允许「操作」分类按显示开关出现；链接模式只显示「操作」；
   普通模式按显示开关决定且永不显示「搜图」分类
 - 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听命中模式的变化，
   切换时刷新关键词、锚点与显隐，无需重建 Vue 应用

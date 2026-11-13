@@ -17,7 +17,7 @@ describe('isLongPressMove', () => {
 });
 
 describe('contextCategoryKey', () => {
-  it('图片与链接分别对应搜图、功能分类', () => {
+  it('图片与链接分别对应搜图、操作分类', () => {
     expect(contextCategoryKey('image')).toBe('image');
     expect(contextCategoryKey('link')).toBe('actions');
     expect(contextCategoryKey('')).toBe('');
@@ -42,7 +42,7 @@ describe('getContextEngines', () => {
     expect(engines.map((engine) => engine.name)).toEqual(['A']);
   });
 
-  it('链接模式取功能分类下启用的复制/打开动作', () => {
+  it('链接模式取操作分类下启用的复制/打开动作', () => {
     const engines = getContextEngines(
       {
         engineList: {

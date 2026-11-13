@@ -157,12 +157,12 @@ describe('useUndoDelete', () => {
     expect(scheduleAutoSave).toHaveBeenCalledTimes(2);
   });
 
-  it('内置功能分类里的自定义引擎可删除，内置快捷动作仍受保护', () => {
+  it('内置操作分类里的自定义引擎可删除，内置快捷动作仍受保护', () => {
     const draft = reactive({
       categories: [
         {
           _id: 1,
-          name: '功能',
+          name: '操作',
           key: 'actions',
           enabled: true,
           engines: [

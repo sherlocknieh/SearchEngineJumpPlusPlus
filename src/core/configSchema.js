@@ -30,6 +30,9 @@ export const OPTION_KEYS = [
   'language',
 ];
 
+/** 内置快捷动作分类的旧版默认名，读配置时跟随新版改名 */
+const LEGACY_ACTIONS_CATEGORY_NAME = '功能';
+
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
@@ -112,18 +115,22 @@ export function normalizeConfig(raw, defaults) {
 
 /**
  * 保证内置的快捷动作分类与动作引擎存在。
- * 只补缺失项，不改变用户已有的排序、隐藏状态与自定义图标。
+ * 只补缺失项与跟随旧版默认名改名，不改变用户已有的排序、隐藏状态与自定义图标。
  */
 function ensureBuiltinActions(categories, engineList) {
-  if (!categories.some(([, key]) => key === BUILTIN_CATEGORY_KEY)) {
-    const defaultCategory = defaultConfig.engineCategories.find(
-      ([, key]) => key === BUILTIN_CATEGORY_KEY,
-    );
+  const defaultCategory = defaultConfig.engineCategories.find(
+    ([, key]) => key === BUILTIN_CATEGORY_KEY,
+  );
+  const category = categories.find(([, key]) => key === BUILTIN_CATEGORY_KEY);
+  if (!category) {
     categories.unshift([
       defaultCategory?.[0] || BUILTIN_CATEGORY_KEY,
       BUILTIN_CATEGORY_KEY,
       defaultCategory?.[2] ?? true,
     ]);
+  } else if (defaultCategory && category[0] === LEGACY_ACTIONS_CATEGORY_NAME) {
+    // 旧版默认名「功能」跟随新版改名，用户自定义的名称保持不变
+    category[0] = defaultCategory[0];
   }
 
   const engines = engineList[BUILTIN_CATEGORY_KEY] || [];
@@ -140,7 +147,7 @@ function ensureBuiltinActions(categories, engineList) {
 
 /**
  * 保证「搜图」分类存在，右键搜图才有可用的引擎列表。
- * 只在分类缺失时补回默认分类与默认识图引擎，并紧跟「功能」分类，与默认设置顺序一致；
+ * 只在分类缺失时补回默认分类与默认识图引擎，并紧跟「操作」分类，与默认设置顺序一致；
  * 用户清空引擎后保持为空，此时右键不接管，原生菜单照常可用。
  */
 function ensureImageCategory(categories, engineList) {
@@ -149,7 +156,7 @@ function ensureImageCategory(categories, engineList) {
   const defaultCategory = defaultConfig.engineCategories.find(
     ([, key]) => key === IMAGE_CATEGORY_KEY,
   );
-  // 有「功能」分类时插在它后面，其余情况追加到末尾
+  // 有「操作」分类时插在它后面，其余情况追加到末尾
   const actionsIndex = categories.findIndex(([, key]) => key === BUILTIN_CATEGORY_KEY);
   const insertAt = actionsIndex === -1 ? categories.length : actionsIndex + 1;
   categories.splice(insertAt, 0, [
