@@ -32,7 +32,7 @@ export const messages = {
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
-      '划词条出现在选中文字的正上方，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出',
+      '划词条出现在选中文字的正上方并右侧对齐，长按图片/链接时贴着目标出现；关闭时从页面顶部滑出',
     'settings.selectionCompact': '简洁模式',
     'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.selectionIcon': '极简模式',
@@ -182,7 +182,7 @@ export const messages = {
       'Show the selection bar when text is selected inside an input',
     'settings.selectionFollowPointer': 'Follow selection',
     'settings.selectionFollowPointerTip':
-      'Show the selection bar above the selected text, or next to the long-pressed image/link; otherwise it slides in from the top',
+      'Show the selection bar above the selected text, right-aligned to it, or next to the long-pressed image/link; otherwise it slides in from the top',
     'settings.selectionCompact': 'Compact mode',
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.selectionIcon': 'Minimal mode',

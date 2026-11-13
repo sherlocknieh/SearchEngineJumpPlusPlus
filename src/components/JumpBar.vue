@@ -12,7 +12,7 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import { PLACEMENT_GAP, placeCenteredRect, placeInsideRect } from '../core/floatPlacement.js';
+import { PLACEMENT_GAP, placeAboveRect, placeInsideRect } from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -439,20 +439,44 @@ function syncFloatPlacement() {
     height: window.visualViewport?.height || window.innerHeight,
   };
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
-  // 文字与链接触发的条一律放在锚点正上方居中
+  // 文字与链接触发的条放在锚点正上方，右边缘与锚点右边缘对齐
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
-      placeCenteredRect({ rect, bar: barSize, viewport }))
+      placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  const { top, left } = imagePlacement ?? placeCenteredRect({ rect, bar: barSize, viewport });
+  const placement =
+    imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport, align: 'right' });
+  const { top, left } = placement;
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
-  // 以整条中心为锚点：极简模式展开时宽度向两侧对称增长，始终居中于锚点
-  const center = left + barSize.width / 2;
+  // 图片条以整条中心为锚点：宽度变化时向两侧对称展开，图标保持居中
+  if (isImageContext.value) {
+    const center = left + barSize.width / 2;
+    floatStyle.value = {
+      top: `${top}px`,
+      left: `${Math.round(center)}px`,
+      transform: 'translateX(-50%)',
+    };
+    return;
+  }
+  // 极简模式收起时只占图标宽，右边缘钉在整条右边缘：展开只向左生长，图标不移动
+  if (iconMode.value) {
+    const right = left + barSize.width;
+    floatStyle.value = {
+      top: `${top}px`,
+      left: 'auto',
+      right: `${Math.round(viewport.width - right)}px`,
+      marginLeft: '0px',
+      marginRight: '0px',
+      transform: 'none',
+    };
+    return;
+  }
   floatStyle.value = {
     top: `${top}px`,
-    left: `${Math.round(center)}px`,
-    transform: 'translateX(-50%)',
+    left: `${Math.round(left)}px`,
+    right: 'auto',
+    transform: 'none',
   };
 }
 
@@ -958,6 +982,7 @@ onBeforeUnmount(() => {
 
 /* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */
 #sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {
+  right: auto;
   left: 50%;
   transform: translateX(-50%);
 }
@@ -972,14 +997,14 @@ onBeforeUnmount(() => {
   width: max-content !important;
 }
 
-/* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
+/* 图标钉在右端圆内（与收起态整圆同心），展开/收起都不动；
    压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项。
    1px 抵消收起态那条透明边框，26px 图标正好居中于 30px 圆内 */
 #sej-container.sej-icon-mode > .sej-icon-trigger {
   position: absolute;
   z-index: 1;
   top: 1px;
-  left: 1px;
+  right: 1px;
   pointer-events: auto;
 }
 
