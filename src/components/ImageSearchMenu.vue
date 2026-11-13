@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
 import { getImageEngines } from '../core/imageSearch.js';
-import { performJump } from '../core/jump.js';
+import { openAllEngines, performJump } from '../core/jump.js';
 import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
 import { useEventIsolation } from '../composables/useEventIsolation.js';
@@ -34,6 +34,12 @@ async function placeAtCursor() {
 
 function onJump(engine) {
   performJump(engine, imageSearch.imageUrl, data);
+  closeImageSearch();
+}
+
+// 一键打开全部识图引擎：批量打开始终新标签页，不会互相覆盖
+function onJumpAll() {
+  openAllEngines(engines.value, imageSearch.imageUrl, data);
   closeImageSearch();
 }
 
@@ -86,6 +92,24 @@ onBeforeUnmount(() => {
     >
       <img v-if="engine.icon" class="sej-engine-icon" :src="engine.icon" alt="" />
       <span>{{ localizeEngineName(engine.name) }}</span>
+    </a>
+    <!-- 一键打开全部识图引擎；只有一个引擎时等同于上面的条目，无需重复 -->
+    <a
+      v-if="engines.length > 1"
+      class="sej-engine sej-image-menu-item sej-image-menu-all"
+      role="menuitem"
+      @click.prevent.stop="onJumpAll"
+    >
+      <span class="sej-image-menu-all-icon" aria-hidden="true">
+        <svg viewBox="0 0 16 16" aria-hidden="true">
+          <path
+            d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
+          />
+          <path d="M9.6 2.6h3.8v3.8" />
+          <path d="M13.4 2.6 8.6 7.4" />
+        </svg>
+      </span>
+      <span>{{ t('imageSearch.searchAll') }}</span>
     </a>
   </div>
 </template>
@@ -147,6 +171,44 @@ onBeforeUnmount(() => {
 
 #sej-image-menu .sej-image-menu-item + .sej-image-menu-item {
   margin-top: 1px;
+}
+
+/* 一键搜索与单独引擎之间加分隔线，避免误点 */
+#sej-image-menu .sej-image-menu-all {
+  position: relative;
+  margin-top: 5px;
+}
+
+#sej-image-menu .sej-image-menu-all::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: 6px;
+  right: 6px;
+  height: 1px;
+  background: var(--border-color-sej);
+}
+
+/* 图标槽与引擎图标的 16px 保持一致，文字不因有无图标而错位 */
+#sej-image-menu .sej-image-menu-all-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: var(--font-color-qxin);
+  opacity: 0.75;
+}
+
+#sej-image-menu .sej-image-menu-all-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 @keyframes sej-image-menu-in {

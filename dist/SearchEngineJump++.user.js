@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2315
+// @version            2026.11.13.2319
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -4001,6 +4001,11 @@
 	function createTextVNode(text = " ", flag = 0) {
 		return createVNode(Text, null, text, flag);
 	}
+	function createStaticVNode(content, numberOfNodes) {
+		const vnode = createVNode(Static, null, content);
+		vnode.staticCount = numberOfNodes;
+		return vnode;
+	}
 	function createCommentVNode(text = "", asBlock = false) {
 		return asBlock ? (openBlock(), createBlock(Comment, null, text)) : createVNode(Comment, null, text);
 	}
@@ -5888,6 +5893,7 @@
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "当前内容不是有效链接",
 			"imageSearch.title": "搜索这张图片",
+			"imageSearch.searchAll": "全部搜索",
 			"config.warningLine1": "此处有更多的设置选项，自由度更高，",
 			"config.warningLine2": "但设置错误会导致脚本无法运行",
 			"config.parseFailed": "JSON 解析失败",
@@ -6024,6 +6030,7 @@
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "The current text is not a valid link",
 			"imageSearch.title": "Search this image",
+			"imageSearch.searchAll": "Search all",
 			"config.warningLine1": "More advanced options are available here,",
 			"config.warningLine2": "but invalid settings can break the script.",
 			"config.parseFailed": "Failed to parse JSON",
@@ -11243,7 +11250,7 @@
 	var _sfc_main$2 = {
 		__name: "ImageSearchMenu",
 		setup(__props) {
-			addStyle("\n#sej-image-menu {\n  position: fixed;\n  z-index: 100000001;\n  min-width: 148px;\n  max-width: min(280px, calc(100vw - 16px));\n  padding: 4px;\n  box-sizing: border-box;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  border-radius: var(--sej-radius-menu, 12px);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  overflow: hidden;\n  user-select: none;\n  animation: sej-image-menu-in 0.1s ease-out;\n}\n\n#sej-image-menu .sej-image-menu-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 4px 8px 6px;\n  font-weight: 600;\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-thumb {\n  width: 28px;\n  height: 28px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  border-radius: 6px;\n  background: var(--sej-surface-2);\n}\n\n#sej-image-menu .sej-image-menu-item {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n#sej-image-menu .sej-image-menu-item + .sej-image-menu-item {\n  margin-top: 1px;\n}\n\n@keyframes sej-image-menu-in {\n  from {\n    opacity: 0;\n    transform: scale(0.98);\n  }\n}\n");
+			addStyle("\n#sej-image-menu {\n  position: fixed;\n  z-index: 100000001;\n  min-width: 148px;\n  max-width: min(280px, calc(100vw - 16px));\n  padding: 4px;\n  box-sizing: border-box;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  border-radius: var(--sej-radius-menu, 12px);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  overflow: hidden;\n  user-select: none;\n  animation: sej-image-menu-in 0.1s ease-out;\n}\n\n#sej-image-menu .sej-image-menu-head {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n  padding: 4px 8px 6px;\n  font-weight: 600;\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-thumb {\n  width: 28px;\n  height: 28px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  border-radius: 6px;\n  background: var(--sej-surface-2);\n}\n\n#sej-image-menu .sej-image-menu-item {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n#sej-image-menu .sej-image-menu-item + .sej-image-menu-item {\n  margin-top: 1px;\n}\n\n/* 一键搜索与单独引擎之间加分隔线，避免误点 */\n#sej-image-menu .sej-image-menu-all {\n  position: relative;\n  margin-top: 5px;\n}\n\n#sej-image-menu .sej-image-menu-all::before {\n  content: '';\n  position: absolute;\n  top: -3px;\n  left: 6px;\n  right: 6px;\n  height: 1px;\n  background: var(--border-color-sej);\n}\n\n/* 图标槽与引擎图标的 16px 保持一致，文字不因有无图标而错位 */\n#sej-image-menu .sej-image-menu-all-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  color: var(--font-color-qxin);\n  opacity: 0.75;\n}\n\n#sej-image-menu .sej-image-menu-all-icon svg {\n  width: 100%;\n  height: 100%;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n@keyframes sej-image-menu-in {\n  from {\n    opacity: 0;\n    transform: scale(0.98);\n  }\n}\n");
 			const data = useSettings().settingData;
 			const engines = computed(() => getImageEngines(data).map((engine) => ({
 				...engine,
@@ -11270,6 +11277,10 @@
 			}
 			function onJump(engine) {
 				performJump(engine, imageSearch.imageUrl, data);
+				closeImageSearch();
+			}
+			function onJumpAll() {
+				openAllEngines(engines.value, imageSearch.imageUrl, data);
 				closeImageSearch();
 			}
 			function onDocumentPointerDown(e) {
@@ -11302,23 +11313,32 @@
 					"aria-label": unref(t)("imageSearch.title"),
 					style: normalizeStyle(position.value),
 					onContextmenu: _cache[0] || (_cache[0] = withModifiers(() => {}, ["prevent"]))
-				}, [createBaseVNode("div", _hoisted_2, [createBaseVNode("img", {
-					class: "sej-image-menu-thumb",
-					src: unref(imageSearch).imageUrl,
-					alt: ""
-				}, null, 8, _hoisted_3), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.title")), 1)]), (openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
-					return openBlock(), createElementBlock("a", {
-						key: engine.name + engine.url,
-						class: "sej-engine sej-image-menu-item",
-						role: "menuitem",
-						onClick: withModifiers(($event) => onJump(engine), ["prevent", "stop"])
-					}, [engine.icon ? (openBlock(), createElementBlock("img", {
-						key: 0,
-						class: "sej-engine-icon",
-						src: engine.icon,
+				}, [
+					createBaseVNode("div", _hoisted_2, [createBaseVNode("img", {
+						class: "sej-image-menu-thumb",
+						src: unref(imageSearch).imageUrl,
 						alt: ""
-					}, null, 8, _hoisted_5)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_4);
-				}), 128))], 44, _hoisted_1);
+					}, null, 8, _hoisted_3), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.title")), 1)]),
+					(openBlock(true), createElementBlock(Fragment, null, renderList(engines.value, (engine) => {
+						return openBlock(), createElementBlock("a", {
+							key: engine.name + engine.url,
+							class: "sej-engine sej-image-menu-item",
+							role: "menuitem",
+							onClick: withModifiers(($event) => onJump(engine), ["prevent", "stop"])
+						}, [engine.icon ? (openBlock(), createElementBlock("img", {
+							key: 0,
+							class: "sej-engine-icon",
+							src: engine.icon,
+							alt: ""
+						}, null, 8, _hoisted_5)) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(unref(localizeEngineName)(engine.name)), 1)], 8, _hoisted_4);
+					}), 128)),
+					engines.value.length > 1 ? (openBlock(), createElementBlock("a", {
+						key: 0,
+						class: "sej-engine sej-image-menu-item sej-image-menu-all",
+						role: "menuitem",
+						onClick: withModifiers(onJumpAll, ["prevent", "stop"])
+					}, [_cache[1] || (_cache[1] = createStaticVNode("<span class=\"sej-image-menu-all-icon\" aria-hidden=\"true\"><svg viewBox=\"0 0 16 16\" aria-hidden=\"true\"><path d=\"M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5\"></path><path d=\"M9.6 2.6h3.8v3.8\"></path><path d=\"M13.4 2.6 8.6 7.4\"></path></svg></span>", 1)), createBaseVNode("span", null, toDisplayString(unref(t)("imageSearch.searchAll")), 1)])) : createCommentVNode("", true)
+				], 44, _hoisted_1);
 			};
 		}
 	};
