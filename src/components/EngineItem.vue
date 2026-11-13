@@ -78,6 +78,8 @@ const emit = defineEmits(['jump']);
   object-fit: cover;
   display: inline-block;
   margin: 0;
+  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */
+  translate: 0 0.75px;
 }
 
 .sej-engine-icon:not([src]) {

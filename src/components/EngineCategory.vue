@@ -498,18 +498,21 @@ onBeforeUnmount(() => {
   height: 16px;
   margin: 0;
   object-fit: cover;
+  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */
+  translate: 0 0.75px;
 }
 
 /*
  * 已固定展开的分类用图钉图标替代引擎图标。
- * 图钉图形本身占 viewBox 的 20/24，缩到 12px 后含描边的墨迹约 11px，
- * 与 13px 中文的行高墨迹齐平，不会显得比文字高一截。
+ * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。
  */
 .sej-category-pin-icon {
   display: block;
-  width: 12px;
-  height: 12px;
+  width: 16px;
+  height: 16px;
   margin: 0;
+  /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */
+  translate: 0 0.75px;
 }
 
 /* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */
