@@ -615,6 +615,8 @@ let showToken = 0;
 let keepOverlayUntil = 0;
 // 本次输入操作里已主动收起，残余的选区变化不应再弹出
 let dismissedGesture = -1;
+// 收起那一刻的选区内容：同一击里选区变了（三击选段、连点选词）就是重新划词
+let dismissedSelection = '';
 // 按下时先不收起：若是重新划词，松手后仍要显示，收起再弹出就是闪烁
 let pendingHide = false;
 // 本次操作已由松手判定过显隐，之后迟到的空选区是拖动中间态，不再改变结果
@@ -627,11 +629,14 @@ function onSelectionChange(e) {
   if (isContextAction.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
-  // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
-  // 但拖动选区属于重新划词，应照常显示
-  if (dismissedGesture === currentGestureId() && !isSelectionDrag()) return;
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
+  // 拖动选区或选区内容变了（三击选段等）属于重新划词，照常显示
+  if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
+    if (text === dismissedSelection) return;
+    dismissedGesture = -1;
+  }
   if (!text) {
     // 松手时已判定过显隐：拖动过程中迟到的空选区不能把刚划好的条收掉
     if (settledGesture === currentGestureId()) return;
@@ -658,8 +663,9 @@ function onOverlayPointerDown(e) {
     closeContextMode();
     return;
   }
-  // 记下本次操作，避免同一击的 mouseup/selectionchange 把刚收起的浮层又拉回来
+  // 记下本次操作与当时的选区，避免同一击的 mouseup/selectionchange 把刚收起的浮层又拉回来
   dismissedGesture = currentGestureId();
+  dismissedSelection = getSelectedText({ includeInput: data.selectSearchInInput }) || '';
   pendingHide = true;
 }
 

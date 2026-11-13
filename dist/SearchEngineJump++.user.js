@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0715
+// @version            2026.11.14.0718
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8744,14 +8744,18 @@
 			let showToken = 0;
 			let keepOverlayUntil = 0;
 			let dismissedGesture = -1;
+			let dismissedSelection = "";
 			let pendingHide = false;
 			let settledGesture = -1;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
 				if (isContextAction.value) return;
 				if (isPointerPressed()) return;
-				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
+				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
+					if (text === dismissedSelection) return;
+					dismissedGesture = -1;
+				}
 				if (!text) {
 					if (settledGesture === currentGestureId()) return;
 					if (barVisible.value && (performance.now() < keepOverlayUntil || isInsideBar(e))) return;
@@ -8773,6 +8777,7 @@
 					return;
 				}
 				dismissedGesture = currentGestureId();
+				dismissedSelection = getSelectedText({ includeInput: data.selectSearchInInput }) || "";
 				pendingHide = true;
 			}
 			function settleOverlay(e) {
