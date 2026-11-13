@@ -8,6 +8,8 @@ const props = defineProps({
   showIcon: { type: Boolean, default: true },
   // 精简模式：只保留图标，文字收进悬停提示
   compact: { type: Boolean, default: false },
+  // 情景专属的悬停提示，优先于名称；为空时按精简模式回退到名称
+  hint: { type: String, default: '' },
 });
 
 const iconSrc = computed(() => (props.showIcon ? getFaviconSrc(props.engine) : ''));
@@ -21,7 +23,7 @@ const emit = defineEmits(['jump']);
 <template>
   <a
     class="sej-engine"
-    :title="compact ? label : null"
+    :title="hint || (compact ? label : null)"
     @click.prevent.stop="emit('jump', engine)"
   >
     <img v-if="iconSrc" class="sej-engine-icon" :src="iconSrc" alt="" />

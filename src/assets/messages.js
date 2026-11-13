@@ -116,6 +116,10 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
+    'action.hintCopyLink': '复制链接标题和地址',
+    'action.hintOpenLink': '打开链接',
+    'action.hintCopyImage': '复制图片',
+    'action.hintOpenImage': '打开图片',
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '无法打开该内容',
 
@@ -268,6 +272,10 @@ export const messages = {
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',
+    'action.hintCopyLink': 'Copy link title and address',
+    'action.hintOpenLink': 'Open link',
+    'action.hintCopyImage': 'Copy image',
+    'action.hintOpenImage': 'Open image',
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'Unable to open this content',
 

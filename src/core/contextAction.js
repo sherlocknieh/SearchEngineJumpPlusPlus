@@ -12,6 +12,12 @@ import { resolveLinkHit } from './linkAction.js';
 export const LONG_PRESS_MS = 450;
 export const LONG_PRESS_MOVE_TOLERANCE = 10;
 
+/** 动作引擎在各情景下的悬停提示文案 */
+const CONTEXT_ACTION_HINTS = {
+  link: { copy: 'action.hintCopyLink', open: 'action.hintOpenLink' },
+  image: { copy: 'action.hintCopyImage', open: 'action.hintOpenImage' },
+};
+
 /** 模式到命中解析与专属分类的映射 */
 export const CONTEXT_MODES = {
   image: { categoryKey: IMAGE_CATEGORY_KEY, resolveHit: resolveImageHit },
@@ -49,4 +55,13 @@ export function contextActionTarget(mode, action, hit = {}) {
   if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
   // 纯图片链接没有文字，关键词就是地址，此时只复制地址
   return keyword && keyword !== url ? `${keyword}\n${url}` : url || keyword;
+}
+
+/**
+ * 动作引擎的悬停提示键：同名的「复制」「打开」在链接与图片情景下含义不同。
+ * @param {'image' | 'link'} mode 命中类型
+ * @param {'copy' | 'open'} action 动作类型
+ */
+export function contextActionHintKey(mode, action) {
+  return CONTEXT_ACTION_HINTS[mode]?.[action] || '';
 }

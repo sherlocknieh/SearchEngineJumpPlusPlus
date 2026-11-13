@@ -458,6 +458,7 @@ onBeforeUnmount(() => {
           v-for="engine in engines"
           :key="engine.name + engine.url"
           :engine="engine"
+          :hint="engine.hint || ''"
           @jump="onEngineJump"
         />
         <a

@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0619
+// @version            2026.11.14.0620
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5900,6 +5900,10 @@
 			"engine.requiredAction": "标题必填",
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
+			"action.hintCopyLink": "复制链接标题和地址",
+			"action.hintOpenLink": "打开链接",
+			"action.hintCopyImage": "复制图片",
+			"action.hintOpenImage": "打开图片",
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "无法打开该内容",
 			"config.warningLine1": "此处有更多的设置选项，自由度更高，",
@@ -6036,6 +6040,10 @@
 			"engine.requiredAction": "Title is required",
 			"action.copied": "Copied to clipboard",
 			"action.opened": "Opened",
+			"action.hintCopyLink": "Copy link title and address",
+			"action.hintOpenLink": "Open link",
+			"action.hintCopyImage": "Copy image",
+			"action.hintOpenImage": "Open image",
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "Unable to open this content",
 			"config.warningLine1": "More advanced options are available here,",
@@ -7277,6 +7285,16 @@
 			element: link
 		};
 	}
+	var CONTEXT_ACTION_HINTS = {
+		link: {
+			copy: "action.hintCopyLink",
+			open: "action.hintOpenLink"
+		},
+		image: {
+			copy: "action.hintCopyImage",
+			open: "action.hintOpenImage"
+		}
+	};
 	var CONTEXT_MODES = {
 		image: {
 			categoryKey: IMAGE_CATEGORY_KEY,
@@ -7308,6 +7326,9 @@
 			image: url || keyword
 		};
 		return keyword && keyword !== url ? `${keyword}\n${url}` : url || keyword;
+	}
+	function contextActionHintKey(mode, action) {
+		return CONTEXT_ACTION_HINTS[mode]?.[action] || "";
 	}
 	var contextAction = reactive({
 		active: false,
@@ -7848,6 +7869,10 @@
 			compact: {
 				type: Boolean,
 				default: false
+			},
+			hint: {
+				type: String,
+				default: ""
 			}
 		},
 		emits: ["jump"],
@@ -7861,7 +7886,7 @@
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("a", {
 					class: "sej-engine",
-					title: __props.compact ? label.value : null,
+					title: __props.hint || (__props.compact ? label.value : null),
 					onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("jump", __props.engine), ["prevent", "stop"]))
 				}, [iconSrc.value ? (openBlock(), createElementBlock("img", {
 					key: 0,
@@ -8271,8 +8296,9 @@
 					return openBlock(), createBlock(_sfc_main$12, {
 						key: engine.name + engine.url,
 						engine,
+						hint: engine.hint || "",
 						onJump: onEngineJump
-					}, null, 8, ["engine"]);
+					}, null, 8, ["engine", "hint"]);
 				}), 128)), showSearchAll.value ? (openBlock(), createElementBlock("a", {
 					key: 0,
 					class: "sej-engine sej-drop-list-search-all",
@@ -8391,7 +8417,10 @@
 			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
-				engines: (data.engineList[key] || []).filter((engine) => !engine.disable)
+				engines: (data.engineList[key] || []).filter((engine) => !engine.disable).map((engine) => isContextAction.value && engine.action ? {
+					...engine,
+					hint: t(contextActionHintKey(contextMode.value, engine.action))
+				} : engine)
 			})).filter((category) => category.engines.length));
 			function getCurrentKeyword() {
 				if (isSelectSearch.value) return selectionText.value;
@@ -8855,8 +8884,13 @@
 									key: engine.url + engine.name,
 									engine,
 									compact: compactBar.value,
+									hint: engine.hint || "",
 									onJump
-								}, null, 8, ["engine", "compact"]);
+								}, null, 8, [
+									"engine",
+									"compact",
+									"hint"
+								]);
 							}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$11, {
 								key: 1,
 								name: category.name,

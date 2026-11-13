@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LONG_PRESS_MOVE_TOLERANCE,
+  contextActionHintKey,
   contextActionTarget,
   contextCategoryKey,
   getContextEngines,
@@ -88,5 +89,19 @@ describe('contextActionTarget', () => {
       image: 'https://cdn.test/a.png',
     });
     expect(contextActionTarget('image', 'open', image)).toBe('https://cdn.test/a.png');
+  });
+});
+
+describe('contextActionHintKey', () => {
+  it('同名动作在链接与图片情景下给出不同提示', () => {
+    expect(contextActionHintKey('link', 'copy')).toBe('action.hintCopyLink');
+    expect(contextActionHintKey('image', 'copy')).toBe('action.hintCopyImage');
+    expect(contextActionHintKey('link', 'open')).toBe('action.hintOpenLink');
+    expect(contextActionHintKey('image', 'open')).toBe('action.hintOpenImage');
+  });
+
+  it('未知情景或动作没有提示', () => {
+    expect(contextActionHintKey('', 'copy')).toBe('');
+    expect(contextActionHintKey('image', 'unknown')).toBe('');
   });
 });

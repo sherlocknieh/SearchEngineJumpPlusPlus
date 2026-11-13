@@ -40,7 +40,7 @@ import {
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible } from '../core/configData.js';
-import { contextActionTarget } from '../core/contextAction.js';
+import { contextActionHintKey, contextActionTarget } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
@@ -154,7 +154,14 @@ const categories = computed(() =>
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
       key,
-      engines: (data.engineList[key] || []).filter((engine) => !engine.disable),
+      engines: (data.engineList[key] || [])
+        .filter((engine) => !engine.disable)
+        // 同名动作用悬停提示说明当前情景下具体复制或打开什么
+        .map((engine) =>
+          isContextAction.value && engine.action
+            ? { ...engine, hint: t(contextActionHintKey(contextMode.value, engine.action)) }
+            : engine,
+        ),
     }))
     .filter((category) => category.engines.length),
 );
@@ -807,6 +814,7 @@ onBeforeUnmount(() => {
               :key="engine.url + engine.name"
               :engine="engine"
               :compact="compactBar"
+              :hint="engine.hint || ''"
               @jump="onJump"
             />
           </template>
