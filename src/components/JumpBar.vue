@@ -867,12 +867,14 @@ onBeforeUnmount(() => {
 }
 
 /* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩；
-   收起态只有图标可交互，压着的第一个搜索项不接收指针，避免悬停/点击误触 */
+   收起态只显示图标：滚动内容隐藏且不接收指针，避免第一个搜索项的图标
+   从图标边缘露出来，或悬停/点击误触 */
 #sej-container.sej-icon-mode > .sej-scroll-viewport {
   flex: 0 0 auto;
 }
 
 #sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-viewport {
+  visibility: hidden;
   pointer-events: none;
 }
 
