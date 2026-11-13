@@ -848,6 +848,7 @@ onBeforeUnmount(() => {
   justify-content: flex-start;
   transition:
     width 0.16s ease-out,
+    margin-top 0.16s ease-out,
     background-color 0.16s ease-out,
     backdrop-filter 0.16s ease-out;
 }
@@ -880,6 +881,16 @@ onBeforeUnmount(() => {
 
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
+}
+
+/* 展开后整条比图标高 6px，上移 3px 让搜索项与图标同心 */
+#sej-container.selectSearch.sej-icon-mode.sej-icon-open {
+  margin-top: -3px;
+}
+
+/* 顶部居中时同样上移，同时抬高站位，避免整条顶边被视口裁掉 */
+#sej-container.selectSearch.sej-icon-mode.sej-top {
+  top: 5px;
 }
 
 /* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */
