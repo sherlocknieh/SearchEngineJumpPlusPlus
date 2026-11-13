@@ -87,13 +87,19 @@ const contextMode = ref('');
 // 当前命中的元素：再次长按另一个目标时据此重新定位浮层
 const contextTarget = ref(null);
 const isImageContext = computed(() => isContextAction.value && contextMode.value === 'image');
-// 简洁模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
-const compactBar = computed(
-  () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
+// 「跟随选区」的两个子选项只作用于跟随选区的划词条；
+// 顶部滑出的划词条、上下文操作条与内嵌条都保持各自的原有形态
+const followSelectionBar = computed(
+  () => isFloat && !isContextAction.value && Boolean(data.selectionFollowPointer),
 );
-// 图标模式：划词或长按命中内容后只露出一个图标，指针停到图标上才展开整条搜索条；
+// 简洁模式：跟随选区的划词条隐藏文字，只留图标
+const compactBar = computed(() => followSelectionBar.value && Boolean(data.selectionCompact));
+// 图标模式：跟随选区的划词条只露出一个图标，指针停到图标上才展开整条搜索条；
 // 上下文操作条是长按唤起的临时浮层，始终以图标收起，避免整条盖住被操作的内容
-const iconMode = computed(() => isFloat && (isContextAction.value || Boolean(data.selectionIcon)));
+const iconMode = computed(
+  () =>
+    isFloat && (isContextAction.value || (followSelectionBar.value && Boolean(data.selectionIcon))),
+);
 // 展开态切换只改类名，宽度由 CSS 过渡；展开后的整条宽度写在 CSS 变量里
 const iconExpanded = ref(false);
 const iconOpenWidth = ref(0);

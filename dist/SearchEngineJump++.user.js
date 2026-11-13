@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0654
+// @version            2026.11.14.0656
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8404,8 +8404,9 @@
 			const contextMode = ref("");
 			const contextTarget = ref(null);
 			const isImageContext = computed(() => isContextAction.value && contextMode.value === "image");
-			const compactBar = computed(() => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact));
-			const iconMode = computed(() => isFloat && (isContextAction.value || Boolean(data.selectionIcon)));
+			const followSelectionBar = computed(() => isFloat && !isContextAction.value && Boolean(data.selectionFollowPointer));
+			const compactBar = computed(() => followSelectionBar.value && Boolean(data.selectionCompact));
+			const iconMode = computed(() => isFloat && (isContextAction.value || followSelectionBar.value && Boolean(data.selectionIcon)));
 			const iconExpanded = ref(false);
 			const iconOpenWidth = ref(0);
 			const iconOpenHeight = ref(0);
