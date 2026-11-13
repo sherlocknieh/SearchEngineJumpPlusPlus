@@ -148,6 +148,8 @@ watch(
 
 // 图片模式是临时浮层：点外部、按 Escape 或滚动页面时收起
 function onImageModePointerDown(e) {
+  // 右键用于重新指定图片，交给 contextmenu 处理，避免先收起再重建
+  if (e.button !== 0) return;
   const path = e.composedPath?.();
   const inside = path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target);
   if (!inside) closeImageMode();

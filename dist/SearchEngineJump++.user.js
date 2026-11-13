@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2347
+// @version            2026.11.13.2355
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5801,7 +5801,7 @@
 			"settings.defaultOpenTargetBlank": "新标签页",
 			"settings.defaultOpenTargetSelf": "当前页",
 			"settings.imageSearch": "长按搜图",
-			"settings.imageSearchTip": "按住图片（手机长按）时用「图片」分类的引擎搜索图片链接，支持背景图",
+			"settings.imageSearchTip": "按住图片（手机长按）或右键时用「图片」分类的引擎搜索图片链接，支持背景图；右键不拦截原生菜单",
 			"settings.language": "语言",
 			"settings.languageAuto": "跟随浏览器",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
@@ -5933,7 +5933,7 @@
 			"settings.defaultOpenTargetBlank": "New tab",
 			"settings.defaultOpenTargetSelf": "Current tab",
 			"settings.imageSearch": "Long-press search",
-			"settings.imageSearchTip": "Hold an image (long-press on phones) to search its URL with the Image category engines; background images are supported",
+			"settings.imageSearchTip": "Hold an image (long-press on phones) or right-click it to search its URL with the Image category engines; background images are supported and the native menu is kept",
 			"settings.language": "Language",
 			"settings.languageAuto": "Auto (browser)",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
@@ -8160,6 +8160,7 @@
 				setTimeout(() => requestRestart(), 0);
 			});
 			function onImageModePointerDown(e) {
+				if (e.button !== 0) return;
 				const path = e.composedPath?.();
 				if (!(path ? path.includes(containerEl.value) : containerEl.value?.contains(e.target))) closeImageMode();
 			}
@@ -11490,9 +11491,7 @@
 		}
 		function onPointerDown(e) {
 			if (e.button !== 0 || !e.isPrimary) return;
-			const settings = useSettings();
-			if (!settings.settingData?.imageSearch) return;
-			if (!getImageEngines(settings.settingData).length) return;
+			if (!imageSearchEnabled()) return;
 			const imageUrl = resolveImageUrl(e.target);
 			if (!imageUrl) return;
 			startX = e.clientX;
@@ -11503,8 +11502,7 @@
 				timer = 0;
 				if (!pressed) return;
 				suppressUntil = performance.now() + 800;
-				openImageSearch(pressed);
-				ensureBoot?.();
+				showImageSearch(pressed);
 				pressed = null;
 				navigator.vibrate?.(10);
 			}, 450);
@@ -11513,17 +11511,36 @@
 			if (!pressed) return;
 			if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
 		}
+		function showImageSearch(imageUrl) {
+			if (!imageUrl) return;
+			openImageSearch(imageUrl);
+			ensureBoot?.();
+		}
+		function imageSearchEnabled() {
+			const settings = useSettings();
+			if (!settings.settingData?.imageSearch) return false;
+			return getImageEngines(settings.settingData).length > 0;
+		}
 		function onSuppress(e) {
 			if (performance.now() > suppressUntil) return;
 			e.preventDefault();
 			e.stopPropagation();
+		}
+		function onContextMenu(e) {
+			if (performance.now() <= suppressUntil) {
+				onSuppress(e);
+				return;
+			}
+			if (!imageSearchEnabled()) return;
+			if ((e.composedPath?.() || []).some((node) => node?.id === "sej-shadow-host")) return;
+			showImageSearch(resolveImageUrl(e.target));
 		}
 		document.addEventListener("pointerdown", onPointerDown, true);
 		document.addEventListener("pointermove", onPointerMove, true);
 		document.addEventListener("pointerup", cancel, true);
 		document.addEventListener("pointercancel", cancel, true);
 		document.addEventListener("click", onSuppress, true);
-		document.addEventListener("contextmenu", onSuppress, true);
+		document.addEventListener("contextmenu", onContextMenu, true);
 	}
 	var startTimer = 0;
 	var lazyListeners = null;

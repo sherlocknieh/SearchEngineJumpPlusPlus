@@ -64,10 +64,12 @@ src/main.js                 只做装配
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
-## 长按图片搜图
+## 图片搜图（长按 / 右键）
 
 - 入口：`app/imageContextMenu.js` 在 `document` 捕获阶段识别长按手势（`LONG_PRESS_MS` 内无位移），
   只注册一次；懒启动时先 `openImageSearch()` 再 `requestBoot`，保证挂载时能读到图片状态
+- 右键：同样弹出跳转条，但**不拦截原生菜单**（不 `preventDefault`），两者并存；
+  跳转条自身的右键直接放行，避免浮层里再弹一次
 - 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
   再向上 4 层找 `background-image`，忽略渐变与 `data:` 图）与 `isLongPressMove`（位移超阈值取消）
 - 引擎来源：内置「图片」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；

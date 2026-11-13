@@ -44,7 +44,7 @@ export const messages = {
     'settings.defaultOpenTargetSelf': '当前页',
     'settings.imageSearch': '长按搜图',
     'settings.imageSearchTip':
-      '按住图片（手机长按）时用「图片」分类的引擎搜索图片链接，支持背景图',
+      '按住图片（手机长按）或右键时用「图片」分类的引擎搜索图片链接，支持背景图；右键不拦截原生菜单',
     'settings.language': '语言',
     'settings.languageAuto': '跟随浏览器',
 
@@ -189,7 +189,7 @@ export const messages = {
     'settings.defaultOpenTargetSelf': 'Current tab',
     'settings.imageSearch': 'Long-press search',
     'settings.imageSearchTip':
-      'Hold an image (long-press on phones) to search its URL with the Image category engines; background images are supported',
+      'Hold an image (long-press on phones) or right-click it to search its URL with the Image category engines; background images are supported and the native menu is kept',
     'settings.language': 'Language',
     'settings.languageAuto': 'Auto (browser)',
 
