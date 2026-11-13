@@ -84,7 +84,7 @@ src/main.js                 只做装配
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；没有可用引擎时该模式不接管
 - 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, element }`；
-  长按唤起时整条直接展开，不套用划词的极简模式图标态；
+  开启「跟随选区」时与划词条共用简洁/极简形态（极简下收起为图标），关闭时整条展开；
   点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；

@@ -87,15 +87,12 @@ const contextMode = ref('');
 // 当前命中的元素：再次长按另一个目标时据此重新定位浮层
 const contextTarget = ref(null);
 const isImageContext = computed(() => isContextAction.value && contextMode.value === 'image');
-// 「跟随选区」的两个子选项只作用于跟随选区的划词条；
-// 顶部滑出的划词条、上下文操作条与内嵌条都保持各自的原有形态
-const followSelectionBar = computed(
-  () => isFloat && !isContextAction.value && Boolean(data.selectionFollowPointer),
-);
-// 简洁模式：跟随选区的划词条隐藏文字，只留图标
+// 「跟随选区」打开时，划词条与长按唤起的图片/链接条都贴着内容出现；
+// 简洁/极简两个子选项只作用于这些贴内容的浮层条，顶部滑出的条与内嵌条保持原样
+const followSelectionBar = computed(() => isFloat && Boolean(data.selectionFollowPointer));
+// 简洁模式：贴内容的浮层条隐藏文字，只留图标
 const compactBar = computed(() => followSelectionBar.value && Boolean(data.selectionCompact));
-// 图标模式：跟随选区的划词条只露出一个图标，指针停到图标上才展开整条搜索条；
-// 上下文操作条长按即整条展开，命中后可以直接点选动作
+// 图标模式：贴内容的浮层条只露出一个图标，指针停到图标上才展开整条搜索条
 const iconMode = computed(() => followSelectionBar.value && Boolean(data.selectionIcon));
 // 展开态切换只改类名，宽度由 CSS 过渡；展开后的整条宽度写在 CSS 变量里
 const iconExpanded = ref(false);
@@ -408,10 +405,26 @@ function syncFloatPlacement() {
   if (!bar || !rect) {
     containerEl.value?.classList.remove('sej-follow-anchor');
     containerEl.value?.classList.add('sej-top');
-    // 图标模式在顶部也按左边定位：把图标钉在视口顶部居中
+    // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中；
+    // 图片条以整条中心为锚点，宽度向两侧对称展开，展开后仍居中
     if (iconMode.value && bar) {
       const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
       const viewportWidth = document.documentElement.clientWidth;
+      if (isImageContext.value) {
+        // 以视口中线为锚点，同时保证展开后的整条落在视口内
+        const center = Math.max(
+          PLACEMENT_GAP + width / 2,
+          Math.min(viewportWidth / 2, viewportWidth - PLACEMENT_GAP - width / 2),
+        );
+        floatStyle.value = {
+          right: 'auto',
+          left: `${Math.round(center)}px`,
+          marginLeft: '0px',
+          marginRight: '0px',
+          transform: 'translateX(-50%)',
+        };
+        return;
+      }
       const left = Math.max(
         PLACEMENT_GAP,
         Math.min(viewportWidth / 2 - 15, viewportWidth - PLACEMENT_GAP - width),
@@ -436,8 +449,8 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 图标模式的划词条贴在选区左侧：优先放在选区外，左侧没有空间时移到选区内左侧
-  if (iconMode.value) {
+  // 链接条贴在链接左侧：优先放在链接外，左侧没有空间时移到链接内左侧
+  if (!isImageContext.value && iconMode.value) {
     const iconSize = iconTriggerSize();
     const outsideLeft = rect.left - PLACEMENT_GAP - iconSize;
     const preferredLeft = outsideLeft >= PLACEMENT_GAP ? outsideLeft : rect.left + PLACEMENT_GAP;
@@ -790,6 +803,7 @@ onBeforeUnmount(() => {
         'sej-top': isFloat && !anchorRect,
         'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
+        'sej-image-search': isImageContext,
         'sej-compact': compactBar,
         'sej-icon-mode': iconMode,
         'sej-icon-open': iconMode && iconExpanded,
@@ -972,6 +986,12 @@ onBeforeUnmount(() => {
   /* 展开高度取脚本量到的值，高度才能跟着宽度一起过渡；量不到时回落到内容高度 */
   height: var(--sej-icon-open-height, auto);
   margin-top: 0;
+}
+
+/* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */
+#sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */
