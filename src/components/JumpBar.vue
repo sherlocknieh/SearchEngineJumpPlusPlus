@@ -236,7 +236,7 @@ watch(
   },
 );
 
-// 上下文操作条是临时浮层：点外部、按 Escape 或滚动页面时收起
+// 上下文操作条是临时浮层：点外部或按 Escape 时收起，滚动交给 onFloatScroll 跟随目标
 function onContextModePointerDown(e) {
   // 划词模式不在这里收起：拖选时按下就藏、松手又显示会闪一下
   if (!isContextAction.value) return;
@@ -253,10 +253,6 @@ function onOverlayKeydown(e) {
     return;
   }
   hideFloatBar();
-}
-
-function onContextModeScroll() {
-  if (isContextAction.value) closeContextMode();
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文
@@ -766,7 +762,6 @@ onMounted(async () => {
     document.addEventListener('pointerdown', onContextModePointerDown, true);
     document.addEventListener('keydown', onOverlayKeydown, true);
     document.addEventListener('mousemove', onIconMouseMove, { passive: true });
-    window.addEventListener('scroll', onContextModeScroll, true);
     window.addEventListener('scroll', onFloatScroll, true);
   }
 
@@ -787,7 +782,6 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onContextModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
   document.removeEventListener('mousemove', onIconMouseMove);
-  window.removeEventListener('scroll', onContextModeScroll, true);
   window.removeEventListener('scroll', onFloatScroll, true);
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('pointerup', settleOverlay, true);

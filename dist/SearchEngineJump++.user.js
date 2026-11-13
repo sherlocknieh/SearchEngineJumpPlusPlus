@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0727
+// @version            2026.11.14.0737
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8501,9 +8501,6 @@
 				}
 				hideFloatBar();
 			}
-			function onContextModeScroll() {
-				if (isContextAction.value) closeContextMode();
-			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
 				return t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
@@ -8859,7 +8856,6 @@
 					document.addEventListener("pointerdown", onContextModePointerDown, true);
 					document.addEventListener("keydown", onOverlayKeydown, true);
 					document.addEventListener("mousemove", onIconMouseMove, { passive: true });
-					window.addEventListener("scroll", onContextModeScroll, true);
 					window.addEventListener("scroll", onFloatScroll, true);
 				}
 				if (isSelectSearch.value) {
@@ -8876,7 +8872,6 @@
 				document.removeEventListener("pointerdown", onContextModePointerDown, true);
 				document.removeEventListener("keydown", onOverlayKeydown, true);
 				document.removeEventListener("mousemove", onIconMouseMove);
-				window.removeEventListener("scroll", onContextModeScroll, true);
 				window.removeEventListener("scroll", onFloatScroll, true);
 				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("pointerup", settleOverlay, true);
