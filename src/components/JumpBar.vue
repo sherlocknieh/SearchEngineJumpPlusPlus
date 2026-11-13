@@ -943,27 +943,31 @@ onBeforeUnmount(() => {
 #sej-container.selectSearch.sej-icon-mode {
   --sej-icon-size: 30px;
   justify-content: flex-start;
+  /* 尺寸、外框、投影同步过渡，曲线先快后慢，展开收尾不突兀 */
   transition:
-    width 0.16s ease-out,
-    background-color 0.16s ease-out,
-    backdrop-filter 0.16s ease-out;
+    width 0.24s cubic-bezier(0.33, 1, 0.68, 1),
+    height 0.24s cubic-bezier(0.33, 1, 0.68, 1),
+    margin-top 0.24s cubic-bezier(0.33, 1, 0.68, 1),
+    border-color 0.24s ease-out,
+    background-color 0.24s ease-out,
+    box-shadow 0.24s ease-out,
+    backdrop-filter 0.24s ease-out;
 }
 
-/* 收起态：去掉边框，换成四周加重的投影，白色页面上也能看出边界。
+/* 收起态：边框透明而不移除，白底铺满边框区，页面上也能看出边界。
    盒子下移（整条高 - 图标高）/2，图标圆心正好落在展开后整条的中心，
    展开前后搜索项的位置不移动 */
 #sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
   width: var(--sej-icon-size) !important;
   height: var(--sej-icon-size);
   margin-top: calc((var(--sej-icon-open-height, var(--sej-icon-size)) - var(--sej-icon-size)) / 2);
-  border: 0;
-  /* 铺白填满整圆：图标自带的白色圆底只有 26px，留空的 2px 圆环会把页面文字与图案透出来 */
+  border-color: transparent;
+  /* 铺白填满整圆：图标自带的白色圆底只有 26px，留空的圆环会把页面文字与图案透出来 */
   background-color: #fff;
   backdrop-filter: none;
+  /* 与展开态同为两层投影，过渡时逐层插值，展开瞬间不会突然换一套阴影 */
   box-shadow:
     0 0 0 1px hsla(0, 0%, 0%, 0.06),
-    0 0 12px hsla(0, 0%, 0%, 0.1),
-    0 2px 8px hsla(0, 0%, 0%, 0.16),
     0 14px 36px -10px hsla(0, 0%, 0%, 0.45);
 }
 
@@ -972,15 +976,22 @@ onBeforeUnmount(() => {
    从图标边缘露出来，或悬停/点击误触 */
 #sej-container.sej-icon-mode > .sej-scroll-viewport {
   flex: 0 0 auto;
+  /* 内容稍晚于外框淡入，避免图标与文字在窄宽下整块蹦出来 */
+  transition: opacity 0.16s ease-out 0.05s;
 }
 
 #sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-viewport {
   visibility: hidden;
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 0.1s ease-out;
 }
 
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
+  /* 展开高度取脚本量到的值，高度才能跟着宽度一起过渡；量不到时回落到内容高度 */
+  height: var(--sej-icon-open-height, auto);
+  margin-top: 0;
 }
 
 /* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */
@@ -1009,11 +1020,18 @@ onBeforeUnmount(() => {
   pointer-events: auto;
 }
 
-/* 收起时只有图标；展开后图标让位，设置按钮在末尾出现 */
+/* 收起态边框改为透明但仍占 1px，图标内移 1px 才能与整圆同心 */
+#sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) > .sej-icon-trigger {
+  top: 1px;
+  left: 1px;
+}
+
+/* 收起时只有图标；展开后图标让位，设置按钮在末尾淡入 */
 #sej-container.sej-icon-mode > #setBtn {
   opacity: 0;
   border-radius: 50%;
   pointer-events: none;
+  transition: opacity 0.16s ease-out;
 }
 
 #sej-container.sej-icon-mode.sej-icon-open > .sej-icon-trigger {
@@ -1031,7 +1049,9 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  #sej-container.selectSearch.sej-icon-mode {
+  #sej-container.selectSearch.sej-icon-mode,
+  #sej-container.sej-icon-mode > .sej-scroll-viewport,
+  #sej-container.sej-icon-mode > #setBtn {
     transition: none;
   }
 }
