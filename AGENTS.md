@@ -33,7 +33,7 @@ src/main.js                 只做装配
 - **重启**：设置保存后 `core/appControl.js` → `lifecycle.restart()`（整棵 Vue 应用重建）。
 - **多实例**：开发版/正式版用不同 host id 共存，层叠偏移在 `core/shadowDom.js`；
   同一版本被重复安装时（如 dev 与 dev:csp 并存），后启动的实例检测到同 id 宿主来自别的安装，直接跳过挂载。
-- **划词条独立**：`float` 宿主是独立 Vue 应用，划词/图片模式只影响它，站点内嵌条保持原位。
+- **划词条独立**：`float` 宿主是独立 Vue 应用，划词/长按操作模式只影响它，站点内嵌条保持原位。
 
 ## 设置数据链路
 
@@ -69,24 +69,30 @@ src/main.js                 只做装配
   - 动作引擎：`action: 'copy' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
-## 图片搜图（长按 / 右键）
+## 长按 / 右键操作（图片搜图、链接操作）
 
-- 入口：`app/imageContextMenu.js` 在 `document` 捕获阶段识别长按手势（`LONG_PRESS_MS` 内无位移），
-  只注册一次；懒启动时先 `openImageSearch()` 再 `requestBoot`，保证挂载时能读到图片状态
+- 入口：`app/contextMenu.js` 在 `document` 捕获阶段识别长按手势（`LONG_PRESS_MS` 内无位移），
+  只注册一次；懒启动时先 `openContextAction()` 再 `requestBoot`，保证挂载时能读到命中状态
 - 右键：同样弹出跳转条，但**不拦截原生菜单**（不 `preventDefault`），两者并存；
   跳转条自身的右键直接放行，避免浮层里再弹一次
-- 判定：`core/imageSearch.js` 的 `resolveImageUrl`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
-  再向上 4 层找 `background-image`，忽略渐变与 `data:` 图）与 `isLongPressMove`（位移超阈值取消）
-- 引擎来源：内置「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），`getImageEngines` 过滤隐藏项；
-  没有可用引擎时不接管
-- 呈现：复用跳转条（`JumpBar` 的图片模式），`stores/imageSearch.js` 提供 `{ active, imageUrl }`；
-  只显示「搜图」分类；与划词共用图标模式，搜图始终以图标收起、悬停或点击图标展开；
+- 命中优先级：图片优先于链接（链接里常包着图片）；
+  链接只接受 http(s)、mailto、tel，页内锚点与 `javascript:` 不接管
+- 判定：`core/contextAction.js` 汇总模式配置与长按判定（`isLongPressMove` 位移超阈值取消）；
+  图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
+  再向上 4 层找 `background-image`），链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
+- 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
+  图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「功能」分类
+  （复制 / 打开链接）；没有可用引擎时该模式不接管
+- 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, element }`；
+  与划词共用图标模式，长按唤起时以图标收起、悬停或点击图标展开；
   点击外部/Escape/滚动关闭，跳转或「一键打开」后自动收起
+- 关键词：图片模式的关键词与打开地址都是图片链接；链接模式的「复制」复制链接文字，
+  「打开链接」打开链接地址（纯图片链接没有文字时回退到地址）
 - 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式显示「搜图」分类，
-  并允许「功能」分类按显示开关出现；普通模式按显示开关决定且永不显示「搜图」分类；
-  该分类的显示状态固定为显示，设置里不提供隐藏按钮
-- 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听 `imageSearch.active` 与当前挂载模式不一致时
-  `requestRestart()` 重建，让同一条跳转条在「站点内嵌」与「顶部图片浮层」之间切换
+  并允许「功能」分类按显示开关出现；链接模式只显示「功能」；
+  普通模式按显示开关决定且永不显示「搜图」分类
+- 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听命中模式的变化，
+  切换时刷新关键词、锚点与显隐，无需重建 Vue 应用
 
 ## 站点适配（新增站点只改这里）
 
@@ -146,13 +152,13 @@ src/main.js                 只做装配
 | 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
 | 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                  |
 | 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                             |
-| 改长按搜图          | `app/imageContextMenu.js` → `core/imageSearch.js` → `JumpBar.vue` 图片模式                                    |
+| 改长按/右键操作    | `app/contextMenu.js` → `core/contextAction.js` → `core/imageSearch.js` / `core/linkAction.js` → `JumpBar.vue` |
 | 发布                | `scripts/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
 
 ## 测试索引（`test/`，纯 JS）
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
-`engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
+`engineUrl` `eventIsolation` `favicon` `imageSearch` `contextAction` `linkAction` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 

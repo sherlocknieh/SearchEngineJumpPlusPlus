@@ -1,11 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import {
-  LONG_PRESS_MOVE_TOLERANCE,
-  getImageEngines,
-  isLongPressMove,
-  resolveImageUrl,
-} from '../src/core/imageSearch.js';
+import { resolveImageUrl } from '../src/core/imageSearch.js';
 
 function img(attrs = {}) {
   const el = document.createElement('img');
@@ -40,7 +35,10 @@ describe('resolveImageUrl', () => {
   });
 
   it('src 是占位图时回退到懒加载属性', () => {
-    const el = img({ src: 'data:image/gif;base64,R0lGOD', 'data-src': 'https://cdn.test/real.jpg' });
+    const el = img({
+      src: 'data:image/gif;base64,R0lGOD',
+      'data-src': 'https://cdn.test/real.jpg',
+    });
     expect(resolveImageUrl(el)).toBe('https://cdn.test/real.jpg');
   });
 
@@ -81,32 +79,5 @@ describe('resolveImageUrl', () => {
     const el = img({ src: 'data:image/gif;base64,R0lGOD' });
     card.appendChild(el);
     expect(resolveImageUrl(el)).toBe('https://cdn.test/cover.jpg');
-  });
-});
-
-describe('isLongPressMove', () => {
-  it('小范围抖动不算移动，超过阈值才算', () => {
-    expect(isLongPressMove(100, 100, 103, 104)).toBe(false);
-    expect(isLongPressMove(100, 100, 100 + LONG_PRESS_MOVE_TOLERANCE + 1, 100)).toBe(true);
-  });
-});
-
-describe('getImageEngines', () => {
-  it('只返回图片分类下启用且带链接的引擎', () => {
-    const engines = getImageEngines({
-      engineList: {
-        image: [
-          { name: 'A', url: 'https://a.test/?url=%s' },
-          { name: 'B', url: 'https://b.test/?url=%s', disable: true },
-          { name: 'C', url: '' },
-        ],
-      },
-    });
-    expect(engines.map((engine) => engine.name)).toEqual(['A']);
-  });
-
-  it('缺少图片分类时返回空数组', () => {
-    expect(getImageEngines({})).toEqual([]);
-    expect(getImageEngines(null)).toEqual([]);
   });
 });

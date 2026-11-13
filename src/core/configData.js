@@ -24,16 +24,27 @@ export function isBuiltinCategory(category) {
 }
 
 /**
- * 分类是否出现在跳转条：图片模式显示搜图分类，并允许「功能」分类按显示开关出现；
- * 普通模式只按显示开关决定，搜图分类即便设为显示也不出现。
+ * 上下文操作条显示哪些分类：primary 为模式专属分类，始终显示；
+ * extras 只在分类显示开关开启时出现。普通跳转条永不显示「搜图」。
+ */
+export const CONTEXT_BAR_CATEGORIES = {
+  image: { primary: IMAGE_CATEGORY_KEY, extras: [BUILTIN_CATEGORY_KEY] },
+  link: { primary: BUILTIN_CATEGORY_KEY, extras: [] },
+};
+
+/**
+ * 分类是否出现在跳转条。
  * @param {string} key 分类键名
  * @param {boolean} enabled 分类的显示开关
- * @param {boolean} imageMode 当前是否为图片搜索模式
+ * @param {string} [contextMode] 上下文操作模式（image / link），空串表示普通跳转条
  */
-export function isBarCategoryVisible(key, enabled, imageMode) {
-  if (key === IMAGE_CATEGORY_KEY) return Boolean(imageMode);
-  // 图片模式下其它分类一律不上条，只额外允许复制/打开这类「功能」动作
-  if (imageMode) return key === BUILTIN_CATEGORY_KEY && Boolean(enabled);
+export function isBarCategoryVisible(key, enabled, contextMode = '') {
+  if (contextMode) {
+    const categories = CONTEXT_BAR_CATEGORIES[contextMode];
+    if (key === categories?.primary) return true;
+    return Boolean(categories?.extras.includes(key) && enabled);
+  }
+  if (key === IMAGE_CATEGORY_KEY) return false;
   return Boolean(enabled);
 }
 

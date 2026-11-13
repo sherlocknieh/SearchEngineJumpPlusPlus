@@ -1,32 +1,40 @@
 /**
- * 图片搜图的入口。
+ * 长按 / 右键页面内容的入口：图片走识图引擎，链接走「功能」里的复制、打开链接。
  *
- * 用户脚本无法往浏览器原生菜单里加项，iOS 长按图片又不会派发可靠的 contextmenu，
- * 所以这里自己识别长按手势：按住图片超过 LONG_PRESS_MS 且没有明显位移时，
- * 把图片地址交给跳转条，由它以图片模式弹出。
+ * 用户脚本无法往浏览器原生菜单里加项，iOS 长按图片/链接又不会派发可靠的 contextmenu，
+ * 所以这里自己识别长按手势：按住命中的元素超过 LONG_PRESS_MS 且没有明显位移时，
+ * 把地址交给跳转条，由它以对应模式弹出。
  *
  * 桌面右键同样会弹出跳转条，但不拦截原生菜单：两者并存，用户各取所需。
  *
  * 监听器挂在 document 上并只注册一次，脚本懒启动时也能先启动再弹跳转条。
  */
 import { useSettings } from '../stores/settings.js';
-import { openImageSearch } from '../stores/imageSearch.js';
+import { openContextAction } from '../stores/contextAction.js';
 import { isOwnHostNode } from '../core/shadowDom.js';
-import { LONG_PRESS_MS, getImageEngines, isLongPressMove, resolveImageHit } from '../core/imageSearch.js';
+import {
+  CONTEXT_MODES,
+  LONG_PRESS_MS,
+  getContextEngines,
+  isLongPressMove,
+} from '../core/contextAction.js';
+
+// 链接里常包着图片：图片优先，命中图片后不再把外层链接当成目标
+const HIT_ORDER = ['image', 'link'];
 
 let armed = false;
 
 /**
  * @param {() => void} ensureBoot 脚本尚未挂载时先启动，保证跳转条有宿主可渲染
  */
-export function armImageContextMenu(ensureBoot) {
+export function armContextMenu(ensureBoot) {
   if (armed) return;
   armed = true;
 
   let timer = 0;
   let startX = 0;
   let startY = 0;
-  // 命中的 { url, element }，长按成立后才交给划词条
+  // 命中的 { mode, url, text, element }，长按成立后才交给跳转条
   let pressed = null;
   // 长按已触发时，随后的 click / contextmenu 要一并吞掉，避免页面误响应
   let suppressUntil = 0;
@@ -37,12 +45,25 @@ export function armImageContextMenu(ensureBoot) {
     pressed = null;
   }
 
+  /** 按优先级找一个有可用引擎的目标；图片包在链接里时仍以图片为准 */
+  function resolveHit(target) {
+    for (const mode of HIT_ORDER) {
+      if (!hasEngines(mode)) continue;
+      const hit = CONTEXT_MODES[mode].resolveHit(target);
+      if (hit) return { mode, ...hit };
+    }
+    return null;
+  }
+
+  function hasEngines(mode) {
+    return getContextEngines(useSettings().settingData, mode).length > 0;
+  }
+
   function onPointerDown(e) {
     // 只处理主键/单指；右键走 onContextMenu，与原生菜单并存
     if (e.button !== 0 || !e.isPrimary) return;
-    if (!hasImageEngines()) return;
 
-    const hit = resolveImageHit(e.target);
+    const hit = resolveHit(e.target);
     if (!hit) return;
 
     startX = e.clientX;
@@ -53,7 +74,7 @@ export function armImageContextMenu(ensureBoot) {
       timer = 0;
       if (!pressed) return;
       suppressUntil = performance.now() + 800;
-      showImageSearch(pressed.url, pressed.element);
+      showContextAction(pressed);
       pressed = null;
       // 触屏设备给一次轻震动，确认长按已生效
       navigator.vibrate?.(10);
@@ -65,16 +86,17 @@ export function armImageContextMenu(ensureBoot) {
     if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
   }
 
-  /** 把图片地址交给划词条；先写状态再启动，挂载时才能进入图片模式 */
-  function showImageSearch(imageUrl, element) {
-    if (!imageUrl) return;
-    openImageSearch(imageUrl, element);
+  /** 把命中的地址交给跳转条；先写状态再启动，挂载时才能进入对应模式 */
+  function showContextAction(hit) {
+    if (!hit.url) return;
+    openContextAction({
+      mode: hit.mode,
+      // 图片模式没有文字，复制与打开都用图片地址；链接模式复制文字、打开地址
+      keyword: hit.text || hit.url,
+      url: hit.url,
+      element: hit.element,
+    });
     ensureBoot?.();
-  }
-
-  function hasImageEngines() {
-    const settings = useSettings();
-    return getImageEngines(settings.settingData).length > 0;
   }
 
   function onSuppress(e) {
@@ -90,12 +112,11 @@ export function armImageContextMenu(ensureBoot) {
       return;
     }
     // 右键不拦截原生菜单：跳转条与系统菜单同时出现
-    if (!hasImageEngines()) return;
     // 跳转条自身的右键交给浏览器，避免在浮层里再弹一次
     const path = e.composedPath?.() || [];
     if (path.some((node) => isOwnHostNode(node))) return;
-    const hit = resolveImageHit(e.target);
-    if (hit) showImageSearch(hit.url, hit.element);
+    const hit = resolveHit(e.target);
+    if (hit) showContextAction(hit);
   }
 
   document.addEventListener('pointerdown', onPointerDown, true);

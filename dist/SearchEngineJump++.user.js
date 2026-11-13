@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0605
+// @version            2026.11.14.0609
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6173,9 +6173,23 @@
 	function isBuiltinCategory(category) {
 		return BUILTIN_CATEGORY_KEYS.includes(category?.key);
 	}
-	function isBarCategoryVisible(key, enabled, imageMode) {
-		if (key === "image") return Boolean(imageMode);
-		if (imageMode) return key === "actions" && Boolean(enabled);
+	var CONTEXT_BAR_CATEGORIES = {
+		image: {
+			primary: IMAGE_CATEGORY_KEY,
+			extras: [BUILTIN_CATEGORY_KEY]
+		},
+		link: {
+			primary: BUILTIN_CATEGORY_KEY,
+			extras: []
+		}
+	};
+	function isBarCategoryVisible(key, enabled, contextMode = "") {
+		if (contextMode) {
+			const categories = CONTEXT_BAR_CATEGORIES[contextMode];
+			if (key === categories?.primary) return true;
+			return Boolean(categories?.extras.includes(key) && enabled);
+		}
+		if (key === "image") return false;
 		return Boolean(enabled);
 	}
 	function normalizeEngineAction(value) {
@@ -7138,19 +7152,23 @@
 		target.addEventListener("keydown", onKeyDown, true);
 		target.addEventListener("blur", onPointerEnd);
 	}
-	var imageSearch = reactive({
+	var contextAction = reactive({
 		active: false,
-		imageUrl: "",
+		mode: "",
+		keyword: "",
+		url: "",
 		element: null
 	});
-	function openImageSearch(imageUrl, element = null) {
-		imageSearch.imageUrl = imageUrl;
-		imageSearch.element = element;
-		imageSearch.active = true;
+	function openContextAction({ mode, keyword, url, element = null }) {
+		contextAction.mode = mode;
+		contextAction.keyword = keyword;
+		contextAction.url = url;
+		contextAction.element = element;
+		contextAction.active = true;
 	}
-	function closeImageSearch() {
-		imageSearch.active = false;
-		imageSearch.element = null;
+	function closeContextAction() {
+		contextAction.active = false;
+		contextAction.element = null;
 	}
 	var VIEWPORT_GAP = 4;
 	var NARROW_BAR_MAX = 640;
@@ -8160,7 +8178,7 @@
 			default: HOST_ROLE_MAIN
 		} },
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 999px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {\n  padding: 0 7px;\n  gap: 0;\n}\n\n/* 图标模式：收起时只占图标一格，展开时把宽度过渡到脚本量好的整条宽度；\n   展开态与测量态都不覆盖普通搜索条的内边距、边框、背景与阴影 */\n#sej-container.selectSearch.sej-icon-mode {\n  --sej-icon-size: 30px;\n  justify-content: flex-start;\n  transition:\n    width 0.16s ease-out,\n    background-color 0.16s ease-out,\n    backdrop-filter 0.16s ease-out;\n}\n\n/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界。\n   盒子下移（整条高 - 图标高）/2，图标圆心正好落在展开后整条的中心，\n   展开前后搜索项的位置不移动 */\n#sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {\n  width: var(--sej-icon-size) !important;\n  height: var(--sej-icon-size);\n  margin-top: calc((var(--sej-icon-open-height, var(--sej-icon-size)) - var(--sej-icon-size)) / 2);\n  border: 0;\n  background-color: transparent;\n  backdrop-filter: none;\n  box-shadow:\n    0 0 0 1px hsla(0, 0%, 0%, 0.06),\n    0 0 12px hsla(0, 0%, 0%, 0.1),\n    0 2px 8px hsla(0, 0%, 0%, 0.16),\n    0 14px 36px -10px hsla(0, 0%, 0%, 0.45);\n}\n\n/* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩；\n   收起态只显示图标：滚动内容隐藏且不接收指针，避免第一个搜索项的图标\n   从图标边缘露出来，或悬停/点击误触 */\n#sej-container.sej-icon-mode > .sej-scroll-viewport {\n  flex: 0 0 auto;\n}\n\n#sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-viewport {\n  visibility: hidden;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open {\n  width: var(--sej-icon-open-width, max-content) !important;\n}\n\n/* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */\n#sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {\n  left: 50%;\n  transform: translateX(-50%);\n}\n\n/* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */\n#sej-container.sej-measuring {\n  visibility: hidden !important;\n  transition: none !important;\n}\n\n#sej-container.sej-measuring.sej-icon-measure {\n  width: max-content !important;\n}\n\n/* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；\n   压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项 */\n#sej-container.sej-icon-mode > .sej-icon-trigger {\n  position: absolute;\n  z-index: 1;\n  top: 2px;\n  left: 2px;\n  pointer-events: auto;\n}\n\n/* 收起时只有图标；展开后图标让位，设置按钮在末尾出现 */\n#sej-container.sej-icon-mode > #setBtn {\n  opacity: 0;\n  border-radius: 50%;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open > .sej-icon-trigger {\n  opacity: 0;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open #setBtn {\n  opacity: 0.65;\n  pointer-events: auto;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open #setBtn:hover {\n  opacity: 1;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  #sej-container.selectSearch.sej-icon-mode {\n    transition: none;\n  }\n}\n\n.sej-icon-trigger {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  padding: 0;\n  border: 0;\n  border-radius: 50%;\n  appearance: none;\n  background: none;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-icon-trigger svg {\n  width: 100%;\n  height: 100%;\n  display: block;\n}\n\n.sej-icon-trigger:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: 0;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */\n#sej-container.selectSearch {\n  position: fixed;\n  z-index: 99999999;\n  margin: 0;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  max-width: min(calc(100vw - 8px), max-content);\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  /* 划词条直接在锚点原位显隐，不做滑入/淡入，也不延迟消失 */\n  animation: none;\n  transition: none;\n}\n\n/* 顶部居中：默认位置，横向由视口决定 */\n#sej-container.selectSearch.sej-top {\n  top: 2px;\n  left: 0;\n  right: 0;\n  margin: 0 auto;\n}\n\n/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */\n#sej-container.selectSearch.sej-follow-anchor {\n  top: 0;\n  left: 0;\n  right: auto;\n  margin: 0;\n  transform: none;\n  transform-origin: top left;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 999px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,\n#sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {\n  padding: 0 7px;\n  gap: 0;\n}\n\n/* 图标模式：收起时只占图标一格，展开时把宽度过渡到脚本量好的整条宽度；\n   展开态与测量态都不覆盖普通搜索条的内边距、边框、背景与阴影 */\n#sej-container.selectSearch.sej-icon-mode {\n  --sej-icon-size: 30px;\n  justify-content: flex-start;\n  transition:\n    width 0.16s ease-out,\n    background-color 0.16s ease-out,\n    backdrop-filter 0.16s ease-out;\n}\n\n/* 收起态：去掉边框与底色，换成四周加重的投影，白色页面上也能看出边界。\n   盒子下移（整条高 - 图标高）/2，图标圆心正好落在展开后整条的中心，\n   展开前后搜索项的位置不移动 */\n#sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {\n  width: var(--sej-icon-size) !important;\n  height: var(--sej-icon-size);\n  margin-top: calc((var(--sej-icon-open-height, var(--sej-icon-size)) - var(--sej-icon-size)) / 2);\n  border: 0;\n  background-color: transparent;\n  backdrop-filter: none;\n  box-shadow:\n    0 0 0 1px hsla(0, 0%, 0%, 0.06),\n    0 0 12px hsla(0, 0%, 0%, 0.1),\n    0 2px 8px hsla(0, 0%, 0%, 0.16),\n    0 14px 36px -10px hsla(0, 0%, 0%, 0.45);\n}\n\n/* 内容保持原宽，收起时由容器宽度裁掉右侧，不做压缩；\n   收起态只显示图标：滚动内容隐藏且不接收指针，避免第一个搜索项的图标\n   从图标边缘露出来，或悬停/点击误触 */\n#sej-container.sej-icon-mode > .sej-scroll-viewport {\n  flex: 0 0 auto;\n}\n\n#sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-viewport {\n  visibility: hidden;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open {\n  width: var(--sej-icon-open-width, max-content) !important;\n}\n\n/* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */\n#sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {\n  left: 50%;\n  transform: translateX(-50%);\n}\n\n/* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态 */\n#sej-container.sej-measuring {\n  visibility: hidden !important;\n  transition: none !important;\n}\n\n#sej-container.sej-measuring.sej-icon-measure {\n  width: max-content !important;\n}\n\n/* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；\n   压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项 */\n#sej-container.sej-icon-mode > .sej-icon-trigger {\n  position: absolute;\n  z-index: 1;\n  top: 2px;\n  left: 2px;\n  pointer-events: auto;\n}\n\n/* 收起时只有图标；展开后图标让位，设置按钮在末尾出现 */\n#sej-container.sej-icon-mode > #setBtn {\n  opacity: 0;\n  border-radius: 50%;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open > .sej-icon-trigger {\n  opacity: 0;\n  pointer-events: none;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open #setBtn {\n  opacity: 0.65;\n  pointer-events: auto;\n}\n\n#sej-container.sej-icon-mode.sej-icon-open #setBtn:hover {\n  opacity: 1;\n}\n\n@media (prefers-reduced-motion: reduce) {\n  #sej-container.selectSearch.sej-icon-mode {\n    transition: none;\n  }\n}\n\n.sej-icon-trigger {\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 26px;\n  height: 26px;\n  padding: 0;\n  border: 0;\n  border-radius: 50%;\n  appearance: none;\n  background: none;\n  cursor: pointer;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.12s ease-out;\n}\n\n.sej-icon-trigger svg {\n  width: 100%;\n  height: 100%;\n  display: block;\n}\n\n.sej-icon-trigger:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: 0;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 浮层条：划词与上下文模式共用，脱离站点布局固定在视口上 */\n#sej-container.selectSearch {\n  position: fixed;\n  z-index: 99999999;\n  margin: 0;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  max-width: min(calc(100vw - 8px), max-content);\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  /* 划词条直接在锚点原位显隐，不做滑入/淡入，也不延迟消失 */\n  animation: none;\n  transition: none;\n}\n\n/* 顶部居中：默认位置，横向由视口决定 */\n#sej-container.selectSearch.sej-top {\n  top: 2px;\n  left: 0;\n  right: 0;\n  margin: 0 auto;\n}\n\n/* 跟随选区/图片：坐标来自内联样式，不再做居中与滑出位移 */\n#sej-container.selectSearch.sej-follow-anchor {\n  top: 0;\n  left: 0;\n  right: auto;\n  margin: 0;\n  transform: none;\n  transform-origin: top left;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
 			const props = __props;
 			const isFloat = props.role === HOST_ROLE_FLOAT;
 			provide(HOST_ROLE_KEY, props.role);
@@ -8177,9 +8195,11 @@
 			const isOverlayBar = { value: isFloat };
 			const selectSearchEnabled = Boolean(data.selectSearch);
 			const isSelectSearch = ref(isFloat && selectSearchEnabled);
-			const isImageSearch = ref(false);
+			const isContextAction = ref(false);
+			const contextMode = ref("");
+			const isImageContext = computed(() => isContextAction.value && contextMode.value === "image");
 			const compactBar = computed(() => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact));
-			const iconMode = computed(() => isFloat && (isImageSearch.value || Boolean(data.selectionIcon)));
+			const iconMode = computed(() => isFloat && (isContextAction.value || Boolean(data.selectionIcon)));
 			const iconExpanded = ref(false);
 			const iconOpenWidth = ref(0);
 			const iconOpenHeight = ref(0);
@@ -8209,38 +8229,39 @@
 				if (iconOpenHeight.value) style["--sej-icon-open-height"] = `${iconOpenHeight.value}px`;
 				return style;
 			});
-			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isImageSearch.value)).map(([name, key]) => ({
+			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
 				engines: (data.engineList[key] || []).filter((engine) => !engine.disable)
 			})).filter((category) => category.engines.length));
-			function getCurrentKeyword() {
-				if (isImageSearch.value) return imageSearch.imageUrl;
+			function getCurrentKeyword(engine) {
+				if (isContextAction.value) return engine?.action === "open" ? contextAction.url : contextAction.keyword;
 				if (isSelectSearch.value) return selectionText.value;
 				return extractKeyword(inputTarget);
 			}
 			async function onJump(engine) {
-				const keyword = getCurrentKeyword();
+				const keyword = getCurrentKeyword(engine);
 				if (isActionEngine(engine)) {
 					if (await performEngineAction(engine, keyword, data.defaultOpenTarget)) showToast(t(engine.action === "copy" ? "action.copied" : "action.opened"));
 					else showToast(t(engine.action === "copy" ? "action.copyFailed" : "action.openFailed"));
 					return;
 				}
 				performJump(engine, keyword, data);
-				if (isImageSearch.value) closeImageMode();
+				if (isContextAction.value) closeContextMode();
 			}
 			function onJumpAll(engines) {
-				openAllEngines(engines, getCurrentKeyword(), data);
-				if (isImageSearch.value) closeImageMode();
+				openAllEngines(engines, isContextAction.value ? contextAction.url : getCurrentKeyword(), data);
+				if (isContextAction.value) closeContextMode();
 			}
-			function closeImageMode() {
+			function closeContextMode() {
 				hideFloatBar();
-				closeImageSearch();
+				closeContextAction();
 			}
-			watch(() => imageSearch.active, (active) => {
-				if (!isFloat || active === isImageSearch.value) return;
-				isImageSearch.value = active;
-				if (active) {
+			watch(() => contextAction.active ? contextAction.mode : "", (mode) => {
+				if (!isFloat || mode === contextMode.value) return;
+				contextMode.value = mode;
+				isContextAction.value = Boolean(mode);
+				if (mode) {
 					selectionText.value = "";
 					refreshAnchor(null);
 					showFloatBar();
@@ -8248,21 +8269,21 @@
 				}
 				hideFloatBar();
 			});
-			function onImageModePointerDown(e) {
-				if (!isImageSearch.value) return;
+			function onContextModePointerDown(e) {
+				if (!isContextAction.value) return;
 				if (e.button !== 0) return;
-				if (!isInsideBar(e)) closeImageMode();
+				if (!isInsideBar(e)) closeContextMode();
 			}
 			function onOverlayKeydown(e) {
 				if (e.key !== "Escape") return;
-				if (isImageSearch.value) {
-					closeImageMode();
+				if (isContextAction.value) {
+					closeContextMode();
 					return;
 				}
 				hideFloatBar();
 			}
-			function onImageModeScroll() {
-				if (isImageSearch.value) closeImageMode();
+			function onContextModeScroll() {
+				if (isContextAction.value) closeContextMode();
 			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
@@ -8314,14 +8335,15 @@
 				inputTarget = () => selectionText.value;
 				return true;
 			}
-			function initImageSearch() {
-				isImageSearch.value = true;
-				inputTarget = () => imageSearch.imageUrl;
+			function initContextAction() {
+				contextMode.value = contextAction.mode;
+				isContextAction.value = true;
+				inputTarget = () => contextAction.keyword;
 				return true;
 			}
 			function initTargets() {
 				if (isFloat) {
-					if (imageSearch.active) return { render: initImageSearch() };
+					if (contextAction.active) return { render: initContextAction() };
 					return { render: selectSearchEnabled && initSelectSearch() };
 				}
 				if (selectSearchEnabled && matchedRule?.enabled && matchedRule.selectSearchPriority) return { render: false };
@@ -8365,7 +8387,7 @@
 					if (iconMode.value && bar) {
 						const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
 						const viewportWidth = document.documentElement.clientWidth;
-						if (isImageSearch.value) {
+						if (isImageContext.value) {
 							const center = Math.max(6 + width / 2, Math.min(viewportWidth / 2, viewportWidth - 6 - width / 2));
 							floatStyle.value = {
 								right: "auto",
@@ -8396,7 +8418,7 @@
 					width: document.documentElement.clientWidth,
 					height: window.visualViewport?.height || window.innerHeight
 				};
-				const { top, left } = (isImageSearch.value ? placeInsideRect({
+				const { top, left } = (isImageContext.value ? placeInsideRect({
 					rect,
 					bar: barSize,
 					viewport
@@ -8411,7 +8433,7 @@
 				});
 				bar.classList.remove("sej-top");
 				bar.classList.add("sej-follow-anchor");
-				if (isImageSearch.value) {
+				if (isImageContext.value) {
 					const center = left + barSize.width / 2;
 					floatStyle.value = {
 						top: `${top}px`,
@@ -8432,14 +8454,14 @@
 				} catch (e) {}
 				return null;
 			}
-			function imageAnchorRect() {
-				const el = imageSearch.element;
+			function contextAnchorRect() {
+				const el = contextAction.element;
 				if (!el?.isConnected) return null;
 				const rect = el.getBoundingClientRect?.();
 				return rect && rect.width > 0 ? rect : null;
 			}
 			function refreshAnchor(selection) {
-				anchorRect.value = isFloat && data.selectionFollowPointer ? isImageSearch.value ? imageAnchorRect() : selectionAnchorRect(selection) : null;
+				anchorRect.value = isFloat && data.selectionFollowPointer ? isContextAction.value ? contextAnchorRect() : selectionAnchorRect(selection) : null;
 			}
 			async function showFloatBar() {
 				if (!isFloat) {
@@ -8508,7 +8530,7 @@
 			let settledGesture = -1;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
-				if (isImageSearch.value) return;
+				if (isContextAction.value) return;
 				if (isPointerPressed()) return;
 				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) return;
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
@@ -8528,8 +8550,8 @@
 					keepOverlayUntil = performance.now() + 500;
 					return;
 				}
-				if (isImageSearch.value) {
-					closeImageMode();
+				if (isContextAction.value) {
+					closeContextMode();
 					return;
 				}
 				dismissedGesture = currentGestureId();
@@ -8538,7 +8560,7 @@
 			function settleOverlay(e) {
 				if (!pendingHide) return;
 				pendingHide = false;
-				if (!isSelectSearch.value || isImageSearch.value) return;
+				if (!isSelectSearch.value || isContextAction.value) return;
 				settledGesture = currentGestureId();
 				if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
 				if (e && performance.now() < keepOverlayUntil) return;
@@ -8564,7 +8586,7 @@
 				if (!render) return;
 				ready.value = true;
 				if (isSelectSearch.value) onSelectionChange();
-				if (isImageSearch.value) {
+				if (isContextAction.value) {
 					refreshAnchor(null);
 					showFloatBar();
 				}
@@ -8585,10 +8607,10 @@
 				window.addEventListener("pointerup", endScrollDrag);
 				window.addEventListener("pointercancel", endScrollDrag);
 				if (isFloat) {
-					document.addEventListener("pointerdown", onImageModePointerDown, true);
+					document.addEventListener("pointerdown", onContextModePointerDown, true);
 					document.addEventListener("keydown", onOverlayKeydown, true);
 					document.addEventListener("mousemove", onIconMouseMove, { passive: true });
-					window.addEventListener("scroll", onImageModeScroll, true);
+					window.addEventListener("scroll", onContextModeScroll, true);
 					window.addEventListener("scroll", onFloatScroll, true);
 				}
 				if (isSelectSearch.value) {
@@ -8602,10 +8624,10 @@
 				}
 			});
 			onBeforeUnmount(() => {
-				document.removeEventListener("pointerdown", onImageModePointerDown, true);
+				document.removeEventListener("pointerdown", onContextModePointerDown, true);
 				document.removeEventListener("keydown", onOverlayKeydown, true);
 				document.removeEventListener("mousemove", onIconMouseMove);
-				window.removeEventListener("scroll", onImageModeScroll, true);
+				window.removeEventListener("scroll", onContextModeScroll, true);
 				window.removeEventListener("scroll", onFloatScroll, true);
 				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("pointerup", settleOverlay, true);
@@ -8633,7 +8655,7 @@
 						"sej-top": isFloat && !anchorRect.value,
 						"sej-follow-anchor": isFloat && Boolean(anchorRect.value),
 						"sej-select-visible": barVisible.value,
-						"sej-image-search": isImageSearch.value,
+						"sej-image-search": isImageContext.value,
 						"sej-compact": compactBar.value,
 						"sej-icon-mode": iconMode.value,
 						"sej-icon-open": iconMode.value && iconExpanded.value
@@ -11759,14 +11781,14 @@
 	function ensureFloatBar() {
 		if (floatApp) return;
 		if (hasForeignHost("float")) return;
-		if (!useSettings().settingData?.selectSearch && !imageSearch.active) return;
+		if (!useSettings().settingData?.selectSearch && !contextAction.active) return;
 		const root = initialize(HOST_ROLE_FLOAT);
 		document.body.appendChild(getHost(HOST_ROLE_FLOAT));
 		applyDarkModeIfNeeded();
 		floatApp = createApp(_sfc_main, { role: HOST_ROLE_FLOAT });
 		floatApp.mount(root);
 		stopFloatWatch?.();
-		stopFloatWatch = watch(() => imageSearch.active, (active) => {
+		stopFloatWatch = watch(() => contextAction.active, (active) => {
 			if (active || useSettings().settingData?.selectSearch) return;
 			disposeFloatBar();
 		});
@@ -11880,16 +11902,54 @@
 		}
 		return null;
 	}
+	var LINK_PROTOCOLS = /^(https?|mailto|tel):$/i;
+	function toLinkUrl(raw, base) {
+		const value = typeof raw === "string" ? raw.trim() : "";
+		if (!value) return "";
+		try {
+			const url = new URL(value, base);
+			return LINK_PROTOCOLS.test(url.protocol) ? url.href : "";
+		} catch (e) {
+			return "";
+		}
+	}
+	function resolveLinkHit(target, base = globalThis.location?.href) {
+		const link = typeof target?.closest === "function" ? target.closest("a[href], area[href]") : null;
+		if (!link) return null;
+		const raw = link.getAttribute?.("href")?.trim() || "";
+		if (!raw || raw.startsWith("#")) return null;
+		const url = toLinkUrl(raw, base) || toLinkUrl(link.href, base);
+		if (!url) return null;
+		return {
+			url,
+			text: (link.textContent || "").replace(/\s+/g, " ").trim(),
+			element: link
+		};
+	}
+	var CONTEXT_MODES = {
+		image: {
+			categoryKey: IMAGE_CATEGORY_KEY,
+			resolveHit: resolveImageHit
+		},
+		link: {
+			categoryKey: BUILTIN_CATEGORY_KEY,
+			resolveHit: resolveLinkHit
+		}
+	};
 	function isLongPressMove(startX, startY, x, y) {
 		return Math.hypot(x - startX, y - startY) > 10;
 	}
-	function getImageEngines(settingData) {
-		const list = settingData?.engineList?.[IMAGE_CATEGORY_KEY];
-		if (!Array.isArray(list)) return [];
-		return list.filter((engine) => !engine.disable && engine.url);
+	function contextCategoryKey(mode) {
+		return CONTEXT_MODES[mode]?.categoryKey || "";
 	}
+	function getContextEngines(settingData, mode) {
+		const list = settingData?.engineList?.[contextCategoryKey(mode)];
+		if (!Array.isArray(list)) return [];
+		return list.filter((engine) => !engine.disable && (engine.url || engine.action));
+	}
+	var HIT_ORDER = ["image", "link"];
 	var armed = false;
-	function armImageContextMenu(ensureBoot) {
+	function armContextMenu(ensureBoot) {
 		if (armed) return;
 		armed = true;
 		let timer = 0;
@@ -11902,10 +11962,23 @@
 			timer = 0;
 			pressed = null;
 		}
+		function resolveHit(target) {
+			for (const mode of HIT_ORDER) {
+				if (!hasEngines(mode)) continue;
+				const hit = CONTEXT_MODES[mode].resolveHit(target);
+				if (hit) return {
+					mode,
+					...hit
+				};
+			}
+			return null;
+		}
+		function hasEngines(mode) {
+			return getContextEngines(useSettings().settingData, mode).length > 0;
+		}
 		function onPointerDown(e) {
 			if (e.button !== 0 || !e.isPrimary) return;
-			if (!hasImageEngines()) return;
-			const hit = resolveImageHit(e.target);
+			const hit = resolveHit(e.target);
 			if (!hit) return;
 			startX = e.clientX;
 			startY = e.clientY;
@@ -11915,7 +11988,7 @@
 				timer = 0;
 				if (!pressed) return;
 				suppressUntil = performance.now() + 800;
-				showImageSearch(pressed.url, pressed.element);
+				showContextAction(pressed);
 				pressed = null;
 				navigator.vibrate?.(10);
 			}, 450);
@@ -11924,13 +11997,15 @@
 			if (!pressed) return;
 			if (isLongPressMove(startX, startY, e.clientX, e.clientY)) cancel();
 		}
-		function showImageSearch(imageUrl, element) {
-			if (!imageUrl) return;
-			openImageSearch(imageUrl, element);
+		function showContextAction(hit) {
+			if (!hit.url) return;
+			openContextAction({
+				mode: hit.mode,
+				keyword: hit.text || hit.url,
+				url: hit.url,
+				element: hit.element
+			});
 			ensureBoot?.();
-		}
-		function hasImageEngines() {
-			return getImageEngines(useSettings().settingData).length > 0;
 		}
 		function onSuppress(e) {
 			if (performance.now() > suppressUntil) return;
@@ -11942,10 +12017,9 @@
 				onSuppress(e);
 				return;
 			}
-			if (!hasImageEngines()) return;
 			if ((e.composedPath?.() || []).some((node) => isOwnHostNode(node))) return;
-			const hit = resolveImageHit(e.target);
-			if (hit) showImageSearch(hit.url, hit.element);
+			const hit = resolveHit(e.target);
+			if (hit) showContextAction(hit);
 		}
 		document.addEventListener("pointerdown", onPointerDown, true);
 		document.addEventListener("pointermove", onPointerMove, true);
@@ -11961,7 +12035,7 @@
 		printBanner();
 		await initStorage([STORAGE_KEY]);
 		registerMenu(requestBoot);
-		armImageContextMenu(requestBoot);
+		armContextMenu(requestBoot);
 		armStart();
 	}
 	function armStart() {

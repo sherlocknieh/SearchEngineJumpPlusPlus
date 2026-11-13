@@ -196,10 +196,7 @@ describe('normalizeConfig', () => {
       defaults,
     );
     // 补回的搜图分类紧跟「功能」分类
-    expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual([
-      'actions',
-      'image',
-    ]);
+    expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual(['actions', 'image']);
     expect(result.engineList.image).toEqual(defaults.engineList.image);
   });
 
@@ -272,7 +269,14 @@ describe('configToText', () => {
   it('导出时去掉内嵌图标数据，保留 favicon 地址', () => {
     const source = {
       engineList: {
-        web: [{ name: 'A', url: 'https://a.test', favicon: 'https://a.test/f.ico', faviconData: 'data:x' }],
+        web: [
+          {
+            name: 'A',
+            url: 'https://a.test',
+            favicon: 'https://a.test/f.ico',
+            faviconData: 'data:x',
+          },
+        ],
       },
     };
     const parsed = JSON.parse(configToText(source));
@@ -308,19 +312,26 @@ describe('readConfig', () => {
 
 describe('isBarCategoryVisible', () => {
   it('搜图分类只在图片模式下出现，普通跳转条始终不显示', () => {
-    expect(isBarCategoryVisible('image', true, false)).toBe(false);
-    expect(isBarCategoryVisible('image', false, true)).toBe(true);
+    expect(isBarCategoryVisible('image', true, '')).toBe(false);
+    expect(isBarCategoryVisible('image', false, 'image')).toBe(true);
   });
 
   it('功能分类在图片模式下按显示开关出现', () => {
-    expect(isBarCategoryVisible('actions', true, true)).toBe(true);
-    expect(isBarCategoryVisible('actions', false, true)).toBe(false);
+    expect(isBarCategoryVisible('actions', true, 'image')).toBe(true);
+    expect(isBarCategoryVisible('actions', false, 'image')).toBe(false);
+  });
+
+  it('链接模式只显示功能分类，且不受普通跳转条的显示开关影响', () => {
+    expect(isBarCategoryVisible('actions', true, 'link')).toBe(true);
+    expect(isBarCategoryVisible('actions', false, 'link')).toBe(true);
+    expect(isBarCategoryVisible('image', true, 'link')).toBe(false);
+    expect(isBarCategoryVisible('web', true, 'link')).toBe(false);
   });
 
   it('其他分类按显示开关决定', () => {
-    expect(isBarCategoryVisible('web', true, false)).toBe(true);
-    expect(isBarCategoryVisible('web', false, false)).toBe(false);
+    expect(isBarCategoryVisible('web', true, '')).toBe(true);
+    expect(isBarCategoryVisible('web', false, '')).toBe(false);
     // 图片模式下普通分类同样不显示
-    expect(isBarCategoryVisible('web', true, true)).toBe(false);
+    expect(isBarCategoryVisible('web', true, 'image')).toBe(false);
   });
 });

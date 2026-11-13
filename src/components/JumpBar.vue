@@ -40,7 +40,7 @@ import {
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible } from '../core/configData.js';
-import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
+import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
@@ -51,7 +51,7 @@ import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';
 
 const props = defineProps({
-  // float 角色只做划词条 / 图片条，main 角色负责站点内嵌的跳转条
+  // float 角色只做划词条 / 上下文操作条，main 角色负责站点内嵌的跳转条
   role: { type: String, default: HOST_ROLE_MAIN },
 });
 
@@ -72,23 +72,24 @@ const sitePatches = matchedRule?.patches ?? {};
 const inlineStyleBlocked = isInlineStyleBlocked();
 
 const ready = ref(false);
-// 浮层条（划词条 / 图片条）始终脱离文档流显示，内嵌条跟随站点布局；
+// 浮层条（划词条 / 上下文操作条）始终脱离文档流显示，内嵌条跟随站点布局；
 // 这里只需一个固定值，供视图校正判断“是否浮层”
 const isOverlayBar = { value: isFloat };
-// 浮层条只在开启划词搜索时响应选区，图片模式与设置项无关
+// 浮层条只在开启划词搜索时响应选区，上下文操作条与设置项无关
 const selectSearchEnabled = Boolean(data.selectSearch);
 const isSelectSearch = ref(isFloat && selectSearchEnabled);
-// 长按图片时复用同一条划词条，只把关键词换成图片地址
-const isImageSearch = ref(false);
+// 长按图片/链接时复用同一条划词条，只把关键词换成命中的内容
+const isContextAction = ref(false);
+// 当前上下文模式（image / link），图片模式有专属的定位方式
+const contextMode = ref('');
+const isImageContext = computed(() => isContextAction.value && contextMode.value === 'image');
 // 精简模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
 const compactBar = computed(
   () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
 );
-// 图标模式：划词或长按搜图后只露出一个图标，指针停到图标上才展开整条搜索条；
-// 搜图是长按唤起的临时浮层，始终以图标收起，避免整条盖住被搜的图片
-const iconMode = computed(
-  () => isFloat && (isImageSearch.value || Boolean(data.selectionIcon)),
-);
+// 图标模式：划词或长按命中内容后只露出一个图标，指针停到图标上才展开整条搜索条；
+// 上下文操作条是长按唤起的临时浮层，始终以图标收起，避免整条盖住被操作的内容
+const iconMode = computed(() => isFloat && (isContextAction.value || Boolean(data.selectionIcon)));
 // 展开态切换只改类名，宽度由 CSS 过渡；展开后的整条宽度写在 CSS 变量里
 const iconExpanded = ref(false);
 const iconOpenWidth = ref(0);
@@ -145,10 +146,10 @@ const barStyle = computed(() => {
 
 const categories = computed(() =>
   data.engineCategories
-    // 搜图分类只在图片模式下出现：图片地址搜网页没有意义，
-    // 普通跳转条也从不展示它，与分类的显示开关无关；
-    // 图片模式还会按显示开关带上「功能」分类（复制/打开图片链接）
-    .filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isImageSearch.value))
+    // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「功能」动作
+    .filter(([, key, enabled]) =>
+      isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
+    )
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
       key,
@@ -157,14 +158,17 @@ const categories = computed(() =>
     .filter((category) => category.engines.length),
 );
 
-function getCurrentKeyword() {
-  if (isImageSearch.value) return imageSearch.imageUrl;
+function getCurrentKeyword(engine) {
+  if (isContextAction.value) {
+    // 链接模式下复制动作复制链接文字，打开动作打开链接地址
+    return engine?.action === 'open' ? contextAction.url : contextAction.keyword;
+  }
   if (isSelectSearch.value) return selectionText.value;
   return extractKeyword(inputTarget);
 }
 
 async function onJump(engine) {
-  const keyword = getCurrentKeyword();
+  const keyword = getCurrentKeyword(engine);
   if (isActionEngine(engine)) {
     const ok = await performEngineAction(engine, keyword, data.defaultOpenTarget);
     if (ok) {
@@ -175,28 +179,31 @@ async function onJump(engine) {
     return;
   }
   performJump(engine, keyword, data);
-  if (isImageSearch.value) closeImageMode();
+  if (isContextAction.value) closeContextMode();
 }
 
 function onJumpAll(engines) {
-  openAllEngines(engines, getCurrentKeyword(), data);
-  if (isImageSearch.value) closeImageMode();
+  // 一键打开时复制动作会被跳过，链接模式统一用链接地址
+  const keyword = isContextAction.value ? contextAction.url : getCurrentKeyword();
+  openAllEngines(engines, keyword, data);
+  if (isContextAction.value) closeContextMode();
 }
 
-/** 收起图片模式：清掉图片状态后由浮层条自行收起 */
-function closeImageMode() {
+/** 收起上下文操作条：清掉命中状态后由浮层条自行收起 */
+function closeContextMode() {
   hideFloatBar();
-  closeImageSearch();
+  closeContextAction();
 }
 
-// 长按可能发生在浮层条已挂载之后：图片模式与划词共用同一个浮层条，
+// 长按可能发生在浮层条已挂载之后：上下文模式与划词共用同一个浮层条，
 // 切换模式只需刷新关键词与显隐，无需重建 Vue 应用
 watch(
-  () => imageSearch.active,
-  (active) => {
-    if (!isFloat || active === isImageSearch.value) return;
-    isImageSearch.value = active;
-    if (active) {
+  () => (contextAction.active ? contextAction.mode : ''),
+  (mode) => {
+    if (!isFloat || mode === contextMode.value) return;
+    contextMode.value = mode;
+    isContextAction.value = Boolean(mode);
+    if (mode) {
       selectionText.value = '';
       refreshAnchor(null);
       showFloatBar();
@@ -206,27 +213,27 @@ watch(
   },
 );
 
-// 图片模式是临时浮层：点外部、按 Escape 或滚动页面时收起
-function onImageModePointerDown(e) {
+// 上下文操作条是临时浮层：点外部、按 Escape 或滚动页面时收起
+function onContextModePointerDown(e) {
   // 划词模式不在这里收起：拖选时按下就藏、松手又显示会闪一下
-  if (!isImageSearch.value) return;
-  // 右键用于重新指定图片，交给 contextmenu 处理，避免先收起再重建
+  if (!isContextAction.value) return;
+  // 右键用于重新指定目标，交给 contextmenu 处理，避免先收起再重建
   if (e.button !== 0) return;
-  if (!isInsideBar(e)) closeImageMode();
+  if (!isInsideBar(e)) closeContextMode();
 }
 
-// Escape 统一收起浮层条：图片模式同时清掉图片状态
+// Escape 统一收起浮层条：上下文模式同时清掉命中状态
 function onOverlayKeydown(e) {
   if (e.key !== 'Escape') return;
-  if (isImageSearch.value) {
-    closeImageMode();
+  if (isContextAction.value) {
+    closeContextMode();
     return;
   }
   hideFloatBar();
 }
 
-function onImageModeScroll() {
-  if (isImageSearch.value) closeImageMode();
+function onContextModeScroll() {
+  if (isContextAction.value) closeContextMode();
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文
@@ -297,9 +304,10 @@ function initSelectSearch() {
   return true;
 }
 
-function initImageSearch() {
-  isImageSearch.value = true;
-  inputTarget = () => imageSearch.imageUrl;
+function initContextAction() {
+  contextMode.value = contextAction.mode;
+  isContextAction.value = true;
+  inputTarget = () => contextAction.keyword;
   return true;
 }
 
@@ -309,9 +317,9 @@ function initImageSearch() {
  *   ok 为 false 表示站点规则命中但目标失效，调用方应保持未挂载状态以便重试。
  */
 function initTargets() {
-  // 划词条与图片条共用同一个浮层条：长按触发时优先进入图片模式
+  // 划词条与上下文操作条共用同一个浮层条：长按触发时优先进入上下文模式
   if (isFloat) {
-    if (imageSearch.active) return { render: initImageSearch() };
+    if (contextAction.active) return { render: initContextAction() };
     return { render: selectSearchEnabled && initSelectSearch() };
   }
 
@@ -359,7 +367,7 @@ function isInsideBar(e) {
   return isEventInsideUi(containerEl.value, e);
 }
 
-/** 跟随模式下用选区/图片的矩形算出跳转条的视口坐标 */
+/** 跟随模式下用选区/命中元素的矩形算出跳转条的视口坐标 */
 function syncFloatPlacement() {
   if (!isFloat) return;
   const bar = containerEl.value;
@@ -368,11 +376,11 @@ function syncFloatPlacement() {
     containerEl.value?.classList.remove('sej-follow-anchor');
     containerEl.value?.classList.add('sej-top');
     // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中；
-    // 搜图条以整条中心为锚点，宽度向两侧对称展开，展开后仍居中
+    // 图片条以整条中心为锚点，宽度向两侧对称展开，展开后仍居中
     if (iconMode.value && bar) {
       const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
       const viewportWidth = document.documentElement.clientWidth;
-      if (isImageSearch.value) {
+      if (isImageContext.value) {
         // 以视口中线为锚点，同时保证展开后的整条落在视口内
         const center = Math.max(
           PLACEMENT_GAP + width / 2,
@@ -412,15 +420,15 @@ function syncFloatPlacement() {
     height: window.visualViewport?.height || window.innerHeight,
   };
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中
-  const imagePlacement = isImageSearch.value
+  const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
   const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
-  // 搜图条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中
-  if (isImageSearch.value) {
+  // 图片条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中
+  if (isImageContext.value) {
     const center = left + barSize.width / 2;
     floatStyle.value = {
       top: `${top}px`,
@@ -448,9 +456,9 @@ function selectionAnchorRect(selection) {
   return null;
 }
 
-/** 当前长按命中的图片元素（用于跟随模式取图片右上角） */
-function imageAnchorRect() {
-  const el = imageSearch.element;
+/** 当前长按命中的图片/链接元素（用于跟随模式取它的矩形） */
+function contextAnchorRect() {
+  const el = contextAction.element;
   if (!el?.isConnected) return null;
   const rect = el.getBoundingClientRect?.();
   return rect && rect.width > 0 ? rect : null;
@@ -463,8 +471,8 @@ function imageAnchorRect() {
 function refreshAnchor(selection) {
   anchorRect.value =
     isFloat && data.selectionFollowPointer
-      ? isImageSearch.value
-        ? imageAnchorRect()
+      ? isContextAction.value
+        ? contextAnchorRect()
         : selectionAnchorRect(selection)
       : null;
 }
@@ -574,9 +582,9 @@ let settledGesture = -1;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
-  // 图片模式的关键词来自图片地址：长按松手时浏览器会补发空选区的
+  // 上下文模式的关键词来自命中的内容：长按松手时浏览器会补发空选区的
   // mouseup / selectionchange，必须先于「无选区就收起」判断
-  if (isImageSearch.value) return;
+  if (isContextAction.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
   // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
@@ -605,9 +613,9 @@ function onOverlayPointerDown(e) {
     keepOverlayUntil = performance.now() + 500;
     return;
   }
-  // 图片模式一并清掉状态，否则下一次长按 active 仍是 true，浮层不会再出现
-  if (isImageSearch.value) {
-    closeImageMode();
+  // 上下文模式一并清掉状态，否则下一次长按 active 仍是 true，浮层不会再出现
+  if (isContextAction.value) {
+    closeContextMode();
     return;
   }
   // 记下本次操作，避免同一击的 mouseup/selectionchange 把刚收起的浮层又拉回来
@@ -619,7 +627,7 @@ function onOverlayPointerDown(e) {
 function settleOverlay(e) {
   if (!pendingHide) return;
   pendingHide = false;
-  if (!isSelectSearch.value || isImageSearch.value) return;
+  if (!isSelectSearch.value || isContextAction.value) return;
   settledGesture = currentGestureId();
   // 拖动产生了新选区，交给 onSelectionChange 更新内容与位置
   if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
@@ -633,7 +641,7 @@ function onDocumentSelectionChange() {
 }
 
 // 滚动只改变锚点的视口坐标，重新量一次矩形就能继续跟随；
-// 锚点已经消失（选区被清空、图片被移除）时才退回顶部居中
+// 锚点已经消失（选区被清空、命中元素被移除）时才退回顶部居中
 function onFloatScroll(e) {
   if (!isFloat || !anchorRect.value) return;
   // 跳转条自身的横向滚动不改变锚点位置，不参与跟随重算
@@ -659,8 +667,8 @@ onMounted(async () => {
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
   if (isSelectSearch.value) onSelectionChange();
-  // 图片模式下由长按触发，挂载后按图标模式量好展开尺寸再显示
-  if (isImageSearch.value) {
+  // 上下文模式下由长按触发，挂载后按图标模式量好展开尺寸再显示
+  if (isContextAction.value) {
     refreshAnchor(null);
     showFloatBar();
   }
@@ -692,10 +700,10 @@ onMounted(async () => {
   window.addEventListener('pointercancel', endScrollDrag);
 
   if (isFloat) {
-    document.addEventListener('pointerdown', onImageModePointerDown, true);
+    document.addEventListener('pointerdown', onContextModePointerDown, true);
     document.addEventListener('keydown', onOverlayKeydown, true);
     document.addEventListener('mousemove', onIconMouseMove, { passive: true });
-    window.addEventListener('scroll', onImageModeScroll, true);
+    window.addEventListener('scroll', onContextModeScroll, true);
     window.addEventListener('scroll', onFloatScroll, true);
   }
 
@@ -713,10 +721,10 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onImageModePointerDown, true);
+  document.removeEventListener('pointerdown', onContextModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
   document.removeEventListener('mousemove', onIconMouseMove);
-  window.removeEventListener('scroll', onImageModeScroll, true);
+  window.removeEventListener('scroll', onContextModeScroll, true);
   window.removeEventListener('scroll', onFloatScroll, true);
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('pointerup', settleOverlay, true);
@@ -747,7 +755,7 @@ onBeforeUnmount(() => {
         'sej-top': isFloat && !anchorRect,
         'sej-follow-anchor': isFloat && Boolean(anchorRect),
         'sej-select-visible': barVisible,
-        'sej-image-search': isImageSearch,
+        'sej-image-search': isImageContext,
         'sej-compact': compactBar,
         'sej-icon-mode': iconMode,
         'sej-icon-open': iconMode && iconExpanded,
@@ -1159,7 +1167,7 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-/* 浮层条：划词与图片模式共用，脱离站点布局固定在视口上 */
+/* 浮层条：划词与上下文模式共用，脱离站点布局固定在视口上 */
 #sej-container.selectSearch {
   position: fixed;
   z-index: 99999999;
