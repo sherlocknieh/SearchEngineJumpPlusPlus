@@ -3,6 +3,7 @@
   "selectSearch": true,
   "selectSearchInInput": true,
   "selectionFollowPointer": false,
+  "selectionCompact": false,
   "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [

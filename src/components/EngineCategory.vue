@@ -18,14 +18,22 @@ const props = defineProps({
   name: { type: String, required: true },
   engines: { type: Array, required: true },
   showIcon: { type: Boolean, default: true },
+  // 精简模式：只保留图标，文字收进悬停提示
+  compact: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['jump', 'jumpAll']);
 
+// 精简模式没有文字，必须保留图标位，即使站点规则关闭了分类图标
+const iconVisible = computed(() => props.showIcon || props.compact);
+
 // 分类标题只显示首个引擎的图标；计算一次，避免模板内重复读取
 const firstIconSrc = computed(() =>
-  props.showIcon && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
+  iconVisible.value && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
 );
+
+// 首个引擎没有图标时用分类名首字兜底，避免精简模式下分类不可见
+const glyph = computed(() => Array.from(props.name)[0] || '');
 
 // 支持 CSS Anchor Positioning 时，面板位置完全交给浏览器；
 // 否则回退到下面的 JS 坐标计算。
@@ -45,6 +53,12 @@ const listEl = ref(null);
 const shown = ref(false);
 const active = ref(false);
 const pinned = ref(false);
+
+// 悬停提示：精简模式补回被隐藏的分类名，固定展开时提示如何收起
+const triggerTitle = computed(() => {
+  if (pinned.value) return t('jump.collapseList', { name: props.name });
+  return props.compact ? props.name : null;
+});
 const top = ref(supportsAnchorPositioning ? '' : '-10000px');
 const left = ref(supportsAnchorPositioning ? '' : '0px');
 const listPosition = ref('fixed');
@@ -387,13 +401,13 @@ onBeforeUnmount(() => {
       tabindex="0"
       aria-haspopup="true"
       :aria-expanded="shown"
-      :title="pinned ? t('jump.collapseList', { name }) : null"
+      :title="triggerTitle"
       @click.prevent.stop="onTriggerClick"
       @keydown.enter.prevent="onTriggerKeydown"
       @keydown.space.prevent="onTriggerKeydown"
     >
       <!-- 固定 16×16 的图标槽，保证所有分类的文字起点一致；分类无图标时也保留占位 -->
-      <span v-if="showIcon" class="sej-category-icon">
+      <span v-if="iconVisible" class="sej-category-icon">
         <!-- 已固定展开时用图钉替代引擎图标，标明点击会收起列表 -->
         <svg
           v-if="pinned"
@@ -417,8 +431,10 @@ onBeforeUnmount(() => {
           :src="firstIconSrc"
           alt=""
         />
+        <!-- 精简模式没有引擎图标时用分类名首字兜底 -->
+        <span v-else-if="compact" class="sej-category-glyph" aria-hidden="true">{{ glyph }}</span>
       </span>
-      <span>{{ name }}</span>
+      <span v-if="!compact">{{ name }}</span>
     </a>
 
     <Teleport :to="dropRoot">
@@ -514,6 +530,21 @@ onBeforeUnmount(() => {
   height: 16px;
   margin: 0;
   /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */
+  translate: 0 0.75px;
+}
+
+/* 精简模式没有引擎图标时的首字兜底，与图标槽同尺寸 */
+.sej-category-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
   translate: 0 0.75px;
 }
 

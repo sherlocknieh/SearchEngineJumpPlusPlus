@@ -43,6 +43,11 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(false);
   });
 
+  it('默认不启用只显示图标的精简模式', () => {
+    const config = createDefaultConfig();
+    expect(config.selectionCompact).toBe(false);
+  });
+
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
@@ -62,6 +67,7 @@ describe('normalizeConfig', () => {
         selectSearch: 0,
         selectSearchInInput: 'yes',
         selectionFollowPointer: 'yes',
+        selectionCompact: 'yes',
         language: 'fr',
         engineCategories: [],
       },
@@ -71,6 +77,7 @@ describe('normalizeConfig', () => {
     expect(result.selectSearch).toBe(defaults.selectSearch);
     expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
     expect(result.selectionFollowPointer).toBe(defaults.selectionFollowPointer);
+    expect(result.selectionCompact).toBe(defaults.selectionCompact);
     expect(result.language).toBe('auto');
   });
 

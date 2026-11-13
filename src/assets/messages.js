@@ -33,6 +33,8 @@ export const messages = {
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
       '划词条出现在选中文字的右上角，长按搜图时出现在图片右上角；关闭时从页面顶部滑出',
+    'settings.selectionCompact': '精简模式',
+    'settings.selectionCompactTip': '划词条只显示图标，不显示文字',
     'settings.center': '强制居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.editConfig': '配置文件',
@@ -177,6 +179,8 @@ export const messages = {
     'settings.selectionFollowPointer': 'Follow selection',
     'settings.selectionFollowPointerTip':
       'Show the selection bar at the top-right of the selected text, or of the image for image search; otherwise it slides in from the top',
+    'settings.selectionCompact': 'Compact mode',
+    'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.center': 'Force center',
     'settings.centerTip': 'Always center the jump bar',
     'settings.editConfig': 'Config file',
