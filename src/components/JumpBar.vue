@@ -366,15 +366,29 @@ function syncFloatPlacement() {
   if (!bar || !rect) {
     containerEl.value?.classList.remove('sej-follow-anchor');
     containerEl.value?.classList.add('sej-top');
-    // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中，
-    // 搜图条按展开后的整条居中，配合图标态的对称展开
+    // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中；
+    // 搜图条以整条中心为锚点，宽度向两侧对称展开，展开后仍居中
     if (iconMode.value && bar) {
       const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
       const viewportWidth = document.documentElement.clientWidth;
-      const centerOffset = isImageSearch.value ? width / 2 : 15;
+      if (isImageSearch.value) {
+        // 以视口中线为锚点，同时保证展开后的整条落在视口内
+        const center = Math.max(
+          PLACEMENT_GAP + width / 2,
+          Math.min(viewportWidth / 2, viewportWidth - PLACEMENT_GAP - width / 2),
+        );
+        floatStyle.value = {
+          right: 'auto',
+          left: `${Math.round(center)}px`,
+          marginLeft: '0px',
+          marginRight: '0px',
+          transform: 'translateX(-50%)',
+        };
+        return;
+      }
       const left = Math.max(
         PLACEMENT_GAP,
-        Math.min(viewportWidth / 2 - centerOffset, viewportWidth - PLACEMENT_GAP - width),
+        Math.min(viewportWidth / 2 - 15, viewportWidth - PLACEMENT_GAP - width),
       );
       floatStyle.value = {
         right: 'auto',
@@ -404,6 +418,16 @@ function syncFloatPlacement() {
   const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
+  // 搜图条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中
+  if (isImageSearch.value) {
+    const center = left + barSize.width / 2;
+    floatStyle.value = {
+      top: `${top}px`,
+      left: `${Math.round(center)}px`,
+      transform: 'translateX(-50%)',
+    };
+    return;
+  }
   floatStyle.value = { top: `${top}px`, left: `${left}px` };
 }
 
@@ -894,27 +918,7 @@ onBeforeUnmount(() => {
   width: var(--sej-icon-open-width, max-content) !important;
 }
 
-/* 搜图条：收起时图标落在整条中心，展开时以中心为轴向两侧对称长大，展开后仍居中。
-   transform 与宽度使用同一缓动，两者合成后中心位置始终不变 */
-#sej-container.sej-image-search.sej-icon-mode {
-  transition:
-    width 0.16s ease-out,
-    transform 0.16s ease-out,
-    background-color 0.16s ease-out,
-    backdrop-filter 0.16s ease-out;
-}
-
-#sej-container.sej-image-search.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) {
-  transform: translateX(
-    calc((var(--sej-icon-open-width, var(--sej-icon-size)) - var(--sej-icon-size)) / 2)
-  );
-}
-
-#sej-container.sej-image-search.sej-icon-mode.sej-icon-open {
-  transform: none;
-}
-
-/* 图标钉在整条中心，展开过程中不随左右边缘移动 */
+/* 搜图条的宽度变化以整条中心为轴向两侧对称展开，靠内联 translateX(-50%) 保持居中 */
 #sej-container.sej-image-search.sej-icon-mode > .sej-icon-trigger {
   left: 50%;
   transform: translateX(-50%);
