@@ -131,6 +131,10 @@ function ensureBuiltinActions(categories, engineList) {
   for (const engine of defaultConfig.engineList[BUILTIN_CATEGORY_KEY] || []) {
     if (!presentActions.has(engine.action)) engines.push({ ...engine });
   }
+  // 旧版默认名「打开链接」跟随新版改名，用户自定义的名称保持不变
+  for (const engine of engines) {
+    if (engine.action === 'open' && engine.name === '打开链接') engine.name = '打开';
+  }
   engineList[BUILTIN_CATEGORY_KEY] = engines;
 }
 

@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   LONG_PRESS_MOVE_TOLERANCE,
+  contextActionTarget,
   contextCategoryKey,
   getContextEngines,
   isLongPressMove,
@@ -46,7 +47,7 @@ describe('getContextEngines', () => {
         engineList: {
           actions: [
             { name: '复制', url: '', action: 'copy' },
-            { name: '打开链接', url: '', action: 'open' },
+            { name: '打开', url: '', action: 'open' },
             { name: '隐藏', url: '', action: 'open', disable: true },
             { name: '空项', url: '' },
           ],
@@ -54,7 +55,7 @@ describe('getContextEngines', () => {
       },
       'link',
     );
-    expect(engines.map((engine) => engine.name)).toEqual(['复制', '打开链接']);
+    expect(engines.map((engine) => engine.name)).toEqual(['复制', '打开']);
   });
 
   it('缺少分类或模式未知时返回空数组', () => {
@@ -63,5 +64,29 @@ describe('getContextEngines', () => {
     expect(getContextEngines({ engineList: { web: [{ url: 'https://a.test/?q=%s' }] } })).toEqual(
       [],
     );
+  });
+});
+
+describe('contextActionTarget', () => {
+  const hit = { keyword: '示例标题', url: 'https://site.test/a' };
+
+  it('链接复制标题加地址，打开只用地址', () => {
+    expect(contextActionTarget('link', 'copy', hit)).toBe('示例标题\nhttps://site.test/a');
+    expect(contextActionTarget('link', 'open', hit)).toBe('https://site.test/a');
+  });
+
+  it('纯图片链接没有标题时只复制地址', () => {
+    const url = 'https://site.test/a.png';
+    expect(contextActionTarget('link', 'copy', { keyword: url, url })).toBe(url);
+  });
+
+  it('图片复制图片本身，取不到时回退地址；打开用图片地址', () => {
+    const image = { keyword: 'https://cdn.test/a.png', url: 'https://cdn.test/a.png' };
+    expect(contextActionTarget('image', 'copy', image)).toEqual({
+      text: 'https://cdn.test/a.png',
+      url: 'https://cdn.test/a.png',
+      image: 'https://cdn.test/a.png',
+    });
+    expect(contextActionTarget('image', 'open', image)).toBe('https://cdn.test/a.png');
   });
 });

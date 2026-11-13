@@ -40,6 +40,7 @@ import {
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible } from '../core/configData.js';
+import { contextActionTarget } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
@@ -158,19 +159,26 @@ const categories = computed(() =>
     .filter((category) => category.engines.length),
 );
 
-function getCurrentKeyword(engine) {
-  if (isContextAction.value) {
-    // 链接模式下复制动作复制链接文字，打开动作打开链接地址
-    return engine?.action === 'open' ? contextAction.url : contextAction.keyword;
-  }
+function getCurrentKeyword() {
   if (isSelectSearch.value) return selectionText.value;
   return extractKeyword(inputTarget);
 }
 
+/** 动作引擎的目标：上下文操作条按命中类型决定复制内容与打开地址 */
+function getActionTarget(engine) {
+  if (isContextAction.value) {
+    return contextActionTarget(contextAction.mode, engine?.action, contextAction);
+  }
+  return getCurrentKeyword();
+}
+
 async function onJump(engine) {
-  const keyword = getCurrentKeyword(engine);
   if (isActionEngine(engine)) {
-    const ok = await performEngineAction(engine, keyword, data.defaultOpenTarget);
+    const ok = await performEngineAction(
+      engine,
+      getActionTarget(engine),
+      data.defaultOpenTarget,
+    );
     if (ok) {
       showToast(t(engine.action === 'copy' ? 'action.copied' : 'action.opened'));
     } else {
@@ -178,6 +186,7 @@ async function onJump(engine) {
     }
     return;
   }
+  const keyword = getCurrentKeyword();
   performJump(engine, keyword, data);
   if (isContextAction.value) closeContextMode();
 }

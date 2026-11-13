@@ -1,7 +1,7 @@
 import { GM_openInTab } from '$';
 import { DEFAULT_OPEN_TARGET, normalizeEngineAction, normalizeDefaultOpenTarget } from './configData.js';
 import { normalizeKeywordUrl } from './engineUrl.js';
-import { copyText } from './clipboard.js';
+import { copyImage, copyText } from './clipboard.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -39,23 +39,38 @@ export function prepareJump(engine, keyword) {
 }
 
 /**
- * 是否为非搜索类动作引擎（复制/打开链接）。
+ * 是否为非搜索类动作引擎（复制/打开）。
  */
 export function isActionEngine(engine) {
   return Boolean(normalizeEngineAction(engine?.action));
 }
 
 /**
- * 执行动作引擎，返回是否成功处理。
- * copy 复制当前关键词/划词内容；open 把当前内容当作链接打开。
+ * 动作引擎的目标内容：普通跳转只有一段文字，上下文操作条另有打开地址与可复制的图片。
+ * @param {string | { text?: string, url?: string, image?: string }} target
  */
-export async function performEngineAction(engine, keyword, defaultTarget = DEFAULT_OPEN_TARGET) {
+function normalizeActionTarget(target) {
+  if (typeof target === 'string') return { text: target, url: target, image: '' };
+  const text = typeof target?.text === 'string' ? target.text : '';
+  const url = typeof target?.url === 'string' && target.url ? target.url : text;
+  const image = typeof target?.image === 'string' ? target.image : '';
+  return { text, url, image };
+}
+
+/**
+ * 执行动作引擎，返回是否成功处理。
+ * copy 优先复制图片本身，取不到时回退到目标文字；open 把目标地址当作链接打开。
+ * @param {string | { text?: string, url?: string, image?: string }} target 复制/打开用的内容
+ */
+export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
   const action = normalizeEngineAction(engine?.action);
+  const source = normalizeActionTarget(target);
   if (action === 'copy') {
-    return copyText(keyword);
+    if (source.image && (await copyImage(source.image))) return true;
+    return copyText(source.text);
   }
   if (action === 'open') {
-    const url = normalizeKeywordUrl(keyword);
+    const url = normalizeKeywordUrl(source.url);
     if (!url) return false;
     if (shouldOpenInNewTab(engine, false, defaultTarget)) {
       if (!openInNewTab(url)) window.open(url, '_blank');
@@ -119,7 +134,7 @@ export function submitPostForm(action, field, value, targetName) {
  * 是否新标签页由引擎的打开方式决定，forceNewTab 仅用于一键打开全部引擎。
  */
 export function performJump(engine, keyword, settingData = {}, forceNewTab = false) {
-  // 动作引擎不拼接搜索 URL，直接执行复制/打开链接
+  // 动作引擎不拼接搜索 URL，直接执行复制/打开
   if (isActionEngine(engine)) {
     performEngineAction(engine, keyword, settingData.defaultOpenTarget);
     return true;
@@ -153,7 +168,7 @@ export function openAllEngines(engines, keyword, settingData = {}) {
   for (const engine of engines) {
     if (engine.disable) continue;
     // 动作引擎没有 URL，不参与“与当前站点相同”的判断；
-    // 批量打开时只执行打开链接，避免静默覆盖剪贴板
+    // 批量打开时只执行打开，避免静默覆盖剪贴板
     if (isActionEngine(engine)) {
       if (engine.action !== 'copy') {
         performEngineAction(engine, keyword, settingData.defaultOpenTarget);

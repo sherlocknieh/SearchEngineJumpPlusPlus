@@ -115,9 +115,9 @@ export const messages = {
     'engine.requiredAction': '标题必填',
 
     'action.copied': '已复制到剪贴板',
-    'action.opened': '已打开链接',
+    'action.opened': '已打开',
     'action.copyFailed': '没有可复制的内容',
-    'action.openFailed': '当前内容不是有效链接',
+    'action.openFailed': '无法打开该内容',
 
 
     'config.warningLine1': '此处有更多的设置选项，自由度更高，',
@@ -267,9 +267,9 @@ export const messages = {
     'engine.requiredAction': 'Title is required',
 
     'action.copied': 'Copied to clipboard',
-    'action.opened': 'Link opened',
+    'action.opened': 'Opened',
     'action.copyFailed': 'Nothing to copy',
-    'action.openFailed': 'The current text is not a valid link',
+    'action.openFailed': 'Unable to open this content',
 
 
     'config.warningLine1': 'More advanced options are available here,',
@@ -342,5 +342,5 @@ export const DEFAULT_ENGINE_NAMES = {
   阿里千问: 'Qwen',
   知乎直答: 'Zhihu Zhida',
   复制: 'Copy',
-  打开链接: 'Open link',
+  打开: 'Open',
 };

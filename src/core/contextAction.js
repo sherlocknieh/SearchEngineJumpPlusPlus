@@ -34,3 +34,19 @@ export function getContextEngines(settingData, mode) {
   if (!Array.isArray(list)) return [];
   return list.filter((engine) => !engine.disable && (engine.url || engine.action));
 }
+
+/**
+ * 命中内容交给动作引擎的目标：链接复制标题加地址，图片复制图片本身；打开统一用地址。
+ * @param {'image' | 'link'} mode 命中类型
+ * @param {'copy' | 'open'} action 动作类型
+ * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
+ * @returns {string | { text: string, url: string, image?: string }}
+ */
+export function contextActionTarget(mode, action, hit = {}) {
+  const url = hit.url || '';
+  const keyword = hit.keyword || url;
+  if (action !== 'copy') return url || keyword;
+  if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
+  // 纯图片链接没有文字，关键词就是地址，此时只复制地址
+  return keyword && keyword !== url ? `${keyword}\n${url}` : url || keyword;
+}

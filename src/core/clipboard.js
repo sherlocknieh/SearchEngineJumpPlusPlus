@@ -44,6 +44,36 @@ function copyWithTextarea(value) {
   return ok;
 }
 
+/** 剪贴板图片只接受 PNG，其他格式先画到画布再导出 */
+async function toPngBlob(blob) {
+  if (blob.type === 'image/png') return blob;
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement('canvas');
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext('2d')?.drawImage(bitmap, 0, 0);
+  bitmap.close?.();
+  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+}
+
+/**
+ * 把图片本身写入剪贴板。
+ * 跨域取图、非安全上下文或浏览器不支持图片剪贴板时返回 false，由调用方回退到复制地址。
+ */
+export async function copyImage(url) {
+  if (!url || !navigator.clipboard?.write || typeof ClipboardItem === 'undefined') return false;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return false;
+    const png = await toPngBlob(await response.blob());
+    if (!png) return false;
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 export async function copyText(text) {
   const value = String(text ?? '');
   if (!value) return false;

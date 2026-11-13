@@ -169,8 +169,23 @@ describe('normalizeConfig', () => {
     expect(result.engineCategories[0]).toEqual(['功能', 'actions', false]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
-      { name: '打开链接', url: '', action: 'open' },
+      { name: '打开', url: '', action: 'open' },
     ]);
+  });
+
+  it('旧版默认名「打开链接」跟随改名，自定义名称保持原样', () => {
+    const result = normalizeConfig(
+      {
+        engineList: {
+          actions: [
+            { name: '打开链接', action: 'open' },
+            { name: '我的复制', action: 'copy' },
+          ],
+        },
+      },
+      defaults,
+    );
+    expect(result.engineList.actions.map((engine) => engine.name)).toEqual(['打开', '我的复制']);
   });
 
   it('缺少 engineList 时按分类键回退默认引擎', () => {

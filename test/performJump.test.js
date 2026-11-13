@@ -119,3 +119,64 @@ describe('动作引擎', () => {
     expect(openInTab).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('动作引擎的上下文目标', () => {
+  const writeText = vi.fn().mockResolvedValue(undefined);
+  const write = vi.fn().mockResolvedValue(undefined);
+
+  beforeEach(() => {
+    openInTab.mockReset();
+    writeText.mockClear();
+    write.mockClear();
+    Object.defineProperty(navigator, 'clipboard', {
+      value: { writeText, write },
+      configurable: true,
+    });
+  });
+
+  it('复制对象里的文本内容', async () => {
+    const target = { text: '标题\nhttps://a.test', url: 'https://a.test' };
+    expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('标题\nhttps://a.test');
+  });
+
+  it('图片可取时写入图片数据，取不到时回退到复制的文字', async () => {
+    const target = { text: 'https://cdn.test/a.png', image: 'https://cdn.test/a.png' };
+    const originalFetch = globalThis.fetch;
+    const OriginalItem = globalThis.ClipboardItem;
+    try {
+      // 不支持图片剪贴板时回退到复制地址
+      globalThis.ClipboardItem = undefined;
+      expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
+      expect(writeText).toHaveBeenCalledWith('https://cdn.test/a.png');
+
+      globalThis.ClipboardItem = class {
+        constructor(items) {
+          this.items = items;
+        }
+      };
+      globalThis.fetch = vi.fn(async () => ({
+        ok: true,
+        blob: async () => new Blob(['png'], { type: 'image/png' }),
+      }));
+      writeText.mockClear();
+      expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
+      expect(write).toHaveBeenCalledTimes(1);
+      expect(writeText).not.toHaveBeenCalled();
+    } finally {
+      globalThis.fetch = originalFetch;
+      globalThis.ClipboardItem = OriginalItem;
+    }
+  });
+
+  it('打开对象目标用地址而不是显示文字', async () => {
+    expect(
+      await performEngineAction({ action: 'open' }, { text: '标题', url: 'https://a.test/p' }),
+    ).toBe(true);
+    expect(openInTab).toHaveBeenCalledWith('https://a.test/p', {
+      active: true,
+      insert: true,
+      setParent: true,
+    });
+  });
+});

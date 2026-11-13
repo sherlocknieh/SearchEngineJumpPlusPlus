@@ -1,5 +1,5 @@
 /**
- * 长按 / 右键页面内容的入口：图片走识图引擎，链接走「功能」里的复制、打开链接。
+ * 长按 / 右键页面内容的入口：图片走识图引擎，链接走「功能」里的复制、打开。
  *
  * 用户脚本无法往浏览器原生菜单里加项，iOS 长按图片/链接又不会派发可靠的 contextmenu，
  * 所以这里自己识别长按手势：按住命中的元素超过 LONG_PRESS_MS 且没有明显位移时，
@@ -91,7 +91,7 @@ export function armContextMenu(ensureBoot) {
     if (!hit.url) return;
     openContextAction({
       mode: hit.mode,
-      // 图片模式没有文字，复制与打开都用图片地址；链接模式复制文字、打开地址
+      // 图片模式复制图片本身、打开图片地址；链接模式复制标题加地址、打开地址
       keyword: hit.text || hit.url,
       url: hit.url,
       element: hit.element,
