@@ -1005,19 +1005,14 @@ onBeforeUnmount(() => {
 }
 
 /* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
-   压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项 */
+   压在滚动区之上，收起时指针始终命中图标而不是下面的搜索项。
+   1px 抵消收起态那条透明边框，26px 图标正好居中于 30px 圆内 */
 #sej-container.sej-icon-mode > .sej-icon-trigger {
   position: absolute;
   z-index: 1;
-  top: 2px;
-  left: 2px;
-  pointer-events: auto;
-}
-
-/* 收起态边框改为透明但仍占 1px，图标内移 1px 才能与整圆同心 */
-#sej-container.sej-icon-mode:not(.sej-icon-open):not(.sej-measuring) > .sej-icon-trigger {
   top: 1px;
   left: 1px;
+  pointer-events: auto;
 }
 
 /* 收起时只有图标；展开后图标让位，设置按钮在末尾淡入 */
