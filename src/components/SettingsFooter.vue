@@ -91,7 +91,7 @@ const emit = defineEmits(['open-config', 'pick-config-file', 'export-config', 's
         <a target="_blank" href="https://greasyfork.org/zh-CN/users/1238054">Greasy Fork</a>
       </span>
       <span class="feedback" :title="t('settings.feedbackGitHub')">
-        <a target="_blank" href="https://github.com/sherlocknieh/Monkey-Scripts">GitHub</a>
+        <a target="_blank" href="https://github.com/sherlocknieh/SearchEngineJumpPlusPlus">GitHub</a>
       </span>
     </div>
     <div class="sej-footer-actions">
