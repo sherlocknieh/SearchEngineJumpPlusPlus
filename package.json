@@ -7,7 +7,6 @@
   "scripts": {
     "dev": "vite",
     "dev:csp": "node scripts/dev-csp.mjs",
-    "dev:cdp": "node scripts/dev-cdp.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",

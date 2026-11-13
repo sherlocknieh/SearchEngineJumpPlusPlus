@@ -44,22 +44,6 @@
   会对所有站点生效、有安全代价；本地服务方案只影响调试脚本自己的加载路径，
   且请求由脚本管理器发起、不经过页面，也不受 Chrome 142 起的本地网络访问授权限制。
 
-- 既要绕开 CSP 又不想放弃 HMR：`pnpm dev:cdp`
-
-  上面两套各自让一步：`pnpm dev` 有 HMR 但过不了 CSP，`pnpm dev:csp` 过得了 CSP 但要整页刷新。
-  `pnpm dev:cdp` 另开一条：自己拉起专用 Chrome，用 CDP 的 `Page.setBypassCSP` 关掉页面 CSP，
-  于是 `pnpm dev` 的模块脚本能正常加载，HMR、源码断点、Vue Devtools 都保留。
-
-  ```bash
-  pnpm dev                              # 另开一个终端先起 dev server
-  pnpm dev:cdp https://www.bing.com     # 也可用 --url / --port / --profile / --no-inject / --headless
-  ```
-
-  1. 浏览器 profile 落在 `.dev/chrome-profile`，登录态可复用；`.dev` 已排除在 watcher 之外。
-  2. 没装脚本管理器时会往页面补 dev 入口，此时没有 `GM_*`，存储退回 localStorage，够调 UI；
-     要验证 GM 存储与跨标签页同步，仍在同一个 profile 里装 `pnpm dev` 打印的 dev 版脚本。
-  3. CSP 与本地网络访问授权只在这个专用浏览器里放开，不影响日常浏览器。
-
 - 打包构建与发布
 
   本仓库按「每次提交即发布」执行。版本号由 `scripts/release.mjs` 按系统日期时间
