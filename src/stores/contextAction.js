@@ -12,6 +12,8 @@ export const contextAction = reactive({
   keyword: '',
   // 打开动作用的地址：图片链接或链接地址
   url: '',
+  // 命中位置（视口坐标）：链接可能撑满整行，图标要贴住用户实际按下的位置
+  point: null,
   // 命中的元素，跟随模式用它的矩形定位
   element: null,
 });
@@ -21,12 +23,14 @@ export const contextAction = reactive({
  * @param {'image' | 'link'} input.mode 命中类型
  * @param {string} input.keyword 引擎关键词
  * @param {string} input.url 打开动作使用的地址
+ * @param {{x: number, y: number} | null} [input.point] 长按/右键的视口坐标
  * @param {Element | null} [input.element] 命中的元素，用于跟随定位
  */
-export function openContextAction({ mode, keyword, url, element = null }) {
+export function openContextAction({ mode, keyword, url, point = null, element = null }) {
   contextAction.mode = mode;
   contextAction.keyword = keyword;
   contextAction.url = url;
+  contextAction.point = point;
   contextAction.element = element;
   contextAction.active = true;
 }

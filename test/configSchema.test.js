@@ -44,7 +44,7 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(false);
   });
 
-  it('默认不启用只显示图标的精简模式', () => {
+  it('默认不启用只显示图标的简洁模式', () => {
     const config = createDefaultConfig();
     expect(config.selectionCompact).toBe(false);
   });

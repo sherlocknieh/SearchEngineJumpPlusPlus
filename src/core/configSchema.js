@@ -38,7 +38,7 @@ export function createDefaultConfig() {
     selectSearchInInput: true,
     // 划词条默认从页面顶部滑出，不跟随选区位置
     selectionFollowPointer: false,
-    // 跟随选区的划词条默认显示文字，不启用只显示图标的精简模式
+    // 跟随选区的划词条默认显示文字，不启用只显示图标的简洁模式
     selectionCompact: false,
     // 划词后默认直接显示整条搜索条，不启用只露一个图标的图标模式
     selectionIcon: false,

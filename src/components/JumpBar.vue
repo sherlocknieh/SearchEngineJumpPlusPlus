@@ -85,7 +85,7 @@ const isContextAction = ref(false);
 // 当前上下文模式（image / link），图片模式有专属的定位方式
 const contextMode = ref('');
 const isImageContext = computed(() => isContextAction.value && contextMode.value === 'image');
-// 精简模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
+// 简洁模式是「跟随选区」的子选项：只有跟随选区的浮层条隐藏文字，只留图标
 const compactBar = computed(
   () => isFloat && Boolean(data.selectionFollowPointer) && Boolean(data.selectionCompact),
 );
@@ -188,11 +188,7 @@ function getActionTarget(engine) {
 
 async function onJump(engine) {
   if (isActionEngine(engine)) {
-    const ok = await performEngineAction(
-      engine,
-      getActionTarget(engine),
-      data.defaultOpenTarget,
-    );
+    const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
     if (ok) {
       showToast(t(engine.action === 'copy' ? 'action.copied' : 'action.opened'));
     } else {
@@ -447,7 +443,14 @@ function syncFloatPlacement() {
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
       placeAboveRect({ rect, bar: barSize, viewport }))
     : null;
-  const { top, left } = imagePlacement ?? placeNearRect({ rect, bar: barSize, viewport });
+  // 链接可能撑满整行：图标贴住实际按下位置，而不是链接的右边缘
+  const point = contextAction.point;
+  const placementRect =
+    !isImageContext.value && point
+      ? { top: point.y, bottom: point.y, left: point.x, right: point.x }
+      : rect;
+  const { top, left } =
+    imagePlacement ?? placeNearRect({ rect: placementRect, bar: barSize, viewport });
   bar.classList.remove('sej-top');
   bar.classList.add('sej-follow-anchor');
   // 图片条以整条中心为锚点：宽度变化时自动向两侧对称展开，图标保持居中
@@ -900,7 +903,7 @@ onBeforeUnmount(() => {
   justify-self: center !important;
 }
 
-/* 精简模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */
+/* 简洁模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */
 #sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,
 #sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {
   padding: 0 7px;
