@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0639
+// @version            2026.11.14.0642
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7281,6 +7281,17 @@
 			return "";
 		}
 	}
+	var HEADING_SELECTOR = "h1, h2, h3, h4, h5, h6";
+	function collapse(value) {
+		return (value || "").replace(/\s+/g, " ").trim();
+	}
+	function linkText(link) {
+		return [
+			(link.querySelector?.(HEADING_SELECTOR))?.textContent,
+			link.getAttribute?.("aria-label"),
+			link.textContent
+		].map(collapse).find(Boolean) || "";
+	}
 	function resolveLinkHit(target, base = globalThis.location?.href) {
 		const link = typeof target?.closest === "function" ? target.closest("a[href], area[href]") : null;
 		if (!link) return null;
@@ -7290,7 +7301,7 @@
 		if (!url) return null;
 		return {
 			url,
-			text: (link.textContent || "").replace(/\s+/g, " ").trim(),
+			text: linkText(link),
 			element: link
 		};
 	}

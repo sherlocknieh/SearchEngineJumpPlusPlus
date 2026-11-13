@@ -48,6 +48,19 @@ describe('resolveLinkHit', () => {
     expect(hit.element).toBe(a);
   });
 
+  it('链接内含标题时只取标题，忽略站点名与面包屑', () => {
+    const a = link({ href: 'https://en.wikipedia.org/wiki/Test' });
+    a.innerHTML =
+      '<h3>Test</h3><div><span>Wikipedia</span><cite>en.wikipedia.org › wiki › Test</cite></div>';
+    expect(resolveLinkHit(a).text).toBe('Test');
+  });
+
+  it('没有标题时回退到 aria-label', () => {
+    const a = link({ href: 'https://site.test/p', 'aria-label': '  文章   标题 ' });
+    a.innerHTML = '<span>图标</span>';
+    expect(resolveLinkHit(a).text).toBe('文章 标题');
+  });
+
   it('纯图片链接没有文字时文字留空，由调用方回退到地址', () => {
     const a = link({ href: 'https://site.test/p' });
     a.appendChild(document.createElement('img'));

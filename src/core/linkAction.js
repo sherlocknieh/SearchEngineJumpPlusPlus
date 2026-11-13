@@ -17,6 +17,26 @@ function toLinkUrl(raw, base) {
   }
 }
 
+const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
+
+function collapse(value) {
+  return (value || '').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * 链接可复制的文字：优先取链接内的标题，避免把站点名、面包屑等附注一起复制。
+ * 没有标题时回退到 aria-label，再回退到整段文字。
+ */
+function linkText(link) {
+  const heading = link.querySelector?.(HEADING_SELECTOR);
+  const candidates = [
+    heading?.textContent,
+    link.getAttribute?.('aria-label'),
+    link.textContent,
+  ];
+  return candidates.map(collapse).find(Boolean) || '';
+}
+
 /**
  * 取按下位置对应的链接文字、地址与 <a>/<area> 元素；不是可操作链接时返回 null。
  * 文字用于复制，地址用于打开；纯图片链接的文字为空，由调用方回退到地址。
@@ -34,8 +54,7 @@ export function resolveLinkHit(target, base = globalThis.location?.href) {
 
   const url = toLinkUrl(raw, base) || toLinkUrl(link.href, base);
   if (!url) return null;
-  const text = (link.textContent || '').replace(/\s+/g, ' ').trim();
-  return { url, text, element: link };
+  return { url, text: linkText(link), element: link };
 }
 
 /**
