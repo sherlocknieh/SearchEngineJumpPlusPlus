@@ -19,7 +19,6 @@ import {
 export const OPTION_KEYS = [
   'fixedTop',
   'fixedTopUpward',
-  'HideTheSameLink',
   'center',
   'selectSearch',
   'selectSearchInInput',
@@ -29,8 +28,6 @@ export const OPTION_KEYS = [
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
-    // 默认隐藏与当前站点相同的引擎，避免重复跳转
-    HideTheSameLink: true,
     // 默认不固定跳转条，不启用“仅上拉显示”
     fixedTop: false,
     fixedTopUpward: false,

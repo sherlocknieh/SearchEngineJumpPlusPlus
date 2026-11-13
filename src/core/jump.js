@@ -18,14 +18,8 @@ export function encodeKeyword(keyword) {
  * 根据搜索引擎配置生成跳转目标。
  * @returns {{ type: 'get', url: string } | { type: 'post', action: string, field: string, value: string }}
  */
-export function prepareJump(engine, keyword, { hideTheSameLink }) {
-  let kw = keyword;
-  if (hideTheSameLink === false) {
-    // 去掉 site: 限定及紧随其后的空白，避免关键词以空格开头被编码成 %20
-    kw = kw.replace(/\bsite:[^\s]+\s*/g, '').trim();
-  }
-
-  const encoded = encodeKeyword(kw);
+export function prepareJump(engine, keyword) {
+  const encoded = encodeKeyword(keyword);
   const targetURL = engine.url;
   const postIndex = targetURL ? targetURL.indexOf('$post$') : -1;
 
@@ -118,16 +112,14 @@ export function submitPostForm(action, field, value, targetName) {
  * 执行跳转。返回 true 表示已处理，调用方无需再走默认导航。
  * 是否新标签页由引擎的打开方式决定，forceNewTab 仅用于一键打开全部引擎。
  */
-export function performJump(engine, keyword, settingData, forceNewTab = false) {
+export function performJump(engine, keyword, forceNewTab = false) {
   // 动作引擎不拼接搜索 URL，直接执行复制/打开链接
   if (isActionEngine(engine)) {
     performEngineAction(engine, keyword);
     return true;
   }
 
-  const result = prepareJump(engine, keyword, {
-    hideTheSameLink: settingData.HideTheSameLink,
-  });
+  const result = prepareJump(engine, keyword);
   const newTab = shouldOpenInNewTab(engine, forceNewTab);
 
   if (result.type === 'post') {
@@ -151,7 +143,7 @@ export function performJump(engine, keyword, settingData, forceNewTab = false) {
  * 批量打开会强制使用新标签页，避免引擎之间互相覆盖页面。
  * GM_openInTab 不可用时 performJump 会回退到 window.open，避免静默失败。
  */
-export function openAllEngines(engines, keyword, settingData, matchedRule) {
+export function openAllEngines(engines, keyword) {
   for (const engine of engines) {
     if (engine.disable) continue;
     // 动作引擎没有 URL，不参与“与当前站点相同”的判断；
@@ -160,9 +152,6 @@ export function openAllEngines(engines, keyword, settingData, matchedRule) {
       if (engine.action !== 'copy') performEngineAction(engine, keyword);
       continue;
     }
-    if (settingData?.HideTheSameLink && matchedRule?.url?.test(engine.url)) {
-      continue;
-    }
-    performJump(engine, keyword, settingData || {}, true);
+    performJump(engine, keyword, true);
   }
 }

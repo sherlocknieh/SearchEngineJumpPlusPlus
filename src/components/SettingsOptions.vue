@@ -10,15 +10,6 @@ const emit = defineEmits(['update-option']);
 
 <template>
   <div class="sej-footer-options">
-    <span id="xin-HideTheSameLink" :title="t('settings.hideSameLinkTip')">
-      <label
-        >{{ t('settings.hideSameLink')
-        }}<input
-          type="checkbox"
-          :checked="options.HideTheSameLink"
-          @change="emit('update-option', 'HideTheSameLink', $event.target.checked)"
-      /></label>
-    </span>
     <span id="xin-selectSearch">
       <label
         >{{ t('settings.selectSearch')

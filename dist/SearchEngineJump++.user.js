@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2223
+// @version            2026.11.13.2226
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5706,7 +5706,6 @@
 		version: "2026-10-24 08:47:49",
 		fixedTop: false,
 		fixedTopUpward: false,
-		HideTheSameLink: true,
 		selectSearch: true,
 		selectSearchInInput: false,
 		center: false,
@@ -5781,8 +5780,6 @@
 			"settings.deleteEngine": "删除引擎",
 			"settings.copyHere": "复制一份到此栏目",
 			"settings.addCategory": "添加列表",
-			"settings.hideSameLink": "防止原地跳转",
-			"settings.hideSameLinkTip": "比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索",
 			"settings.selectSearch": "划词搜索",
 			"settings.selectSearchInInput": "输入框内划词",
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
@@ -5911,8 +5908,6 @@
 			"settings.deleteEngine": "Delete engine",
 			"settings.copyHere": "Copy here",
 			"settings.addCategory": "Add category",
-			"settings.hideSameLink": "Prevent same-site jumps",
-			"settings.hideSameLinkTip": "For example, Google is hidden from the engine list on a Google results page",
 			"settings.selectSearch": "Selection search",
 			"settings.selectSearchInInput": "Selection in inputs",
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
@@ -6165,7 +6160,6 @@
 	var OPTION_KEYS = [
 		"fixedTop",
 		"fixedTopUpward",
-		"HideTheSameLink",
 		"center",
 		"selectSearch",
 		"selectSearchInInput",
@@ -6173,7 +6167,6 @@
 	];
 	function createDefaultConfig() {
 		return {
-			HideTheSameLink: true,
 			fixedTop: false,
 			fixedTopUpward: false,
 			selectSearch: true,
@@ -6818,10 +6811,8 @@
 	function encodeKeyword(keyword) {
 		return encodeURIComponent(keyword);
 	}
-	function prepareJump(engine, keyword, { hideTheSameLink }) {
-		let kw = keyword;
-		if (hideTheSameLink === false) kw = kw.replace(/\bsite:[^\s]+\s*/g, "").trim();
-		const encoded = encodeKeyword(kw);
+	function prepareJump(engine, keyword) {
+		const encoded = encodeKeyword(keyword);
 		const targetURL = engine.url;
 		const postIndex = targetURL ? targetURL.indexOf("$post$") : -1;
 		if (postIndex !== -1) return {
@@ -6888,12 +6879,12 @@
 		document.body.appendChild(form);
 		form.submit();
 	}
-	function performJump(engine, keyword, settingData, forceNewTab = false) {
+	function performJump(engine, keyword, forceNewTab = false) {
 		if (isActionEngine(engine)) {
 			performEngineAction(engine, keyword);
 			return true;
 		}
-		const result = prepareJump(engine, keyword, { hideTheSameLink: settingData.HideTheSameLink });
+		const result = prepareJump(engine, keyword);
 		const newTab = shouldOpenInNewTab(engine, forceNewTab);
 		if (result.type === "post") {
 			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
@@ -6907,15 +6898,14 @@
 		window.location.href = result.url;
 		return true;
 	}
-	function openAllEngines(engines, keyword, settingData, matchedRule) {
+	function openAllEngines(engines, keyword) {
 		for (const engine of engines) {
 			if (engine.disable) continue;
 			if (isActionEngine(engine)) {
 				if (engine.action !== "copy") performEngineAction(engine, keyword);
 				continue;
 			}
-			if (settingData?.HideTheSameLink && matchedRule?.url?.test(engine.url)) continue;
-			performJump(engine, keyword, settingData || {}, true);
+			performJump(engine, keyword, true);
 		}
 	}
 	function isEditableElement(el) {
@@ -8069,12 +8059,7 @@
 			const categories = computed(() => data.engineCategories.filter(([, , enabled]) => enabled).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
-				engines: (data.engineList[key] || []).filter((engine) => {
-					if (engine.disable) return false;
-					if (engine.action) return true;
-					if (data.HideTheSameLink && matchedRule?.url?.test(engine.url)) return false;
-					return true;
-				})
+				engines: (data.engineList[key] || []).filter((engine) => !engine.disable)
 			})).filter((category) => category.engines.length));
 			function getCurrentKeyword() {
 				if (isSelectSearch.value) return selectionText.value;
@@ -8087,10 +8072,10 @@
 					else showToast(t(engine.action === "copy" ? "action.copyFailed" : "action.openFailed"));
 					return;
 				}
-				performJump(engine, keyword, data);
+				performJump(engine, keyword);
 			}
 			function onJumpAll(engines) {
-				openAllEngines(engines, getCurrentKeyword(), data, matchedRule);
+				openAllEngines(engines, getCurrentKeyword());
 			}
 			let scrollAnimRaf = 0;
 			function easeInOutQuad(t) {
@@ -9882,11 +9867,11 @@
 		class: "sej-preview-dot"
 	};
 	var _hoisted_14$2 = ["href"];
-	var _hoisted_15$2 = {
+	var _hoisted_15$1 = {
 		key: 2,
 		class: "sej-preview-size"
 	};
-	var _hoisted_16$1 = {
+	var _hoisted_16 = {
 		key: 3,
 		class: "sej-preview-state"
 	};
@@ -10080,8 +10065,8 @@
 									rel: "noopener",
 									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
 								}, toDisplayString(step.url), 9, _hoisted_14$2),
-								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(step.size), 1)) : createCommentVNode("", true),
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
@@ -10425,7 +10410,7 @@
 		"innerHTML"
 	];
 	var _hoisted_14$1 = ["innerHTML"];
-	var _hoisted_15$1 = {
+	var _hoisted_15 = {
 		key: 2,
 		class: "sej-copy-hint"
 	};
@@ -10557,7 +10542,7 @@
 					key: 0,
 					class: "sej-copy-icon",
 					innerHTML: unref(COPY)
-				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15$1, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
+				}, null, 8, _hoisted_14$1)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode("+")], 64)), __props.copyTargetCi === __props.ci ? (openBlock(), createElementBlock("span", _hoisted_15, toDisplayString(unref(t)("settings.copyHere")), 1)) : createCommentVNode("", true)], 2)], 8, _hoisted_7$2)], 10, _hoisted_1$3);
 			};
 		}
 	};
@@ -10685,9 +10670,9 @@
 		}
 	};
 	var _hoisted_1$1 = { class: "sej-footer-options" };
-	var _hoisted_2$1 = ["title"];
+	var _hoisted_2$1 = { id: "xin-selectSearch" };
 	var _hoisted_3$1 = ["checked"];
-	var _hoisted_4$1 = { id: "xin-selectSearch" };
+	var _hoisted_4$1 = ["title"];
 	var _hoisted_5$1 = ["checked"];
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
@@ -10695,11 +10680,9 @@
 	var _hoisted_9 = ["checked"];
 	var _hoisted_10 = ["title"];
 	var _hoisted_11 = ["checked"];
-	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["checked"];
-	var _hoisted_14 = { id: "xin-language" };
-	var _hoisted_15 = ["value"];
-	var _hoisted_16 = { value: "auto" };
+	var _hoisted_12 = { id: "xin-language" };
+	var _hoisted_13 = ["value"];
+	var _hoisted_14 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -10711,60 +10694,52 @@
 			const emit = __emit;
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("div", _hoisted_1$1, [
-					createBaseVNode("span", {
-						id: "xin-HideTheSameLink",
-						title: unref(t)("settings.hideSameLinkTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.hideSameLink")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.HideTheSameLink,
-						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "HideTheSameLink", $event.target.checked))
-					}, null, 40, _hoisted_3$1)])], 8, _hoisted_2$1),
-					createBaseVNode("span", _hoisted_4$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
+					createBaseVNode("span", _hoisted_2$1, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearch")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectSearch,
-						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
-					}, null, 40, _hoisted_5$1)])]),
+						onChange: _cache[0] || (_cache[0] = ($event) => emit("update-option", "selectSearch", $event.target.checked))
+					}, null, 40, _hoisted_3$1)])]),
 					withDirectives(createBaseVNode("span", {
 						id: "xin-selectSearchInInput",
 						title: unref(t)("settings.selectSearchInInputTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectSearchInInput")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectSearchInInput,
-						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
-					}, null, 40, _hoisted_7)])], 8, _hoisted_6), [[vShow, __props.options.selectSearch]]),
+						onChange: _cache[1] || (_cache[1] = ($event) => emit("update-option", "selectSearchInInput", $event.target.checked))
+					}, null, 40, _hoisted_5$1)])], 8, _hoisted_4$1), [[vShow, __props.options.selectSearch]]),
 					createBaseVNode("span", {
 						id: "xin-centerDisplay",
 						title: unref(t)("settings.centerTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.center")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.center,
-						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "center", $event.target.checked))
-					}, null, 40, _hoisted_9)])], 8, _hoisted_8),
+						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "center", $event.target.checked))
+					}, null, 40, _hoisted_7)])], 8, _hoisted_6),
 					createBaseVNode("span", {
 						id: "iqxin-fixedTopS",
 						title: unref(t)("settings.fixedTopTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTop")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.fixedTop,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "fixedTop", $event.target.checked))
-					}, null, 40, _hoisted_11)])], 8, _hoisted_10),
+						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "fixedTop", $event.target.checked))
+					}, null, 40, _hoisted_9)])], 8, _hoisted_8),
 					withDirectives(createBaseVNode("span", {
 						id: "iqxin-fixedTopUpward",
 						title: unref(t)("settings.fixedTopUpwardTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTopUpward")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.fixedTopUpward,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "fixedTopUpward", $event.target.checked))
-					}, null, 40, _hoisted_13)])], 8, _hoisted_12), [[vShow, __props.options.fixedTop]]),
-					createBaseVNode("span", _hoisted_14, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "fixedTopUpward", $event.target.checked))
+					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.fixedTop]]),
+					createBaseVNode("span", _hoisted_12, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_15)])])
+						createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_13)])])
 				]);
 			};
 		}

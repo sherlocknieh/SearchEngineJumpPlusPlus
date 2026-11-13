@@ -92,15 +92,7 @@ const categories = computed(() =>
     .map(([name, key]) => ({
       name: localizeCategoryName(name, key),
       key,
-      engines: (data.engineList[key] || []).filter((engine) => {
-        if (engine.disable) return false;
-        // 动作引擎没有站点链接，不受“防止原地跳转”影响
-        if (engine.action) return true;
-        if (data.HideTheSameLink && matchedRule?.url?.test(engine.url)) {
-          return false;
-        }
-        return true;
-      }),
+      engines: (data.engineList[key] || []).filter((engine) => !engine.disable),
     }))
     .filter((category) => category.engines.length),
 );
@@ -121,11 +113,11 @@ async function onJump(engine) {
     }
     return;
   }
-  performJump(engine, keyword, data);
+  performJump(engine, keyword);
 }
 
 function onJumpAll(engines) {
-  openAllEngines(engines, getCurrentKeyword(), data, matchedRule);
+  openAllEngines(engines, getCurrentKeyword());
 }
 
 // 与浏览器 PageDown 一致：每次滚动 7/8 屏，保留少量上下文

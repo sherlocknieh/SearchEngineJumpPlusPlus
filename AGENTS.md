@@ -58,7 +58,7 @@ src/main.js                 只做装配
 - 取词：`core/selection.js`（文档选区 + 输入框 `selectionStart/End`）
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
-  - `performJump` / `openAllEngines`；`HideTheSameLink` 时过滤当前站点规则
+  - `performJump` / `openAllEngines`
   - 打开方式：未配置 `target` 时默认新标签页；`target: '_self'` 才原地跳转；
     批量打开始终强制新标签页
   - 动作引擎：`action: 'copy' | 'open'`

@@ -25,14 +25,14 @@ describe('prepareJump', () => {
   const engine = { url: 'https://a.test/?q=%s' };
 
   it('生成 GET 目标并替换全部占位符', () => {
-    expect(prepareJump({ url: 'https://a.test/?q=%s&r=%s' }, 'a b', {})).toEqual({
+    expect(prepareJump({ url: 'https://a.test/?q=%s&r=%s' }, 'a b')).toEqual({
       type: 'get',
       url: 'https://a.test/?q=a%20b&r=a%20b',
     });
   });
 
   it('支持 $post$ 表单目标', () => {
-    expect(prepareJump({ url: 'https://a.test/search$post$q' }, 'a b', {})).toEqual({
+    expect(prepareJump({ url: 'https://a.test/search$post$q' }, 'a b')).toEqual({
       type: 'post',
       action: 'https://a.test/search',
       field: 'q',
@@ -40,32 +40,8 @@ describe('prepareJump', () => {
     });
   });
 
-  it('HideTheSameLink 为 false 时移除 site: 限定及多余空格', () => {
-    expect(prepareJump(engine, 'site:a.test keyword', { hideTheSameLink: false }).url).toBe(
-      'https://a.test/?q=keyword',
-    );
-    expect(prepareJump(engine, '  site:a.test   keyword', { hideTheSameLink: false }).url).toBe(
-      'https://a.test/?q=keyword',
-    );
-    expect(
-      prepareJump(engine, 'site:a.test site:b.test keyword', { hideTheSameLink: false }).url,
-    ).toBe('https://a.test/?q=keyword');
-  });
-
-  it('不把普通单词中的 site: 当作限定', () => {
-    expect(prepareJump(engine, 'website:a.test', { hideTheSameLink: false }).url).toBe(
-      'https://a.test/?q=website%3Aa.test',
-    );
-  });
-
-  it('只有 site: 时生成空关键词', () => {
-    expect(prepareJump(engine, 'site:a.test', { hideTheSameLink: false }).url).toBe(
-      'https://a.test/?q=',
-    );
-  });
-
-  it('HideTheSameLink 为 true 时保留 site: 限定', () => {
-    expect(prepareJump(engine, 'site:a.test keyword', { hideTheSameLink: true }).url).toBe(
+  it('关键词原样编码，保留 site: 限定', () => {
+    expect(prepareJump(engine, 'site:a.test keyword').url).toBe(
       'https://a.test/?q=site%3Aa.test%20keyword',
     );
   });

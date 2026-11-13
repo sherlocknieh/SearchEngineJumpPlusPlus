@@ -27,8 +27,6 @@ export const messages = {
     'settings.deleteEngine': '删除引擎',
     'settings.copyHere': '复制一份到此栏目',
     'settings.addCategory': '添加列表',
-    'settings.hideSameLink': '防止原地跳转',
-    'settings.hideSameLinkTip': '比如处于谷歌搜索页时，引擎列表中不再显示谷歌搜索',
     'settings.selectSearch': '划词搜索',
     'settings.selectSearchInInput': '输入框内划词',
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
@@ -167,9 +165,6 @@ export const messages = {
     'settings.deleteEngine': 'Delete engine',
     'settings.copyHere': 'Copy here',
     'settings.addCategory': 'Add category',
-    'settings.hideSameLink': 'Prevent same-site jumps',
-    'settings.hideSameLinkTip':
-      'For example, Google is hidden from the engine list on a Google results page',
     'settings.selectSearch': 'Selection search',
     'settings.selectSearchInInput': 'Selection in inputs',
     'settings.selectSearchInInputTip':
