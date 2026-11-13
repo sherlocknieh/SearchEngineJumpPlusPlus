@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/www\.zhihu\.com\/search\?/i,
     hosts: ['www.zhihu.com'],
-    fixedTop: 52,
     insertIntoDoc: {
       keyword: 'css;.Input',
       target: 'css;.Search-container',

@@ -182,7 +182,7 @@ function onScrollArea() {
   if (shown.value) measureAndPosition();
 }
 
-// absolute 模式下由宿主天然跟随页面滚动；fixed 模式（划词条/吸顶容器）
+// absolute 模式下由宿主天然跟随页面滚动；fixed 模式（划词条）
 // 仍需在滚动时重新贴合触发项。
 let pageListenersOn = false;
 
@@ -277,9 +277,9 @@ function unpin() {
 }
 
 function onTriggerClick() {
-  // 图标出现（已固定）后，整个分类触发项都是一键搜索的触发区域
+  // 已固定时再次点击触发项只收起面板，一键搜索改由列表末尾的条目承担
   if (pinned.value) {
-    onTriggerAction();
+    unpin();
     return;
   }
   pin();
@@ -298,15 +298,14 @@ function onHoverLeave() {
   scheduleHide();
 }
 
-// 常驻后标题图标会变成“在新标签打开”图标；
-// 此时点击分类触发项的任意位置都会执行一键搜索全部分类
-function onTriggerAction() {
+// 列表末尾的一键搜索条目：打开该分类下全部引擎，然后收起面板
+function onSearchAll() {
   unpin();
   emit('jumpAll');
 }
 
 function onTriggerKeydown() {
-  // 面板展开时回车/空格执行一键搜索，收起时作为普通触发键展开
+  // 面板展开时回车/空格收起，收起时作为普通触发键展开
   onTriggerClick();
 }
 
@@ -386,27 +385,14 @@ onBeforeUnmount(() => {
       tabindex="0"
       aria-haspopup="true"
       :aria-expanded="shown"
-      :title="pinned ? t('jump.searchAll', { name }) : null"
+      :title="pinned ? t('jump.collapseList', { name }) : null"
       @click.prevent.stop="onTriggerClick"
       @keydown.enter.prevent="onTriggerKeydown"
       @keydown.space.prevent="onTriggerKeydown"
     >
-      <!--
-        固定 16×16 的图标槽：图标与一键搜索图标互换时文字位置不变。
-        开启分类图标时始终保留槽位，即使当前分类没有可用图标；
-        关闭图标时只在需要显示一键搜索图标时出现，避免所有分类都缩进。
-      -->
-      <span v-if="showIcon || pinned" class="sej-category-icon">
-        <span v-if="pinned" class="sej-category-search-icon" aria-hidden="true">
-          <svg viewBox="0 0 16 16" aria-hidden="true">
-            <path
-              d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
-            />
-            <path d="M9.6 2.6h3.8v3.8" />
-            <path d="M13.4 2.6 8.6 7.4" />
-          </svg>
-        </span>
-        <img v-else-if="firstIconSrc" class="sej-category-icon-img" :src="firstIconSrc" alt="" />
+      <!-- 固定 16×16 的图标槽，保证所有分类的文字起点一致；分类无图标时也保留占位 -->
+      <span v-if="showIcon" class="sej-category-icon">
+        <img v-if="firstIconSrc" class="sej-category-icon-img" :src="firstIconSrc" alt="" />
       </span>
       <span>{{ name }}</span>
     </a>
@@ -438,6 +424,25 @@ onBeforeUnmount(() => {
           :engine="engine"
           @jump="onEngineJump"
         />
+        <a
+          class="sej-engine sej-drop-list-search-all"
+          role="button"
+          tabindex="0"
+          @click.prevent.stop="onSearchAll"
+          @keydown.enter.prevent="onSearchAll"
+          @keydown.space.prevent="onSearchAll"
+        >
+          <span class="sej-category-icon" aria-hidden="true">
+            <svg class="sej-search-all-icon" viewBox="0 0 16 16">
+              <path
+                d="M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5"
+              />
+              <path d="M9.6 2.6h3.8v3.8" />
+              <path d="M13.4 2.6 8.6 7.4" />
+            </svg>
+          </span>
+          <span>{{ t('jump.searchAll') }}</span>
+        </a>
       </div>
     </Teleport>
   </span>
@@ -473,17 +478,8 @@ onBeforeUnmount(() => {
   object-fit: cover;
 }
 
-/* 一键搜索图标只是状态展示，所有操作都由所在的分类触发项承担 */
-.sej-category-search-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  color: var(--font-color-qxin);
-}
-
-.sej-category-search-icon svg {
+/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */
+.sej-search-all-icon {
   display: block;
   width: 14px;
   height: 14px;
@@ -493,6 +489,10 @@ onBeforeUnmount(() => {
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.sej-drop-list > .sej-drop-list-search-all {
+  color: var(--sej-accent, #4285f4) !important;
 }
 
 .sej-engine.sej-drop-list-trigger-shown {

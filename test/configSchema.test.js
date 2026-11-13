@@ -33,9 +33,8 @@ describe('createDefaultConfig', () => {
     expect(config.engineCategories[0].slice(0, 2)).toEqual(['功能', 'actions']);
   });
 
-  it('默认固定跳转条并允许输入框内划词', () => {
+  it('默认允许输入框内划词', () => {
     const config = createDefaultConfig();
-    expect(config.fixedTop).toBe(true);
     expect(config.selectSearchInInput).toBe(true);
   });
 
@@ -53,7 +52,7 @@ describe('normalizeConfig', () => {
   it('类型错误的选项回退默认值', () => {
     const result = normalizeConfig(
       {
-        fixedTop: 'yes',
+        center: 'yes',
         selectSearch: 0,
         selectSearchInInput: 'yes',
         language: 'fr',
@@ -61,7 +60,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.fixedTop).toBe(defaults.fixedTop);
+    expect(result.center).toBe(defaults.center);
     expect(result.selectSearch).toBe(defaults.selectSearch);
     expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
     expect(result.language).toBe('auto');
@@ -199,7 +198,7 @@ describe('normalizeConfig', () => {
 describe('serializeConfig', () => {
   it('按白名单序列化草稿，并保留草稿内部字段之外的数据', () => {
     const config = serializeConfig({
-      options: { fixedTop: true, language: 'en' },
+      options: { center: true, language: 'en' },
       categories: [
         {
           name: '分类',
@@ -216,7 +215,7 @@ describe('serializeConfig', () => {
     });
 
     expect(config.version).toBe('v2');
-    expect(config.fixedTop).toBe(true);
+    expect(config.center).toBe(true);
     expect(config.language).toBe('en');
     expect(config.engineCategories).toEqual([['分类', 'cat', true]]);
     expect(config.engineList.cat).toEqual([

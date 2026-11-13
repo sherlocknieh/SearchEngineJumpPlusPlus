@@ -4,7 +4,7 @@ import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
 import { localizeCategoryName, t } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
-import { getHost, insertHost, getStackOffset } from '../core/shadowDom.js';
+import { getHost, insertHost } from '../core/shadowDom.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -24,7 +24,7 @@ import { IMAGE_CATEGORY_KEY } from '../core/configData.js';
 import { closeImageSearch, imageSearch } from '../stores/imageSearch.js';
 import { requestRestart } from '../core/appControl.js';
 import { showToast } from '../stores/ui.js';
-import { useFixedTop } from '../composables/useFixedTop.js';
+import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
 import EngineItem from './EngineItem.vue';
@@ -45,7 +45,15 @@ const ready = ref(false);
 const isSelectSearch = ref(false);
 // 长按图片时复用同一条跳转条，只把关键词换成图片地址
 const isImageSearch = ref(false);
-const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value);
+// 站点内嵌的跳转条在划词时临时改成顶部浮层
+const isSelectionOverlay = ref(false);
+const isOverlay = computed(
+  () => isSelectSearch.value || isImageSearch.value || isSelectionOverlay.value,
+);
+// 站点内嵌的跳转条也能响应划词（临时浮到顶部），纯划词条已是浮层，无需再接管
+const selectionOverlayAvailable = computed(
+  () => Boolean(matchedRule?.enabled) && Boolean(data.selectSearch) && !isSelectSearch.value,
+);
 const selectionText = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
@@ -66,23 +74,15 @@ const { start: startStackSync, stop: stopStackSync } = useStackSync();
 
 const {
   constrainBarToViewport,
-  onScroll,
   onViewportResize,
-  captureOriginTop,
   scheduleConstrainCheck,
-  dispose: disposeFixedTop,
-} = useFixedTop({
+  dispose: disposeViewport,
+} = useBarViewport({
   containerEl,
+  // 浮层期间不做页面内的横向校正
   isSelectSearch: isOverlay,
-  inlineStyleBlocked,
   sitePatches,
-  matchedRule,
-  getResolvedStyle: () => resolvedStyle,
-  getHost,
-  getStackOffset,
   updateScrollHints,
-  getInsertTarget: () => insertTarget,
-  getInputTarget: () => inputTarget,
   forceCenter: Boolean(data.center),
 });
 
@@ -106,7 +106,7 @@ const categories = computed(() =>
 
 function getCurrentKeyword() {
   if (isImageSearch.value) return imageSearch.imageUrl;
-  if (isSelectSearch.value) return selectionText.value;
+  if (isSelectSearch.value || isSelectionOverlay.value) return selectionText.value;
   return extractKeyword(inputTarget);
 }
 
@@ -275,6 +275,13 @@ function initTargets() {
   return false;
 }
 
+/** 站点 wrapperClass 会参与页面网格布局，浮层期间需要摘掉 */
+function applyWrapperClass() {
+  if (!matchedRule?.wrapperClass) return;
+  const needsWrapper = !resolvedStyle.includes('sticky') && !resolvedStyle.includes('fixed');
+  if (needsWrapper) getHost().classList.add(matchedRule.wrapperClass);
+}
+
 function injectHost() {
   if (isOverlay.value) {
     insertHost(document.body, 'beforeend');
@@ -282,22 +289,97 @@ function injectHost() {
   }
 
   insertHost(insertTarget, insertPosition);
-
-  const needsWrapper = !resolvedStyle.includes('sticky') && !resolvedStyle.includes('fixed');
-  if (needsWrapper && matchedRule?.wrapperClass) {
-    getHost().className += ` ${matchedRule.wrapperClass}`;
-  }
+  applyWrapperClass();
 }
 
-function onSelectionChange() {
+/**
+ * 站点内嵌的跳转条在划词时临时改为顶部浮层，
+ * 复用同一条跳转条，关键词换成选中文字。
+ */
+function enterSelectionOverlay(text) {
+  selectionText.value = text;
+  if (isSelectionOverlay.value) {
+    barVisible.value = true;
+    return;
+  }
+  isSelectionOverlay.value = true;
+
+  const host = getHost();
+  const bar = containerEl.value;
+  // 站点布局留下的位置、宽度与居中位移在浮层里都不再适用
+  bar?.removeAttribute('style');
+  bar?.classList.remove('sej-mobile-centered');
+  host.removeAttribute('style');
+  if (matchedRule?.wrapperClass) host.classList.remove(matchedRule.wrapperClass);
+  insertHost(document.body, 'beforeend');
+
+  // 先套用浮层定位，下一帧再显示，保留从顶部滑出的过渡
+  requestAnimationFrame(() => {
+    if (isSelectionOverlay.value) barVisible.value = true;
+  });
+}
+
+/** 事件是否发生在跳转条（Shadow DOM）内部 */
+function isInsideBar(e) {
+  const path = e?.composedPath?.();
+  return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
+}
+
+/** 选区消失后把跳转条交还页面的内嵌位置 */
+function exitSelectionOverlay() {
+  if (!isSelectionOverlay.value) return;
+  isSelectionOverlay.value = false;
+  barVisible.value = false;
+
+  injectHost();
+  constrainBarToViewport();
+  updateScrollHints();
+  scheduleConstrainCheck();
+}
+
+// 点击跳转条本身会清掉页面选区，此时要保持浮层，否则点第二个引擎前就被收回
+let keepOverlayUntil = 0;
+
+function onSelectionChange(e) {
   // 输入框内的选区默认忽略，可在设置面板中单独开启
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
   if (!text) {
+    // 点跳转条本身会清掉页面选区，浮层要留到这次点击结束
+    if (isSelectionOverlay.value) {
+      if (performance.now() < keepOverlayUntil || isInsideBar(e)) return;
+      exitSelectionOverlay();
+      return;
+    }
     barVisible.value = false;
     return;
   }
-  selectionText.value = text;
-  barVisible.value = true;
+  // 图片模式下关键词是图片地址，不跟随页面选区
+  if (isImageSearch.value) return;
+  if (isSelectSearch.value) {
+    selectionText.value = text;
+    barVisible.value = true;
+    return;
+  }
+  enterSelectionOverlay(text);
+}
+
+// 在页面其他位置按下鼠标即收起划词浮层；selectionchange 无法区分点击目标
+function onOverlayPointerDown(e) {
+  if (!isSelectionOverlay.value) return;
+  if (isInsideBar(e)) {
+    keepOverlayUntil = performance.now() + 500;
+    return;
+  }
+  exitSelectionOverlay();
+}
+
+function onOverlayKeydown(e) {
+  if (e.key === 'Escape') exitSelectionOverlay();
+}
+
+// selectionchange 不带可靠的事件目标，只用来发现新选区
+function onDocumentSelectionChange() {
+  onSelectionChange(null);
 }
 
 onMounted(async () => {
@@ -338,16 +420,17 @@ onMounted(async () => {
     window.addEventListener('scroll', closeImageMode, true);
   }
 
-  if (isSelectSearch.value) {
-    document.addEventListener('selectionchange', onSelectionChange);
+  // 划词监听：纯划词条直接控制显隐；站点内嵌的跳转条则在划词时临时吸到顶部
+  if (isSelectSearch.value || selectionOverlayAvailable.value) {
+    document.addEventListener('selectionchange', onDocumentSelectionChange);
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
     document.addEventListener('mouseup', onSelectionChange);
     document.addEventListener('keyup', onSelectionChange);
   }
-
-  if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isOverlay.value) {
-    captureOriginTop();
-    window.addEventListener('scroll', onScroll);
+  // 页面其它位置的点击会带走选区，需要主动收起浮层
+  if (selectionOverlayAvailable.value) {
+    document.addEventListener('pointerdown', onOverlayPointerDown, true);
+    document.addEventListener('keydown', onOverlayKeydown, true);
   }
 });
 
@@ -355,17 +438,19 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onImageModePointerDown, true);
   document.removeEventListener('keydown', onImageModeKeydown, true);
   window.removeEventListener('scroll', closeImageMode, true);
+  document.removeEventListener('pointerdown', onOverlayPointerDown, true);
+  document.removeEventListener('keydown', onOverlayKeydown, true);
+  document.removeEventListener('selectionchange', onDocumentSelectionChange);
   document.removeEventListener('selectionchange', onSelectionChange);
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);
-  window.removeEventListener('scroll', onScroll);
   window.removeEventListener('resize', onViewportResize);
   window.removeEventListener('pointermove', onWindowPointerMove);
   window.removeEventListener('pointerup', endScrollDrag);
   window.removeEventListener('pointercancel', endScrollDrag);
   cancelScrollAnim();
   disposeScrollDrag();
-  disposeFixedTop();
+  disposeViewport();
   stopStackSync();
 });
 </script>
@@ -650,6 +735,8 @@ onBeforeUnmount(() => {
   right: 0;
   z-index: 99999999;
   margin: 0 auto;
+  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */
+  grid-column: auto;
   transform: translateY(calc(-100% - 10px));
   visibility: hidden;
   pointer-events: none;

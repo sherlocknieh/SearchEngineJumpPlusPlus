@@ -41,15 +41,6 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'center', $event.target.checked)"
       /></label>
     </span>
-    <span id="iqxin-fixedTopS" :title="t('settings.fixedTopTip')">
-      <label
-        >{{ t('settings.fixedTop')
-        }}<input
-          type="checkbox"
-          :checked="options.fixedTop"
-          @change="emit('update-option', 'fixedTop', $event.target.checked)"
-      /></label>
-    </span>
     <span id="xin-defaultOpenTarget" :title="t('settings.defaultOpenTargetTip')">
       <label
         >{{ t('settings.defaultOpenTarget') }}

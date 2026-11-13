@@ -32,8 +32,6 @@ export const messages = {
     'settings.selectSearchInInputTip': '在输入框内选中文字时也弹出划词条',
     'settings.center': '强制居中',
     'settings.centerTip': '搜索条始终居中显示',
-    'settings.fixedTop': '固顶显示',
-    'settings.fixedTopTip': '页面下滑时搜索条固定在顶部显示',
     'settings.editConfig': '配置文件',
     'settings.feedbackGreasyFork': '在 GreasyFork 进行反馈',
     'settings.feedbackGitHub': '在 Github 进行反馈',
@@ -130,7 +128,8 @@ export const messages = {
     'config.mergeTip': '把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置',
     'config.export': '导出',
 
-    'jump.searchAll': '一键搜索全部：{name}',
+    'jump.searchAll': '一键搜索',
+    'jump.collapseList': '收起列表：{name}',
     'bar.scrollLeft': '向左滚动',
     'bar.scrollRight': '向右滚动',
 
@@ -177,8 +176,6 @@ export const messages = {
       'Show the selection bar when text is selected inside an input',
     'settings.center': 'Force center',
     'settings.centerTip': 'Always center the jump bar',
-    'settings.fixedTop': 'Pin to top',
-    'settings.fixedTopTip': 'Keep the jump bar at the top while scrolling',
     'settings.editConfig': 'Config file',
     'settings.feedbackGreasyFork': 'Feedback on GreasyFork',
     'settings.feedbackGitHub': 'Feedback on GitHub',
@@ -278,7 +275,8 @@ export const messages = {
       'Append engines from the imported file or the text above to the current list, keeping current settings',
     'config.export': 'Export',
 
-    'jump.searchAll': 'Search all: {name}',
+    'jump.searchAll': 'Search all',
+    'jump.collapseList': 'Collapse list: {name}',
     'bar.scrollLeft': 'Scroll left',
     'bar.scrollRight': 'Scroll right',
 

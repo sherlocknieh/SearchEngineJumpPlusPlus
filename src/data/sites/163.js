@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/music\.163\.com\/.*?#\/search/i,
     hosts: ['music.163.com'],
-    fixedTop: 0,
     insertIntoDoc: {
       keyword: function () {
         return decodeURI(document.URL.match(/s=(.+?)(&|$)/)[1]);

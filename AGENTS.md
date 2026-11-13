@@ -125,7 +125,7 @@ src/main.js                 只做装配
 
 | 任务                | 阅读顺序                                                                                                       |
 | ------------------- | -------------------------------------------------------------------------------------------------------------- |
-| 改跳转条外观/交互   | `JumpBar.vue` → `composables/useFixedTop` / `useScrollDrag` / `useStackSync` → `components/EngineCategory.vue` |
+| 改跳转条外观/交互   | `JumpBar.vue` → `composables/useBarViewport` / `useScrollDrag` / `useStackSync` → `components/EngineCategory.vue` |
 | 改设置面板          | `SettingPanel.vue` → 对应 `composables/useSettings*` → `components/styles/*.css`                               |
 | 加站点适配          | `data/sites/<站名>.js`（照抄 `bing.js`/`zhihu.js`）→ `core/applyRule.js`                                       |
 | 改跳转/取词         | `core/jump.js` → `core/selection.js` → `JumpBar.getCurrentKeyword`                                             |
@@ -142,7 +142,7 @@ src/main.js                 只做装配
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
 `engineUrl` `eventIsolation` `favicon` `imageSearch` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
-`useFixedTop` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
+`useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 
 > Vitest 未接入 Vue 插件，`.vue` 组件不能直接挂载测试；可测试逻辑请放 `core/` 或 `composables/`。
 

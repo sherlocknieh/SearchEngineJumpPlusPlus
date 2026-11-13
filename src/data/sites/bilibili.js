@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/search\.bilibili\.com\/*/,
     hosts: ['search.bilibili.com'],
-    fixedTop: 65,
     insertIntoDoc: {
       keyword: function () {
         if (document.querySelector('#search-keyword')) {

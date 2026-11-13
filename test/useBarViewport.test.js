@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { afterEach, describe, expect, it } from 'vitest';
 import { ref } from 'vue';
-import { useFixedTop } from '../src/composables/useFixedTop.js';
+import { useBarViewport } from '../src/composables/useBarViewport.js';
 
 function setViewportWidth(vw) {
   Object.defineProperty(document.documentElement, 'clientWidth', {
@@ -28,30 +28,22 @@ function createBar(left, width) {
 
 function setup({ vw, left, width, patches = {}, forceCenter = false }) {
   setViewportWidth(vw);
-  const host = document.createElement('div');
   const containerEl = ref(createBar(left, width));
-  const api = useFixedTop({
+  const api = useBarViewport({
     containerEl,
     isSelectSearch: ref(false),
-    inlineStyleBlocked: false,
     sitePatches: patches,
-    matchedRule: null,
-    getResolvedStyle: () => '',
-    getHost: () => host,
-    getStackOffset: () => 0,
     updateScrollHints: () => {},
-    getInsertTarget: () => null,
-    getInputTarget: () => null,
     forceCenter,
   });
-  return { api, host, el: containerEl.value };
+  return { api, el: containerEl.value };
 }
 
 afterEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('useFixedTop constrainBarToViewport', () => {
+describe('useBarViewport constrainBarToViewport', () => {
   it('窄屏下把所有站点的跳转条位移到视口中心', () => {
     const { api, el } = setup({ vw: 500, left: 600, width: 100 });
 
@@ -119,20 +111,9 @@ describe('useFixedTop constrainBarToViewport', () => {
       }
     }
   });
-
-  it('跳转条固定时不保留居中位移', () => {
-    const { api, host, el } = setup({ vw: 500, left: 600, width: 100 });
-    api.constrainBarToViewport();
-    host.style.position = 'fixed';
-
-    api.constrainBarToViewport();
-
-    expect(el.style.getPropertyValue('translate')).toBe('');
-    expect(el.dataset.sejCentered).toBeUndefined();
-  });
 });
 
-describe('useFixedTop alignTo', () => {
+describe('useBarViewport alignTo', () => {
   function createNav(left, width = 600) {
     const nav = document.createElement('nav');
     nav.className = 'b_scopebar';

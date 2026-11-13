@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/www\.sogou\.com\/(?:web|s)/,
     hosts: ['www.sogou.com'],
-    fixedTop: 60,
     insertIntoDoc: {
       keyword: 'css;#upquery',
       target: 'css;#wrapper',

@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/stackoverflow\.com\/search\?/i,
     hosts: ['stackoverflow.com'],
-    fixedTop: 50,
     insertIntoDoc: {
       keyword: 'css; #search > div > input',
       target: 'css;body > div.container',

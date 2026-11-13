@@ -22,7 +22,6 @@ import {
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
 export const OPTION_KEYS = [
-  'fixedTop',
   'center',
   'selectSearch',
   'selectSearchInInput',
@@ -34,8 +33,6 @@ export const OPTION_KEYS = [
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
-    // 默认固定跳转条
-    fixedTop: true,
     // 默认开启划词搜索，输入框内的选区同样触发
     selectSearch: true,
     selectSearchInInput: true,

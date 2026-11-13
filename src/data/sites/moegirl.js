@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/.*\.?moegirl\.org\.cn/i,
     hostSuffixes: ['moegirl.org.cn'],
-    fixedTop: 52,
     insertIntoDoc: {
       keyword: 'css;#firstHeading',
       target: 'css;#moe-topbanner-container',

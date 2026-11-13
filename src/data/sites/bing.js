@@ -6,7 +6,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/[^.]*\.bing\.com\/search/,
     hostSuffixes: ['bing.com'],
-    fixedTop: 60,
     insertIntoDoc: {
       keyword: 'css;#sb_form_q',
       target: 'css;#b_content',
@@ -28,7 +27,6 @@ export default [
     enabled: true,
     url: /^https?:\/\/.*\.bing\.com\/images\/search/i,
     hostSuffixes: ['bing.com'],
-    fixedTop: 88,
     insertIntoDoc: {
       keyword: 'css;#sb_form_q',
       target: 'css;#b_content',

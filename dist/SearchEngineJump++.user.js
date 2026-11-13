@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.13.2355
+// @version            2026.11.14.0040
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5030,7 +5030,6 @@
 		enabled: true,
 		url: /^https?:\/\/music\.163\.com\/.*?#\/search/i,
 		hosts: ["music.163.com"],
-		fixedTop: 0,
 		insertIntoDoc: {
 			keyword: function() {
 				return decodeURI(document.URL.match(/s=(.+?)(&|$)/)[1]);
@@ -5048,7 +5047,6 @@
 		enabled: true,
 		url: /^https?:\/\/www\.baidu\.com\/(?:s|baidu)/,
 		hosts: ["www.baidu.com"],
-		fixedTop: 80,
 		insertIntoDoc: {
 			keyword: "css;input#kw",
 			target: "css;#wrapper_wrapper",
@@ -5074,7 +5072,6 @@
 		enabled: true,
 		url: /^https?:\/\/search\.bilibili\.com\/*/,
 		hosts: ["search.bilibili.com"],
-		fixedTop: 65,
 		insertIntoDoc: {
 			keyword: function() {
 				if (document.querySelector("#search-keyword")) return document.querySelector("#search-keyword").value;
@@ -5097,7 +5094,6 @@
 			enabled: true,
 			url: /^https?:\/\/[^.]*\.bing\.com\/search/,
 			hostSuffixes: ["bing.com"],
-			fixedTop: 60,
 			insertIntoDoc: {
 				keyword: "css;#sb_form_q",
 				target: "css;#b_content",
@@ -5117,7 +5113,6 @@
 			enabled: true,
 			url: /^https?:\/\/.*\.bing\.com\/images\/search/i,
 			hostSuffixes: ["bing.com"],
-			fixedTop: 88,
 			insertIntoDoc: {
 				keyword: "css;#sb_form_q",
 				target: "css;#b_content",
@@ -5194,7 +5189,6 @@
 		url: /^https?:\/\/www\.google(?:\.[A-z]{2,3}){1,2}\/[^?]+\?(?!tbm=)(?:&?q=|(?:[^#](?!&tbm=))+?&q=)(?:.(?!&tbm=))*$|(^https?:\/\/xn--flw351e\.ml\/search\?q=)/,
 		hosts: ["xn--flw351e.ml"],
 		hostPattern: /^www\.google(?:\.[a-z]{2,3}){1,2}$/i,
-		fixedTop: 56,
 		insertIntoDoc: {
 			target: "css;#appbar",
 			keyword: "css;[name=q]",
@@ -5211,20 +5205,7 @@
 		patches: {
 			narrowFullWidth: true,
 			constrainToViewport: true,
-			narrowMaxWidthInPixels: true,
-			getFixedHeaderBottom({ bottom, barLeft, barWidth, inputTarget }) {
-				const searchBox = inputTarget instanceof Element ? inputTarget.closest("form") || inputTarget : null;
-				if (!searchBox) return bottom;
-				let node = searchBox;
-				while (node && node !== document.documentElement) {
-					if (/^(fixed|sticky)$/.test(getComputedStyle(node).position)) break;
-					node = node.parentElement;
-				}
-				if (!node || node === document.documentElement) return bottom;
-				const rect = searchBox.getBoundingClientRect();
-				const halfViewport = window.innerHeight * .5;
-				return rect.right > barLeft && rect.left < barLeft + barWidth && rect.top < halfViewport && rect.bottom > bottom && rect.bottom < halfViewport ? rect.bottom : bottom;
-			}
+			narrowMaxWidthInPixels: true
 		}
 	}];
 	var moegirl_exports = __exportAll({ default: () => moegirl_default });
@@ -5232,7 +5213,6 @@
 		enabled: true,
 		url: /^https?:\/\/.*\.?moegirl\.org\.cn/i,
 		hostSuffixes: ["moegirl.org.cn"],
-		fixedTop: 52,
 		insertIntoDoc: {
 			keyword: "css;#firstHeading",
 			target: "css;#moe-topbanner-container",
@@ -5271,7 +5251,6 @@
 		enabled: true,
 		url: /^https?:\/\/www\.sogou\.com\/(?:web|s)/,
 		hosts: ["www.sogou.com"],
-		fixedTop: 60,
 		insertIntoDoc: {
 			keyword: "css;#upquery",
 			target: "css;#wrapper",
@@ -5289,7 +5268,6 @@
 		enabled: true,
 		url: /^https?:\/\/stackoverflow\.com\/search\?/i,
 		hosts: ["stackoverflow.com"],
-		fixedTop: 50,
 		insertIntoDoc: {
 			keyword: "css; #search > div > input",
 			target: "css;body > div.container",
@@ -5302,7 +5280,6 @@
 		enabled: true,
 		url: /^https?:\/\/dict\.youdao\.com\/search/i,
 		hosts: ["dict.youdao.com"],
-		fixedTop: 94,
 		insertIntoDoc: {
 			keyword: "css;#query",
 			target: "css;#container",
@@ -5317,7 +5294,6 @@
 		enabled: true,
 		url: /^https?:\/\/www\.zhihu\.com\/search\?/i,
 		hosts: ["www.zhihu.com"],
-		fixedTop: 52,
 		insertIntoDoc: {
 			keyword: "css;.Input",
 			target: "css;.Search-container",
@@ -5704,7 +5680,6 @@
 	}
 	var engines_default = {
 		version: "2026-10-24 08:47:49",
-		fixedTop: true,
 		selectSearch: true,
 		selectSearchInInput: true,
 		defaultOpenTarget: "_blank",
@@ -5790,8 +5765,6 @@
 			"settings.selectSearchInInputTip": "在输入框内选中文字时也弹出划词条",
 			"settings.center": "强制居中",
 			"settings.centerTip": "搜索条始终居中显示",
-			"settings.fixedTop": "固顶显示",
-			"settings.fixedTopTip": "页面下滑时搜索条固定在顶部显示",
 			"settings.editConfig": "配置文件",
 			"settings.feedbackGreasyFork": "在 GreasyFork 进行反馈",
 			"settings.feedbackGitHub": "在 Github 进行反馈",
@@ -5880,7 +5853,8 @@
 			"config.mergeImport": "合并导入",
 			"config.mergeTip": "把导入文件或文本框中配置的引擎追加到现有列表，保留当前设置",
 			"config.export": "导出",
-			"jump.searchAll": "一键搜索全部：{name}",
+			"jump.searchAll": "一键搜索",
+			"jump.collapseList": "收起列表：{name}",
 			"bar.scrollLeft": "向左滚动",
 			"bar.scrollRight": "向右滚动",
 			"favicon.noRequestApi": "缺少 GM 请求接口",
@@ -5922,8 +5896,6 @@
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.center": "Force center",
 			"settings.centerTip": "Always center the jump bar",
-			"settings.fixedTop": "Pin to top",
-			"settings.fixedTopTip": "Keep the jump bar at the top while scrolling",
 			"settings.editConfig": "Config file",
 			"settings.feedbackGreasyFork": "Feedback on GreasyFork",
 			"settings.feedbackGitHub": "Feedback on GitHub",
@@ -6012,7 +5984,8 @@
 			"config.mergeImport": "Merge import",
 			"config.mergeTip": "Append engines from the imported file or the text above to the current list, keeping current settings",
 			"config.export": "Export",
-			"jump.searchAll": "Search all: {name}",
+			"jump.searchAll": "Search all",
+			"jump.collapseList": "Collapse list: {name}",
 			"bar.scrollLeft": "Scroll left",
 			"bar.scrollRight": "Scroll right",
 			"favicon.noRequestApi": "GM request API unavailable",
@@ -6186,7 +6159,6 @@
 		return categories;
 	}
 	var OPTION_KEYS = [
-		"fixedTop",
 		"center",
 		"selectSearch",
 		"selectSearchInInput",
@@ -6196,7 +6168,6 @@
 	];
 	function createDefaultConfig() {
 		return {
-			fixedTop: true,
 			selectSearch: true,
 			selectSearchInInput: true,
 			center: false,
@@ -7009,10 +6980,8 @@
 	function closeImageSearch() {
 		imageSearch.active = false;
 	}
-	var FIXED_GAP = 8;
 	var VIEWPORT_GAP = 4;
 	var NARROW_BAR_MAX = 640;
-	var HEADER_CACHE_MS = 120;
 	var MOBILE_UA_RE = /Android|iPhone|iPad|iPod|Windows Phone|BlackBerry|Opera Mini|IEMobile|Mobile/i;
 	function clearTimers(timers) {
 		timers.forEach(clearTimeout);
@@ -7040,11 +7009,7 @@
 		el.style.setProperty("translate", `${delta}px 0`, "important");
 		el.dataset.sejCentered = "1";
 	}
-	function useFixedTop({ containerEl, isSelectSearch, inlineStyleBlocked, sitePatches, matchedRule, getResolvedStyle, getHost, getStackOffset, updateScrollHints, getInsertTarget, getInputTarget, forceCenter = false }) {
-		let originalContainerDistanceTop = 0;
-		let headerBottomCache = null;
-		let scrollRaf = 0;
-		let fixedTopTimers = [];
+	function useBarViewport({ containerEl, isSelectSearch, sitePatches, updateScrollHints, forceCenter = false }) {
 		let constrainTimers = [];
 		function getAlignLeft(alignTo) {
 			if (!alignTo) return null;
@@ -7057,7 +7022,6 @@
 			const el = containerEl.value;
 			if (!el || isSelectSearch.value) return;
 			clearCenterOffset(el);
-			if (getHost().style.position === "fixed") return;
 			const { vw, narrow, viewLeft, viewWidth } = getViewportMetrics();
 			const { constrainToViewport, narrowFullWidth, narrowMaxWidthInPixels } = sitePatches;
 			const alignTo = forceCenter ? null : sitePatches.alignTo;
@@ -7096,125 +7060,9 @@
 			const desiredLeft = alignLeft ?? rect.left;
 			el.style.marginLeft = `${Math.round(Math.min(Math.max(desiredLeft, gap), maxLeft) - rect.left)}px`;
 		}
-		function getFixedHeaderBottom(barLeft, barWidth) {
-			let bottom = 0;
-			const consider = (el) => {
-				if (!el || el === getHost() || el.dataset?.sejInstance) return;
-				const style = getComputedStyle(el);
-				if (style.position !== "fixed" && style.position !== "sticky") return;
-				const rect = el.getBoundingClientRect();
-				if (!(rect.right > barLeft && rect.left < barLeft + barWidth) && rect.width < window.innerWidth * .3) return;
-				if (rect.top <= FIXED_GAP && rect.bottom > bottom && rect.bottom < window.innerHeight * .5) bottom = rect.bottom;
-			};
-			if (document.elementsFromPoint) {
-				const points = [
-					barLeft + barWidth / 2,
-					barLeft - 8,
-					barLeft + barWidth + 8,
-					window.innerWidth / 2,
-					window.innerWidth - 8
-				];
-				for (const x of points) {
-					if (x < 0 || x > window.innerWidth - 1) continue;
-					document.elementsFromPoint(x, FIXED_GAP).forEach(consider);
-				}
-			}
-			let el = getInsertTarget();
-			while (el && el !== document.documentElement) {
-				consider(el);
-				el = el.parentElement;
-			}
-			const getBottom = sitePatches.getFixedHeaderBottom;
-			return getBottom ? getBottom({
-				bottom,
-				barLeft,
-				barWidth,
-				inputTarget: getInputTarget()
-			}) : bottom;
-		}
-		function getFixedHeaderBottomCached(barLeft, barWidth) {
-			const key = `${Math.round(barLeft)}:${Math.round(barWidth)}`;
-			const now = performance.now();
-			if (headerBottomCache?.key !== key || now - headerBottomCache.at >= HEADER_CACHE_MS) headerBottomCache = {
-				key,
-				bottom: getFixedHeaderBottom(barLeft, barWidth),
-				at: now
-			};
-			return headerBottomCache.bottom;
-		}
-		const refreshFixedTop = () => fixedToTop(matchedRule?.fixedTop, matchedRule?.fixedTopColor);
-		function scheduleFixedTopRefresh() {
-			clearTimers(fixedTopTimers);
-			fixedTopTimers = [
-				80,
-				250,
-				600
-			].map((delay) => setTimeout(() => {
-				if (getHost().style.position === "fixed") refreshFixedTop();
-			}, delay));
-		}
-		function fixedToTop(fixedTopValue, color) {
-			const container = containerEl.value;
-			if (!container || inlineStyleBlocked) return;
-			const resolvedStyle = getResolvedStyle();
-			if (resolvedStyle.includes("sticky") || resolvedStyle.includes("fixed")) return;
-			const host = getHost();
-			const { vw, narrow: narrowViewport } = getViewportMetrics();
-			const narrow = narrowViewport && Boolean(sitePatches.narrowFullWidth);
-			const gap = VIEWPORT_GAP;
-			const rect = container.getBoundingClientRect();
-			const left = narrow ? gap : narrowViewport && !narrow ? Math.max(0, Math.round((vw - rect.width) / 2)) : Math.max(0, parseFloat(host.dataset.originalLeft) || rect.left);
-			const width = narrow ? Math.max(120, vw - 8) : parseFloat(host.dataset.originalWidth) || rect.width;
-			const headerBottom = getFixedHeaderBottomCached(left, width);
-			const baseTop = headerBottom > 0 ? headerBottom + FIXED_GAP : FIXED_GAP;
-			const threshold = Math.max(fixedTopValue || 0, headerBottom > 0 ? baseTop : 0);
-			if (originalContainerDistanceTop - window.scrollY > threshold) {
-				if (host.style.position !== "fixed") return;
-				host.removeAttribute("style");
-				container.removeAttribute("style");
-				delete host.dataset.originalLeft;
-				delete host.dataset.originalWidth;
-				constrainBarToViewport();
-				return;
-			}
-			clearCenterOffset(container);
-			if (host.style.position !== "fixed") {
-				host.dataset.originalLeft = narrow ? gap : rect.left;
-				host.dataset.originalWidth = narrow ? width : rect.width;
-				scheduleFixedTopRefresh();
-			}
-			host.style.display = "block";
-			host.style.width = width > 0 ? `${Math.ceil(width)}px` : "max-content";
-			host.style.maxWidth = narrow ? `${Math.ceil(width)}px` : `calc(100vw - ${left + 12}px)`;
-			host.style.position = "fixed";
-			host.style.top = `${Math.round(baseTop + getStackOffset())}px`;
-			host.style.left = `${left}px`;
-			host.style.zIndex = "100000";
-			container.style.position = "static";
-			container.style.left = "0";
-			container.style.top = "0";
-			container.style.gridColumn = "auto";
-			container.style.margin = "0";
-			if (narrow) container.style.setProperty("width", `${Math.ceil(width)}px`, "important");
-			container.style.backgroundColor = color;
-			updateScrollHints();
-		}
-		function onScroll() {
-			if (scrollRaf) return;
-			scrollRaf = requestAnimationFrame(() => {
-				scrollRaf = 0;
-				refreshFixedTop();
-			});
-		}
 		function onViewportResize() {
-			headerBottomCache = null;
-			if (getHost().style.position === "fixed") refreshFixedTop();
-			else constrainBarToViewport();
+			constrainBarToViewport();
 			updateScrollHints();
-		}
-		function captureOriginTop() {
-			if (!containerEl.value) return;
-			originalContainerDistanceTop = containerEl.value.getBoundingClientRect().top + window.scrollY;
 		}
 		function scheduleConstrainCheck(delays = [180, 400]) {
 			clearTimers(constrainTimers);
@@ -7224,17 +7072,11 @@
 			}, delay));
 		}
 		function dispose() {
-			clearTimers(fixedTopTimers);
 			clearTimers(constrainTimers);
-			if (scrollRaf) cancelAnimationFrame(scrollRaf);
-			scrollRaf = 0;
 		}
 		return {
 			constrainBarToViewport,
-			fixedToTop,
-			onScroll,
 			onViewportResize,
-			captureOriginTop,
 			scheduleConstrainCheck,
 			dispose
 		};
@@ -7727,12 +7569,8 @@
 		key: 0,
 		class: "sej-category-icon"
 	};
-	var _hoisted_3$8 = {
-		key: 0,
-		class: "sej-category-search-icon",
-		"aria-hidden": "true"
-	};
-	var _hoisted_4$8 = ["src"];
+	var _hoisted_3$8 = ["src"];
+	var _hoisted_4$8 = ["onKeydown"];
 	var pinnedCategory = null;
 	var openCategory = null;
 	var anchorSeq = 0;
@@ -7754,7 +7592,7 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/* 一键搜索图标只是状态展示，所有操作都由所在的分类触发项承担 */\n.sej-category-search-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  color: var(--font-color-qxin);\n}\n\n.sej-category-search-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/* 列表末尾的一键搜索条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 8px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const props = __props;
 			const emit = __emit;
 			const firstIconSrc = computed(() => props.showIcon && props.engines[0] ? getFaviconSrc(props.engines[0]) : "");
@@ -7933,7 +7771,7 @@
 			}
 			function onTriggerClick() {
 				if (pinned.value) {
-					onTriggerAction();
+					unpin();
 					return;
 				}
 				pin();
@@ -7947,7 +7785,7 @@
 				hoverSuppressed = false;
 				scheduleHide();
 			}
-			function onTriggerAction() {
+			function onSearchAll() {
 				unpin();
 				emit("jumpAll");
 			}
@@ -8017,22 +7855,15 @@
 					tabindex: "0",
 					"aria-haspopup": "true",
 					"aria-expanded": shown.value,
-					title: pinned.value ? unref(t)("jump.searchAll", { name: __props.name }) : null,
+					title: pinned.value ? unref(t)("jump.collapseList", { name: __props.name }) : null,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
-				}, [__props.showIcon || pinned.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("span", _hoisted_3$8, [..._cache[2] || (_cache[2] = [createBaseVNode("svg", {
-					viewBox: "0 0 16 16",
-					"aria-hidden": "true"
-				}, [
-					createBaseVNode("path", { d: "M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" }),
-					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
-					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
-				], -1)])])) : firstIconSrc.value ? (openBlock(), createElementBlock("img", {
-					key: 1,
+				}, [__props.showIcon ? (openBlock(), createElementBlock("span", _hoisted_2$8, [firstIconSrc.value ? (openBlock(), createElementBlock("img", {
+					key: 0,
 					class: "sej-category-icon-img",
 					src: firstIconSrc.value,
 					alt: ""
-				}, null, 8, _hoisted_4$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
+				}, null, 8, _hoisted_3$8)) : createCommentVNode("", true)])) : createCommentVNode("", true), createBaseVNode("span", null, toDisplayString(__props.name), 1)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
 					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
@@ -8057,7 +7888,23 @@
 						engine,
 						onJump: onEngineJump
 					}, null, 8, ["engine"]);
-				}), 128))], 38)], 8, ["to"]))], 32);
+				}), 128)), createBaseVNode("a", {
+					class: "sej-engine sej-drop-list-search-all",
+					role: "button",
+					tabindex: "0",
+					onClick: withModifiers(onSearchAll, ["prevent", "stop"]),
+					onKeydown: [withKeys(withModifiers(onSearchAll, ["prevent"]), ["enter"]), withKeys(withModifiers(onSearchAll, ["prevent"]), ["space"])]
+				}, [_cache[2] || (_cache[2] = createBaseVNode("span", {
+					class: "sej-category-icon",
+					"aria-hidden": "true"
+				}, [createBaseVNode("svg", {
+					class: "sej-search-all-icon",
+					viewBox: "0 0 16 16"
+				}, [
+					createBaseVNode("path", { d: "M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" }),
+					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
+					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
+				])], -1)), createBaseVNode("span", null, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_4$8)], 38)], 8, ["to"]))], 32);
 			};
 		}
 	};
@@ -8090,7 +7937,7 @@
 	var _sfc_main$9 = {
 		__name: "JumpBar",
 		setup(__props) {
-			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n/*\n * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
+			addStyle("\n#sej-container {\n  display: flex;\n  align-items: center;\n  position: relative;\n  z-index: 2;\n  padding: 2px;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  transform-origin: top center;\n  animation: sejopen 0.14s ease-out;\n  color: var(--font-color-qxin);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  width: max-content !important;\n  max-width: min(100%, calc(100vw - 8px));\n  box-sizing: border-box;\n  border-radius: var(--sej-radius-bar, 12px);\n  border: 1px solid var(--border-color-sej);\n  overflow: hidden;\n  box-shadow: var(\n    --sej-shadow-bar,\n    0 1px 2px hsla(0, 0%, 0%, 0.06),\n    0 8px 24px -12px hsla(0, 0%, 0%, 0.35)\n  );\n  height: fit-content;\n  flex-wrap: nowrap;\n  justify-content: center;\n  user-select: none;\n}\n\n/*\n * 移动端由 JS 标记：抵消站点规则里的 left / grid-column 等横向偏移，\n * 再由 JS 的 translate 把跳转条对齐到可视视口中心。\n */\n#sej-container.sej-mobile-centered {\n  left: auto !important;\n  right: auto !important;\n  margin-left: auto !important;\n  margin-right: auto !important;\n  grid-column: 1 / -1 !important;\n  justify-self: center !important;\n}\n\n/* 滚动区容器：内容不足时让类别和设置按钮作为整体居中，溢出时再收缩滚动 */\n#sej-container > .sej-scroll-viewport {\n  position: relative;\n  display: flex;\n  flex: 0 1 auto;\n  min-width: 0;\n}\n\n/* 类别区单行显示，超出可用宽度时横向滚动；设置按钮固定在右侧 */\n#sej-container > .sej-scroll-viewport > .sej-scroll {\n  display: flex;\n  flex-wrap: nowrap;\n  align-items: center;\n  gap: 2px;\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow-x: auto;\n  overflow-y: hidden;\n  overscroll-behavior-x: contain;\n  -webkit-overflow-scrolling: touch;\n  /*\n   * 不显示滚动条：桌面端用鼠标拖动或滚轮横向滚动，触屏不拦截手势，\n   * 让浏览器原生处理横向滚动，保留松手后的惯性滑动。\n   */\n  scrollbar-width: none;\n  -ms-overflow-style: none;\n  touch-action: auto;\n  cursor: grab;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll::-webkit-scrollbar {\n  display: none;\n  width: 0;\n  height: 0;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-dragging * {\n  cursor: grabbing;\n}\n\n/* 左右仍有隐藏内容时，用渐隐边缘 + 圆形箭头提示可以继续拖动 */\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left {\n  -webkit-mask-image: linear-gradient(to right, transparent, #000 28px);\n  mask-image: linear-gradient(to right, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(to left, transparent, #000 28px);\n  mask-image: linear-gradient(to left, transparent, #000 28px);\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left.sej-scroll-more-right {\n  -webkit-mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n  mask-image: linear-gradient(\n    to right,\n    transparent,\n    #000 28px,\n    #000 calc(100% - 28px),\n    transparent\n  );\n}\n\n/*\n * 箭头滚动按钮：点击滚动一屏。\n * 按钮本身铺满滚动区高度并加宽为透明命中区，鼠标从边缘移到箭头上时\n * 不会先掠过底下的分类/引擎条目；只绘制箭头，不带圆形底座。\n */\n#sej-container .sej-scroll-hint {\n  position: absolute;\n  top: 0;\n  bottom: 0;\n  z-index: 1;\n  display: flex;\n  align-items: center;\n  justify-content: center;\n  width: 10px;\n  min-width: 0;\n  min-height: 0;\n  margin-left: 4px;\n  padding: 0;\n  box-sizing: border-box;\n  appearance: none;\n  color: var(--font-color-qxin);\n  background: none;\n  border: 0;\n  font: inherit;\n  line-height: 0;\n  cursor: pointer;\n  opacity: 0;\n  visibility: hidden;\n  pointer-events: none;\n  -webkit-tap-highlight-color: transparent;\n  transition: opacity 0.16s ease-out;\n}\n\n/* 箭头本体 */\n#sej-container .sej-scroll-hint::after {\n  content: '';\n  position: relative;\n  z-index: 1;\n  width: 7px;\n  height: 7px;\n  border-top: 2px solid currentColor;\n  border-right: 2px solid currentColor;\n  border-radius: 1px;\n  opacity: 0.45;\n  transition: opacity 0.12s ease-out;\n  filter: drop-shadow(0 1px 2px hsla(0, 0%, 0%, 0.2));\n}\n\n#sej-container .sej-scroll-hint-left {\n  left: 0;\n}\n\n#sej-container .sej-scroll-hint-left::after {\n  margin-left: 2px;\n  transform: rotate(-135deg);\n}\n\n#sej-container .sej-scroll-hint-right {\n  right: 0;\n}\n\n#sej-container .sej-scroll-hint-right::after {\n  margin-right: 2px;\n  transform: rotate(45deg);\n}\n\n#sej-container .sej-scroll-hint:hover::after {\n  opacity: 0.8;\n  filter: drop-shadow(0 1px 4px hsla(0, 0%, 0%, 0.4));\n}\n\n#sej-container .sej-scroll-hint:active::after {\n  opacity: 1;\n}\n\n#sej-container .sej-scroll-hint:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,\n#sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {\n  opacity: 1;\n  visibility: visible;\n  pointer-events: auto;\n}\n\n#sej-container > #setBtn {\n  flex: 0 0 auto;\n}\n\n/* 滑词搜索样式 */\n#sej-container.selectSearch {\n  position: fixed;\n  top: 2px;\n  left: 0;\n  right: 0;\n  z-index: 99999999;\n  margin: 0 auto;\n  /* 站点规则里的网格列与横向偏移在顶部浮层里不再适用 */\n  grid-column: auto;\n  transform: translateY(calc(-100% - 10px));\n  visibility: hidden;\n  pointer-events: none;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0.3s;\n}\n\n#sej-container.selectSearch.sej-select-visible {\n  transform: none;\n  visibility: visible;\n  pointer-events: auto;\n  transition:\n    transform 0.3s,\n    visibility 0s linear 0s;\n}\n\n/*\n * 图片模式：长按后从顶部滑出，并显示当前要搜索的图片缩略图，\n * 让用户确认搜的是哪张图（背景图没有可见的 <img> 可参照）。\n */\n#sej-container.sej-image-search {\n  padding-left: 6px;\n}\n\n#sej-container.sej-image-search::before {\n  content: '';\n  flex: 0 0 auto;\n  width: 20px;\n  height: 20px;\n  margin-right: 4px;\n  border-radius: 4px;\n  background: var(--sej-surface-2) center / cover no-repeat;\n  background-image: var(--sej-image-thumb, none);\n  box-shadow: inset 0 0 0 1px var(--border-color-sej);\n}\n\n.sej-category-title {\n  font-weight: 600;\n  padding: 0 12px;\n  opacity: 0.8;\n}\n\n@keyframes sejopen {\n  0% {\n    transform: translateY(-4px) scale(0.98);\n    opacity: 0;\n  }\n  100% {\n    transform: none;\n    opacity: 1;\n  }\n}\n");
 			const settings = useSettings();
 			const data = settings.settingData;
 			const matchedRule = settings.getMatchedRule();
@@ -8101,7 +7948,9 @@
 			const ready = ref(false);
 			const isSelectSearch = ref(false);
 			const isImageSearch = ref(false);
-			const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value);
+			const isSelectionOverlay = ref(false);
+			const isOverlay = computed(() => isSelectSearch.value || isImageSearch.value || isSelectionOverlay.value);
+			const selectionOverlayAvailable = computed(() => Boolean(matchedRule?.enabled) && Boolean(data.selectSearch) && !isSelectSearch.value);
 			const selectionText = ref("");
 			const barVisible = ref(false);
 			const containerEl = ref(null);
@@ -8109,18 +7958,11 @@
 			const containerClass = ref("rwl-exempt");
 			const { updateScrollHints, onScrollPointerDown, onWindowPointerMove, endScrollDrag, onScrollClickCapture, onScrollWheel, dispose: disposeScrollDrag } = useScrollDrag({ scrollEl });
 			const { start: startStackSync, stop: stopStackSync } = useStackSync();
-			const { constrainBarToViewport, onScroll, onViewportResize, captureOriginTop, scheduleConstrainCheck, dispose: disposeFixedTop } = useFixedTop({
+			const { constrainBarToViewport, onViewportResize, scheduleConstrainCheck, dispose: disposeViewport } = useBarViewport({
 				containerEl,
 				isSelectSearch: isOverlay,
-				inlineStyleBlocked,
 				sitePatches,
-				matchedRule,
-				getResolvedStyle: () => resolvedStyle,
-				getHost,
-				getStackOffset,
 				updateScrollHints,
-				getInsertTarget: () => insertTarget,
-				getInputTarget: () => inputTarget,
 				forceCenter: Boolean(data.center)
 			});
 			let inputTarget = null;
@@ -8134,7 +7976,7 @@
 			})).filter((category) => category.engines.length));
 			function getCurrentKeyword() {
 				if (isImageSearch.value) return imageSearch.imageUrl;
-				if (isSelectSearch.value) return selectionText.value;
+				if (isSelectSearch.value || isSelectionOverlay.value) return selectionText.value;
 				return extractKeyword(inputTarget);
 			}
 			async function onJump(engine) {
@@ -8244,22 +8086,82 @@
 				console.info("[SEJ] 未启用搜索跳转，跳过初始化");
 				return false;
 			}
+			function applyWrapperClass() {
+				if (!matchedRule?.wrapperClass) return;
+				if (!resolvedStyle.includes("sticky") && !resolvedStyle.includes("fixed")) getHost().classList.add(matchedRule.wrapperClass);
+			}
 			function injectHost() {
 				if (isOverlay.value) {
 					insertHost(document.body, "beforeend");
 					return;
 				}
 				insertHost(insertTarget, insertPosition);
-				if (!resolvedStyle.includes("sticky") && !resolvedStyle.includes("fixed") && matchedRule?.wrapperClass) getHost().className += ` ${matchedRule.wrapperClass}`;
+				applyWrapperClass();
 			}
-			function onSelectionChange() {
+			function enterSelectionOverlay(text) {
+				selectionText.value = text;
+				if (isSelectionOverlay.value) {
+					barVisible.value = true;
+					return;
+				}
+				isSelectionOverlay.value = true;
+				const host = getHost();
+				const bar = containerEl.value;
+				bar?.removeAttribute("style");
+				bar?.classList.remove("sej-mobile-centered");
+				host.removeAttribute("style");
+				if (matchedRule?.wrapperClass) host.classList.remove(matchedRule.wrapperClass);
+				insertHost(document.body, "beforeend");
+				requestAnimationFrame(() => {
+					if (isSelectionOverlay.value) barVisible.value = true;
+				});
+			}
+			function isInsideBar(e) {
+				const path = e?.composedPath?.();
+				return path ? path.includes(containerEl.value) : Boolean(containerEl.value?.contains(e?.target));
+			}
+			function exitSelectionOverlay() {
+				if (!isSelectionOverlay.value) return;
+				isSelectionOverlay.value = false;
+				barVisible.value = false;
+				injectHost();
+				constrainBarToViewport();
+				updateScrollHints();
+				scheduleConstrainCheck();
+			}
+			let keepOverlayUntil = 0;
+			function onSelectionChange(e) {
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (!text) {
+					if (isSelectionOverlay.value) {
+						if (performance.now() < keepOverlayUntil || isInsideBar(e)) return;
+						exitSelectionOverlay();
+						return;
+					}
 					barVisible.value = false;
 					return;
 				}
-				selectionText.value = text;
-				barVisible.value = true;
+				if (isImageSearch.value) return;
+				if (isSelectSearch.value) {
+					selectionText.value = text;
+					barVisible.value = true;
+					return;
+				}
+				enterSelectionOverlay(text);
+			}
+			function onOverlayPointerDown(e) {
+				if (!isSelectionOverlay.value) return;
+				if (isInsideBar(e)) {
+					keepOverlayUntil = performance.now() + 500;
+					return;
+				}
+				exitSelectionOverlay();
+			}
+			function onOverlayKeydown(e) {
+				if (e.key === "Escape") exitSelectionOverlay();
+			}
+			function onDocumentSelectionChange() {
+				onSelectionChange(null);
 			}
 			onMounted(async () => {
 				if (!initTargets()) return;
@@ -8287,31 +8189,33 @@
 					document.addEventListener("keydown", onImageModeKeydown, true);
 					window.addEventListener("scroll", closeImageMode, true);
 				}
-				if (isSelectSearch.value) {
-					document.addEventListener("selectionchange", onSelectionChange);
+				if (isSelectSearch.value || selectionOverlayAvailable.value) {
+					document.addEventListener("selectionchange", onDocumentSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
 				}
-				if (data.fixedTop && matchedRule && !inlineStyleBlocked && !isOverlay.value) {
-					captureOriginTop();
-					window.addEventListener("scroll", onScroll);
+				if (selectionOverlayAvailable.value) {
+					document.addEventListener("pointerdown", onOverlayPointerDown, true);
+					document.addEventListener("keydown", onOverlayKeydown, true);
 				}
 			});
 			onBeforeUnmount(() => {
 				document.removeEventListener("pointerdown", onImageModePointerDown, true);
 				document.removeEventListener("keydown", onImageModeKeydown, true);
 				window.removeEventListener("scroll", closeImageMode, true);
+				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
+				document.removeEventListener("keydown", onOverlayKeydown, true);
+				document.removeEventListener("selectionchange", onDocumentSelectionChange);
 				document.removeEventListener("selectionchange", onSelectionChange);
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
-				window.removeEventListener("scroll", onScroll);
 				window.removeEventListener("resize", onViewportResize);
 				window.removeEventListener("pointermove", onWindowPointerMove);
 				window.removeEventListener("pointerup", endScrollDrag);
 				window.removeEventListener("pointercancel", endScrollDrag);
 				cancelScrollAnim();
 				disposeScrollDrag();
-				disposeFixedTop();
+				disposeViewport();
 				stopStackSync();
 			});
 			return (_ctx, _cache) => {
@@ -9982,8 +9886,8 @@
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17$1 = ["title"];
-	var _hoisted_18$1 = {
+	var _hoisted_17 = ["title"];
+	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -10178,7 +10082,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -10784,16 +10688,14 @@
 	var _hoisted_6 = ["title"];
 	var _hoisted_7 = ["checked"];
 	var _hoisted_8 = ["title"];
-	var _hoisted_9 = ["checked"];
-	var _hoisted_10 = ["title"];
-	var _hoisted_11 = ["value"];
-	var _hoisted_12 = { value: "_blank" };
-	var _hoisted_13 = { value: "_self" };
-	var _hoisted_14 = ["title"];
-	var _hoisted_15 = ["checked"];
-	var _hoisted_16 = { id: "xin-language" };
-	var _hoisted_17 = ["value"];
-	var _hoisted_18 = { value: "auto" };
+	var _hoisted_9 = ["value"];
+	var _hoisted_10 = { value: "_blank" };
+	var _hoisted_11 = { value: "_self" };
+	var _hoisted_12 = ["title"];
+	var _hoisted_13 = ["checked"];
+	var _hoisted_14 = { id: "xin-language" };
+	var _hoisted_15 = ["value"];
+	var _hoisted_16 = { value: "auto" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -10827,38 +10729,30 @@
 						onChange: _cache[2] || (_cache[2] = ($event) => emit("update-option", "center", $event.target.checked))
 					}, null, 40, _hoisted_7)])], 8, _hoisted_6),
 					createBaseVNode("span", {
-						id: "iqxin-fixedTopS",
-						title: unref(t)("settings.fixedTopTip")
-					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.fixedTop")), 1), createBaseVNode("input", {
-						type: "checkbox",
-						checked: __props.options.fixedTop,
-						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "fixedTop", $event.target.checked))
-					}, null, 40, _hoisted_9)])], 8, _hoisted_8),
-					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_12, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_13, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_11)])], 8, _hoisted_10),
+						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_10, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_11, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_9)])], 8, _hoisted_8),
 					createBaseVNode("span", {
 						id: "xin-imageSearch",
 						title: unref(t)("settings.imageSearchTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.imageSearch")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.imageSearch,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
-					}, null, 40, _hoisted_15)])], 8, _hoisted_14),
-					createBaseVNode("span", _hoisted_16, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "imageSearch", $event.target.checked))
+					}, null, 40, _hoisted_13)])], 8, _hoisted_12),
+					createBaseVNode("span", _hoisted_14, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.language")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.language,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "language", $event.target.value))
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "language", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.languageAuto")), 1),
-						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
-						_cache[8] || (_cache[8] = createBaseVNode("option", { value: "en" }, "English", -1))
-					], 40, _hoisted_17)])])
+						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.languageAuto")), 1),
+						_cache[6] || (_cache[6] = createBaseVNode("option", { value: "zh-CN" }, "简体中文", -1)),
+						_cache[7] || (_cache[7] = createBaseVNode("option", { value: "en" }, "English", -1))
+					], 40, _hoisted_15)])])
 				]);
 			};
 		}

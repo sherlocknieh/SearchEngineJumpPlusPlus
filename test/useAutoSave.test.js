@@ -4,7 +4,7 @@ import { t } from '../src/assets/i18n.js';
 import { showToast, ui } from '../src/stores/ui.js';
 
 function setup({ delay = 500 } = {}) {
-  const unchanged = { fixedTop: false, engineList: {} };
+  const unchanged = { center: false, engineList: {} };
   let current = unchanged;
   let built = unchanged;
   const settings = {
@@ -40,7 +40,7 @@ describe('useAutoSave', () => {
 
   it('节流后只保存一次', () => {
     const { api, settings, setBuilt } = setup();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     api.scheduleAutoSave();
     api.scheduleAutoSave();
     vi.advanceTimersByTime(499);
@@ -61,7 +61,7 @@ describe('useAutoSave', () => {
 
   it('自动保存成功后用 toast 提示', () => {
     const { api, setBuilt } = setup();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     api.scheduleAutoSave();
     vi.advanceTimersByTime(500);
     expect(ui.toastVisible).toBe(true);
@@ -73,7 +73,7 @@ describe('useAutoSave', () => {
     const onClick = vi.fn();
     showToast('已删除', 5000, { label: '撤销', onClick });
     const { api, setBuilt } = setup();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     api.scheduleAutoSave();
     vi.advanceTimersByTime(500);
     expect(ui.toastText).toBe('已删除');
@@ -84,7 +84,7 @@ describe('useAutoSave', () => {
   it('flushPending 立即落盘待保存的修改', () => {
     const { api, settings, setBuilt } = setup();
     api.scheduleAutoSave();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     api.flushPending();
     expect(settings.savePartial).toHaveBeenCalledTimes(1);
     expect(api.takeSettingsChanged()).toBe(true);
@@ -95,7 +95,7 @@ describe('useAutoSave', () => {
 
   it('saveNow 失败时返回 false 且不标记已修改', () => {
     const { api, settings, setBuilt } = setup();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     settings.applySettings.mockReturnValue('memory');
     expect(api.saveNow()).toBe(false);
     expect(api.saving.value).toBe(false);
@@ -105,7 +105,7 @@ describe('useAutoSave', () => {
 
   it('saveNow 成功时标记已修改并清除待保存队列', () => {
     const { api, settings, setBuilt } = setup();
-    setBuilt({ fixedTop: true, engineList: {} });
+    setBuilt({ center: true, engineList: {} });
     api.scheduleAutoSave();
     expect(api.saveNow()).toBe(true);
     expect(settings.applySettings).toHaveBeenCalledTimes(1);
