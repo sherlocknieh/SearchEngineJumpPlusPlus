@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0618
+// @version            2026.11.14.0619
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7980,6 +7980,7 @@
 			const emit = __emit;
 			const iconVisible = computed(() => props.showIcon || props.compact);
 			const firstIconSrc = computed(() => iconVisible.value && props.engines[0] ? getFaviconSrc(props.engines[0]) : "");
+			const showSearchAll = computed(() => props.engines.some((engine) => engine.url));
 			const glyph = computed(() => Array.from(props.name)[0] || "");
 			const supportsAnchorPositioning = Boolean(typeof CSS !== "undefined" && CSS.supports?.("position-anchor: --sej-anchor") && CSS.supports?.("top: anchor(bottom)"));
 			anchorSeq += 1;
@@ -8272,7 +8273,8 @@
 						engine,
 						onJump: onEngineJump
 					}, null, 8, ["engine"]);
-				}), 128)), createBaseVNode("a", {
+				}), 128)), showSearchAll.value ? (openBlock(), createElementBlock("a", {
+					key: 0,
 					class: "sej-engine sej-drop-list-search-all",
 					role: "button",
 					tabindex: "0",
@@ -8288,7 +8290,7 @@
 					createBaseVNode("path", { d: "M6.5 3H4.3A1.3 1.3 0 0 0 3 4.3v7.4A1.3 1.3 0 0 0 4.3 13h7.4a1.3 1.3 0 0 0 1.3-1.3V9.5" }),
 					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
 					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
-				])], -1)), createBaseVNode("span", null, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_7$5)], 38)], 8, ["to"]))], 32);
+				])], -1)), createBaseVNode("span", null, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_7$5)) : createCommentVNode("", true)], 38)], 8, ["to"]))], 32);
 			};
 		}
 	};

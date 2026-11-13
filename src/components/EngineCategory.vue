@@ -32,6 +32,9 @@ const firstIconSrc = computed(() =>
   iconVisible.value && props.engines[0] ? getFaviconSrc(props.engines[0]) : '',
 );
 
+// 一键搜索只对能跳转的引擎有意义，「功能」这类纯快捷动作分类没有可批量打开的地址
+const showSearchAll = computed(() => props.engines.some((engine) => engine.url));
+
 // 首个引擎没有图标时用分类名首字兜底，避免精简模式下分类不可见
 const glyph = computed(() => Array.from(props.name)[0] || '');
 
@@ -458,6 +461,7 @@ onBeforeUnmount(() => {
           @jump="onEngineJump"
         />
         <a
+          v-if="showSearchAll"
           class="sej-engine sej-drop-list-search-all"
           role="button"
           tabindex="0"
