@@ -870,10 +870,11 @@ onBeforeUnmount(() => {
   flex: 0 0 auto;
 }
 
-/* 展开态：宽度过度到脚本量好的整条宽度，左侧整圆留给设置按钮 */
+/* 展开态：宽度过渡到脚本量好的整条宽度；左右两端都由圆角元素填满，
+   左侧是设置按钮的整圆，右侧是最后一个搜索项的圆角，不再留白 */
 #sej-container.sej-icon-mode.sej-icon-open {
   width: var(--sej-icon-open-width, max-content) !important;
-  padding: 0 6px 0 0;
+  padding: 0;
   background-color: var(--sej-bar-bg, var(--background-color-qxin));
   backdrop-filter: blur(20px) saturate(180%);
 }
@@ -886,7 +887,7 @@ onBeforeUnmount(() => {
 
 #sej-container.sej-measuring.sej-icon-measure {
   width: max-content !important;
-  padding: 0 6px 0 0;
+  padding: 0;
 }
 
 /* 图标钉在左端圆内（与设置按钮同圆心），展开/收起都不动 */
