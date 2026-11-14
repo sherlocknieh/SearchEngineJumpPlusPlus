@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
-import { localizeCategoryName, localizeEngineName, t } from '../assets/i18n.js';
+import { localizeCategoryName, t } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
 import {
   getHost,
@@ -42,6 +42,8 @@ import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY } from '../core/configData.j
 import { findKeywordUrl } from '../core/engineUrl.js';
 import {
   actionEngineHint,
+  actionTargetHint,
+  contextActionHintKey,
   contextActionTarget,
   contextLinkHit,
   getContextEngines,
@@ -172,13 +174,10 @@ const hasLinkActions = computed(
   () => Boolean(linkActionHit.value) && contextMode.value === 'image',
 );
 
-/** 两类动作同处一个分类时，名称补上作用目标，避免两个「复制」「打开」分不清 */
+/** 两类动作同处一个分类时，名称直接说明操作与作用对象（如「复制图片」） */
 function targetedActionName(engine, target) {
-  if (!target) return engine.name;
-  return t('action.targetName', {
-    name: localizeEngineName(engine.name),
-    target: t(target === 'link' ? 'action.targetLink' : 'action.targetImage'),
-  });
+  if (!target || !engine.action) return engine.name;
+  return t(contextActionHintKey(target === 'link' ? 'link' : 'image', engine.action)) || engine.name;
 }
 
 const categories = computed(() => {
@@ -199,11 +198,14 @@ const categories = computed(() => {
             : isSelectSearch.value
               ? 'text'
               : 'input';
-          return {
-            ...engine,
-            name: targetedActionName(engine, dualActions ? 'image' : ''),
-            hint: actionEngineHint(mode, engine.action, actionHintHit.value, t),
-          };
+          if (dualActions) {
+            return {
+              ...engine,
+              name: targetedActionName(engine, 'image'),
+              hint: actionTargetHint('image', engine.action, actionHintHit.value),
+            };
+          }
+          return { ...engine, hint: actionEngineHint(mode, engine.action, actionHintHit.value, t) };
         });
 
       // 图片包在链接里时，链接的复制/打开沿用同一批动作配置追加在图片动作之后
@@ -214,7 +216,7 @@ const categories = computed(() => {
             ...engine,
             name: targetedActionName(engine, 'link'),
             contextTarget: 'link',
-            hint: actionEngineHint('link', engine.action, linkActionHit.value, t),
+            hint: actionTargetHint('link', engine.action, linkActionHit.value),
           });
         }
       }

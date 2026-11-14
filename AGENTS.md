@@ -95,7 +95,8 @@ src/main.js                 只做装配
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；
   链接模式「复制」复制为 Markdown 链接 `[标题](链接)`、「打开」新标签打开链接（纯图片链接没有标题时只复制地址）；
   图片包在链接里时，「操作」分类内先列图片动作、再列链接动作；链接动作带 `contextTarget: 'link'`，
-  目标改由 `contextLinkHit` 提供，名称用 `action.targetName` 标明作用目标
+  目标改由 `contextLinkHit` 提供。两类动作的名称直接取 `contextActionHintKey` 对应的文案
+  （复制图片 / 打开链接等），悬停提示改用 `actionTargetHint` 只显示目标内容，不再重复动作名
 - 悬停提示：`actionEngineHint(mode, action, hit, t)` 把动作说明与实际目标拼在一起，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`

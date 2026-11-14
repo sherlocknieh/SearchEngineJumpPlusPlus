@@ -129,3 +129,14 @@ export function actionEngineHint(mode, action, hit = {}, t) {
   const target = shortenHintTarget(hintTargetText(mode, action, hit));
   return target ? t('action.hintWithTarget', { action: label, target }) : label;
 }
+
+/**
+ * 条目名称已经说明动作（如「复制图片」）时，悬停提示只保留目标内容，不再重复动作说明。
+ * @param {'image' | 'link'} mode 命中类型
+ * @param {'copy' | 'open'} action 动作类型
+ * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
+ */
+export function actionTargetHint(mode, action, hit = {}) {
+  if (!contextActionHintKey(mode, action)) return '';
+  return shortenHintTarget(hintTargetText(mode, action, hit));
+}

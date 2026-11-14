@@ -4,6 +4,7 @@ import {
   HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
   actionEngineHint,
+  actionTargetHint,
   contextActionHintKey,
   contextActionTarget,
   contextCategoryKey,
@@ -237,6 +238,15 @@ describe('actionEngineHint', () => {
     const target = hint.split('：')[1];
     expect(target).toHaveLength(HINT_TARGET_MAX);
     expect(target.endsWith('…')).toBe(true);
+  });
+
+  it('名称已说明动作时只返回目标内容', () => {
+    expect(actionTargetHint('image', 'copy', { url: 'https://cdn.test/a.png' })).toBe(
+      'https://cdn.test/a.png',
+    );
+    expect(actionTargetHint('link', 'copy', hit)).toBe('[示例标题](https://site.test/a)');
+    expect(actionTargetHint('link', 'open', hit)).toBe('https://site.test/a');
+    expect(actionTargetHint('image', 'unknown', hit)).toBe('');
   });
 
   it('未知情景没有提示', () => {

@@ -122,9 +122,6 @@ export const messages = {
     'action.hintCopyText': '复制选中的文字',
     'action.hintCopyKeyword': '复制关键词',
     'action.hintWithTarget': '{action}：{target}',
-    'action.targetName': '{name}（{target}）',
-    'action.targetImage': '图片',
-    'action.targetLink': '链接',
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '无法打开该内容',
 
@@ -282,9 +279,6 @@ export const messages = {
     'action.hintCopyText': 'Copy selected text',
     'action.hintCopyKeyword': 'Copy keyword',
     'action.hintWithTarget': '{action}: {target}',
-    'action.targetName': '{name} ({target})',
-    'action.targetImage': 'image',
-    'action.targetLink': 'link',
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'Unable to open this content',
 
