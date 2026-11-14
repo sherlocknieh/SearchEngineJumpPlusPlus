@@ -115,7 +115,7 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
-    'action.hintCopyLink': '复制为 Markdown 链接',
+    'action.hintCopyLink': '复制链接',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintOpenImage': '打开图片',
