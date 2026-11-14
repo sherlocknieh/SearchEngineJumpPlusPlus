@@ -40,6 +40,7 @@ export const messages = {
     'settings.centerTip': '搜索条始终居中显示',
     'settings.imageToggleHint':
       '长按/右键图片即可搜图；搜图引擎不会出现在文字搜索条，显示开关对它无效',
+    'settings.actionToggleHint': '操作条目始终显示，点击条目名称可重命名',
     'settings.editConfig': '配置文件',
     'settings.feedbackGreasyFork': '在 GreasyFork 进行反馈',
     'settings.feedbackGitHub': '在 Github 进行反馈',
@@ -195,6 +196,7 @@ export const messages = {
     'settings.centerTip': 'Always center the jump bar',
     'settings.imageToggleHint':
       'Long-press or right-click an image to search; image engines never appear in the text search bar, so this switch has no effect',
+    'settings.actionToggleHint': 'Action items are always shown; click an item name to rename it',
     'settings.editConfig': 'Config file',
     'settings.feedbackGreasyFork': 'Feedback on GreasyFork',
     'settings.feedbackGitHub': 'Feedback on GitHub',

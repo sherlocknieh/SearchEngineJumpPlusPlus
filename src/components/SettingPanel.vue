@@ -1,7 +1,7 @@
 <script setup>
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { OPTION_KEYS } from '../core/configSchema.js';
-import { IMAGE_CATEGORY_KEY, isBuiltinCategory } from '../core/configData.js';
+import { BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY, isBuiltinCategory } from '../core/configData.js';
 import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
 import { closeSettingPanel, showToast } from '../stores/ui.js';
@@ -207,6 +207,10 @@ function onToggleCategory(ci) {
 }
 
 function onToggleEngine(ci, ei) {
+  if (draft.categories[ci]?.key === BUILTIN_CATEGORY_KEY) {
+    showToast(t('settings.actionToggleHint'), 3500);
+    return;
+  }
   toggleEngine(ci, ei);
   scheduleAutoSave();
 }
@@ -355,7 +359,7 @@ onBeforeUnmount(() => {
           :copy-target-ci="copyTargetCi"
           :display-name="displayCategoryName(category)"
           :hide-delete="isBuiltinCategory(category)"
-          :hide-edit="isBuiltinCategory(category)"
+          :hide-edit="false"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"
           @delete-category="deleteCategory"
