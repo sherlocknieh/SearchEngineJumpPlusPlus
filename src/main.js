@@ -10,15 +10,10 @@
  * - banner.js       控制台版本信息
  * - delay.js        需要延迟启动的站点
  */
-import { onRestartRequest } from './core/appControl.js';
-
-import { restart } from './app/lifecycle.js';
 import { startScript } from './app/start.js';
 import { listenUrlChange } from './app/urlChange.js';
 import { setupSettingsSync } from './app/settingsSync.js';
 
-// 设置面板等模块通过 appControl 请求重启，避免直接依赖入口文件
-onRestartRequest(restart);
 // 立即启动脚本
 startScript();
 // 监听 SPA 路由变化，重新启动脚本
