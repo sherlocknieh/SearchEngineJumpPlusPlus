@@ -233,7 +233,7 @@ describe('normalizeConfig', () => {
     expect(result.engineList.image).toEqual(defaults.engineList.image);
   });
 
-  it('已有搜图分类时移动到首位，其余分类保持原顺序', () => {
+  it('已有搜图分类时保留用户排序，不再强制置顶', () => {
     const result = normalizeConfig(
       {
         engineCategories: [
@@ -245,7 +245,7 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories.map(([, key]) => key)).toEqual(['image', 'actions', 'web']);
+    expect(result.engineCategories.map(([, key]) => key)).toEqual(['actions', 'web', 'image']);
   });
 
   it('用户清空搜图引擎后保持为空，不强行补回', () => {

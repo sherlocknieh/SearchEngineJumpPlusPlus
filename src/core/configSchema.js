@@ -144,18 +144,13 @@ function ensureBuiltinActions(categories, engineList) {
 }
 
 /**
- * 保证「搜图」分类存在并排在首位：它是右键搜图的固定入口。
- * 只在缺失时补回默认分类与默认识图引擎，并保持用户的引擎编辑结果；
+ * 保证「搜图」分类存在：它是右键搜图的固定入口，但位置与其他分类一样由用户拖拽决定。
+ * 分类缺失（旧配置）时补回默认分类与默认识图引擎并放在首位，已有分类则完全保留原位置；
  * 用户清空引擎后保持为空，此时右键不接管，原生菜单照常可用。
  */
 function ensureImageCategory(categories, engineList) {
-  const index = categories.findIndex(([, key]) => key === IMAGE_CATEGORY_KEY);
-  if (index > 0) {
-    // 固定入口始终置顶，其余分类保持用户排序
-    categories.unshift(...categories.splice(index, 1));
-    return;
-  }
-  if (index === 0) return;
+  // 已有分类：位置、名称、引擎都由用户决定，不再强制置顶
+  if (categories.some(([, key]) => key === IMAGE_CATEGORY_KEY)) return;
 
   const defaultCategory = defaultConfig.engineCategories.find(
     ([, key]) => key === IMAGE_CATEGORY_KEY,

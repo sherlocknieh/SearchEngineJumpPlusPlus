@@ -173,7 +173,8 @@ src/main.js                 只做装配
 - 所有配置读写必须经过 `configSchema` / `configData`，避免多处解释不一致
 - 新增默认引擎：`src/data/engines.json`；新增站点适配：`src/data/sites/`
 - 内置分类（`actions` / `image`）不可删除、不提供分类编辑入口，`isBuiltinCategory` 统一判断；
-  `image` 分类缺失时由 `normalizeConfig` 补回并固定排在首位，始终视为显示、只出现在图片模式（`isBarCategoryVisible`）
+  `image` 分类缺失时由 `normalizeConfig` 补回并放在首位，已有分类则保留用户拖拽出的排序；
+  它始终视为显示、只出现在图片模式（`isBarCategoryVisible`）
 - 删除操作默认走 `useUndoDelete`（可撤销）
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
