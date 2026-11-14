@@ -119,6 +119,8 @@ export const messages = {
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintOpenImage': '打开图片',
+    'action.hintCopyText': '复制选中的文字',
+    'action.hintWithTarget': '{action}：{target}',
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '无法打开该内容',
 
@@ -273,6 +275,8 @@ export const messages = {
     'action.hintOpenLink': 'Open link',
     'action.hintCopyImage': 'Copy image',
     'action.hintOpenImage': 'Open image',
+    'action.hintCopyText': 'Copy selected text',
+    'action.hintWithTarget': '{action}: {target}',
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'Unable to open this content',
 

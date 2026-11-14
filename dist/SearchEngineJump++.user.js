@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.1642
+// @version            2026.11.14.1644
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5901,6 +5901,8 @@
 			"action.hintOpenLink": "打开链接",
 			"action.hintCopyImage": "复制图片",
 			"action.hintOpenImage": "打开图片",
+			"action.hintCopyText": "复制选中的文字",
+			"action.hintWithTarget": "{action}：{target}",
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "无法打开该内容",
 			"config.warningLine1": "此处有更多的设置选项，自由度更高，",
@@ -6039,6 +6041,8 @@
 			"action.hintOpenLink": "Open link",
 			"action.hintCopyImage": "Copy image",
 			"action.hintOpenImage": "Open image",
+			"action.hintCopyText": "Copy selected text",
+			"action.hintWithTarget": "{action}: {target}",
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "Unable to open this content",
 			"config.warningLine1": "More advanced options are available here,",
@@ -7294,6 +7298,10 @@
 		image: {
 			copy: "action.hintCopyImage",
 			open: "action.hintOpenImage"
+		},
+		text: {
+			copy: "action.hintCopyText",
+			open: "action.hintOpenLink"
 		}
 	};
 	var CONTEXT_MODES = {
@@ -7330,6 +7338,25 @@
 	}
 	function contextActionHintKey(mode, action) {
 		return CONTEXT_ACTION_HINTS[mode]?.[action] || "";
+	}
+	function hintTargetText(mode, action, hit) {
+		if (mode === "text") return (action === "copy" ? hit.keyword : hit.url) || "";
+		const target = contextActionTarget(mode, action, hit);
+		return typeof target === "string" ? target : target?.text || "";
+	}
+	function shortenHintTarget(value) {
+		const text = String(value ?? "").replace(/\s+/g, " ").trim();
+		return text.length > 80 ? `${text.slice(0, 79)}…` : text;
+	}
+	function actionEngineHint(mode, action, hit = {}, t) {
+		const key = contextActionHintKey(mode, action);
+		if (!key) return "";
+		const label = t(key);
+		const target = shortenHintTarget(hintTargetText(mode, action, hit));
+		return target ? t("action.hintWithTarget", {
+			action: label,
+			target
+		}) : label;
 	}
 	var contextAction = reactive({
 		active: false,
@@ -8420,13 +8447,29 @@
 				if (iconOpenHeight.value) style["--sej-icon-open-height"] = `${iconOpenHeight.value}px`;
 				return style;
 			});
+			const actionHintHit = computed(() => {
+				if (isContextAction.value) return {
+					keyword: contextAction.keyword,
+					url: contextAction.url
+				};
+				if (!isSelectSearch.value) return null;
+				return {
+					keyword: selectionText.value,
+					url: findKeywordUrl(selectionText.value) || ""
+				};
+			});
 			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
-				engines: (data.engineList[key] || []).filter((engine) => !engine.disable && !hidesOpenAction(engine)).map((engine) => isContextAction.value && engine.action ? {
-					...engine,
-					hint: t(contextActionHintKey(contextMode.value, engine.action))
-				} : engine)
+				engines: (data.engineList[key] || []).filter((engine) => !engine.disable && !hidesOpenAction(engine)).map((engine) => {
+					const hit = actionHintHit.value;
+					if (!engine.action || !hit) return engine;
+					const mode = isContextAction.value ? contextMode.value : "text";
+					return {
+						...engine,
+						hint: actionEngineHint(mode, engine.action, hit, t)
+					};
+				})
 			})).filter((category) => category.engines.length));
 			function hidesOpenAction(engine) {
 				if (engine.action !== "open" || isContextAction.value || !isSelectSearch.value) return false;

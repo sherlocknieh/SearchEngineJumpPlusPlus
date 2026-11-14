@@ -40,7 +40,7 @@ import {
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible } from '../core/configData.js';
 import { findKeywordUrl } from '../core/engineUrl.js';
-import { contextActionHintKey, contextActionTarget } from '../core/contextAction.js';
+import { actionEngineHint, contextActionTarget } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
@@ -146,6 +146,14 @@ const barStyle = computed(() => {
   return style;
 });
 
+// 动作引擎这次实际复制/打开的内容：上下文条用命中的目标，划词条用选区；
+// 站点内嵌条的复制对象是输入框里的关键词，随打字变化，不做提示
+const actionHintHit = computed(() => {
+  if (isContextAction.value) return { keyword: contextAction.keyword, url: contextAction.url };
+  if (!isSelectSearch.value) return null;
+  return { keyword: selectionText.value, url: findKeywordUrl(selectionText.value) || '' };
+});
+
 const categories = computed(() =>
   data.engineCategories
     // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「操作」动作
@@ -157,12 +165,13 @@ const categories = computed(() =>
       key,
       engines: (data.engineList[key] || [])
         .filter((engine) => !engine.disable && !hidesOpenAction(engine))
-        // 同名动作用悬停提示说明当前情景下具体复制或打开什么
-        .map((engine) =>
-          isContextAction.value && engine.action
-            ? { ...engine, hint: t(contextActionHintKey(contextMode.value, engine.action)) }
-            : engine,
-        ),
+        // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
+        .map((engine) => {
+          const hit = actionHintHit.value;
+          if (!engine.action || !hit) return engine;
+          const mode = isContextAction.value ? contextMode.value : 'text';
+          return { ...engine, hint: actionEngineHint(mode, engine.action, hit, t) };
+        }),
     }))
     .filter((category) => category.engines.length),
 );

@@ -12,11 +12,15 @@ import { resolveLinkHit } from './linkAction.js';
 export const LONG_PRESS_MS = 450;
 export const LONG_PRESS_MOVE_TOLERANCE = 10;
 
-/** 动作引擎在各情景下的悬停提示文案 */
+/** 动作引擎在各情景下的悬停提示文案；text 表示划词条上直接复制选区文字 */
 const CONTEXT_ACTION_HINTS = {
   link: { copy: 'action.hintCopyLink', open: 'action.hintOpenLink' },
   image: { copy: 'action.hintCopyImage', open: 'action.hintOpenImage' },
+  text: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
 };
+
+/** 提示里展示目标内容的长度上限，避免长标题把悬停提示撑得过宽 */
+export const HINT_TARGET_MAX = 80;
 
 /** 模式到命中解析与专属分类的映射 */
 export const CONTEXT_MODES = {
@@ -64,4 +68,34 @@ export function contextActionTarget(mode, action, hit = {}) {
  */
 export function contextActionHintKey(mode, action) {
   return CONTEXT_ACTION_HINTS[mode]?.[action] || '';
+}
+
+/** 提示里展示的目标内容：复制文字时是选区本身，其余沿用动作目标 */
+function hintTargetText(mode, action, hit) {
+  if (mode === 'text') return (action === 'copy' ? hit.keyword : hit.url) || '';
+  const target = contextActionTarget(mode, action, hit);
+  return typeof target === 'string' ? target : target?.text || '';
+}
+
+/** 折叠空白并截断，保证单行提示不被长标题撑开 */
+function shortenHintTarget(value) {
+  const text = String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > HINT_TARGET_MAX ? `${text.slice(0, HINT_TARGET_MAX - 1)}…` : text;
+}
+
+/**
+ * 动作引擎完整的悬停提示：说明这次到底复制或打开什么内容。
+ * @param {'image' | 'link' | 'text'} mode 命中情景，text 为划词条
+ * @param {'copy' | 'open'} action 动作类型
+ * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
+ * @param {(key: string, params?: object) => string} t 文案函数
+ */
+export function actionEngineHint(mode, action, hit = {}, t) {
+  const key = contextActionHintKey(mode, action);
+  if (!key) return '';
+  const label = t(key);
+  const target = shortenHintTarget(hintTargetText(mode, action, hit));
+  return target ? t('action.hintWithTarget', { action: label, target }) : label;
 }

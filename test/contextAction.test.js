@@ -1,7 +1,9 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
 import {
+  HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
+  actionEngineHint,
   contextActionHintKey,
   contextActionTarget,
   contextCategoryKey,
@@ -103,5 +105,46 @@ describe('contextActionHintKey', () => {
   it('未知情景或动作没有提示', () => {
     expect(contextActionHintKey('', 'copy')).toBe('');
     expect(contextActionHintKey('image', 'unknown')).toBe('');
+  });
+});
+
+describe('actionEngineHint', () => {
+  // 用带插值的假文案函数，直接断言提示里拼进了什么内容
+  const t = (key, params = {}) => {
+    const text = key === 'action.hintWithTarget' ? '{action}：{target}' : key;
+    return text.replace(/\{(\w+)\}/g, (match, name) => params[name] ?? match);
+  };
+  const hit = { keyword: '示例标题', url: 'https://site.test/a' };
+
+  it('提示包含这次实际复制或打开的内容', () => {
+    expect(actionEngineHint('link', 'copy', hit, t)).toBe(
+      'action.hintCopyLink：[示例标题](https://site.test/a)',
+    );
+    expect(actionEngineHint('link', 'open', hit, t)).toBe(
+      'action.hintOpenLink：https://site.test/a',
+    );
+    expect(actionEngineHint('image', 'copy', hit, t)).toBe(
+      'action.hintCopyImage：https://site.test/a',
+    );
+    expect(actionEngineHint('text', 'copy', hit, t)).toBe('action.hintCopyText：示例标题');
+    expect(actionEngineHint('text', 'open', hit, t)).toBe(
+      'action.hintOpenLink：https://site.test/a',
+    );
+  });
+
+  it('没有目标内容时只保留动作说明', () => {
+    expect(actionEngineHint('text', 'copy', { keyword: '  ' }, t)).toBe('action.hintCopyText');
+  });
+
+  it('过长的目标内容截断，避免提示被撑开', () => {
+    const longUrl = `https://site.test/${'a'.repeat(HINT_TARGET_MAX * 2)}`;
+    const hint = actionEngineHint('link', 'open', { keyword: '', url: longUrl }, t);
+    const target = hint.split('：')[1];
+    expect(target).toHaveLength(HINT_TARGET_MAX);
+    expect(target.endsWith('…')).toBe(true);
+  });
+
+  it('未知情景没有提示', () => {
+    expect(actionEngineHint('', 'copy', hit, t)).toBe('');
   });
 });
