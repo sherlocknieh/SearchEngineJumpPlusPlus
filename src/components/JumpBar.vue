@@ -38,9 +38,14 @@ import {
   isSelectionDrag,
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
-import { isBarCategoryVisible } from '../core/configData.js';
+import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY } from '../core/configData.js';
 import { findKeywordUrl } from '../core/engineUrl.js';
-import { actionEngineHint, contextActionTarget } from '../core/contextAction.js';
+import {
+  actionEngineHint,
+  contextActionTarget,
+  contextLinkHit,
+  getContextEngines,
+} from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
@@ -158,8 +163,13 @@ const actionHintHit = computed(() => {
   return { keyword, url: findKeywordUrl(keyword) || '' };
 });
 
-const categories = computed(() =>
-  data.engineCategories
+// 图片外层链接的动作目标：图片模式下另起一组「链接操作」，不影响图片自身的复制/打开
+const linkActionHit = computed(() =>
+  isContextAction.value ? contextLinkHit(contextAction) : null,
+);
+
+const categories = computed(() => {
+  const list = data.engineCategories
     // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「操作」动作
     .filter(([, key, enabled]) =>
       isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
@@ -180,8 +190,27 @@ const categories = computed(() =>
           return { ...engine, hint: actionEngineHint(mode, engine.action, actionHintHit.value, t) };
         }),
     }))
-    .filter((category) => category.engines.length),
-);
+    .filter((category) => category.engines.length);
+
+  // 图片外面还包着链接时，链接的复制/打开另作一组，仍沿用「操作」分类里的动作配置
+  if (linkActionHit.value && contextMode.value === 'image') {
+    const actionsEnabled = data.engineCategories.find(
+      ([, key]) => key === BUILTIN_CATEGORY_KEY,
+    )?.[2];
+    const engines = isBarCategoryVisible(BUILTIN_CATEGORY_KEY, actionsEnabled, contextMode.value)
+      ? getContextEngines(data, 'link').map((engine) => ({
+          ...engine,
+          contextTarget: 'link',
+          hint: actionEngineHint('link', engine.action, linkActionHit.value, t),
+        }))
+      : [];
+    if (engines.length) {
+      list.push({ name: t('category.linkActions'), key: `${BUILTIN_CATEGORY_KEY}:link`, engines });
+    }
+  }
+
+  return list;
+});
 
 /** 关键词里不含链接时，「打开」没有可打开的目标，不显示该动作 */
 function hidesOpenAction(engine) {
@@ -202,6 +231,10 @@ function syncSearchInputKeyword() {
 /** 动作引擎的目标：上下文操作条按命中类型决定复制内容与打开地址 */
 function getActionTarget(engine) {
   if (isContextAction.value) {
+    // 链接动作组始终作用于图片外层的链接，图片动作组仍作用于图片本身
+    if (engine?.contextTarget === 'link') {
+      return contextActionTarget('link', engine.action, linkActionHit.value);
+    }
     return contextActionTarget(contextAction.mode, engine?.action, contextAction);
   }
   return getCurrentKeyword();

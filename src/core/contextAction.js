@@ -29,6 +29,34 @@ export const CONTEXT_MODES = {
   link: { categoryKey: BUILTIN_CATEGORY_KEY, resolveHit: resolveLinkHit },
 };
 
+/**
+ * 解析命中的内容：图片与其外层链接可以同时存在。
+ * 图片作为主模式交给「搜图」，外层链接另存一份供「链接操作」使用，两者互不覆盖。
+ * @param {Element | null} target 按下事件的目标元素
+ * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
+ * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string} | null} | null}
+ */
+export function resolveContextHit(target, hasEngines = () => true) {
+  const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target) : null;
+  const link = hasEngines('link') ? CONTEXT_MODES.link.resolveHit(target) : null;
+  if (image) {
+    return { mode: 'image', ...image, link: link ? { url: link.url, text: link.text } : null };
+  }
+  if (link) return { mode: 'link', ...link };
+  return null;
+}
+
+/**
+ * 图片外层链接的动作目标：复制沿用链接文字，打开使用链接地址。
+ * @param {{link?: {url?: string, text?: string} | null}} hit 命中内容
+ * @returns {{keyword: string, url: string} | null}
+ */
+export function contextLinkHit(hit = {}) {
+  const link = hit.link;
+  if (!link?.url) return null;
+  return { keyword: link.text || link.url, url: link.url };
+}
+
 /** 位移是否已超出长按允许的范围（滚动、拖拽时取消） */
 export function isLongPressMove(startX, startY, x, y) {
   return Math.hypot(x - startX, y - startY) > LONG_PRESS_MOVE_TOLERANCE;

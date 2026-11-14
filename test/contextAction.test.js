@@ -1,5 +1,5 @@
 // @vitest-environment happy-dom
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
@@ -7,9 +7,72 @@ import {
   contextActionHintKey,
   contextActionTarget,
   contextCategoryKey,
+  contextLinkHit,
   getContextEngines,
   isLongPressMove,
+  resolveContextHit,
 } from '../src/core/contextAction.js';
+
+afterEach(() => {
+  document.body.innerHTML = '';
+});
+
+describe('resolveContextHit', () => {
+  it('图片包在链接里时以图片为主，同时保留外层链接', () => {
+    document.body.innerHTML =
+      '<a href="https://site.test/page"><img src="https://cdn.test/a.png"></a>';
+    const hit = resolveContextHit(document.querySelector('img'));
+    expect(hit.mode).toBe('image');
+    expect(hit.url).toBe('https://cdn.test/a.png');
+    expect(hit.link).toEqual({ url: 'https://site.test/page', text: '' });
+  });
+
+  it('只有链接引擎时按链接处理，不额外记录链接副本', () => {
+    document.body.innerHTML =
+      '<a href="https://site.test/page"><img src="https://cdn.test/a.png"></a>';
+    const hit = resolveContextHit(
+      document.querySelector('img'),
+      (mode) => mode === 'link',
+    );
+    expect(hit.mode).toBe('link');
+    expect(hit.url).toBe('https://site.test/page');
+    expect(hit.link).toBeUndefined();
+  });
+
+  it('只有图片引擎时不提供链接动作', () => {
+    document.body.innerHTML =
+      '<a href="https://site.test/page"><img src="https://cdn.test/a.png"></a>';
+    const hit = resolveContextHit(
+      document.querySelector('img'),
+      (mode) => mode === 'image',
+    );
+    expect(hit.mode).toBe('image');
+    expect(hit.link).toBeNull();
+  });
+
+  it('没有可用引擎或目标不是图片/链接时返回 null', () => {
+    document.body.innerHTML = '<a href="https://site.test/page">文字</a><p>段落</p>';
+    expect(resolveContextHit(document.querySelector('a'), () => false)).toBeNull();
+    expect(resolveContextHit(document.querySelector('p'))).toBeNull();
+  });
+});
+
+describe('contextLinkHit', () => {
+  it('链接动作目标取链接文字与地址，没有文字时回退到地址', () => {
+    expect(
+      contextLinkHit({ link: { url: 'https://site.test/a', text: '标题' } }),
+    ).toEqual({ keyword: '标题', url: 'https://site.test/a' });
+    expect(contextLinkHit({ link: { url: 'https://site.test/a.png', text: '' } })).toEqual({
+      keyword: 'https://site.test/a.png',
+      url: 'https://site.test/a.png',
+    });
+  });
+
+  it('没有外层链接时返回 null', () => {
+    expect(contextLinkHit({})).toBeNull();
+    expect(contextLinkHit({ link: { url: '' } })).toBeNull();
+  });
+});
 
 describe('isLongPressMove', () => {
   it('小范围抖动不算移动，超过阈值才算', () => {

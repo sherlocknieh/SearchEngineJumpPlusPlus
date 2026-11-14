@@ -13,14 +13,11 @@ import { useSettings } from '../stores/settings.js';
 import { openContextAction } from '../stores/contextAction.js';
 import { isOwnHostNode } from '../core/shadowDom.js';
 import {
-  CONTEXT_MODES,
   LONG_PRESS_MS,
   getContextEngines,
   isLongPressMove,
+  resolveContextHit,
 } from '../core/contextAction.js';
-
-// 链接里常包着图片：图片优先，命中图片后不再把外层链接当成目标
-const HIT_ORDER = ['image', 'link'];
 
 let armed = false;
 
@@ -45,14 +42,9 @@ export function armContextMenu(ensureBoot) {
     pressed = null;
   }
 
-  /** 按优先级找一个有可用引擎的目标；图片包在链接里时仍以图片为准 */
+  /** 图片优先作为主模式；包着图片的链接同时记下，供「链接操作」使用 */
   function resolveHit(target) {
-    for (const mode of HIT_ORDER) {
-      if (!hasEngines(mode)) continue;
-      const hit = CONTEXT_MODES[mode].resolveHit(target);
-      if (hit) return { mode, ...hit };
-    }
-    return null;
+    return resolveContextHit(target, hasEngines);
   }
 
   function hasEngines(mode) {
@@ -95,6 +87,7 @@ export function armContextMenu(ensureBoot) {
       keyword: hit.text || hit.url,
       url: hit.url,
       element: hit.element,
+      link: hit.link || null,
     });
     ensureBoot?.();
   }

@@ -80,6 +80,7 @@ export const messages = {
     'category.emptyName': '空',
     'category.newName': '新分类',
     'category.label': '分类「{name}」',
+    'category.linkActions': '链接操作',
 
     'engine.label': '「{name}」',
     'engine.addTitle': '添加搜索引擎',
@@ -237,6 +238,7 @@ export const messages = {
     'category.emptyName': 'Untitled',
     'category.newName': 'New category',
     'category.label': 'category “{name}”',
+    'category.linkActions': 'Link actions',
 
     'engine.label': '“{name}”',
     'engine.addTitle': 'Add search engine',
