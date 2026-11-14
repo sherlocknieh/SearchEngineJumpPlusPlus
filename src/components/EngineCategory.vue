@@ -18,13 +18,13 @@ const props = defineProps({
   name: { type: String, required: true },
   engines: { type: Array, required: true },
   showIcon: { type: Boolean, default: true },
-  // 简洁模式：只保留图标，文字收进悬停提示
+  // 紧凑模式：只保留图标，文字收进悬停提示
   compact: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['jump', 'jumpAll']);
 
-// 简洁模式没有文字，必须保留图标位，即使站点规则关闭了分类图标
+// 紧凑模式没有文字，必须保留图标位，即使站点规则关闭了分类图标
 const iconVisible = computed(() => props.showIcon || props.compact);
 
 // 分类标题只显示首个引擎的图标；计算一次，避免模板内重复读取
@@ -35,7 +35,7 @@ const firstIconSrc = computed(() =>
 // 一键打开只对能跳转的引擎有意义，「操作」这类纯快捷动作分类没有可批量打开的地址
 const showSearchAll = computed(() => props.engines.some((engine) => engine.url));
 
-// 首个引擎没有图标时用分类名首字兜底，避免简洁模式下分类不可见
+// 首个引擎没有图标时用分类名首字兜底，避免紧凑模式下分类不可见
 const glyph = computed(() => Array.from(props.name)[0] || '');
 
 // 支持 CSS Anchor Positioning 时，面板位置完全交给浏览器；
@@ -57,7 +57,7 @@ const shown = ref(false);
 const active = ref(false);
 const pinned = ref(false);
 
-// 悬停提示：简洁模式补回被隐藏的分类名，固定展开时提示如何收起
+// 悬停提示：紧凑模式补回被隐藏的分类名，固定展开时提示如何收起
 const triggerTitle = computed(() => {
   if (pinned.value) return t('jump.collapseList', { name: props.name });
   return props.compact ? props.name : null;
@@ -426,7 +426,7 @@ onBeforeUnmount(() => {
           :src="firstIconSrc"
           alt=""
         />
-        <!-- 简洁模式没有引擎图标时用分类名首字兜底 -->
+        <!-- 紧凑模式没有引擎图标时用分类名首字兜底 -->
         <span v-else-if="compact" class="sej-category-glyph" aria-hidden="true">{{ glyph }}</span>
       </span>
       <span v-if="!compact">{{ name }}</span>
@@ -530,7 +530,7 @@ onBeforeUnmount(() => {
   translate: 0 0.75px;
 }
 
-/* 简洁模式没有引擎图标时的首字兜底，与图标槽同尺寸 */
+/* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */
 .sej-category-glyph {
   display: inline-flex;
   align-items: center;

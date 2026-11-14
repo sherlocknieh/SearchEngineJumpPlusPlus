@@ -6,15 +6,15 @@ import { localizeEngineName } from '../assets/i18n.js';
 const props = defineProps({
   engine: { type: Object, required: true },
   showIcon: { type: Boolean, default: true },
-  // 简洁模式：只保留图标，文字收进悬停提示
+  // 紧凑模式：只保留图标，文字收进悬停提示
   compact: { type: Boolean, default: false },
-  // 情景专属的悬停提示，优先于名称；为空时按简洁模式回退到名称
+  // 情景专属的悬停提示，优先于名称；为空时按紧凑模式回退到名称
   hint: { type: String, default: '' },
 });
 
 const iconSrc = computed(() => (props.showIcon ? getFaviconSrc(props.engine) : ''));
 const label = computed(() => localizeEngineName(props.engine.name));
-// 没有图标时用名称首字兜底，避免简洁模式下条目不可见
+// 没有图标时用名称首字兜底，避免紧凑模式下条目不可见
 const glyph = computed(() => Array.from(label.value)[0] || '');
 
 const emit = defineEmits(['jump']);
@@ -98,7 +98,7 @@ const emit = defineEmits(['jump']);
   display: none;
 }
 
-/* 简洁模式没有图标时的首字兜底，占据与图标槽相同的 16px */
+/* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */
 .sej-engine-glyph {
   display: inline-flex;
   align-items: center;

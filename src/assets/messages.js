@@ -32,9 +32,9 @@ export const messages = {
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
       '划词搜索条出现在选中文字/图片/链接附近；关闭选项时搜索条置顶',
-    'settings.selectionCompact': '简洁模式',
+    'settings.selectionCompact': '紧凑模式',
     'settings.selectionCompactTip': '划词搜索条只显示图标，不显示文字',
-    'settings.selectionIcon': '极简模式',
+    'settings.selectionIcon': '折叠模式',
     'settings.selectionIconTip': '划词后只显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
@@ -115,7 +115,7 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
-    'action.hintCopyLink': '复制链接',
+    'action.hintCopyLink': '复制',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintOpenImage': '打开图片',

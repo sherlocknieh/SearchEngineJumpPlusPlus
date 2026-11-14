@@ -88,7 +88,7 @@ const isImageContext = computed(() => isContextAction.value && contextMode.value
 // 「跟随选区」打开时，划词条与长按唤起的图片/链接条都贴着内容出现；
 // 简洁/极简两个子选项只作用于这些贴内容的浮层条，顶部滑出的条与内嵌条保持原样
 const followSelectionBar = computed(() => isFloat && Boolean(data.selectionFollowPointer));
-// 简洁模式：贴内容的浮层条隐藏文字，只留图标
+// 紧凑模式：贴内容的浮层条隐藏文字，只留图标
 const compactBar = computed(() => followSelectionBar.value && Boolean(data.selectionCompact));
 // 图标模式：贴内容的浮层条只露出一个图标，指针停到图标上才展开整条搜索条
 const iconMode = computed(() => followSelectionBar.value && Boolean(data.selectionIcon));
@@ -458,7 +458,7 @@ function syncFloatPlacement() {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
-  // 极简模式收起时只露图标：与展开后的整条共用同一落点，出现在目标正上方，
+  // 折叠模式收起时只露图标：与展开后的整条共用同一落点，出现在目标正上方，
   // 展开时向两侧对称生长
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
   // 文字与链接触发的整条放在锚点正上方并水平居中
@@ -929,7 +929,7 @@ onBeforeUnmount(() => {
   justify-self: center !important;
 }
 
-/* 简洁模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */
+/* 紧凑模式只留图标：收紧分类与引擎条目的左右内边距，避免只剩图标时留白过大 */
 #sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll > .sej-engine,
 #sej-container.sej-compact > .sej-scroll-viewport > .sej-scroll .sej-category > .sej-engine {
   padding: 0 7px;
