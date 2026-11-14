@@ -4,7 +4,7 @@ import { OPTION_KEYS } from '../core/configSchema.js';
 import { IMAGE_CATEGORY_KEY, isBuiltinCategory } from '../core/configData.js';
 import { useSettings } from '../stores/settings.js';
 import { requestRestart } from '../core/appControl.js';
-import { closeSettingPanel } from '../stores/ui.js';
+import { closeSettingPanel, showToast } from '../stores/ui.js';
 import { setLanguagePreference, t } from '../assets/i18n.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { useAutoSave } from '../composables/useAutoSave.js';
@@ -197,6 +197,11 @@ const {
 });
 
 function onToggleCategory(ci) {
+  // 搜图分类只在图片模式下出现，点击显隐按钮只提示它没有意义
+  if (draft.categories[ci]?.key === IMAGE_CATEGORY_KEY) {
+    showToast(t('settings.imageToggleMeaningless'));
+    return;
+  }
   toggleCategory(ci);
   scheduleAutoSave();
 }
@@ -351,7 +356,6 @@ onBeforeUnmount(() => {
           :display-name="displayCategoryName(category)"
           :hide-delete="isBuiltinCategory(category)"
           :hide-edit="isBuiltinCategory(category)"
-          :hide-toggle="category.key === IMAGE_CATEGORY_KEY"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"
           @delete-category="deleteCategory"

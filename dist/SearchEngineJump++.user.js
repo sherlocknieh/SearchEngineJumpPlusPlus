@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0800
+// @version            2026.11.14.0803
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5825,6 +5825,7 @@
 			"settings.selectionIconTip": "划词后只显示一个图标，鼠标悬浮时展开搜索条",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
+			"settings.imageToggleMeaningless": "搜图分类只在长按图片时出现，显示开关对它没有意义",
 			"settings.editConfig": "配置文件",
 			"settings.feedbackGreasyFork": "在 GreasyFork 进行反馈",
 			"settings.feedbackGitHub": "在 Github 进行反馈",
@@ -5962,6 +5963,7 @@
 			"settings.selectionIconTip": "Show a single icon above the selected text/link; hover it to expand the search bar",
 			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
+			"settings.imageToggleMeaningless": "The image category only appears on long-press, so its visibility switch has no effect",
 			"settings.editConfig": "Config file",
 			"settings.feedbackGreasyFork": "Feedback on GreasyFork",
 			"settings.feedbackGitHub": "Feedback on GitHub",
@@ -11119,10 +11121,6 @@
 			hideEdit: {
 				type: Boolean,
 				default: false
-			},
-			hideToggle: {
-				type: Boolean,
-				default: false
 			}
 		},
 		emits: [
@@ -11159,15 +11157,14 @@
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
 					}, null, 8, _hoisted_4$3)) : createCommentVNode("", true),
-					!__props.hideToggle ? (openBlock(), createElementBlock("span", {
-						key: 1,
+					createBaseVNode("span", {
 						class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": !__props.category.enabled }]),
 						title: __props.category.enabled ? unref(t)("common.hide") : unref(t)("common.show"),
 						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle-category", __props.ci), ["stop"])),
 						innerHTML: __props.category.enabled ? unref(EYE) : unref(EYE_OFF)
-					}, null, 10, _hoisted_5$3)) : createCommentVNode("", true),
+					}, null, 10, _hoisted_5$3),
 					!__props.hideDelete ? (openBlock(), createElementBlock("span", {
-						key: 2,
+						key: 1,
 						class: "sej-hover-delete",
 						title: unref(t)("settings.deleteCategory"),
 						onPointerdown: _cache[1] || (_cache[1] = withModifiers(() => {}, ["stop"])),
@@ -11545,6 +11542,10 @@
 				consumeClickSuppression
 			});
 			function onToggleCategory(ci) {
+				if (draft.categories[ci]?.key === "image") {
+					showToast(t("settings.imageToggleMeaningless"));
+					return;
+				}
 				toggleCategory(ci);
 				scheduleAutoSave();
 			}
@@ -11677,7 +11678,6 @@
 							"display-name": unref(displayCategoryName)(category),
 							"hide-delete": unref(isBuiltinCategory)(category),
 							"hide-edit": unref(isBuiltinCategory)(category),
-							"hide-toggle": category.key === unref(IMAGE_CATEGORY_KEY),
 							onToggleCategory,
 							onOpenCategory: unref(openCategoryDialog),
 							onDeleteCategory: unref(deleteCategory),
@@ -11694,7 +11694,6 @@
 							"display-name",
 							"hide-delete",
 							"hide-edit",
-							"hide-toggle",
 							"onOpenCategory",
 							"onDeleteCategory",
 							"onAddEngine",
