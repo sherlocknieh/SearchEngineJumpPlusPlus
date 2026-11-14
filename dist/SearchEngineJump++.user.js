@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.0756
+// @version            2026.11.14.0800
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5741,13 +5741,13 @@
 		center: false,
 		engineCategories: [
 			[
-				"操作",
-				"actions",
-				false
-			],
-			[
 				"搜图",
 				"image",
+				true
+			],
+			[
+				"操作",
+				"actions",
 				true
 			],
 			[
@@ -6302,11 +6302,14 @@
 		engineList[BUILTIN_CATEGORY_KEY] = engines;
 	}
 	function ensureImageCategory(categories, engineList) {
-		if (categories.some(([, key]) => key === "image")) return;
+		const index = categories.findIndex(([, key]) => key === IMAGE_CATEGORY_KEY);
+		if (index > 0) {
+			categories.unshift(...categories.splice(index, 1));
+			return;
+		}
+		if (index === 0) return;
 		const defaultCategory = engines_default.engineCategories.find(([, key]) => key === IMAGE_CATEGORY_KEY);
-		const actionsIndex = categories.findIndex(([, key]) => key === BUILTIN_CATEGORY_KEY);
-		const insertAt = actionsIndex === -1 ? categories.length : actionsIndex + 1;
-		categories.splice(insertAt, 0, [
+		categories.unshift([
 			defaultCategory?.[0] || "image",
 			IMAGE_CATEGORY_KEY,
 			defaultCategory?.[2] ?? true
@@ -11113,6 +11116,10 @@
 				type: Boolean,
 				default: false
 			},
+			hideEdit: {
+				type: Boolean,
+				default: false
+			},
 			hideToggle: {
 				type: Boolean,
 				default: false
@@ -11142,24 +11149,25 @@
 					class: normalizeClass(["sejtitle drag", { "sej-no-delete": __props.hideDelete }]),
 					"data-xin": __props.category.enabled ? 1 : -1,
 					"data-iqxintitle": __props.category.key,
-					title: unref(t)("settings.editCategory", { name: __props.displayName }),
+					title: __props.hideEdit ? null : unref(t)("settings.editCategory", { name: __props.displayName }),
 					onPointerdown: _cache[3] || (_cache[3] = ($event) => emit("drag-start", $event, "category", __props.ci)),
-					onClick: _cache[4] || (_cache[4] = withModifiers(($event) => emit("open-category", __props.ci), ["stop"]))
+					onClick: _cache[4] || (_cache[4] = withModifiers(($event) => !__props.hideEdit && emit("open-category", __props.ci), ["stop"]))
 				}, [
 					createBaseVNode("span", _hoisted_3$3, toDisplayString(__props.displayName), 1),
-					createBaseVNode("span", {
+					!__props.hideEdit ? (openBlock(), createElementBlock("span", {
+						key: 0,
 						class: "sej-hover-edit",
 						innerHTML: unref(PENCIL)
-					}, null, 8, _hoisted_4$3),
+					}, null, 8, _hoisted_4$3)) : createCommentVNode("", true),
 					!__props.hideToggle ? (openBlock(), createElementBlock("span", {
-						key: 0,
+						key: 1,
 						class: normalizeClass(["iqxin-set-toggle", { "iqxin-set-hidden": !__props.category.enabled }]),
 						title: __props.category.enabled ? unref(t)("common.hide") : unref(t)("common.show"),
 						onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("toggle-category", __props.ci), ["stop"])),
 						innerHTML: __props.category.enabled ? unref(EYE) : unref(EYE_OFF)
 					}, null, 10, _hoisted_5$3)) : createCommentVNode("", true),
 					!__props.hideDelete ? (openBlock(), createElementBlock("span", {
-						key: 1,
+						key: 2,
 						class: "sej-hover-delete",
 						title: unref(t)("settings.deleteCategory"),
 						onPointerdown: _cache[1] || (_cache[1] = withModifiers(() => {}, ["stop"])),
@@ -11668,6 +11676,7 @@
 							"copy-target-ci": unref(copyTargetCi),
 							"display-name": unref(displayCategoryName)(category),
 							"hide-delete": unref(isBuiltinCategory)(category),
+							"hide-edit": unref(isBuiltinCategory)(category),
 							"hide-toggle": category.key === unref(IMAGE_CATEGORY_KEY),
 							onToggleCategory,
 							onOpenCategory: unref(openCategoryDialog),
@@ -11684,6 +11693,7 @@
 							"copy-target-ci",
 							"display-name",
 							"hide-delete",
+							"hide-edit",
 							"hide-toggle",
 							"onOpenCategory",
 							"onDeleteCategory",

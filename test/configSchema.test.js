@@ -27,11 +27,12 @@ describe('createDefaultConfig', () => {
     expect(createDefaultConfig().engineList[key][0].name).toBe(originalName);
   });
 
-  it('包含全部选项与默认引擎，快捷动作排在首位', () => {
+  it('包含全部选项与默认引擎，搜图与操作分类置顶', () => {
     const config = createDefaultConfig();
     for (const key of OPTION_KEYS) expect(config).toHaveProperty(key);
     expect(Object.keys(config.engineList).length).toBeGreaterThan(0);
-    expect(config.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
+    expect(config.engineCategories[0].slice(0, 2)).toEqual(['搜图', 'image']);
+    expect(config.engineCategories[1].slice(0, 2)).toEqual(['操作', 'actions']);
   });
 
   it('划词相关选项默认全部开启', () => {
@@ -45,8 +46,8 @@ describe('createDefaultConfig', () => {
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
-    // 搜图分类命名为「搜图」，紧跟「操作」分类，默认不隐藏
-    expect(config.engineCategories[1]).toEqual(['搜图', 'image', true]);
+    // 搜图分类命名为「搜图」，排在首位，默认不隐藏
+    expect(config.engineCategories[0]).toEqual(['搜图', 'image', true]);
     expect(config.engineList.image.length).toBeGreaterThan(0);
   });
 });
@@ -134,7 +135,11 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
+    expect(result.engineCategories[0].slice(0, 2)).toEqual(['搜图', 'image']);
+    expect(result.engineCategories.find(([, key]) => key === 'actions')?.slice(0, 2)).toEqual([
+      '操作',
+      'actions',
+    ]);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
   });
 
@@ -152,7 +157,11 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0]).toEqual(['我的操作', 'actions', false]);
+    expect(result.engineCategories.find(([, key]) => key === 'actions')).toEqual([
+      '我的操作',
+      'actions',
+      false,
+    ]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
       { name: '打开', url: '', action: 'open' },
@@ -170,7 +179,11 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineCategories[0]).toEqual(['操作', 'actions', false]);
+    expect(result.engineCategories.find(([, key]) => key === 'actions')).toEqual([
+      '操作',
+      'actions',
+      false,
+    ]);
     expect(result.engineCategories.find(([, key]) => key === 'web')).toEqual([
       '我自己的分类',
       'web',
@@ -215,9 +228,24 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    // 补回的搜图分类紧跟「操作」分类
-    expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual(['actions', 'image']);
+    // 补回的搜图分类排在首位
+    expect(result.engineCategories.slice(0, 2).map(([, key]) => key)).toEqual(['image', 'actions']);
     expect(result.engineList.image).toEqual(defaults.engineList.image);
+  });
+
+  it('已有搜图分类时移动到首位，其余分类保持原顺序', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [
+          ['操作', 'actions', true],
+          ['搜索', 'web', true],
+          ['搜图', 'image', true],
+        ],
+        engineList: { actions: [], web: [], image: [] },
+      },
+      defaults,
+    );
+    expect(result.engineCategories.map(([, key]) => key)).toEqual(['image', 'actions', 'web']);
   });
 
   it('用户清空搜图引擎后保持为空，不强行补回', () => {

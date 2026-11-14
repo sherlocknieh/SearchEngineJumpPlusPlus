@@ -350,6 +350,7 @@ onBeforeUnmount(() => {
           :copy-target-ci="copyTargetCi"
           :display-name="displayCategoryName(category)"
           :hide-delete="isBuiltinCategory(category)"
+          :hide-edit="isBuiltinCategory(category)"
           :hide-toggle="category.key === IMAGE_CATEGORY_KEY"
           @toggle-category="onToggleCategory"
           @open-category="openCategoryDialog"

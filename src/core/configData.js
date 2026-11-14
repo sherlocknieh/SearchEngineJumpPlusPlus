@@ -16,7 +16,7 @@ export const BUILTIN_CATEGORY_KEY = 'actions';
 /** 内置的图片搜索分类键名：供右键图片搜图使用，缺失时自动补回 */
 export const IMAGE_CATEGORY_KEY = 'image';
 
-/** 内置分类只能编辑内容与排序，不能删除，避免依赖它的功能失去入口 */
+/** 内置分类不能删除，也不提供分类编辑入口；引擎内容与排序仍可调整 */
 const BUILTIN_CATEGORY_KEYS = [BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY];
 
 export function isBuiltinCategory(category) {

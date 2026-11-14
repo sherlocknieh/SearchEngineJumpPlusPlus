@@ -9,8 +9,10 @@ defineProps({
   dragCtx: { type: Object, default: null },
   copyTargetCi: { type: Number, default: null },
   displayName: { type: String, required: true },
-  // 内置分类（快捷动作）：只隐藏删除按钮，其余编辑操作保持可用
+  // 内置分类（搜图 / 操作）：隐藏删除按钮，排序仍可调整
   hideDelete: { type: Boolean, default: false },
+  // 内置分类不提供类别编辑入口
+  hideEdit: { type: Boolean, default: false },
   // 搜图分类不参与跳转条显示开关，隐藏它的眼睛按钮
   hideToggle: { type: Boolean, default: false },
 });
@@ -43,12 +45,12 @@ const emit = defineEmits([
       :class="{ 'sej-no-delete': hideDelete }"
       :data-xin="category.enabled ? 1 : -1"
       :data-iqxintitle="category.key"
-      :title="t('settings.editCategory', { name: displayName })"
+      :title="hideEdit ? null : t('settings.editCategory', { name: displayName })"
       @pointerdown="emit('drag-start', $event, 'category', ci)"
-      @click.stop="emit('open-category', ci)"
+      @click.stop="!hideEdit && emit('open-category', ci)"
     >
       <span class="iqxin-pointer-events">{{ displayName }}</span>
-      <span class="sej-hover-edit" v-html="PENCIL"></span>
+      <span v-if="!hideEdit" class="sej-hover-edit" v-html="PENCIL"></span>
       <span
         v-if="!hideToggle"
         class="iqxin-set-toggle"
