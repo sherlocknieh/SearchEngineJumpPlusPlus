@@ -38,7 +38,7 @@ export const messages = {
     'settings.selectionIconTip': '划词后只显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
-    'settings.imageToggleMeaningless': '搜图分类只在长按图片时出现，显示开关对它没有意义',
+    'settings.imageToggleHint': '显示开关对「搜图」无意义：长按或右键网页图片，即可用搜图分类搜索',
     'settings.editConfig': '配置文件',
     'settings.feedbackGreasyFork': '在 GreasyFork 进行反馈',
     'settings.feedbackGitHub': '在 Github 进行反馈',
@@ -189,8 +189,8 @@ export const messages = {
       'Show a single icon above the selected text/link; hover it to expand the search bar',
     'settings.center': 'Center search bar',
     'settings.centerTip': 'Always center the jump bar',
-    'settings.imageToggleMeaningless':
-      'The image category only appears on long-press, so its visibility switch has no effect',
+    'settings.imageToggleHint':
+      'This switch does not affect the image category: long-press or right-click an image to search it',
     'settings.editConfig': 'Config file',
     'settings.feedbackGreasyFork': 'Feedback on GreasyFork',
     'settings.feedbackGitHub': 'Feedback on GitHub',
