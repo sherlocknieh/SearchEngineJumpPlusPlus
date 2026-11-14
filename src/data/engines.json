@@ -7,8 +7,8 @@
   "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [
-    ["搜图", "image", true],
     ["操作", "actions", true],
+    ["搜图", "image", true],
     ["搜索", "web", true],
     ["AI", "ai", true],
     ["影视", "video", true],

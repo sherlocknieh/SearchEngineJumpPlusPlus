@@ -145,7 +145,8 @@ function ensureBuiltinActions(categories, engineList) {
 
 /**
  * 保证「搜图」分类存在：它是右键搜图的固定入口，但位置与其他分类一样由用户拖拽决定。
- * 分类缺失（旧配置）时补回默认分类与默认识图引擎并放在首位，已有分类则完全保留原位置；
+ * 分类缺失（旧配置）时补回默认分类与默认识图引擎，插在「操作」之后——
+ * 默认顺序由「操作」占据首位；已有分类则完全保留原位置；
  * 用户清空引擎后保持为空，此时右键不接管，原生菜单照常可用。
  */
 function ensureImageCategory(categories, engineList) {
@@ -155,7 +156,9 @@ function ensureImageCategory(categories, engineList) {
   const defaultCategory = defaultConfig.engineCategories.find(
     ([, key]) => key === IMAGE_CATEGORY_KEY,
   );
-  categories.unshift([
+  // 内置动作分类此时已由 ensureBuiltinActions 补回，搜图紧随其后
+  const actionsIndex = categories.findIndex(([, key]) => key === BUILTIN_CATEGORY_KEY);
+  categories.splice(actionsIndex >= 0 ? actionsIndex + 1 : 0, 0, [
     defaultCategory?.[0] || IMAGE_CATEGORY_KEY,
     IMAGE_CATEGORY_KEY,
     defaultCategory?.[2] ?? true,
