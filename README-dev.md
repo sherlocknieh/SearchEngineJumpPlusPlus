@@ -68,6 +68,9 @@
   发布成功后, 源码、`vite.config.js` 中的版本号与 `dist/SearchEngineJump++.user.js`
   在同一个提交里, 并附带 `vYYYY.MM.DD.HHmm` 标签。
 
+  每次提交都必须走这条命令: 发布脚本本身就是提交入口, 不要先 `git commit` 再补发布。
+  推送到远端时带上 `--push`, 让分支与标签同步。
+
   单独执行 `pnpm build` 只重新构建产物, 不会改动版本号, 仅供调试或本地验证使用。
 
 - 代码检查与测试

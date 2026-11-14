@@ -197,4 +197,6 @@ src/main.js                 只做装配
   （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/build/`，
   由脚本管理器拉取执行，页面不加载外部脚本
 - 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
+- 每次提交都必须发布新版：直接用 `pnpm release "..." --push` 产生提交（升版本 → lint → test →
+  build → 单提交 + tag → 推送），不要先 `git commit` 再补发布
 - 发布前会跑 lint/test，改完先本地 `pnpm test`
