@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import { defineConfig } from 'vite';
 import vue from '@vitejs/plugin-vue';
 import monkey from 'vite-plugin-monkey';
-import vueStyleToShadow from './.build/vueStyleToShadow.js';
+import vueStyleToShadow from './.dev/vueStyleToShadow.js';
 
 const icon = `data:image/svg+xml;base64,${readFileSync(new URL('./assets/icon.svg', import.meta.url)).toString('base64')}`;
 

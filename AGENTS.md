@@ -130,7 +130,7 @@ src/main.js                 只做装配
   文字/链接与锚点水平居中、图片居中；极简模式收起时只露图标，与展开后的整条共用落点），
   跟随选区时由 JumpBar 写入内联坐标；
   滚动时重新量锚点矩形继续跟随，锚点消失（选区清空/图片移除）才回到顶部居中
-- `.build/vueStyleToShadow.js`：把 SFC `<style>` 改写为 `addStyle()`（脚本在 Shadow Root 内，document 样式不生效）
+- `.dev/vueStyleToShadow.js`：把 SFC `<style>` 改写为 `addStyle()`（脚本在 Shadow Root 内，document 样式不生效）
 - 面板样式：`components/settingPanelStyles.js` 按 shell → list → footer → controls → dialogs 顺序拼接
 - `composables/useEventIsolation.js`：面板内的指针/键盘事件在 mask 处截断，避免触发页面自身监听器
 - 需要监听 document 时注意：阴影事件会重定向，用 `e.composedPath()`；面板已截断冒泡，必要时用捕获阶段
