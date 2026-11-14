@@ -183,10 +183,10 @@ const categories = computed(() =>
     .filter((category) => category.engines.length),
 );
 
-/** 划词内容不含链接时，「打开」没有可打开的目标，不显示该动作 */
+/** 关键词里不含链接时，「打开」没有可打开的目标，不显示该动作 */
 function hidesOpenAction(engine) {
-  if (engine.action !== 'open' || isContextAction.value || !isSelectSearch.value) return false;
-  return !findKeywordUrl(selectionText.value);
+  if (engine.action !== 'open' || isContextAction.value) return false;
+  return !findKeywordUrl(actionHintHit.value.keyword);
 }
 
 function getCurrentKeyword() {

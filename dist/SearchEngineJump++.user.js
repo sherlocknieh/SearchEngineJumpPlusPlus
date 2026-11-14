@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.1651
+// @version            2026.11.14.1653
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8482,8 +8482,8 @@
 				})
 			})).filter((category) => category.engines.length));
 			function hidesOpenAction(engine) {
-				if (engine.action !== "open" || isContextAction.value || !isSelectSearch.value) return false;
-				return !findKeywordUrl(selectionText.value);
+				if (engine.action !== "open" || isContextAction.value) return false;
+				return !findKeywordUrl(actionHintHit.value.keyword);
 			}
 			function getCurrentKeyword() {
 				if (isSelectSearch.value) return selectionText.value;
