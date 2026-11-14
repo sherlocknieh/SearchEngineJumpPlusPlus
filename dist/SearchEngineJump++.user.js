@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.2017
+// @version            2026.11.14.2205
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8168,6 +8168,7 @@
 			const left = ref(supportsAnchorPositioning ? "" : "0px");
 			const listPosition = ref("fixed");
 			const halfWidth = ref("64px");
+			const anchorMode = ref(supportsAnchorPositioning);
 			const pointer = {
 				x: -1,
 				y: -1
@@ -8204,6 +8205,23 @@
 				if (!path) return true;
 				return path.includes(trigger);
 			}
+			const TRANSFORM_PROPS = [
+				"transform",
+				"translate",
+				"rotate",
+				"scale"
+			];
+			function hasTransformedAncestor(el) {
+				for (let node = el; node; node = node.parentElement ?? node.host ?? null) {
+					if (node.nodeType !== Node.ELEMENT_NODE) continue;
+					const style = getComputedStyle(node);
+					if (TRANSFORM_PROPS.some((prop) => style[prop] && style[prop] !== "none")) return true;
+				}
+				return false;
+			}
+			function refreshAnchorMode() {
+				anchorMode.value = supportsAnchorPositioning && !hasTransformedAncestor(triggerEl.value);
+			}
 			function getPositioningMode() {
 				const trigger = triggerEl.value;
 				if (!trigger) return "fixed";
@@ -8217,7 +8235,7 @@
 				const trigger = triggerEl.value;
 				const list = listEl.value;
 				if (!trigger || !list) return;
-				if (supportsAnchorPositioning) {
+				if (anchorMode.value) {
 					listPosition.value = "fixed";
 					top.value = "";
 					left.value = "";
@@ -8254,7 +8272,7 @@
 			let pageListenersOn = false;
 			function onPageViewportChange(event) {
 				if (!shown.value) return;
-				if (supportsAnchorPositioning) {
+				if (anchorMode.value) {
 					if (event.type === "resize") measureAndPosition();
 					return;
 				}
@@ -8285,6 +8303,7 @@
 				if (!triggerEl.value) return;
 				if (openCategory && openCategory !== hide) openCategory();
 				openCategory = hide;
+				refreshAnchorMode();
 				shown.value = true;
 				setPageListeners(true);
 				await nextTick();
@@ -8423,11 +8442,11 @@
 				}, null, 8, _hoisted_4$8)) : __props.compact ? (openBlock(), createElementBlock("span", _hoisted_5$8, toDisplayString(glyph.value), 1)) : createCommentVNode("", true)])) : createCommentVNode("", true), !__props.compact ? (openBlock(), createElementBlock("span", _hoisted_6$6, toDisplayString(__props.name), 1)) : createCommentVNode("", true)], 46, _hoisted_1$9), (openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [createBaseVNode("div", {
 					ref_key: "listEl",
 					ref: listEl,
-					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": unref(supportsAnchorPositioning) }]),
+					class: normalizeClass(["sej-drop-list", { "sej-drop-list-anchored": anchorMode.value }]),
 					style: normalizeStyle({
 						display: shown.value ? "block" : "none",
 						position: listPosition.value,
-						positionAnchor: unref(supportsAnchorPositioning) ? anchorId : void 0,
+						positionAnchor: anchorMode.value ? anchorId : void 0,
 						"--sej-half-width": halfWidth.value,
 						top: top.value,
 						left: left.value,

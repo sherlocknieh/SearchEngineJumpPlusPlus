@@ -150,6 +150,9 @@ src/main.js                 只做装配
 - `composables/useEventIsolation.js`：面板内的指针/键盘事件在 mask 处截断，避免触发页面自身监听器
 - 需要监听 document 时注意：阴影事件会重定向，用 `e.composedPath()`；面板已截断冒泡，必要时用捕获阶段
 - 判断事件是否属于 UI 内用 `isEventInsideUi(el, e)`：下拉面板 Teleport 到 `#sej-drop-lists`，不在 `el` 子树内，只能按 Shadow Root 归属判断
+- 分类下拉面板定位：`EngineCategory.vue` 优先用 CSS Anchor Positioning（`anchor()` + `position-try-fallbacks`），
+  但触发项到文档根之间只要有 `transform`/`translate` 等变换就退回 JS 坐标计算——Firefox 解析 `anchor()`
+  会忽略祖先变换，面板整体偏移（划词条靠内联 `translateX(-50%)` 居中，必走 JS 分支）
 
 ## UI 状态与提示
 

@@ -38,8 +38,8 @@ const showSearchAll = computed(() => props.engines.some((engine) => engine.url))
 // 首个引擎没有图标时用分类名首字兜底，避免紧凑模式下分类不可见
 const glyph = computed(() => Array.from(props.name)[0] || '');
 
-// 支持 CSS Anchor Positioning 时，面板位置完全交给浏览器；
-// 否则回退到下面的 JS 坐标计算。
+// 浏览器支持 CSS Anchor Positioning 时，面板位置可以交给浏览器；
+// 实际用不用还要看锚点所处的坐标系，见 refreshAnchorMode。
 const supportsAnchorPositioning = Boolean(
   typeof CSS !== 'undefined' &&
   CSS.supports?.('position-anchor: --sej-anchor') &&
@@ -66,6 +66,8 @@ const top = ref(supportsAnchorPositioning ? '' : '-10000px');
 const left = ref(supportsAnchorPositioning ? '' : '0px');
 const listPosition = ref('fixed');
 const halfWidth = ref('64px');
+// 本次展开是否交给 CSS 锚点定位，决定见 refreshAnchorMode
+const anchorMode = ref(supportsAnchorPositioning);
 
 const pointer = { x: -1, y: -1 };
 // 点击收起（再次点击固定项、点开引擎）后指针通常仍停在触发项上，
@@ -130,6 +132,26 @@ function isPointerOverTrigger(path) {
   return path.includes(trigger);
 }
 
+// 触发项到文档根之间是否有 transform/translate 之类的变换。
+// 祖先带变换时 Firefox 仍按未变换的坐标解析 anchor()，面板会整体偏移，
+// 这种坐标系只能走 JS 坐标计算。
+const TRANSFORM_PROPS = ['transform', 'translate', 'rotate', 'scale'];
+
+function hasTransformedAncestor(el) {
+  for (let node = el; node; node = node.parentElement ?? node.host ?? null) {
+    if (node.nodeType !== Node.ELEMENT_NODE) continue;
+    const style = getComputedStyle(node);
+    if (TRANSFORM_PROPS.some((prop) => style[prop] && style[prop] !== 'none')) return true;
+  }
+  return false;
+}
+
+// 每次展开前判断能不能把位置交给浏览器：划词条靠内联 translateX(-50%) 居中，
+// 取不到正确坐标，只有变换之外的场景才用锚点定位
+function refreshAnchorMode() {
+  anchorMode.value = supportsAnchorPositioning && !hasTransformedAncestor(triggerEl.value);
+}
+
 // 正常文档流里让面板相对 Shadow 宿主做 absolute 定位，页面滚动时由浏览器
 // 天然跟随跳转条；划词条或站点规则使容器 fixed/sticky 时才退回视口定位。
 function getPositioningMode() {
@@ -148,7 +170,7 @@ function measureAndPosition() {
   const list = listEl.value;
   if (!trigger || !list) return;
 
-  if (supportsAnchorPositioning) {
+  if (anchorMode.value) {
     // 位置由 CSS anchor()/position-try 计算，这里只同步用于视口钳制的半宽
     listPosition.value = 'fixed';
     top.value = '';
@@ -207,7 +229,7 @@ let pageListenersOn = false;
 
 function onPageViewportChange(event) {
   if (!shown.value) return;
-  if (supportsAnchorPositioning) {
+  if (anchorMode.value) {
     // 位置由浏览器跟随，只有视口变化可能改变面板宽度时才重新量一次
     if (event.type === 'resize') measureAndPosition();
     return;
@@ -244,6 +266,8 @@ async function show() {
   // 同一时间只保留一个悬停展开的面板，避免多行布局下叠加
   if (openCategory && openCategory !== hide) openCategory();
   openCategory = hide;
+  // 先定好定位方式再显示，避免面板先按错误坐标系闪一帧
+  refreshAnchorMode();
   shown.value = true;
   setPageListeners(true);
   await nextTick();
@@ -420,12 +444,7 @@ onBeforeUnmount(() => {
           <path d="M9 4v6.5L6.5 13v2h11v-2L15 10.5V4" />
           <path d="M12 15v4.5" />
         </svg>
-        <img
-          v-else-if="firstIconSrc"
-          class="sej-category-icon-img"
-          :src="firstIconSrc"
-          alt=""
-        />
+        <img v-else-if="firstIconSrc" class="sej-category-icon-img" :src="firstIconSrc" alt="" />
         <!-- 紧凑模式没有引擎图标时用分类名首字兜底 -->
         <span v-else-if="compact" class="sej-category-glyph" aria-hidden="true">{{ glyph }}</span>
       </span>
@@ -436,11 +455,11 @@ onBeforeUnmount(() => {
       <div
         ref="listEl"
         class="sej-drop-list"
-        :class="{ 'sej-drop-list-anchored': supportsAnchorPositioning }"
+        :class="{ 'sej-drop-list-anchored': anchorMode }"
         :style="{
           display: shown ? 'block' : 'none',
           position: listPosition,
-          positionAnchor: supportsAnchorPositioning ? anchorId : undefined,
+          positionAnchor: anchorMode ? anchorId : undefined,
           '--sej-half-width': halfWidth,
           top,
           left,
