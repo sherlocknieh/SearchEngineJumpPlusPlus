@@ -161,6 +161,11 @@
         "action": "copy"
       },
       {
+        "name": "复制图片地址",
+        "url": "",
+        "action": "copyImageUrl"
+      },
+      {
         "name": "打开",
         "url": "",
         "action": "open"

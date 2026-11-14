@@ -257,9 +257,13 @@ async function onJump(engine) {
   if (isActionEngine(engine)) {
     const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
     if (ok) {
-      showToast(t(engine.action === 'copy' ? 'action.copied' : 'action.opened'));
+      showToast(
+        t(engine.action === 'open' ? 'action.opened' : 'action.copied'),
+      );
     } else {
-      showToast(t(engine.action === 'copy' ? 'action.copyFailed' : 'action.openFailed'));
+      showToast(
+        t(engine.action === 'open' ? 'action.openFailed' : 'action.copyFailed'),
+      );
     }
     return;
   }

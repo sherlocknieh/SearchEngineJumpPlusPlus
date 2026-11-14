@@ -31,7 +31,7 @@ const ICON_SELECT =
 
 // 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
 const initialAction =
-  props.initial.action === 'copy' || props.initial.action === 'open' ? props.initial.action : '';
+  ['copy', 'copyImageUrl', 'open'].includes(props.initial.action) ? props.initial.action : '';
 
 const form = reactive({
   name: props.initial.name || '',

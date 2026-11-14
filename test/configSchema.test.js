@@ -124,6 +124,7 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions).toEqual([
       { name: '复制', action: 'copy' },
       { name: '打开', url: 'https://ignored.test', action: 'open' },
+      { name: '复制图片地址', url: '', action: 'copyImageUrl' },
     ]);
   });
 
@@ -137,7 +138,11 @@ describe('normalizeConfig', () => {
     );
     expect(result.engineCategories[0].slice(0, 2)).toEqual(['操作', 'actions']);
     expect(result.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
-    expect(result.engineList.actions.map((engine) => engine.action)).toEqual(['copy', 'open']);
+    expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
+      'copy',
+      'copyImageUrl',
+      'open',
+    ]);
   });
 
   it('保留内置分类的隐藏状态与自定义名称，只补缺失动作', () => {
@@ -161,6 +166,7 @@ describe('normalizeConfig', () => {
     ]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
+      { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '打开', url: '', action: 'open' },
     ]);
   });
@@ -200,7 +206,11 @@ describe('normalizeConfig', () => {
       },
       defaults,
     );
-    expect(result.engineList.actions.map((engine) => engine.name)).toEqual(['打开', '我的复制']);
+    expect(result.engineList.actions.map((engine) => engine.name)).toEqual([
+      '打开',
+      '我的复制',
+      '复制图片地址',
+    ]);
   });
 
   it('缺少 engineList 时按分类键回退默认引擎', () => {

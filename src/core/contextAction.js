@@ -15,7 +15,11 @@ export const LONG_PRESS_MOVE_TOLERANCE = 10;
 /** 动作引擎在各情景下的悬停提示文案；text 为划词条，input 为站点内嵌条的搜索框 */
 const CONTEXT_ACTION_HINTS = {
   link: { copy: 'action.hintCopyLink', open: 'action.hintOpenLink' },
-  image: { copy: 'action.hintCopyImage', open: 'action.hintOpenImage' },
+  image: {
+    copy: 'action.hintCopyImage',
+    copyImageUrl: 'action.hintCopyImageUrl',
+    open: 'action.hintOpenImage',
+  },
   text: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
   input: { copy: 'action.hintCopyKeyword', open: 'action.hintOpenLink' },
 };
@@ -85,6 +89,7 @@ export function getContextEngines(settingData, mode) {
 export function contextActionTarget(mode, action, hit = {}) {
   const url = hit.url || '';
   const keyword = hit.keyword || url;
+  if (action === 'copyImageUrl') return url || keyword;
   if (action !== 'copy') return url || keyword;
   if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
   // 纯图片链接没有文字，关键词就是地址，此时只复制地址
