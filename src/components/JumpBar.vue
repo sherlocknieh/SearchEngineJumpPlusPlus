@@ -173,7 +173,7 @@ function contextActionName(engine, target) {
   return key ? t(key) : engine?.name || '';
 }
 
-/** 按单一目标生成操作条目；图片+链接时直接拼接两次结果 */
+/** 按单一目标生成操作条目；图片+链接时按链接、图片顺序拼接结果 */
 function buildActionEngines(target, hit) {
   return (data.engineList[BUILTIN_CATEGORY_KEY] || [])
     .filter((engine) => !engine.disable && engine.action)
@@ -225,7 +225,7 @@ const categories = computed(() => {
           contextMode.value === 'image' && linkActionHit.value
             ? buildActionEngines('link', linkActionHit.value)
             : [];
-        engines = primaryEngines.concat(linkEngines);
+        engines = linkEngines.concat(primaryEngines);
       }
 
       return { name: localizeCategoryName(name, key), key, engines };
