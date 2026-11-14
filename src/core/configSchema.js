@@ -39,10 +39,10 @@ export function createDefaultConfig() {
     selectSearchInInput: true,
     // 划词条默认贴在选区旁，而不是从页面顶部滑出
     selectionFollowPointer: true,
-    // 划词条默认只显示图标，不显示文字
-    selectionCompact: true,
-    // 划词后默认只露一个图标，指针悬浮时展开整条搜索条
-    selectionIcon: true,
+    // 划词条默认完整显示，不隐藏文字
+    selectionCompact: false,
+    // 划词条默认整条展开，不先收起成图标
+    selectionIcon: false,
     // 搜索条默认居中显示，优先于站点的横向对齐
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开

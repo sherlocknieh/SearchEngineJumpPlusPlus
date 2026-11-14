@@ -35,12 +35,12 @@ describe('createDefaultConfig', () => {
     expect(config.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
   });
 
-  it('划词相关选项默认全部开启', () => {
+  it('划词触发与跟随选区默认开启，紧凑与折叠默认关闭', () => {
     const config = createDefaultConfig();
     expect(config.selectSearchInInput).toBe(true);
     expect(config.selectionFollowPointer).toBe(true);
-    expect(config.selectionCompact).toBe(true);
-    expect(config.selectionIcon).toBe(true);
+    expect(config.selectionCompact).toBe(false);
+    expect(config.selectionIcon).toBe(false);
   });
 
   it('内置搜图分类，长按搜图无需开关', () => {
