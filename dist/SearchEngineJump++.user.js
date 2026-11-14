@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.1644
+// @version            2026.11.14.1651
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5897,11 +5897,12 @@
 			"engine.requiredAction": "标题必填",
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
-			"action.hintCopyLink": "复制为 Markdown 链接",
+			"action.hintCopyLink": "复制链接",
 			"action.hintOpenLink": "打开链接",
 			"action.hintCopyImage": "复制图片",
 			"action.hintOpenImage": "打开图片",
 			"action.hintCopyText": "复制选中的文字",
+			"action.hintCopyKeyword": "复制关键词",
 			"action.hintWithTarget": "{action}：{target}",
 			"action.copyFailed": "没有可复制的内容",
 			"action.openFailed": "无法打开该内容",
@@ -6042,6 +6043,7 @@
 			"action.hintCopyImage": "Copy image",
 			"action.hintOpenImage": "Open image",
 			"action.hintCopyText": "Copy selected text",
+			"action.hintCopyKeyword": "Copy keyword",
 			"action.hintWithTarget": "{action}: {target}",
 			"action.copyFailed": "Nothing to copy",
 			"action.openFailed": "Unable to open this content",
@@ -7302,6 +7304,10 @@
 		text: {
 			copy: "action.hintCopyText",
 			open: "action.hintOpenLink"
+		},
+		input: {
+			copy: "action.hintCopyKeyword",
+			open: "action.hintOpenLink"
 		}
 	};
 	var CONTEXT_MODES = {
@@ -7340,7 +7346,7 @@
 		return CONTEXT_ACTION_HINTS[mode]?.[action] || "";
 	}
 	function hintTargetText(mode, action, hit) {
-		if (mode === "text") return (action === "copy" ? hit.keyword : hit.url) || "";
+		if (mode === "text" || mode === "input") return (action === "copy" ? hit.keyword : hit.url) || "";
 		const target = contextActionTarget(mode, action, hit);
 		return typeof target === "string" ? target : target?.text || "";
 	}
@@ -8422,6 +8428,7 @@
 			const iconOpenWidth = ref(0);
 			const iconOpenHeight = ref(0);
 			const selectionText = ref("");
+			const searchInputKeyword = ref("");
 			const barVisible = ref(false);
 			const containerEl = ref(null);
 			const scrollEl = ref(null);
@@ -8452,22 +8459,25 @@
 					keyword: contextAction.keyword,
 					url: contextAction.url
 				};
-				if (!isSelectSearch.value) return null;
-				return {
+				if (isSelectSearch.value) return {
 					keyword: selectionText.value,
 					url: findKeywordUrl(selectionText.value) || ""
+				};
+				const keyword = searchInputKeyword.value;
+				return {
+					keyword,
+					url: findKeywordUrl(keyword) || ""
 				};
 			});
 			const categories = computed(() => data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => ({
 				name: localizeCategoryName(name, key),
 				key,
 				engines: (data.engineList[key] || []).filter((engine) => !engine.disable && !hidesOpenAction(engine)).map((engine) => {
-					const hit = actionHintHit.value;
-					if (!engine.action || !hit) return engine;
-					const mode = isContextAction.value ? contextMode.value : "text";
+					if (!engine.action) return engine;
+					const mode = isContextAction.value ? contextMode.value : isSelectSearch.value ? "text" : "input";
 					return {
 						...engine,
-						hint: actionEngineHint(mode, engine.action, hit, t)
+						hint: actionEngineHint(mode, engine.action, actionHintHit.value, t)
 					};
 				})
 			})).filter((category) => category.engines.length));
@@ -8478,6 +8488,9 @@
 			function getCurrentKeyword() {
 				if (isSelectSearch.value) return selectionText.value;
 				return extractKeyword(inputTarget);
+			}
+			function syncSearchInputKeyword() {
+				searchInputKeyword.value = extractKeyword(inputTarget);
 			}
 			function getActionTarget(engine) {
 				if (isContextAction.value) return contextActionTarget(contextAction.mode, engine?.action, contextAction);
@@ -8828,6 +8841,11 @@
 				if (!render) return;
 				ready.value = true;
 				if (isSelectSearch.value) onSelectionChange();
+				if (!isFloat) {
+					syncSearchInputKeyword();
+					document.addEventListener("input", syncSearchInputKeyword, true);
+					document.addEventListener("change", syncSearchInputKeyword, true);
+				}
 				if (isContextAction.value) {
 					refreshAnchor(null);
 					showFloatBar();
@@ -8865,6 +8883,8 @@
 				}
 			});
 			onBeforeUnmount(() => {
+				document.removeEventListener("input", syncSearchInputKeyword, true);
+				document.removeEventListener("change", syncSearchInputKeyword, true);
 				document.removeEventListener("pointerdown", onContextModePointerDown, true);
 				document.removeEventListener("keydown", onOverlayKeydown, true);
 				document.removeEventListener("mousemove", onIconMouseMove);

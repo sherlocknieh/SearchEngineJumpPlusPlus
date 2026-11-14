@@ -130,6 +130,9 @@ describe('actionEngineHint', () => {
     expect(actionEngineHint('text', 'open', hit, t)).toBe(
       'action.hintOpenLink：https://site.test/a',
     );
+    expect(actionEngineHint('input', 'copy', hit, t)).toBe(
+      'action.hintCopyKeyword：示例标题',
+    );
   });
 
   it('没有目标内容时只保留动作说明', () => {

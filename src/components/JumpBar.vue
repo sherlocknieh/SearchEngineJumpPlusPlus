@@ -98,6 +98,8 @@ const iconOpenWidth = ref(0);
 // 展开后的整条高度：收起态据此把图标下移到整条的中心，两者天然同心
 const iconOpenHeight = ref(0);
 const selectionText = ref('');
+// 内嵌条的关键词来自站点搜索框：跟随输入事件同步，悬停提示才能显示当前内容
+const searchInputKeyword = ref('');
 const barVisible = ref(false);
 const containerEl = ref(null);
 const scrollEl = ref(null);
@@ -146,12 +148,14 @@ const barStyle = computed(() => {
   return style;
 });
 
-// 动作引擎这次实际复制/打开的内容：上下文条用命中的目标，划词条用选区；
-// 站点内嵌条的复制对象是输入框里的关键词，随打字变化，不做提示
+// 动作引擎这次实际复制/打开的内容：上下文条用命中的目标，划词条用选区，内嵌条用搜索框关键词
 const actionHintHit = computed(() => {
   if (isContextAction.value) return { keyword: contextAction.keyword, url: contextAction.url };
-  if (!isSelectSearch.value) return null;
-  return { keyword: selectionText.value, url: findKeywordUrl(selectionText.value) || '' };
+  if (isSelectSearch.value) {
+    return { keyword: selectionText.value, url: findKeywordUrl(selectionText.value) || '' };
+  }
+  const keyword = searchInputKeyword.value;
+  return { keyword, url: findKeywordUrl(keyword) || '' };
 });
 
 const categories = computed(() =>
@@ -167,10 +171,13 @@ const categories = computed(() =>
         .filter((engine) => !engine.disable && !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
         .map((engine) => {
-          const hit = actionHintHit.value;
-          if (!engine.action || !hit) return engine;
-          const mode = isContextAction.value ? contextMode.value : 'text';
-          return { ...engine, hint: actionEngineHint(mode, engine.action, hit, t) };
+          if (!engine.action) return engine;
+          const mode = isContextAction.value
+            ? contextMode.value
+            : isSelectSearch.value
+              ? 'text'
+              : 'input';
+          return { ...engine, hint: actionEngineHint(mode, engine.action, actionHintHit.value, t) };
         }),
     }))
     .filter((category) => category.engines.length),
@@ -185,6 +192,11 @@ function hidesOpenAction(engine) {
 function getCurrentKeyword() {
   if (isSelectSearch.value) return selectionText.value;
   return extractKeyword(inputTarget);
+}
+
+/** 内嵌条的关键词随搜索框输入变化，动作引擎的提示据此展示将要复制/打开的内容 */
+function syncSearchInputKeyword() {
+  searchInputKeyword.value = extractKeyword(inputTarget);
 }
 
 /** 动作引擎的目标：上下文操作条按命中类型决定复制内容与打开地址 */
@@ -701,6 +713,12 @@ onMounted(async () => {
 
   // 划词条可能是在用户划词后才延迟挂载的，先把当前选区同步进来
   if (isSelectSearch.value) onSelectionChange();
+  // 内嵌条：搜索框里的关键词就是动作引擎的目标，跟着输入事件更新提示内容
+  if (!isFloat) {
+    syncSearchInputKeyword();
+    document.addEventListener('input', syncSearchInputKeyword, true);
+    document.addEventListener('change', syncSearchInputKeyword, true);
+  }
   // 上下文模式下由长按触发，挂载后按图标模式量好展开尺寸再显示
   if (isContextAction.value) {
     refreshAnchor(null);
@@ -754,6 +772,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  document.removeEventListener('input', syncSearchInputKeyword, true);
+  document.removeEventListener('change', syncSearchInputKeyword, true);
   document.removeEventListener('pointerdown', onContextModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
   document.removeEventListener('mousemove', onIconMouseMove);
