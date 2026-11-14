@@ -45,7 +45,6 @@ import {
   contextActionHintKey,
   contextActionTarget,
   contextLinkHit,
-  getContextActionEngines,
 } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
@@ -168,15 +167,27 @@ const actionHintHit = computed(() => {
 const linkActionHit = computed(() =>
   isContextAction.value ? contextLinkHit(contextAction) : null,
 );
-// 图片包在链接里时，「操作」分类内部同时提供图片动作与链接动作
-const hasLinkActions = computed(
-  () => Boolean(linkActionHit.value) && contextMode.value === 'image',
-);
-
 /** 动作名称直接说明操作与作用对象（如「复制图片」「复制选中的文字」） */
 function contextActionName(engine, target) {
   const key = engine?.action ? contextActionHintKey(target, engine.action) : '';
   return key ? t(key) : engine?.name || '';
+}
+
+/** 按单一目标生成操作条目；图片+链接时直接拼接两次结果 */
+function buildActionEngines(target, hit) {
+  return (data.engineList[BUILTIN_CATEGORY_KEY] || [])
+    .filter((engine) => !engine.disable && engine.action)
+    .filter((engine) => target !== 'link' || engine.action !== 'copyImageUrl')
+    .map((engine) => ({
+      ...engine,
+      // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
+      ...(target === 'image' && engine.action === 'copy'
+        ? { favicon: hit.url, faviconData: '' }
+        : {}),
+      name: contextActionName(engine, target),
+      contextTarget: target,
+      hint: actionTargetHint(target, engine.action, hit),
+    }));
 }
 
 const categories = computed(() => {
@@ -193,7 +204,7 @@ const categories = computed(() => {
           ? 'text'
           : 'input';
       const contextActions = key === BUILTIN_CATEGORY_KEY && isContextAction.value;
-      const engines = (data.engineList[key] || [])
+      let engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
         .map((engine) => {
@@ -206,21 +217,15 @@ const categories = computed(() => {
         });
 
       if (contextActions) {
-        const actionHit = (engine) =>
-          engine.contextTarget === 'link' ? linkActionHit.value : contextAction;
-        engines.splice(
-          0,
-          engines.length,
-          ...getContextActionEngines(data, contextMode.value, hasLinkActions.value).map((engine) => ({
-            ...engine,
-            name: contextActionName(engine, engine.contextTarget),
-            hint: actionTargetHint(
-              engine.contextTarget,
-              engine.action,
-              actionHit(engine),
-            ),
-          })),
-        );
+        const primaryEngines =
+          contextMode.value === 'image'
+            ? buildActionEngines('image', contextAction)
+            : buildActionEngines('link', contextAction);
+        const linkEngines =
+          contextMode.value === 'image' && linkActionHit.value
+            ? buildActionEngines('link', linkActionHit.value)
+            : [];
+        engines = primaryEngines.concat(linkEngines);
       }
 
       return { name: localizeCategoryName(name, key), key, engines };
