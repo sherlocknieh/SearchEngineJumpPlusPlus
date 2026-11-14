@@ -55,6 +55,35 @@ describe('resolveContextHit', () => {
     expect(resolveContextHit(document.querySelector('a'), () => false)).toBeNull();
     expect(resolveContextHit(document.querySelector('p'))).toBeNull();
   });
+
+  it('按下目标被标题浮层覆盖时，仍按坐标同时给出图片与外层链接', () => {
+    const figure = document.createElement('figure');
+    const link = document.createElement('a');
+    link.href = 'https://site.test/page';
+    const image = document.createElement('img');
+    image.setAttribute('src', 'https://cdn.test/a.png');
+    image.getBoundingClientRect = () => ({
+      width: 120,
+      height: 120,
+      top: 0,
+      left: 0,
+      right: 120,
+      bottom: 120,
+      x: 0,
+      y: 0,
+    });
+    link.appendChild(image);
+    const overlay = document.createElement('a');
+    overlay.href = 'https://site.test/page';
+    overlay.textContent = '标题';
+    figure.append(link, overlay);
+    document.body.appendChild(figure);
+
+    const hit = resolveContextHit(overlay, () => true, { x: 50, y: 50 });
+    expect(hit.mode).toBe('image');
+    expect(hit.url).toBe('https://cdn.test/a.png');
+    expect(hit.link).toEqual({ url: 'https://site.test/page', text: '标题' });
+  });
 });
 
 describe('contextLinkHit', () => {

@@ -80,4 +80,52 @@ describe('resolveImageUrl', () => {
     card.appendChild(el);
     expect(resolveImageUrl(el)).toBe('https://cdn.test/cover.jpg');
   });
+
+  it('按下的是盖住图片的链接或浮层时，按坐标找到下面的图片', () => {
+    const figure = document.createElement('figure');
+    const link = document.createElement('a');
+    link.href = 'https://site.test/page';
+    const image = img({ src: 'https://cdn.test/a.png' });
+    image.getBoundingClientRect = () => ({
+      width: 120,
+      height: 120,
+      top: 0,
+      left: 0,
+      right: 120,
+      bottom: 120,
+      x: 0,
+      y: 0,
+    });
+    link.appendChild(image);
+    const overlay = document.createElement('a');
+    overlay.href = 'https://site.test/page';
+    overlay.textContent = '标题';
+    figure.append(link, overlay);
+    document.body.appendChild(figure);
+
+    // 链接本身与盖在上面的标题链接都能按坐标找到图片
+    expect(resolveImageUrl(link, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
+    expect(resolveImageUrl(overlay, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
+    // 坐标不在图片范围内时不去猜
+    expect(resolveImageUrl(overlay, undefined, { x: 200, y: 200 })).toBe('');
+  });
+
+  it('按坐标兜底时忽略图标大小的小图', () => {
+    const card = document.createElement('div');
+    const icon = img({ src: 'https://cdn.test/icon.png' });
+    icon.getBoundingClientRect = () => ({
+      width: 16,
+      height: 16,
+      top: 0,
+      left: 0,
+      right: 16,
+      bottom: 16,
+      x: 0,
+      y: 0,
+    });
+    const inner = document.createElement('span');
+    card.append(icon, inner);
+    document.body.appendChild(card);
+    expect(resolveImageUrl(inner, undefined, { x: 8, y: 8 })).toBe('');
+  });
 });

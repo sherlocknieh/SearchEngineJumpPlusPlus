@@ -81,8 +81,9 @@ src/main.js                 只做装配
   图片有可用引擎时，链接的复制/打开另作一组「链接操作」。
   链接只接受 http(s)、mailto、tel，页内锚点与 `javascript:` 不接管
 - 判定：`core/contextAction.js` 汇总模式配置与长按判定（`isLongPressMove` 位移超阈值取消）；
-  图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`，
-  再向上 4 层找 `background-image`），链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
+  图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`；
+  按下目标不是 img 时按坐标向上找被链接/标题浮层盖住的图片，再向上 4 层找 `background-image`），
+  链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；「链接操作」组同样取「操作」分类，只是目标换成外层链接；

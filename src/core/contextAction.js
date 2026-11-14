@@ -34,10 +34,11 @@ export const CONTEXT_MODES = {
  * 图片作为主模式交给「搜图」，外层链接另存一份供「链接操作」使用，两者互不覆盖。
  * @param {Element | null} target 按下事件的目标元素
  * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
+ * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被链接/浮层盖住的图片
  * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string} | null} | null}
  */
-export function resolveContextHit(target, hasEngines = () => true) {
-  const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target) : null;
+export function resolveContextHit(target, hasEngines = () => true, point = null) {
+  const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target, undefined, point) : null;
   const link = hasEngines('link') ? CONTEXT_MODES.link.resolveHit(target) : null;
   if (image) {
     return { mode: 'image', ...image, link: link ? { url: link.url, text: link.text } : null };

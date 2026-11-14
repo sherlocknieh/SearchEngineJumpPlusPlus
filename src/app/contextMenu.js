@@ -43,8 +43,8 @@ export function armContextMenu(ensureBoot) {
   }
 
   /** 图片优先作为主模式；包着图片的链接同时记下，供「链接操作」使用 */
-  function resolveHit(target) {
-    return resolveContextHit(target, hasEngines);
+  function resolveHit(target, point) {
+    return resolveContextHit(target, hasEngines, point);
   }
 
   function hasEngines(mode) {
@@ -55,7 +55,7 @@ export function armContextMenu(ensureBoot) {
     // 只处理主键/单指；右键走 onContextMenu，与原生菜单并存
     if (e.button !== 0 || !e.isPrimary) return;
 
-    const hit = resolveHit(e.target);
+    const hit = resolveHit(e.target, { x: e.clientX, y: e.clientY });
     if (!hit) return;
 
     startX = e.clientX;
@@ -108,7 +108,7 @@ export function armContextMenu(ensureBoot) {
     // 跳转条自身的右键交给浏览器，避免在浮层里再弹一次
     const path = e.composedPath?.() || [];
     if (path.some((node) => isOwnHostNode(node))) return;
-    const hit = resolveHit(e.target);
+    const hit = resolveHit(e.target, { x: e.clientX, y: e.clientY });
     if (hit) showContextAction(hit);
   }
 
