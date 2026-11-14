@@ -16,7 +16,7 @@ import path from 'node:path';
 import { Script } from 'node:vm';
 
 const root = path.resolve(import.meta.dirname, '..');
-const bundlePath = path.join(root, '.dev', 'SearchEngineJump++.user.js');
+const bundlePath = path.join(root, '.dev', 'build', 'SearchEngineJump++.user.js');
 const HEADER_END = '// ==/UserScript==';
 
 function readPort() {

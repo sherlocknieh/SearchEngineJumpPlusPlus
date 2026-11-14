@@ -13,7 +13,7 @@ pnpm lint           # ESLint
 pnpm test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
 pnpm release "feat: xxx" --push   # 每次提交即发布：升版本 → lint → test → build → commit → tag → push
 
-# 版本号由 scripts/release.mjs 按系统时间生成，不要手改 vite.config.js
+# 版本号由 .dev/release.mjs 按系统时间生成，不要手改 vite.config.js
 ```
 
 ## 运行链路（启动 → 挂载）
@@ -156,7 +156,7 @@ src/main.js                 只做装配
 | 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                  |
 | 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                             |
 | 改长按/右键操作    | `app/contextMenu.js` → `core/contextAction.js` → `core/imageSearch.js` / `core/linkAction.js` → `JumpBar.vue` |
-| 发布                | `scripts/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
+| 发布                | `.dev/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
 
 ## 测试索引（`test/`，纯 JS）
 
@@ -179,7 +179,7 @@ src/main.js                 只做装配
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
 - `pnpm dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
-  （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/`，
+  （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/build/`，
   由脚本管理器拉取执行，页面不加载外部脚本
 - 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
 - 发布前会跑 lint/test，改完先本地 `pnpm test`

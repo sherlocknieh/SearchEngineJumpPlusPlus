@@ -9,7 +9,7 @@ pnpm release "feat: 改动说明"          # 升版本号 -> lint -> test -> bui
 pnpm release "fix: 改动说明" --push    # 额外推送分支与标签到 origin
 ```
 
-脚本 [scripts/release.mjs](../scripts/release.mjs) 会依次完成：
+脚本 [.dev/release.mjs](../.dev/release.mjs) 会依次完成：
 
 1. **生成版本号**：按系统本地日期时间写入 [vite.config.js](../vite.config.js) 的 `userscript.version`，格式为 `YYYY.MM.DD.HHmm`（如 `2026.10.29.1547`）；同一分钟重复发布或系统时间回拨时自动顺延，保证递增。
 2. **校验**：执行 `pnpm lint` 与 `pnpm test`。

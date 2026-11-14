@@ -12,8 +12,8 @@ const devBundle = process.env.SEJ_DEV_BUNDLE === '1';
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
 export default defineConfig({
   build: {
-    // dist 里还有随源码提交的 images，只有独立输出目录 .dev 才能清空
-    outDir: devBundle ? '.dev' : 'dist',
+    // dist 里还有随源码提交的 images，只有独立输出目录 .dev/build 才能清空
+    outDir: devBundle ? '.dev/build' : 'dist',
     emptyOutDir: devBundle,
     ...(devBundle ? { minify: false } : {}),
   },
