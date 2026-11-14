@@ -41,7 +41,6 @@ import {
 import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY } from '../core/configData.js';
 import { findKeywordUrl } from '../core/engineUrl.js';
 import {
-  actionEngineHint,
   actionTargetHint,
   contextActionHintKey,
   contextActionTarget,
@@ -174,7 +173,7 @@ const hasLinkActions = computed(
   () => Boolean(linkActionHit.value) && contextMode.value === 'image',
 );
 
-/** 命中图片或链接时，动作名称直接说明操作与作用对象（如「复制图片」「打开链接」） */
+/** 动作名称直接说明操作与作用对象（如「复制图片」「复制选中的文字」） */
 function contextActionName(engine, target) {
   const key = engine?.action ? contextActionHintKey(target, engine.action) : '';
   return key ? t(key) : engine?.name || '';
@@ -187,22 +186,23 @@ const categories = computed(() => {
       isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
     )
     .map(([name, key]) => {
-      // 上下文操作条的「操作」分类：名称与提示都按命中的是图片还是链接决定
+      // 动作分类：名称与提示都按当前关键词的来源决定
+      const actionMode = isContextAction.value
+        ? contextMode.value
+        : isSelectSearch.value
+          ? 'text'
+          : 'input';
       const contextActions = key === BUILTIN_CATEGORY_KEY && isContextAction.value;
       const engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
         .map((engine) => {
           if (!engine.action) return engine;
-          if (contextActions) {
-            return {
-              ...engine,
-              name: contextActionName(engine, contextMode.value),
-              hint: actionTargetHint(contextMode.value, engine.action, actionHintHit.value),
-            };
-          }
-          const mode = isSelectSearch.value ? 'text' : 'input';
-          return { ...engine, hint: actionEngineHint(mode, engine.action, actionHintHit.value, t) };
+          return {
+            ...engine,
+            name: contextActionName(engine, actionMode),
+            hint: actionTargetHint(actionMode, engine.action, actionHintHit.value),
+          };
         });
 
       // 图片包在链接里时，链接的复制/打开沿用同一批动作配置追加在图片动作之后
