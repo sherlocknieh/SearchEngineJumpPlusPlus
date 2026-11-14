@@ -8,6 +8,7 @@
 ```bash
 pnpm dev            # 开发调试（浏览器打开 http://localhost:5173）
 pnpm dev:csp        # 严格 CSP 站点的调试（watch 构建 + 本地服务，管理器直连拉取产物）
+                    # 两者安装的用户脚本都叫 server:SearchEngineJump++，管理器里只留一条
 pnpm build          # 只重新构建 dist，不动版本号
 pnpm lint           # ESLint
 pnpm test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
@@ -32,7 +33,8 @@ src/main.js                 只做装配
 - **SPA 路由**：`app/urlChange.js` 监听 `urlchange`，规则未变且 `barMounted` 时不重建，只刷新 `settings.activeRule`。
 - **重启**：设置保存后 `core/appControl.js` → `lifecycle.restart()`（整棵 Vue 应用重建）。
 - **多实例**：开发版/正式版用不同 host id 共存，层叠偏移在 `core/shadowDom.js`；
-  同一版本被重复安装时（如 dev 与 dev:csp 并存），后启动的实例检测到同 id 宿主来自别的安装，直接跳过挂载。
+  调试脚本统一 `@name` 为 `server:SearchEngineJump++`，dev 与 dev:csp 共用一个安装位，
+  同一角色被两个实例同时运行时，后启动的实例检测到同 id 宿主来自别的安装，直接跳过挂载。
 - **划词条独立**：`float` 宿主是独立 Vue 应用，划词/长按操作模式只影响它，站点内嵌条保持原位。
 
 ## 设置数据链路

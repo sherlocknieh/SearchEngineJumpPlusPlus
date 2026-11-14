@@ -20,6 +20,7 @@
 
 - dev 版的注入方式与构建版不同：它往页面插入外部 module 脚本
   (`http://localhost:5173/__vite-plugin-monkey.entry.js`)。
+  管理器里装的是 `server:SearchEngineJump++`，和 `pnpm dev:csp` 同名，切换调试方式只会替换这一条。
   站点 CSP 的 `script-src` 不含该地址时浏览器会直接拒绝加载，脚本完全不运行
   （控制台报 `Loading the script ... violates the following Content Security Policy directive`）。
 
@@ -37,8 +38,8 @@
 
   1. 服务就绪后会自动用系统默认浏览器打开 `http://127.0.0.1:5180/install.user.js`
      （不是 VS Code 内部浏览器），脚本管理器接管后直接弹出安装框，
-     确认安装 `SearchEngineJump++ (dev)` 即可。
-     脚本名带 (dev)，与正式版共存；两者共用同一份配置，宿主 id 也不冲突。
+     确认安装 `server:SearchEngineJump++` 即可。
+     两套调试流程共用这个脚本名，管理器里只保留一条；它与正式版共存，共用同一份配置，宿主 id 也不冲突。
   2. 之后任意页面都会自动加载最新产物，代码改动会重建并整页刷新（替代 HMR）。
   3. 脚本管理器需允许 eval（Tampermonkey / Violentmonkey 默认允许）；
      把注入方式设成“页面上下文”会重新受站点 CSP 限制。

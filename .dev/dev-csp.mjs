@@ -17,7 +17,6 @@ import { Script } from 'node:vm';
 
 const root = path.resolve(import.meta.dirname, '..');
 const bundlePath = path.join(root, '.dev', 'build', 'SearchEngineJump++.user.js');
-const HEADER_END = '// ==/UserScript==';
 
 function readPort() {
   const flag = process.argv.indexOf('--port');
@@ -59,14 +58,6 @@ function readBundle() {
 
 function bundleHash(text) {
   return createHash('sha1').update(text).digest('hex').slice(0, 12);
-}
-
-/** 复用构建产物的 userscript 头，改名成 dev 版以便与正式版同时安装 */
-function devHeader(text) {
-  const end = text.indexOf(HEADER_END);
-  if (!text.startsWith('// ==UserScript==') || end < 0) return '';
-  const header = text.slice(0, end + HEADER_END.length);
-  return header.replace(/^\/\/ @name .*$/m, '// @name               SearchEngineJump++ (dev)');
 }
 
 /**
@@ -137,7 +128,7 @@ const installHtml = `<!DOCTYPE html>
   </head>
   <body>
     <h1>SearchEngineJump++ 调试脚本</h1>
-    <p>点击安装 <a href="/install.user.js">install.user.js</a>（脚本名为 SearchEngineJump++ (dev)，与正式版共存）。</p>
+    <p>点击安装 <a href="/install.user.js">install.user.js</a>（脚本名为 server:SearchEngineJump++，与正式版共存）。</p>
     <p>安装后任意页面都会加载最新构建产物，产物变化时整页刷新。</p>
   </body>
 </html>`;
@@ -169,7 +160,8 @@ const server = createServer(async (req, res) => {
     if (pathname === '/install.user.js') {
       const text = await readBundle();
       res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
-      res.end(`${devHeader(text)}\n\n${loaderSource()}`);
+      // 构建时已写入调试用的 @name，这里只需拼上加载器
+      res.end(`${text}\n\n${loaderSource()}`);
       return;
     }
     if (pathname === '/sej.dev.js' || pathname === '/__hash') {

@@ -25,9 +25,10 @@ export default defineConfig({
       server: { mountGmApi: true }, // dev 下挂载 GM_* 全局变量, 使调试时的表现和构建版一致
       build: { fileName: 'SearchEngineJump++.user.js' },
       userscript: {
-        name: 'SearchEngineJump++',
+        // dev 服务下插件会自动加 `server:` 前缀；调试构建显式同名，两套调试流程只占一条安装位
+        name: devBundle ? 'server:SearchEngineJump++' : 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.14.1653',
+        version: '2026.11.14.1658',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': 'Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。',
