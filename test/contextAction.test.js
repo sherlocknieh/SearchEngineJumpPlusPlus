@@ -9,6 +9,7 @@ import {
   contextActionTarget,
   contextCategoryKey,
   contextLinkHit,
+  getContextActionEngines,
   getContextEngines,
   isLongPressMove,
   resolveContextHit,
@@ -135,6 +136,49 @@ describe('getContextEngines', () => {
       'image',
     );
     expect(engines.map((engine) => engine.name)).toEqual(['A']);
+  });
+
+  describe('getContextActionEngines', () => {
+    const settingData = {
+      engineList: {
+        image: [{ name: '搜图', url: 'https://image.test/?url=%s' }],
+        actions: [
+          { name: '复制', action: 'copy' },
+          { name: '复制图片地址', action: 'copyImageUrl' },
+          { name: '打开', action: 'open' },
+        ],
+      },
+    };
+
+    it('仅图片时只提供图片动作', () => {
+      expect(getContextActionEngines(settingData, 'image').map((engine) => engine.contextTarget)).toEqual([
+        'image',
+        'image',
+        'image',
+      ]);
+    });
+
+    it('仅链接时只提供链接动作', () => {
+      expect(getContextActionEngines(settingData, 'link').map((engine) => engine.contextTarget)).toEqual([
+        'link',
+        'link',
+      ]);
+    });
+
+    it('图片加链接时按图片动作、链接动作排列且不重复图片地址', () => {
+      expect(
+        getContextActionEngines(settingData, 'image', true).map((engine) => [
+          engine.action,
+          engine.contextTarget,
+        ]),
+      ).toEqual([
+        ['copy', 'image'],
+        ['copyImageUrl', 'image'],
+        ['open', 'image'],
+        ['copy', 'link'],
+        ['open', 'link'],
+      ]);
+    });
   });
 
   it('链接模式取操作分类下启用的复制/打开动作', () => {

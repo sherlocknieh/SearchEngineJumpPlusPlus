@@ -80,6 +80,20 @@ export function getContextEngines(settingData, mode) {
 }
 
 /**
+ * 按三种命中形态生成「操作」条目：仅图片、仅链接、图片+外层链接。
+ * 图片专用动作永远只属于图片目标，链接动作只复制/打开外层链接。
+ */
+export function getContextActionEngines(settingData, mode, hasLink = false) {
+  const image = mode === 'image';
+  const modes = image && hasLink ? ['image', 'link'] : [mode];
+  return modes.flatMap((targetMode) =>
+    getContextEngines(settingData, 'link')
+      .filter((engine) => targetMode !== 'link' || engine.action !== 'copyImageUrl')
+      .map((engine) => ({ ...engine, contextTarget: targetMode })),
+  );
+}
+
+/**
  * 命中内容交给动作引擎的目标：链接复制为 Markdown 链接，图片复制图片本身；打开统一用地址。
  * @param {'image' | 'link'} mode 命中类型
  * @param {'copy' | 'open'} action 动作类型

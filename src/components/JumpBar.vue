@@ -45,7 +45,7 @@ import {
   contextActionHintKey,
   contextActionTarget,
   contextLinkHit,
-  getContextEngines,
+  getContextActionEngines,
 } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
@@ -205,18 +205,22 @@ const categories = computed(() => {
           };
         });
 
-      // 图片包在链接里时，链接的复制/打开沿用同一批动作配置追加在图片动作之后
-      if (contextActions && hasLinkActions.value) {
-        for (const engine of getContextEngines(data, 'link')) {
-          // 图片地址是图片专用动作，不能混入外层链接动作
-          if (!engine.action || engine.action === 'copyImageUrl') continue;
-          engines.push({
+      if (contextActions) {
+        const actionHit = (engine) =>
+          engine.contextTarget === 'link' ? linkActionHit.value : contextAction;
+        engines.splice(
+          0,
+          engines.length,
+          ...getContextActionEngines(data, contextMode.value, hasLinkActions.value).map((engine) => ({
             ...engine,
-            name: contextActionName(engine, 'link'),
-            contextTarget: 'link',
-            hint: actionTargetHint('link', engine.action, linkActionHit.value),
-          });
-        }
+            name: contextActionName(engine, engine.contextTarget),
+            hint: actionTargetHint(
+              engine.contextTarget,
+              engine.action,
+              actionHit(engine),
+            ),
+          })),
+        );
       }
 
       return { name: localizeCategoryName(name, key), key, engines };
