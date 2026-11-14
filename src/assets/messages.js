@@ -38,7 +38,8 @@ export const messages = {
     'settings.selectionIconTip': '划词后只显示一个图标，鼠标悬浮时展开搜索条',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
-    'settings.imageToggleHint': '显示开关对「搜图」无意义：长按或右键网页图片，即可用搜图分类搜索',
+    'settings.imageToggleHint':
+      '长按/右键图片即可搜图；搜图引擎不会出现在文字搜索条，显示开关对它无效',
     'settings.editConfig': '配置文件',
     'settings.feedbackGreasyFork': '在 GreasyFork 进行反馈',
     'settings.feedbackGitHub': '在 Github 进行反馈',
@@ -190,7 +191,7 @@ export const messages = {
     'settings.center': 'Center search bar',
     'settings.centerTip': 'Always center the jump bar',
     'settings.imageToggleHint':
-      'This switch does not affect the image category: long-press or right-click an image to search it',
+      'Long-press or right-click an image to search; image engines never appear in the text search bar, so this switch has no effect',
     'settings.editConfig': 'Config file',
     'settings.feedbackGreasyFork': 'Feedback on GreasyFork',
     'settings.feedbackGitHub': 'Feedback on GitHub',

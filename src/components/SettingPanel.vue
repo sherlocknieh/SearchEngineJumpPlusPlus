@@ -199,7 +199,7 @@ const {
 function onToggleCategory(ci) {
   // 搜图分类只在图片模式下出现，点击显隐按钮借机说明搜图用法
   if (draft.categories[ci]?.key === IMAGE_CATEGORY_KEY) {
-    showToast(t('settings.imageToggleHint'), 3000);
+    showToast(t('settings.imageToggleHint'), 4000);
     return;
   }
   toggleCategory(ci);
