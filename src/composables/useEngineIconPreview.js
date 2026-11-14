@@ -5,7 +5,14 @@
  * 组件只保留表单字段与模板，避免把网络/异步状态混在表单逻辑里。
  */
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
-import { dataUrlStorageBytes, formatIconSize, resolveFavicon } from '../core/favicon.js';
+import {
+  dataUrlStorageBytes,
+  formatIconSize,
+  imageFileFromDataTransfer,
+  isImageFile,
+  readImageFileAsDataUrl,
+  resolveFavicon,
+} from '../core/favicon.js';
 import { faviconFromUrl, registrableDomain } from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
 
@@ -292,27 +299,44 @@ export function useEngineIconPreview({
     faviconFileInput.value?.click();
   }
 
+  /**
+   * 采用本地图片文件：转成 data URL 后覆盖当前图标。
+   * 本地上传或粘贴优先于进行中的远程获取，因此同时作废未返回的请求。
+   */
+  async function applyImageFile(file) {
+    const data = await readImageFileAsDataUrl(file);
+    if (!data) {
+      alert(t('engine.readImageFailed'));
+      return;
+    }
+    previewToken++;
+    previewLoading.value = false;
+    previewFailed.value = false;
+    clearSteps();
+    setManualPreviewData(data);
+  }
+
   function uploadFavicon(event) {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
-    const isImage =
-      file.type.startsWith('image/') || /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name);
-    if (!isImage) {
+    if (!isImageFile(file)) {
       alert(t('engine.selectImage'));
       return;
     }
-    const reader = new FileReader();
-    reader.onload = () => {
-      // 本地上传优先于进行中的远程获取
-      previewToken++;
-      previewLoading.value = false;
-      previewFailed.value = false;
-      clearSteps();
-      setManualPreviewData(String(reader.result || ''));
-    };
-    reader.onerror = () => alert(t('engine.readImageFailed'));
-    reader.readAsDataURL(file);
+    applyImageFile(file);
+  }
+
+  /**
+   * 图标数据输入框粘贴：剪贴板里带图片（截图、复制的网页图片）就转成 data URL，
+   * 纯文本粘贴（如 data:image 链接）不拦截，交给输入框默认行为。
+   */
+  async function pasteFaviconImage(event) {
+    if (isBusy()) return;
+    const file = imageFileFromDataTransfer(event.clipboardData);
+    if (!file) return;
+    event.preventDefault();
+    await applyImageFile(file);
   }
 
   /**
@@ -352,6 +376,7 @@ export function useEngineIconPreview({
     previewIcon,
     pickFaviconFile,
     uploadFavicon,
+    pasteFaviconImage,
     resolveFaviconData,
   };
 }

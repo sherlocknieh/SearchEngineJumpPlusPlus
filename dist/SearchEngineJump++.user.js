@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.14.1708
+// @version            2026.11.14.1718
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5872,7 +5872,7 @@
 			"engine.iconSrc": "图标来源",
 			"engine.iconData": "图标数据",
 			"engine.iconDataCompressed": "(已压缩)",
-			"engine.iconDataPlaceholder": "选填，可粘贴 data:image/... 链接",
+			"engine.iconDataPlaceholder": "选填，可粘贴 data:image 链接或图片",
 			"engine.fetchIcon": "获取图标",
 			"engine.refetch": "重新获取",
 			"engine.cancelFetch": "取消",
@@ -6013,7 +6013,7 @@
 			"engine.iconSrc": "Icon source",
 			"engine.iconData": "Icon data",
 			"engine.iconDataCompressed": " (compressed)",
-			"engine.iconDataPlaceholder": "Optional; paste a data:image/... URL",
+			"engine.iconDataPlaceholder": "Optional; paste a data:image URL or an image",
 			"engine.fetchIcon": "Fetch icon",
 			"engine.refetch": "Fetch again",
 			"engine.cancelFetch": "Cancel",
@@ -7625,6 +7625,29 @@
 		".bmp": "image/bmp",
 		".avif": "image/avif"
 	};
+	var IMAGE_EXTENSION = /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i;
+	function isImageFile(file) {
+		const type = typeof file?.type === "string" ? file.type : "";
+		const name = typeof file?.name === "string" ? file.name : "";
+		return /^image\//i.test(type) || IMAGE_EXTENSION.test(name);
+	}
+	function imageFileFromDataTransfer(dataTransfer) {
+		const items = Array.from(dataTransfer?.items || []);
+		for (const item of items) {
+			if (item?.kind !== "file" || !/^image\//i.test(item.type || "")) continue;
+			const file = item.getAsFile?.();
+			if (file) return file;
+		}
+		return Array.from(dataTransfer?.files || []).find(isImageFile) || null;
+	}
+	function readImageFileAsDataUrl(file) {
+		return new Promise((resolve) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ""));
+			reader.onerror = () => resolve("");
+			reader.readAsDataURL(file);
+		});
+	}
 	function getHeader(headers, name) {
 		if (!headers) return "";
 		const match = headers.match(new RegExp(`^${name}:\\s*(.+)$`, "im"));
@@ -10508,24 +10531,34 @@
 		function pickFaviconFile() {
 			faviconFileInput.value?.click();
 		}
+		async function applyImageFile(file) {
+			const data = await readImageFileAsDataUrl(file);
+			if (!data) {
+				alert(t("engine.readImageFailed"));
+				return;
+			}
+			previewToken++;
+			previewLoading.value = false;
+			previewFailed.value = false;
+			clearSteps();
+			setManualPreviewData(data);
+		}
 		function uploadFavicon(event) {
 			const file = event.target.files?.[0];
 			event.target.value = "";
 			if (!file) return;
-			if (!(file.type.startsWith("image/") || /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i.test(file.name))) {
+			if (!isImageFile(file)) {
 				alert(t("engine.selectImage"));
 				return;
 			}
-			const reader = new FileReader();
-			reader.onload = () => {
-				previewToken++;
-				previewLoading.value = false;
-				previewFailed.value = false;
-				clearSteps();
-				setManualPreviewData(String(reader.result || ""));
-			};
-			reader.onerror = () => alert(t("engine.readImageFailed"));
-			reader.readAsDataURL(file);
+			applyImageFile(file);
+		}
+		async function pasteFaviconImage(event) {
+			if (isBusy()) return;
+			const file = imageFileFromDataTransfer(event.clipboardData);
+			if (!file) return;
+			event.preventDefault();
+			await applyImageFile(file);
 		}
 		function resolveFaviconData(favicon) {
 			const data = previewData.value.trim();
@@ -10555,6 +10588,7 @@
 			previewIcon,
 			pickFaviconFile,
 			uploadFavicon,
+			pasteFaviconImage,
 			resolveFaviconData
 		};
 	}
@@ -10682,7 +10716,7 @@
 				onClose: cancel
 			});
 			const initialFavicon = (props.initial.favicon || "").trim();
-			const { faviconFileInput, previewData, pickedUrl, previewLoading, previewSteps, previewSize, dataIconLink, previewImage, canPreview, previewLabel, extractorUrl, STEP_STATUS_TEXT, clearSteps, markDataEdited, chooseStep, previewIcon, pickFaviconFile, uploadFavicon, resolveFaviconData } = useEngineIconPreview({
+			const { faviconFileInput, previewData, pickedUrl, previewLoading, previewSteps, previewSize, dataIconLink, previewImage, canPreview, previewLabel, extractorUrl, STEP_STATUS_TEXT, clearSteps, markDataEdited, chooseStep, previewIcon, pickFaviconFile, uploadFavicon, pasteFaviconImage, resolveFaviconData } = useEngineIconPreview({
 				form,
 				siteHost: computed(() => hostFromUrl(form.url) || hostFromUrl(form.favicon)),
 				initialFavicon,
@@ -10815,13 +10849,14 @@
 							class: "sej-data-input",
 							placeholder: unref(t)("engine.iconDataPlaceholder"),
 							disabled: __props.busy,
-							onInput: _cache[6] || (_cache[6] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args))
+							onInput: _cache[6] || (_cache[6] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args)),
+							onPaste: _cache[7] || (_cache[7] = (...args) => unref(pasteFaviconImage) && unref(pasteFaviconImage)(...args))
 						}, null, 40, _hoisted_23), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
 							type: "button",
 							class: normalizeClass(["sej-icon-preview-btn", { "sej-has-icon": unref(previewImage) }]),
 							disabled: __props.busy,
 							title: unref(previewImage) ? unref(t)("engine.uploadReplace") : unref(t)("engine.upload"),
-							onClick: _cache[7] || (_cache[7] = (...args) => unref(pickFaviconFile) && unref(pickFaviconFile)(...args))
+							onClick: _cache[8] || (_cache[8] = (...args) => unref(pickFaviconFile) && unref(pickFaviconFile)(...args))
 						}, [unref(previewImage) ? (openBlock(), createElementBlock("img", {
 							key: 0,
 							class: "sej-icon-preview",
@@ -10834,12 +10869,12 @@
 							class: "sej-file-input",
 							type: "file",
 							accept: "image/*,.ico",
-							onChange: _cache[8] || (_cache[8] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
+							onChange: _cache[9] || (_cache[9] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
 						}, null, 544)
 					])) : createCommentVNode("", true),
 					!unref(initialAction) || unref(initialAction) === "open" ? (openBlock(), createElementBlock("label", _hoisted_26, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
 						id: "iqxin-newTarget",
-						"onUpdate:modelValue": _cache[9] || (_cache[9] = ($event) => form.target = $event),
+						"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => form.target = $event),
 						disabled: __props.busy
 					}, [
 						createBaseVNode("option", {
@@ -10855,12 +10890,12 @@
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
-							onClick: _cache[10] || (_cache[10] = ($event) => _ctx.$emit("delete"))
+							onClick: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("delete"))
 						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_32)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
-							onClick: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("cancel"))
+							onClick: _cache[12] || (_cache[12] = ($event) => _ctx.$emit("cancel"))
 						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_33),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",

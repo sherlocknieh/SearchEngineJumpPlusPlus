@@ -82,6 +82,7 @@ const {
   previewIcon,
   pickFaviconFile,
   uploadFavicon,
+  pasteFaviconImage,
   resolveFaviconData,
 } = useEngineIconPreview({
   form,
@@ -295,13 +296,14 @@ function submit() {
       </span>
       <!-- 图标数据输入行：输入框 + 上传按钮 -->
       <div class="sej-data-line">
-        <!-- 图标数据输入框：支持直接粘贴 data URI -->
+        <!-- 图标数据输入框：可直接粘贴 data URI 或剪贴板里的图片 -->
         <input
           v-model="previewData"
           class="sej-data-input"
           :placeholder="t('engine.iconDataPlaceholder')"
           :disabled="busy"
           @input="markDataEdited"
+          @paste="pasteFaviconImage"
         />
         <!-- 上传按钮：已有图标时显示缩略图 -->
         <button

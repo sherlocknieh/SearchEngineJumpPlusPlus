@@ -32,6 +32,42 @@ const EXTENSION_MIME = {
   '.avif': 'image/avif',
 };
 
+/** 无 MIME 时按后缀识别图片，覆盖系统剪贴板与上传里常见的图片格式 */
+const IMAGE_EXTENSION = /\.(ico|png|jpe?g|gif|webp|svg|bmp|avif)$/i;
+
+/** 判断本地文件是否为可用作图标的图片 */
+export function isImageFile(file) {
+  const type = typeof file?.type === 'string' ? file.type : '';
+  const name = typeof file?.name === 'string' ? file.name : '';
+  return /^image\//i.test(type) || IMAGE_EXTENSION.test(name);
+}
+
+/**
+ * 从剪贴板数据里挑出图片文件，供图标数据输入框把截图/复制的图片直接内嵌。
+ * 优先取 image/* 的条目（截图与网页图片复制都走这里），没有条目时回退到 files；
+ * 返回 null 表示剪贴板里没有图片，调用方应保留输入框的默认粘贴行为。
+ */
+export function imageFileFromDataTransfer(dataTransfer) {
+  const items = Array.from(dataTransfer?.items || []);
+  for (const item of items) {
+    if (item?.kind !== 'file' || !/^image\//i.test(item.type || '')) continue;
+    const file = item.getAsFile?.();
+    if (file) return file;
+  }
+  const files = Array.from(dataTransfer?.files || []);
+  return files.find(isImageFile) || null;
+}
+
+/** 把本地图片文件读成 data URL；读取失败返回空串，由调用方提示 */
+export function readImageFileAsDataUrl(file) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => resolve('');
+    reader.readAsDataURL(file);
+  });
+}
+
 function getHeader(headers, name) {
   if (!headers) return '';
   const match = headers.match(new RegExp(`^${name}:\\s*(.+)$`, 'im'));

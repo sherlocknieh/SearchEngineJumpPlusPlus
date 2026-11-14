@@ -125,7 +125,7 @@ src/main.js                 只做装配
 
 - `core/favicon.js`：`resolveFavicon` / `embedFavicon` / `toWebpIcon`（超 64KB 先压缩）
 - `composables/useEngineIcons.js`：设置面板批量内嵌、保存后后台补图标
-- `composables/useEngineIconPreview.js`：编辑弹窗多来源并行预览/取消/上传
+- `composables/useEngineIconPreview.js`：编辑弹窗多来源并行预览/取消/上传/粘贴图片
 - `core/configSchema.js` 的 `configToText`：导出/预览时剔除 `faviconData`，只保留图标地址
 
 ## Shadow DOM 与样式

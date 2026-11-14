@@ -4,6 +4,8 @@ import {
   dataUrlBytes,
   dataUrlStorageBytes,
   formatIconSize,
+  imageFileFromDataTransfer,
+  isImageFile,
   toWebpIcon,
 } from '../src/core/favicon.js';
 
@@ -104,5 +106,48 @@ describe('toWebpIcon', () => {
     await expect(toWebpIcon(buffer, 'image/webp')).resolves.toBe('');
     await expect(toWebpIcon(buffer, 'image/gif')).resolves.toBe('');
     await expect(toWebpIcon(buffer, 'image/svg+xml')).resolves.toBe('');
+  });
+});
+
+describe('isImageFile', () => {
+  it('按 MIME 或后缀识别图片', () => {
+    expect(isImageFile({ type: 'image/png', name: 'image.png' })).toBe(true);
+    // 系统剪贴板里的 .ico 常常没有 MIME
+    expect(isImageFile({ type: '', name: 'favicon.ico' })).toBe(true);
+  });
+
+  it('非图片与缺字段都判为否', () => {
+    expect(isImageFile({ type: 'text/plain', name: 'a.txt' })).toBe(false);
+    expect(isImageFile(null)).toBe(false);
+  });
+});
+
+describe('imageFileFromDataTransfer', () => {
+  const png = { type: 'image/png', name: 'image.png' };
+
+  it('优先取剪贴板里的图片条目', () => {
+    const dataTransfer = {
+      items: [
+        { kind: 'string', type: 'text/plain' },
+        { kind: 'file', type: 'image/png', getAsFile: () => png },
+      ],
+      files: [],
+    };
+    expect(imageFileFromDataTransfer(dataTransfer)).toBe(png);
+  });
+
+  it('条目取不到文件时回退到 files', () => {
+    const dataTransfer = {
+      items: [{ kind: 'file', type: 'image/png', getAsFile: () => null }],
+      files: [png],
+    };
+    expect(imageFileFromDataTransfer(dataTransfer)).toBe(png);
+  });
+
+  it('剪贴板没有图片时返回 null，保留输入框默认粘贴', () => {
+    expect(imageFileFromDataTransfer(null)).toBeNull();
+    expect(
+      imageFileFromDataTransfer({ items: [{ kind: 'string', type: 'text/plain' }], files: [] }),
+    ).toBeNull();
   });
 });

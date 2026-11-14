@@ -4,9 +4,11 @@ import { nextTick, reactive } from 'vue';
 import { hostFromUrl } from '../src/core/engineUrl.js';
 
 const resolveFavicon = vi.fn();
+const readImageFileAsDataUrl = vi.fn();
 vi.mock('../src/core/favicon.js', async (importOriginal) => ({
   ...(await importOriginal()),
   resolveFavicon,
+  readImageFileAsDataUrl,
 }));
 
 const { useEngineIconPreview } = await import('../src/composables/useEngineIconPreview.js');
@@ -233,5 +235,48 @@ describe('useEngineIconPreview 结果呈现', () => {
     await nextTick();
 
     expect(api.pickedUrl.value).toBe('');
+  });
+});
+
+describe('useEngineIconPreview 粘贴图片', () => {
+  afterEach(() => {
+    resolveFavicon.mockReset();
+    readImageFileAsDataUrl.mockReset();
+  });
+
+  it('把剪贴板里的图片转成图标数据，并作废进行中的获取', async () => {
+    readImageFileAsDataUrl.mockResolvedValue(ICON);
+    const { api } = setup({ url: 'https://www.1337x.to/search/%s/1/', favicon: '' });
+    api.previewLoading.value = true;
+
+    const event = {
+      clipboardData: {
+        items: [{ kind: 'file', type: 'image/png', getAsFile: () => ({ name: 'image.png' }) }],
+        files: [],
+      },
+      preventDefault: vi.fn(),
+    };
+    await api.pasteFaviconImage(event);
+
+    expect(event.preventDefault).toHaveBeenCalled();
+    expect(api.previewData.value).toBe(ICON);
+    expect(api.previewImage.value).toBe(true);
+    expect(api.previewLoading.value).toBe(false);
+    // 手填数据会随提交一并保存
+    expect(api.resolveFaviconData('')).toBe(ICON);
+  });
+
+  it('剪贴板不是图片时不拦截默认粘贴', async () => {
+    const { api } = setup({ url: 'https://www.1337x.to/search/%s/1/', favicon: '' });
+
+    const event = {
+      clipboardData: { items: [{ kind: 'string', type: 'text/plain' }], files: [] },
+      preventDefault: vi.fn(),
+    };
+    await api.pasteFaviconImage(event);
+
+    expect(event.preventDefault).not.toHaveBeenCalled();
+    expect(readImageFileAsDataUrl).not.toHaveBeenCalled();
+    expect(api.previewData.value).toBe('');
   });
 });
