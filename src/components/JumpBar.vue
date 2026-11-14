@@ -208,7 +208,8 @@ const categories = computed(() => {
       // 图片包在链接里时，链接的复制/打开沿用同一批动作配置追加在图片动作之后
       if (contextActions && hasLinkActions.value) {
         for (const engine of getContextEngines(data, 'link')) {
-          if (!engine.action) continue;
+          // 图片地址是图片专用动作，不能混入外层链接动作
+          if (!engine.action || engine.action === 'copyImageUrl') continue;
           engines.push({
             ...engine,
             name: contextActionName(engine, 'link'),
