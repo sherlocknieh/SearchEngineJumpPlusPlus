@@ -83,7 +83,7 @@ export function armContextMenu(ensureBoot) {
     if (!hit.url) return;
     openContextAction({
       mode: hit.mode,
-      // 图片模式复制图片本身、打开图片地址；链接模式复制 Markdown 链接、打开地址
+      // 图片模式复制图片本身、打开图片地址；链接模式复制链接标题/地址、打开地址
       keyword: hit.text || hit.url,
       url: hit.url,
       element: hit.element,

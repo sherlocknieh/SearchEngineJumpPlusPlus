@@ -77,8 +77,10 @@ describe('动作引擎', () => {
     });
   });
 
-  it('识别 copy/open 动作', () => {
+  it('识别各类复制与打开动作', () => {
     expect(isActionEngine({ action: 'copy' })).toBe(true);
+    expect(isActionEngine({ action: 'copyLinkText' })).toBe(true);
+    expect(isActionEngine({ action: 'copyLinkUrl' })).toBe(true);
     expect(isActionEngine({ action: 'open' })).toBe(true);
     expect(isActionEngine({ action: 'unknown' })).toBe(false);
     expect(isActionEngine({ url: 'https://a.test' })).toBe(false);
@@ -92,6 +94,14 @@ describe('动作引擎', () => {
 
   it('没有可复制内容时返回 false', async () => {
     expect(await performEngineAction({ action: 'copy' }, '')).toBe(false);
+  });
+
+  it('复制链接标题只写文字，复制链接地址只写地址', async () => {
+    const target = { text: '示例标题', url: 'https://a.test/p' };
+    expect(await performEngineAction({ action: 'copyLinkText' }, target)).toBe(true);
+    expect(writeText).toHaveBeenLastCalledWith('示例标题');
+    expect(await performEngineAction({ action: 'copyLinkUrl' }, target)).toBe(true);
+    expect(writeText).toHaveBeenLastCalledWith('https://a.test/p');
   });
 
   it('把当前关键词当作链接打开', async () => {
@@ -123,7 +133,16 @@ describe('动作引擎', () => {
   });
 
   it('一键打开全部时跳过复制动作，只打开链接', () => {
-    openAllEngines([{ action: 'copy' }, { action: 'open' }], 'example.com');
+    openAllEngines(
+      [
+        { action: 'copy' },
+        { action: 'copyImageUrl' },
+        { action: 'copyLinkText' },
+        { action: 'copyLinkUrl' },
+        { action: 'open' },
+      ],
+      'example.com',
+    );
     expect(writeText).not.toHaveBeenCalled();
     expect(openInTab).toHaveBeenCalledTimes(1);
   });

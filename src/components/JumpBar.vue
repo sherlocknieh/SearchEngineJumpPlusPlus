@@ -45,6 +45,7 @@ import {
   contextActionHintKey,
   contextActionTarget,
   contextLinkHit,
+  isActionAvailableInMode,
 } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
@@ -177,7 +178,9 @@ function contextActionName(engine, target) {
 function buildActionEngines(target, hit) {
   return (data.engineList[BUILTIN_CATEGORY_KEY] || [])
     .filter((engine) => !engine.disable && engine.action)
-    .filter((engine) => target !== 'link' || engine.action !== 'copyImageUrl')
+    .filter((engine) => isActionAvailableInMode(target, engine.action))
+    // 纯图片链接没有标题，复制标题与复制地址内容相同，省掉重复按钮
+    .filter((engine) => engine.action !== 'copyLinkText' || hit.keyword !== hit.url)
     .map((engine) => ({
       ...engine,
       // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
@@ -205,7 +208,8 @@ const categories = computed(() => {
           : 'input';
       const contextActions = key === BUILTIN_CATEGORY_KEY && isContextAction.value;
       let engines = (data.engineList[key] || [])
-        .filter((engine) => !engine.disable && !hidesOpenAction(engine))
+        .filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action))
+        .filter((engine) => !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
         .map((engine) => {
           if (!engine.action) return engine;
@@ -254,9 +258,10 @@ function syncSearchInputKeyword() {
 /** 动作引擎的目标：上下文操作条按命中类型决定复制内容与打开地址 */
 function getActionTarget(engine) {
   if (isContextAction.value) {
-    // 链接动作始终作用于图片外层的链接，其余动作仍作用于图片本身
+    // 链接动作在链接模式作用于命中的链接，在图片模式作用于图片外层链接
     if (engine?.contextTarget === 'link') {
-      return contextActionTarget('link', engine.action, linkActionHit.value);
+      const hit = contextMode.value === 'link' ? contextAction : linkActionHit.value;
+      return contextActionTarget('link', engine.action, hit);
     }
     return contextActionTarget(contextAction.mode, engine?.action, contextAction);
   }

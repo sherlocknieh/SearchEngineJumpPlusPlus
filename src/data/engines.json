@@ -166,6 +166,16 @@
         "action": "copyImageUrl"
       },
       {
+        "name": "复制链接标题",
+        "url": "",
+        "action": "copyLinkText"
+      },
+      {
+        "name": "复制链接地址",
+        "url": "",
+        "action": "copyLinkUrl"
+      },
+      {
         "name": "打开",
         "url": "",
         "action": "open"

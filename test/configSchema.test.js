@@ -125,6 +125,8 @@ describe('normalizeConfig', () => {
       { name: '复制', action: 'copy' },
       { name: '打开', url: 'https://ignored.test', action: 'open' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
+      { name: '复制链接标题', url: '', action: 'copyLinkText' },
+      { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
     ]);
   });
 
@@ -141,6 +143,8 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
       'copy',
       'copyImageUrl',
+      'copyLinkText',
+      'copyLinkUrl',
       'open',
     ]);
   });
@@ -167,6 +171,8 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
+      { name: '复制链接标题', url: '', action: 'copyLinkText' },
+      { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '打开', url: '', action: 'open' },
     ]);
   });
@@ -210,6 +216,8 @@ describe('normalizeConfig', () => {
       '打开',
       '我的复制',
       '复制图片地址',
+      '复制链接标题',
+      '复制链接地址',
     ]);
   });
 

@@ -14,7 +14,11 @@ export const LONG_PRESS_MOVE_TOLERANCE = 10;
 
 /** 动作引擎在各情景下的悬停提示文案；text 为划词条，input 为站点内嵌条的搜索框 */
 const CONTEXT_ACTION_HINTS = {
-  link: { copy: 'action.hintCopyLink', open: 'action.hintOpenLink' },
+  link: {
+    copyLinkText: 'action.hintCopyLinkTitle',
+    copyLinkUrl: 'action.hintCopyLinkUrl',
+    open: 'action.hintOpenLink',
+  },
   image: {
     copy: 'action.hintCopyImage',
     copyImageUrl: 'action.hintCopyImageUrl',
@@ -80,26 +84,40 @@ export function getContextEngines(settingData, mode) {
 }
 
 /**
- * 命中内容交给动作引擎的目标：链接复制为 Markdown 链接，图片复制图片本身；打开统一用地址。
+ * 命中内容交给动作引擎的目标：链接标题、链接地址与图片地址各取对应内容，
+ * 通用「复制」按命中类型决定复制图片本身还是文字；打开统一用地址。
  * @param {'image' | 'link'} mode 命中类型
- * @param {'copy' | 'open'} action 动作类型
+ * @param {string} action 动作类型
  * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
  * @returns {string | { text: string, url: string, image?: string }}
  */
 export function contextActionTarget(mode, action, hit = {}) {
   const url = hit.url || '';
   const keyword = hit.keyword || url;
-  if (action === 'copyImageUrl') return url || keyword;
+  if (action === 'copyLinkText') return keyword;
+  if (action === 'copyLinkUrl' || action === 'copyImageUrl') return url || keyword;
   if (action !== 'copy') return url || keyword;
   if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
-  // 纯图片链接没有文字，关键词就是地址，此时只复制地址
-  return keyword && keyword !== url ? `[${keyword}](${url})` : url || keyword;
+  return keyword;
 }
 
 /**
- * 动作引擎的悬停提示键：同名的「复制」「打开」在链接与图片情景下含义不同。
+ * 动作在某个关键词来源下是否有意义：链接标题/地址只属于链接，图片地址只属于图片，
+ * 通用「复制」不再参与链接（链接复制已拆成标题与地址两项）。
+ * @param {'image' | 'link' | 'text' | 'input'} mode 关键词来源
+ * @param {string} [action] 动作类型
+ */
+export function isActionAvailableInMode(mode, action) {
+  if (action === 'copy') return mode !== 'link';
+  if (action === 'copyImageUrl') return mode === 'image';
+  if (action === 'copyLinkText' || action === 'copyLinkUrl') return mode === 'link';
+  return true;
+}
+
+/**
+ * 动作引擎的悬停提示键：同名动作在链接与图片情景下含义不同。
  * @param {'image' | 'link'} mode 命中类型
- * @param {'copy' | 'open'} action 动作类型
+ * @param {string} action 动作类型
  */
 export function contextActionHintKey(mode, action) {
   return CONTEXT_ACTION_HINTS[mode]?.[action] || '';
@@ -123,7 +141,7 @@ function shortenHintTarget(value) {
 /**
  * 动作引擎完整的悬停提示：说明这次到底复制或打开什么内容。
  * @param {'image' | 'link' | 'text' | 'input'} mode 命中情景：text 为划词条，input 为内嵌条搜索框
- * @param {'copy' | 'open'} action 动作类型
+ * @param {string} action 动作类型
  * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
  * @param {(key: string, params?: object) => string} t 文案函数
  */
@@ -138,7 +156,7 @@ export function actionEngineHint(mode, action, hit = {}, t) {
 /**
  * 条目名称已经说明动作（如「复制图片」）时，悬停提示只保留目标内容，不再重复动作说明。
  * @param {'image' | 'link'} mode 命中类型
- * @param {'copy' | 'open'} action 动作类型
+ * @param {string} action 动作类型
  * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
  */
 export function actionTargetHint(mode, action, hit = {}) {

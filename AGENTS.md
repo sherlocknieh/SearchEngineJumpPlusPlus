@@ -42,7 +42,7 @@ src/main.js                 只做装配
 | 层         | 文件                                                           | 职责                                                                                         |
 | ---------- | -------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
 | 唯一形状   | `core/configSchema.js`                                         | `createDefaultConfig` / `normalizeConfig` / `serializeConfig` / `readConfig` / `OPTION_KEYS` |
-| 字段规范化 | `core/configData.js`                                           | `normalizeEngine`、`normalizeCategories`、动作引擎 `copy/open`、内置分类                     |
+| 字段规范化 | `core/configData.js`                                           | `normalizeEngine`、`normalizeCategories`、动作引擎 `copy*` / `open`、内置分类                |
 | 存储       | `core/storage.js`                                              | 读写、变更监听、时间戳、`pullLatest`                                                         |
 | 存储后端   | `core/storageBackend.js`                                       | GM API 与 localStorage 探测/读写                                                             |
 | 运行时单例 | `stores/settings.js`                                           | `useSettings()`：`settingData`、`getMatchedRule()`、`savePartial()`、`reload()`              |
@@ -68,7 +68,7 @@ src/main.js                 只做装配
   - `performJump` / `openAllEngines`
   - 打开方式：引擎未配置 `target` 时跟随设置项 `defaultOpenTarget`（默认新标签页）；
     批量打开始终强制新标签页
-  - 动作引擎：`action: 'copy' | 'open'`
+  - 动作引擎：`action: 'copy' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
 ## 长按 / 右键操作（图片搜图、链接操作）
@@ -93,9 +93,10 @@ src/main.js                 只做装配
   点击外部/Escape 关闭，滚动时继续跟随命中的元素，跳转或「一键打开」后自动收起
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；
-  链接模式「复制」复制为 Markdown 链接 `[标题](链接)`、「打开」新标签打开链接（纯图片链接没有标题时只复制地址）；
-  图片包在链接里时，「操作」分类内先列图片动作、再列链接动作；链接动作带 `contextTarget: 'link'`，
-  目标改由 `contextLinkHit` 提供。上下文操作条里所有动作的名称都直接取 `contextActionHintKey`
+  链接模式拆成「复制链接标题」「复制链接地址」两项，分别复制链接文字与 URL，「打开」新标签打开链接；
+  动作是否出现由 `isActionAvailableInMode` 决定；纯图片链接没有标题时不再单列「复制链接标题」；
+  图片包在链接里时，「操作」分类内先列链接动作、再列图片动作；链接动作带 `contextTarget: 'link'`，
+  链接模式的目标直接用命中状态，图片模式的外层链接目标改由 `contextLinkHit` 提供。上下文操作条里所有动作的名称都直接取 `contextActionHintKey`
   对应的文案（复制图片 / 打开链接等，单一图片或链接时同样如此），悬停提示改用
   `actionTargetHint` 只显示目标内容，不再重复动作名；划词条与内嵌条仍用 `actionEngineHint` 拼动作名
 - 悬停提示：`actionEngineHint(mode, action, hit, t)` 把动作说明与实际目标拼在一起，

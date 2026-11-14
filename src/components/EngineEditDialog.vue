@@ -9,6 +9,7 @@ import {
 } from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
+import { ENGINE_ACTIONS } from '../core/configData.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -30,8 +31,7 @@ const ICON_SELECT =
   '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>';
 
 // 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
-const initialAction =
-  ['copy', 'copyImageUrl', 'open'].includes(props.initial.action) ? props.initial.action : '';
+const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : '';
 
 const form = reactive({
   name: props.initial.name || '',

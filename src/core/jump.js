@@ -59,7 +59,8 @@ function normalizeActionTarget(target) {
 
 /**
  * 执行动作引擎，返回是否成功处理。
- * copy 优先复制图片本身，copyImageUrl 复制图片地址；open 把目标地址当作链接打开。
+ * copy 优先复制图片本身，取不到时复制文字；copyLinkText 复制链接标题，
+ * copyImageUrl / copyLinkUrl 复制地址；open 把目标地址当作链接打开。
  * @param {string | { text?: string, url?: string, image?: string }} target 复制/打开用的内容
  */
 export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
@@ -69,7 +70,8 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
     if (source.image && (await copyImage(source.image))) return true;
     return copyText(source.text);
   }
-  if (action === 'copyImageUrl') return copyText(source.url);
+  if (action === 'copyLinkText') return copyText(source.text);
+  if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);
   if (action === 'open') {
     const url = findKeywordUrl(source.url);
     if (!url) return false;
@@ -169,9 +171,9 @@ export function openAllEngines(engines, keyword, settingData = {}) {
   for (const engine of engines) {
     if (engine.disable) continue;
     // 动作引擎没有 URL，不参与“与当前站点相同”的判断；
-    // 批量打开时只执行打开，避免静默覆盖剪贴板
+    // 批量打开只执行打开，避免复制动作静默覆盖剪贴板
     if (isActionEngine(engine)) {
-      if (engine.action !== 'copy' && engine.action !== 'copyImageUrl') {
+      if (engine.action === 'open') {
         performEngineAction(engine, keyword, settingData.defaultOpenTarget);
       }
       continue;

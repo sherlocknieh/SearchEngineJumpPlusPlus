@@ -116,7 +116,8 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
-    'action.hintCopyLink': '复制链接',
+    'action.hintCopyLinkTitle': '复制链接标题',
+    'action.hintCopyLinkUrl': '复制链接地址',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintCopyImageUrl': '复制图片地址',
@@ -275,7 +276,8 @@ export const messages = {
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',
-    'action.hintCopyLink': 'Copy link',
+    'action.hintCopyLinkTitle': 'Copy link title',
+    'action.hintCopyLinkUrl': 'Copy link address',
     'action.hintOpenLink': 'Open link',
     'action.hintCopyImage': 'Copy image',
     'action.hintCopyImageUrl': 'Copy image URL',
@@ -356,5 +358,7 @@ export const DEFAULT_ENGINE_NAMES = {
   阿里千问: 'Qwen',
   知乎直答: 'Zhihu Zhida',
   复制: 'Copy',
+  复制链接标题: 'Copy link title',
+  复制链接地址: 'Copy link address',
   打开: 'Open',
 };

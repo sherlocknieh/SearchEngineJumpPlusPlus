@@ -7,8 +7,11 @@ export function isPlainObject(value) {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
-/** 非搜索类快捷动作：copy 复制目标内容，open 打开目标地址 */
-export const ENGINE_ACTIONS = ['copy', 'copyImageUrl', 'open'];
+/**
+ * 非搜索类快捷动作：copy 复制命中的内容，copyImageUrl 复制图片地址，
+ * copyLinkText 复制链接标题，copyLinkUrl 复制链接地址，open 打开目标地址。
+ */
+export const ENGINE_ACTIONS = ['copy', 'copyImageUrl', 'copyLinkText', 'copyLinkUrl', 'open'];
 
 /** 内置的快捷动作分类键名：始终存在，只能移动和隐藏 */
 export const BUILTIN_CATEGORY_KEY = 'actions';

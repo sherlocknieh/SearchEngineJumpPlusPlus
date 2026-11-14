@@ -10,6 +10,7 @@ import {
   contextCategoryKey,
   contextLinkHit,
   getContextEngines,
+  isActionAvailableInMode,
   isLongPressMove,
   resolveContextHit,
 } from '../src/core/contextAction.js';
@@ -166,14 +167,16 @@ describe('getContextEngines', () => {
 describe('contextActionTarget', () => {
   const hit = { keyword: '示例标题', url: 'https://site.test/a' };
 
-  it('链接复制为 Markdown 链接，打开只用地址', () => {
-    expect(contextActionTarget('link', 'copy', hit)).toBe('[示例标题](https://site.test/a)');
+  it('链接标题与链接地址分别取文字和地址，打开只用地址', () => {
+    expect(contextActionTarget('link', 'copyLinkText', hit)).toBe('示例标题');
+    expect(contextActionTarget('link', 'copyLinkUrl', hit)).toBe('https://site.test/a');
     expect(contextActionTarget('link', 'open', hit)).toBe('https://site.test/a');
   });
 
-  it('纯图片链接没有标题时只复制地址', () => {
+  it('纯图片链接没有标题时标题与地址取同一段地址', () => {
     const url = 'https://site.test/a.png';
-    expect(contextActionTarget('link', 'copy', { keyword: url, url })).toBe(url);
+    expect(contextActionTarget('link', 'copyLinkText', { keyword: url, url })).toBe(url);
+    expect(contextActionTarget('link', 'copyLinkUrl', { keyword: url, url })).toBe(url);
   });
 
   it('图片复制图片本身，取不到时回退地址；打开用图片地址', () => {
@@ -187,9 +190,35 @@ describe('contextActionTarget', () => {
   });
 });
 
+describe('isActionAvailableInMode', () => {
+  it('链接复制拆成标题与地址，不再提供通用复制', () => {
+    expect(isActionAvailableInMode('link', 'copyLinkText')).toBe(true);
+    expect(isActionAvailableInMode('link', 'copyLinkUrl')).toBe(true);
+    expect(isActionAvailableInMode('link', 'copy')).toBe(false);
+    expect(isActionAvailableInMode('link', 'copyImageUrl')).toBe(false);
+  });
+
+  it('图片地址只在图片模式，链接复制只在链接模式', () => {
+    expect(isActionAvailableInMode('image', 'copyImageUrl')).toBe(true);
+    expect(isActionAvailableInMode('image', 'copyLinkUrl')).toBe(false);
+    expect(isActionAvailableInMode('text', 'copyLinkText')).toBe(false);
+    expect(isActionAvailableInMode('input', 'copyImageUrl')).toBe(false);
+  });
+
+  it('通用复制与打开始终可用', () => {
+    for (const mode of ['image', 'text', 'input']) {
+      expect(isActionAvailableInMode(mode, 'copy')).toBe(true);
+      expect(isActionAvailableInMode(mode, 'open')).toBe(true);
+    }
+    expect(isActionAvailableInMode('link', 'open')).toBe(true);
+  });
+});
+
 describe('contextActionHintKey', () => {
-  it('同名动作在链接与图片情景下给出不同提示', () => {
-    expect(contextActionHintKey('link', 'copy')).toBe('action.hintCopyLink');
+  it('不同情景下的复制动作各有提示', () => {
+    expect(contextActionHintKey('link', 'copyLinkText')).toBe('action.hintCopyLinkTitle');
+    expect(contextActionHintKey('link', 'copyLinkUrl')).toBe('action.hintCopyLinkUrl');
+    expect(contextActionHintKey('link', 'copy')).toBe('');
     expect(contextActionHintKey('image', 'copy')).toBe('action.hintCopyImage');
     expect(contextActionHintKey('link', 'open')).toBe('action.hintOpenLink');
     expect(contextActionHintKey('image', 'open')).toBe('action.hintOpenImage');
@@ -210,8 +239,11 @@ describe('actionEngineHint', () => {
   const hit = { keyword: '示例标题', url: 'https://site.test/a' };
 
   it('提示包含这次实际复制或打开的内容', () => {
-    expect(actionEngineHint('link', 'copy', hit, t)).toBe(
-      'action.hintCopyLink：[示例标题](https://site.test/a)',
+    expect(actionEngineHint('link', 'copyLinkText', hit, t)).toBe(
+      'action.hintCopyLinkTitle：示例标题',
+    );
+    expect(actionEngineHint('link', 'copyLinkUrl', hit, t)).toBe(
+      'action.hintCopyLinkUrl：https://site.test/a',
     );
     expect(actionEngineHint('link', 'open', hit, t)).toBe(
       'action.hintOpenLink：https://site.test/a',
@@ -244,7 +276,8 @@ describe('actionEngineHint', () => {
     expect(actionTargetHint('image', 'copy', { url: 'https://cdn.test/a.png' })).toBe(
       'https://cdn.test/a.png',
     );
-    expect(actionTargetHint('link', 'copy', hit)).toBe('[示例标题](https://site.test/a)');
+    expect(actionTargetHint('link', 'copyLinkText', hit)).toBe('示例标题');
+    expect(actionTargetHint('link', 'copyLinkUrl', hit)).toBe('https://site.test/a');
     expect(actionTargetHint('link', 'open', hit)).toBe('https://site.test/a');
     expect(actionTargetHint('image', 'unknown', hit)).toBe('');
   });
