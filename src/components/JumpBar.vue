@@ -2,7 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, provide, ref, watch } from 'vue';
 import { useSettings } from '../stores/settings.js';
 import { ui } from '../stores/ui.js';
-import { localizeCategoryName, t } from '../assets/i18n.js';
+import { localizeCategoryName, localizeEngineName, t } from '../assets/i18n.js';
 import { isInlineStyleBlocked } from '../core/csp.js';
 import {
   getHost,
@@ -163,10 +163,23 @@ const actionHintHit = computed(() => {
   return { keyword, url: findKeywordUrl(keyword) || '' };
 });
 
-// 图片外层链接的动作目标：图片模式下另起一组「链接操作」，不影响图片自身的复制/打开
+// 图片外层链接的动作目标：图片模式下与图片动作共用「操作」分类
 const linkActionHit = computed(() =>
   isContextAction.value ? contextLinkHit(contextAction) : null,
 );
+// 图片包在链接里时，「操作」分类内部同时提供图片动作与链接动作
+const hasLinkActions = computed(
+  () => Boolean(linkActionHit.value) && contextMode.value === 'image',
+);
+
+/** 两类动作同处一个分类时，名称补上作用目标，避免两个「复制」「打开」分不清 */
+function targetedActionName(engine, target) {
+  if (!target) return engine.name;
+  return t('action.targetName', {
+    name: localizeEngineName(engine.name),
+    target: t(target === 'link' ? 'action.targetLink' : 'action.targetImage'),
+  });
+}
 
 const categories = computed(() => {
   const list = data.engineCategories
@@ -174,10 +187,9 @@ const categories = computed(() => {
     .filter(([, key, enabled]) =>
       isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
     )
-    .map(([name, key]) => ({
-      name: localizeCategoryName(name, key),
-      key,
-      engines: (data.engineList[key] || [])
+    .map(([name, key]) => {
+      const dualActions = key === BUILTIN_CATEGORY_KEY && hasLinkActions.value;
+      const engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && !hidesOpenAction(engine))
         // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
         .map((engine) => {
@@ -187,27 +199,29 @@ const categories = computed(() => {
             : isSelectSearch.value
               ? 'text'
               : 'input';
-          return { ...engine, hint: actionEngineHint(mode, engine.action, actionHintHit.value, t) };
-        }),
-    }))
-    .filter((category) => category.engines.length);
+          return {
+            ...engine,
+            name: targetedActionName(engine, dualActions ? 'image' : ''),
+            hint: actionEngineHint(mode, engine.action, actionHintHit.value, t),
+          };
+        });
 
-  // 图片外面还包着链接时，链接的复制/打开另作一组，仍沿用「操作」分类里的动作配置
-  if (linkActionHit.value && contextMode.value === 'image') {
-    const actionsEnabled = data.engineCategories.find(
-      ([, key]) => key === BUILTIN_CATEGORY_KEY,
-    )?.[2];
-    const engines = isBarCategoryVisible(BUILTIN_CATEGORY_KEY, actionsEnabled, contextMode.value)
-      ? getContextEngines(data, 'link').map((engine) => ({
-          ...engine,
-          contextTarget: 'link',
-          hint: actionEngineHint('link', engine.action, linkActionHit.value, t),
-        }))
-      : [];
-    if (engines.length) {
-      list.push({ name: t('category.linkActions'), key: `${BUILTIN_CATEGORY_KEY}:link`, engines });
-    }
-  }
+      // 图片包在链接里时，链接的复制/打开沿用同一批动作配置追加在图片动作之后
+      if (dualActions) {
+        for (const engine of getContextEngines(data, 'link')) {
+          if (!engine.action) continue;
+          engines.push({
+            ...engine,
+            name: targetedActionName(engine, 'link'),
+            contextTarget: 'link',
+            hint: actionEngineHint('link', engine.action, linkActionHit.value, t),
+          });
+        }
+      }
+
+      return { name: localizeCategoryName(name, key), key, engines };
+    })
+    .filter((category) => category.engines.length);
 
   return list;
 });
@@ -231,7 +245,7 @@ function syncSearchInputKeyword() {
 /** 动作引擎的目标：上下文操作条按命中类型决定复制内容与打开地址 */
 function getActionTarget(engine) {
   if (isContextAction.value) {
-    // 链接动作组始终作用于图片外层的链接，图片动作组仍作用于图片本身
+    // 链接动作始终作用于图片外层的链接，其余动作仍作用于图片本身
     if (engine?.contextTarget === 'link') {
       return contextActionTarget('link', engine.action, linkActionHit.value);
     }

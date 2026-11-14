@@ -31,7 +31,7 @@ export const CONTEXT_MODES = {
 
 /**
  * 解析命中的内容：图片与其外层链接可以同时存在。
- * 图片作为主模式交给「搜图」，外层链接另存一份供「链接操作」使用，两者互不覆盖。
+ * 图片作为主模式交给「搜图」，外层链接另存一份供「操作」分类里的链接动作使用，两者互不覆盖。
  * @param {Element | null} target 按下事件的目标元素
  * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被链接/浮层盖住的图片

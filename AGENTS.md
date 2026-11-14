@@ -78,7 +78,7 @@ src/main.js                 只做装配
 - 右键：同样弹出跳转条，但**不拦截原生菜单**（不 `preventDefault`），两者并存；
   跳转条自身的右键直接放行，避免浮层里再弹一次
 - 命中优先级：图片作为主模式（链接里常包着图片），同时解析外层链接；
-  图片有可用引擎时，链接的复制/打开另作一组「链接操作」。
+  图片有可用引擎时，同一「操作」分类内再补上链接的复制/打开。
   链接只接受 http(s)、mailto、tel，页内锚点与 `javascript:` 不接管
 - 判定：`core/contextAction.js` 汇总模式配置与长按判定（`isLongPressMove` 位移超阈值取消）；
   图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`；
@@ -86,7 +86,7 @@ src/main.js                 只做装配
   链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
-  （复制 / 打开）；「链接操作」组同样取「操作」分类，只是目标换成外层链接；
+  （复制 / 打开）；链接动作同样取「操作」分类配置，追加在同一分类内并标明作用目标；
   没有可用引擎时该模式不接管
 - 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, link, element }`；
   开启「跟随选区」时与划词条共用简洁/极简形态（极简下收起为图标），关闭时整条展开；
@@ -94,14 +94,13 @@ src/main.js                 只做装配
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；
   链接模式「复制」复制为 Markdown 链接 `[标题](链接)`、「打开」新标签打开链接（纯图片链接没有标题时只复制地址）；
-  图片包在链接里时，「操作」仍作用于图片，外层链接另出一组「链接操作」，其中引擎带 `contextTarget: 'link'`，
-  目标改由 `contextLinkHit` 提供
+  图片包在链接里时，「操作」分类内先列图片动作、再列链接动作；链接动作带 `contextTarget: 'link'`，
+  目标改由 `contextLinkHit` 提供，名称用 `action.targetName` 标明作用目标
 - 悬停提示：`actionEngineHint(mode, action, hit, t)` 把动作说明与实际目标拼在一起，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
 - 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式显示「搜图」分类，
   并允许「操作」分类按显示开关出现；链接模式只显示「操作」；
-  图片外层还有链接时追加不落在配置里的「链接操作」组（动作引擎沿用「操作」分类配置）；
   普通模式按显示开关决定且永不显示「搜图」分类；非上下文模式下「打开」只在当前
   关键词（选区或搜索框）含链接时出现
 - 模式切换：长按可能发生在跳转条已挂载之后，`JumpBar` 监听命中模式的变化，

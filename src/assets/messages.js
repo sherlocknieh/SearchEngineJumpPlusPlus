@@ -80,7 +80,6 @@ export const messages = {
     'category.emptyName': '空',
     'category.newName': '新分类',
     'category.label': '分类「{name}」',
-    'category.linkActions': '链接操作',
 
     'engine.label': '「{name}」',
     'engine.addTitle': '添加搜索引擎',
@@ -116,13 +115,16 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
-    'action.hintCopyLink': '复制',
+    'action.hintCopyLink': '复制链接',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintOpenImage': '打开图片',
     'action.hintCopyText': '复制选中的文字',
     'action.hintCopyKeyword': '复制关键词',
     'action.hintWithTarget': '{action}：{target}',
+    'action.targetName': '{name}（{target}）',
+    'action.targetImage': '图片',
+    'action.targetLink': '链接',
     'action.copyFailed': '没有可复制的内容',
     'action.openFailed': '无法打开该内容',
 
@@ -238,7 +240,6 @@ export const messages = {
     'category.emptyName': 'Untitled',
     'category.newName': 'New category',
     'category.label': 'category “{name}”',
-    'category.linkActions': 'Link actions',
 
     'engine.label': '“{name}”',
     'engine.addTitle': 'Add search engine',
@@ -274,13 +275,16 @@ export const messages = {
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',
-    'action.hintCopyLink': 'Copy as Markdown link',
+    'action.hintCopyLink': 'Copy link',
     'action.hintOpenLink': 'Open link',
     'action.hintCopyImage': 'Copy image',
     'action.hintOpenImage': 'Open image',
     'action.hintCopyText': 'Copy selected text',
     'action.hintCopyKeyword': 'Copy keyword',
     'action.hintWithTarget': '{action}: {target}',
+    'action.targetName': '{name} ({target})',
+    'action.targetImage': 'image',
+    'action.targetLink': 'link',
     'action.copyFailed': 'Nothing to copy',
     'action.openFailed': 'Unable to open this content',
 

@@ -42,7 +42,7 @@ export function armContextMenu(ensureBoot) {
     pressed = null;
   }
 
-  /** 图片优先作为主模式；包着图片的链接同时记下，供「链接操作」使用 */
+  /** 图片优先作为主模式；包着图片的链接同时记下，供「操作」分类里的链接动作使用 */
   function resolveHit(target, point) {
     return resolveContextHit(target, hasEngines, point);
   }
