@@ -20,9 +20,9 @@ pnpm release "feat: xxx" --push   # 每次提交即发布：升版本 → lint �
 
 ```
 src/main.js                 只做装配
-└─ app/start.js             顶栏页面才运行；initStorage → registerMenu → armStart
+└─ app/start.js             顶栏页面才运行；初始化存储 → 挂菜单/右键监听 → armStart
    ├─ 命中站点规则 → boot()（延迟站点见 app/delay.js）
-   └─ 未命中 → 只开启划词懒启动（首次划词/菜单才 boot）
+   └─ 未命中 → 只开启懒启动（首次划词、右键/长按、菜单才 boot）
    └─ app/lifecycle.js      boot(): teardown → Shadow DOM → 全局样式 → 暗色 → 挂 App
       ├─ App(role=main)     JumpBar + SettingPanel(v-if) + Toast，挂在 sej-shadow-host
       └─ App(role=float)    ensureFloatBar() 单独挂载划词条，挂在 sej-shadow-host-float
@@ -126,6 +126,7 @@ src/main.js                 只做装配
 
 - `core/shadowDom.js`：按角色（`main` / `float`）多宿主、`addStyle` 广播、层叠偏移、`reset`；
   子组件通过 `inject(HOST_ROLE_KEY)` 取所属宿主（`getDropRoot` / `getHost`）
+- `core/csp.js`：`getCSPNonce()` 取页面 nonce（只缓存成功结果），`isInlineStyleBlocked()` 探测内联样式是否被 CSP 拦截；宿主与规则注入据此选择样式注入方式
 - 划词条定位：`core/floatPlacement.js` 的 `placeAboveRect`（锚点正上方，放不下翻到下方；
   文字/链接与锚点水平居中、图片居中；极简模式收起时只露图标，与展开后的整条共用落点），
   跟随选区时由 JumpBar 写入内联坐标；
@@ -161,7 +162,7 @@ src/main.js                 只做装配
 ## 测试索引（`test/`，纯 JS）
 
 `applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
-`engineUrl` `eventIsolation` `favicon` `imageSearch` `contextAction` `linkAction` `jump` `matchRule` `performJump` `selection` `sharedPointer`
+`engineUrl` `eventIsolation` `favicon` `floatPlacement` `imageSearch` `contextAction` `linkAction` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
 
