@@ -39,7 +39,6 @@
   --sej-input-bg: #fff;
   --sej-btn-bg: #fff;
   --sej-checkbox-border: #cfd5dd;
-  --sej-focus-ring: rgba(66, 133, 244, 0.22);
   --sej-accent-contrast: #fff;
   --sej-danger: #d93025;
   --sej-danger-weak: rgba(217, 48, 37, 0.1);
@@ -70,7 +69,6 @@
   --sej-input-bg: #17181a;
   --sej-btn-bg: rgba(255, 255, 255, 0.04);
   --sej-checkbox-border: #4a5459;
-  --sej-focus-ring: rgba(138, 180, 248, 0.3);
   --sej-accent-contrast: #202124;
   --sej-danger: #f28b82;
   --sej-danger-weak: rgba(242, 139, 130, 0.14);

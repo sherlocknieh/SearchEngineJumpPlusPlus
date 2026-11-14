@@ -58,7 +58,6 @@
 
 #btnEle .sej-language-select:focus-visible {
   border-color: var(--sej-accent);
-  box-shadow: 0 0 0 3px var(--sej-focus-ring);
 }
 
 #btnEle span:hover {

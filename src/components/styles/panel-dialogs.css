@@ -75,16 +75,13 @@
   background: var(--sej-input-bg);
   font-family: inherit;
   font-size: 13px;
-  transition:
-    border-color 0.12s ease-out,
-    box-shadow 0.12s ease-out;
+  transition: border-color 0.12s ease-out;
 }
 
 #newSearchBox input:focus,
 .sej-dialog-box input:focus {
   background: var(--sej-input-bg);
   border-color: var(--sej-accent);
-  box-shadow: 0 0 0 3px var(--sej-focus-ring);
 }
 
 .addItemBoxBtn {
