@@ -31,7 +31,7 @@ src/main.js                 只做装配
 ```
 
 - **SPA 路由**：`app/urlChange.js` 监听 `urlchange`，规则未变且 `barMounted` 时不重建，只刷新 `settings.activeRule`。
-- **重启**：设置保存后 `core/appControl.js` → `lifecycle.restart()`（整棵 Vue 应用重建）。
+- **重启**：设置保存后 `SettingPanel.vue` → `lifecycle.restart()`（整棵 Vue 应用重建）。
 - **多实例**：开发版/正式版用不同 host id 共存，层叠偏移在 `core/shadowDom.js`；
   调试脚本统一 `@name` 为 `server:SearchEngineJump++`，dev 与 dev:csp 共用一个安装位，
   同一角色被两个实例同时运行时，后启动的实例检测到同 id 宿主来自别的安装，直接跳过挂载。

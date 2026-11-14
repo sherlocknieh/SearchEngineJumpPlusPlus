@@ -3,7 +3,8 @@ import { nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { OPTION_KEYS } from '../core/configSchema.js';
 import { BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY, isBuiltinCategory } from '../core/configData.js';
 import { useSettings } from '../stores/settings.js';
-import { requestRestart } from '../core/appControl.js';
+// 直接依赖 lifecycle：restart 在关闭动画后才调用，那时模块早已求值完毕
+import { restart } from '../app/lifecycle.js';
 import { closeSettingPanel, showToast } from '../stores/ui.js';
 import { setLanguagePreference, t } from '../assets/i18n.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -241,7 +242,7 @@ function finishClose() {
   closeSettingPanel();
   if (remoteSynced.value || takeSettingsChanged()) {
     remoteSynced.value = false;
-    setTimeout(requestRestart, 0);
+    setTimeout(restart, 0);
   }
 }
 
