@@ -51,7 +51,7 @@ import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
-import scriptIcon from '../../assets/icon.svg?raw';
+import scriptIcon from '../assets/icon.svg?raw';
 import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
 import SettingButton from './SettingButton.vue';

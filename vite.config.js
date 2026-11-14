@@ -4,7 +4,7 @@ import vue from '@vitejs/plugin-vue';
 import monkey from 'vite-plugin-monkey';
 import vueStyleToShadow from './.dev/vueStyleToShadow.js';
 
-const icon = `data:image/svg+xml;base64,${readFileSync(new URL('./assets/icon.svg', import.meta.url)).toString('base64')}`;
+const icon = `data:image/svg+xml;base64,${readFileSync(new URL('./src/assets/icon.svg', import.meta.url)).toString('base64')}`;
 
 // `pnpm dev:csp` 的调试构建：产物给脚本管理器直接拉取执行，不写进随源码提交的 dist
 const devBundle = process.env.SEJ_DEV_BUNDLE === '1';
@@ -37,7 +37,7 @@ export default defineConfig({
           en: "Fork of MUTED64's SearchEngineJumpPlus, rebuilt with Vue 3 with numerous fixes and a cleaner, faster UI.",
         },
         license: 'MIT',
-        icon, // 自动从 assets/icon.svg 读取图标
+        icon, // 自动从 src/assets/icon.svg 读取图标
         match: ['*://*/*'],
         connect: ['*'],
         grant: [

@@ -154,7 +154,7 @@ src/main.js                 只做装配
 
 - `stores/ui.js`：`ui` 响应式状态、`showToast(text, duration, action, { priority })`、`openSettingPanel`
 - `components/Toast.vue` 挂在 `App.vue`，用 popover 进入 top layer：页面把 z-index 拉满（广告层）时提示仍可见可点
-- 所有文案走 `assets/i18n.js` 的 `t(key, params)`（`{name}` 插值），中英文在 `assets/messages.js`
+- 所有文案走 `src/assets/i18n.js` 的 `t(key, params)`（`{name}` 插值），中英文在 `src/assets/messages.js`
 
 ## 常见任务 → 先读哪些文件
 
