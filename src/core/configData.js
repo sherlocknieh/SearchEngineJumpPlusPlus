@@ -14,12 +14,12 @@ export function isPlainObject(value) {
  * 值是设置里的默认名称；清单本身即默认排序，配置缺项时按它补齐，设置面板因此始终列全。
  */
 export const ACTION_ENGINE_DEFAULTS = {
-  copy: '复制',
+  copy: '复制文字',
   copyImageUrl: '复制图片地址',
   copyLinkText: '复制链接标题',
   copyLinkUrl: '复制链接地址',
   selectLinkText: '选中链接标题',
-  open: '打开',
+  open: '打开链接',
 };
 
 export const ENGINE_ACTIONS = Object.keys(ACTION_ENGINE_DEFAULTS);

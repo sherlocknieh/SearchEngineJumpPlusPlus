@@ -373,8 +373,8 @@ export const DEFAULT_ENGINE_NAMES = {
   智谱GLM: 'Zhipu GLM',
   阿里千问: 'Qwen',
   知乎直答: 'Zhihu Zhida',
-  复制: 'Copy',
+  复制文字: 'Copy text',
   复制链接标题: 'Copy link title',
   复制链接地址: 'Copy link address',
-  打开: 'Open',
+  打开链接: 'Open link',
 };

@@ -135,8 +135,8 @@ describe('normalizeConfig', () => {
       defaults,
     );
     expect(result.engineList.actions).toEqual([
-      { name: '复制', action: 'copy' },
-      { name: '打开', url: 'https://ignored.test', action: 'open' },
+      { name: '复制文字', action: 'copy' },
+      { name: '打开链接', url: 'https://ignored.test', action: 'open' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
@@ -189,7 +189,7 @@ describe('normalizeConfig', () => {
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '选中链接标题', url: '', action: 'selectLinkText' },
-      { name: '打开', url: '', action: 'open' },
+      { name: '打开链接', url: '', action: 'open' },
     ]);
   });
 
@@ -240,12 +240,12 @@ describe('normalizeConfig', () => {
     ]);
   });
 
-  it('旧版默认名「打开链接」跟随改名，自定义名称保持原样', () => {
+  it('旧版默认名「复制」「打开」跟随改名，自定义名称保持原样', () => {
     const result = normalizeConfig(
       {
         engineList: {
           actions: [
-            { name: '打开链接', action: 'open' },
+            { name: '打开', action: 'open' },
             { name: '我的复制', action: 'copy' },
           ],
         },
@@ -253,13 +253,21 @@ describe('normalizeConfig', () => {
       defaults,
     );
     expect(result.engineList.actions.map((engine) => engine.name)).toEqual([
-      '打开',
+      '打开链接',
       '我的复制',
       '复制图片地址',
       '复制链接标题',
       '复制链接地址',
       '选中链接标题',
     ]);
+  });
+
+  it('旧默认名只在动作类型一致时改名', () => {
+    const result = normalizeConfig(
+      { engineList: { actions: [{ name: '打开', action: 'copy' }] } },
+      defaults,
+    );
+    expect(result.engineList.actions[0]).toEqual({ name: '打开', action: 'copy' });
   });
 
   it('缺少 engineList 时按分类键回退默认引擎', () => {

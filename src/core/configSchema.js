@@ -34,6 +34,12 @@ export const OPTION_KEYS = [
 /** 内置快捷动作分类的旧版默认名，读配置时跟随新版改名 */
 const LEGACY_ACTIONS_CATEGORY_NAME = '功能';
 
+/** 旧版动作默认名 → 新版默认名，只在动作类型一致时改名，用户自定义名称保持不变 */
+const LEGACY_ACTION_NAMES = {
+  复制: { action: 'copy', name: ACTION_ENGINE_DEFAULTS.copy },
+  打开: { action: 'open', name: ACTION_ENGINE_DEFAULTS.open },
+};
+
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
@@ -144,9 +150,10 @@ function ensureBuiltinActions(categories, engineList) {
     const defaultEngine = defaultEngines.find((engine) => engine.action === action);
     engines.push(defaultEngine ? { ...defaultEngine } : { name: actionName, url: '', action });
   }
-  // 旧版默认名「打开链接」跟随新版改名，用户自定义的名称保持不变
+  // 旧版默认名跟随改名（「复制」→「复制文字」，「打开」→「打开链接」），自定义名称保持不变
   for (const engine of engines) {
-    if (engine.action === 'open' && engine.name === '打开链接') engine.name = '打开';
+    const legacy = LEGACY_ACTION_NAMES[engine.name];
+    if (legacy && legacy.action === engine.action) engine.name = legacy.name;
   }
   engineList[BUILTIN_CATEGORY_KEY] = engines;
 }
