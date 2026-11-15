@@ -216,9 +216,11 @@ describe('contextActionTarget', () => {
     expect(contextActionTarget('link', 'copyLinkUrl', { keyword: url, url })).toBe(url);
   });
 
-  it('图片复制图片本身，取不到时回退地址；打开用图片地址', () => {
+  it('复制文字只复制文字，复制图片取图片本身，打开用图片地址', () => {
     const image = { keyword: 'https://cdn.test/a.png', url: 'https://cdn.test/a.png' };
-    expect(contextActionTarget('image', 'copy', image)).toEqual({
+    // 复制文字只用于划词与搜索框，目标始终是那段文字
+    expect(contextActionTarget('text', 'copy', image)).toBe('https://cdn.test/a.png');
+    expect(contextActionTarget('image', 'copyImage', image)).toEqual({
       text: 'https://cdn.test/a.png',
       url: 'https://cdn.test/a.png',
       image: 'https://cdn.test/a.png',
@@ -228,28 +230,31 @@ describe('contextActionTarget', () => {
 });
 
 describe('isActionAvailableInMode', () => {
-  it('链接复制拆成标题与地址，不再提供通用复制', () => {
+  it('复制文字只用于划词与搜索框，链接复制拆成标题与地址', () => {
+    expect(isActionAvailableInMode('text', 'copy')).toBe(true);
+    expect(isActionAvailableInMode('input', 'copy')).toBe(true);
+    expect(isActionAvailableInMode('image', 'copy')).toBe(false);
+    expect(isActionAvailableInMode('link', 'copy')).toBe(false);
     expect(isActionAvailableInMode('link', 'copyLinkText')).toBe(true);
     expect(isActionAvailableInMode('link', 'copyLinkUrl')).toBe(true);
     expect(isActionAvailableInMode('link', 'selectLinkText')).toBe(true);
-    expect(isActionAvailableInMode('link', 'copy')).toBe(false);
     expect(isActionAvailableInMode('link', 'copyImageUrl')).toBe(false);
   });
 
-  it('图片地址只在图片模式，链接复制只在链接模式', () => {
+  it('复制图片与图片地址只在图片模式，链接复制只在链接模式', () => {
+    expect(isActionAvailableInMode('image', 'copyImage')).toBe(true);
     expect(isActionAvailableInMode('image', 'copyImageUrl')).toBe(true);
+    expect(isActionAvailableInMode('text', 'copyImage')).toBe(false);
     expect(isActionAvailableInMode('image', 'copyLinkUrl')).toBe(false);
     expect(isActionAvailableInMode('text', 'copyLinkText')).toBe(false);
     expect(isActionAvailableInMode('text', 'selectLinkText')).toBe(false);
     expect(isActionAvailableInMode('input', 'copyImageUrl')).toBe(false);
   });
 
-  it('通用复制与打开始终可用', () => {
-    for (const mode of ['image', 'text', 'input']) {
-      expect(isActionAvailableInMode(mode, 'copy')).toBe(true);
+  it('打开在所有情景下都可用', () => {
+    for (const mode of ['image', 'link', 'text', 'input']) {
       expect(isActionAvailableInMode(mode, 'open')).toBe(true);
     }
-    expect(isActionAvailableInMode('link', 'open')).toBe(true);
   });
 });
 
@@ -257,7 +262,8 @@ describe('contextActionEngines', () => {
   const t = (key) => key;
   const engines = [
     { name: '复制图片地址', url: '', action: 'copyImageUrl' },
-    { name: '复制', url: '', action: 'copy' },
+    { name: '复制文字', url: '', action: 'copy' },
+    { name: '复制图片', url: '', action: 'copyImage' },
     { name: '打开', url: '', action: 'open' },
     { name: '复制链接标题', url: '', action: 'copyLinkText' },
     { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
@@ -272,6 +278,7 @@ describe('contextActionEngines', () => {
 
   it('图片与外层链接的动作按设置顺序合并，图片目标排在链接目标之前', () => {
     const list = contextActionEngines(engines, targets, t);
+    // 复制文字在图片/链接模式下没有目标，不产生条目
     expect(list.map((engine) => engine.name)).toEqual([
       'action.hintCopyImageUrl',
       'action.hintCopyImage',
@@ -307,7 +314,14 @@ describe('contextActionEngines', () => {
   });
 
   it('纯图片链接不再重复给出复制/选中标题，复制图片用命中图片当图标', () => {
-    const list = contextActionEngines(engines, [{ mode: 'image', hit: image }, { mode: 'link', hit: image }], t);
+    const list = contextActionEngines(
+      engines,
+      [
+        { mode: 'image', hit: image },
+        { mode: 'link', hit: image },
+      ],
+      t,
+    );
     expect(list.map((engine) => engine.name)).toEqual([
       'action.hintCopyImageUrl',
       'action.hintCopyImage',
@@ -315,7 +329,9 @@ describe('contextActionEngines', () => {
       'action.hintOpenLink',
       'action.hintCopyLinkUrl',
     ]);
-    expect(list.find((engine) => engine.action === 'copy').favicon).toBe(image.url);
+    expect(list.find((engine) => engine.action === 'copyImage').favicon).toBe(image.url);
+    // 复制文字在图片/链接浮层里不出现，图标也不被替换
+    expect(list.some((engine) => engine.action === 'copy')).toBe(false);
   });
 
   it('跳过隐藏项与非动作引擎，目标为空时返回空数组', () => {
@@ -356,7 +372,9 @@ describe('contextActionHintKey', () => {
     expect(contextActionHintKey('link', 'copyLinkUrl')).toBe('action.hintCopyLinkUrl');
     expect(contextActionHintKey('link', 'selectLinkText')).toBe('action.hintSelectLinkTitle');
     expect(contextActionHintKey('link', 'copy')).toBe('');
-    expect(contextActionHintKey('image', 'copy')).toBe('action.hintCopyImage');
+    expect(contextActionHintKey('image', 'copy')).toBe('');
+    expect(contextActionHintKey('image', 'copyImage')).toBe('action.hintCopyImage');
+    expect(contextActionHintKey('text', 'copy')).toBe('action.hintCopyText');
     expect(contextActionHintKey('link', 'open')).toBe('action.hintOpenLink');
     expect(contextActionHintKey('image', 'open')).toBe('action.hintOpenImage');
   });
@@ -385,7 +403,7 @@ describe('actionEngineHint', () => {
     expect(actionEngineHint('link', 'open', hit, t)).toBe(
       'action.hintOpenLink：https://site.test/a',
     );
-    expect(actionEngineHint('image', 'copy', hit, t)).toBe(
+    expect(actionEngineHint('image', 'copyImage', hit, t)).toBe(
       'action.hintCopyImage：https://site.test/a',
     );
     expect(actionEngineHint('text', 'copy', hit, t)).toBe('action.hintCopyText：示例标题');
@@ -410,7 +428,7 @@ describe('actionEngineHint', () => {
   });
 
   it('名称已说明动作时只返回目标内容', () => {
-    expect(actionTargetHint('image', 'copy', { url: 'https://cdn.test/a.png' })).toBe(
+    expect(actionTargetHint('image', 'copyImage', { url: 'https://cdn.test/a.png' })).toBe(
       'https://cdn.test/a.png',
     );
     expect(actionTargetHint('link', 'copyLinkText', hit)).toBe('示例标题');

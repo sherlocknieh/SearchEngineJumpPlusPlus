@@ -136,11 +136,12 @@ describe('normalizeConfig', () => {
     );
     expect(result.engineList.actions).toEqual([
       { name: '复制文字', action: 'copy' },
-      { name: '打开链接', url: 'https://ignored.test', action: 'open' },
+      { name: '复制图片', url: '', action: 'copyImage' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '选中链接标题', url: '', action: 'selectLinkText' },
+      { name: '打开链接', url: 'https://ignored.test', action: 'open' },
     ]);
   });
 
@@ -156,6 +157,7 @@ describe('normalizeConfig', () => {
     expect(result.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
       'copy',
+      'copyImage',
       'copyImageUrl',
       'copyLinkText',
       'copyLinkUrl',
@@ -185,6 +187,7 @@ describe('normalizeConfig', () => {
     ]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
+      { name: '复制图片', url: '', action: 'copyImage' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
@@ -193,7 +196,7 @@ describe('normalizeConfig', () => {
     ]);
   });
 
-  it('补齐全部动作时保留用户已有顺序，缺的动作追加在末尾', () => {
+  it('补齐全部动作时保留用户已有顺序，缺的动作落在默认位置', () => {
     const result = normalizeConfig(
       {
         engineCategories: [['操作', 'actions', true]],
@@ -210,6 +213,7 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
       'open',
       'copy',
+      'copyImage',
       'copyImageUrl',
       'copyLinkText',
       'copyLinkUrl',
@@ -255,6 +259,7 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions.map((engine) => engine.name)).toEqual([
       '打开链接',
       '我的复制',
+      '复制图片',
       '复制图片地址',
       '复制链接标题',
       '复制链接地址',

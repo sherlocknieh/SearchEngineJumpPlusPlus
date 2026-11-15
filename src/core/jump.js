@@ -67,17 +67,18 @@ function normalizeActionTarget(target) {
 
 /**
  * 执行动作引擎，返回是否成功处理。
- * copy 优先复制图片本身，取不到时复制文字；copyLinkText 复制链接标题，
- * copyImageUrl / copyLinkUrl 复制地址；selectLinkText 选中页面上的链接标题；
- * open 把目标地址当作链接打开。
+ * copy 复制文字，copyImage 复制图片本身（取不到时复制图片地址），
+ * copyImageUrl / copyLinkUrl 复制地址，copyLinkText 复制链接标题，
+ * selectLinkText 选中页面上的链接标题，open 把目标地址当作链接打开。
  * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target 复制/打开用的内容
  */
 export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
   const action = normalizeEngineAction(engine?.action);
   const source = normalizeActionTarget(target);
-  if (action === 'copy') {
+  if (action === 'copy') return copyText(source.text);
+  if (action === 'copyImage') {
     if (source.image && (await copyImage(source.image))) return true;
-    return copyText(source.text);
+    return copyText(source.url || source.text);
   }
   if (action === 'copyLinkText') return copyText(source.text);
   if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);

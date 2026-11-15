@@ -144,11 +144,17 @@ function ensureBuiltinActions(categories, engineList) {
   const engines = engineList[BUILTIN_CATEGORY_KEY] || [];
   const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
   const defaultEngines = defaultConfig.engineList[BUILTIN_CATEGORY_KEY] || [];
-  // 按动作清单补齐：设置面板始终列出所有可能的动作，顺序与隐藏状态仍由用户决定
-  for (const [action, actionName] of Object.entries(ACTION_ENGINE_DEFAULTS)) {
+  const defaultActions = Object.keys(ACTION_ENGINE_DEFAULTS);
+  // 按动作清单补齐：设置面板始终列出所有可能的动作。
+  // 补的动作插到清单里前一个已有动作之后，既落在默认位置，也不打乱用户拖出的顺序。
+  for (const [order, action] of defaultActions.entries()) {
     if (presentActions.has(action)) continue;
     const defaultEngine = defaultEngines.find((engine) => engine.action === action);
-    engines.push(defaultEngine ? { ...defaultEngine } : { name: actionName, url: '', action });
+    const engine = defaultEngine
+      ? { ...defaultEngine }
+      : { name: ACTION_ENGINE_DEFAULTS[action], url: '', action };
+    engines.splice(insertIndexFor(engines, defaultActions, order), 0, engine);
+    presentActions.add(action);
   }
   // 旧版默认名跟随改名（「复制」→「复制文字」，「打开」→「打开链接」），自定义名称保持不变
   for (const engine of engines) {
@@ -156,6 +162,20 @@ function ensureBuiltinActions(categories, engineList) {
     if (legacy && legacy.action === engine.action) engine.name = legacy.name;
   }
   engineList[BUILTIN_CATEGORY_KEY] = engines;
+}
+
+/**
+ * 补齐动作时的插入位置：清单里前一个已有动作之后，前面都没有就放最前。
+ * @param {Array} engines 当前动作条目
+ * @param {string[]} defaultActions 动作清单（默认顺序）
+ * @param {number} order 待插入动作在清单里的位置
+ */
+function insertIndexFor(engines, defaultActions, order) {
+  for (let i = order - 1; i >= 0; i -= 1) {
+    const at = engines.findIndex((engine) => engine.action === defaultActions[i]);
+    if (at >= 0) return at + 1;
+  }
+  return 0;
 }
 
 /**

@@ -21,7 +21,7 @@ const CONTEXT_ACTION_HINTS = {
     open: 'action.hintOpenLink',
   },
   image: {
-    copy: 'action.hintCopyImage',
+    copyImage: 'action.hintCopyImage',
     copyImageUrl: 'action.hintCopyImageUrl',
     open: 'action.hintOpenImage',
   },
@@ -41,6 +41,7 @@ export function contextActionLabel(mode, action, fallback, t) {
 /** 设置面板里的动作说明：什么场景下出现、具体做什么 */
 const ACTION_ENGINE_TIPS = {
   copy: 'action.tipCopy',
+  copyImage: 'action.tipCopyImage',
   copyImageUrl: 'action.tipCopyImageUrl',
   copyLinkText: 'action.tipCopyLinkText',
   copyLinkUrl: 'action.tipCopyLinkUrl',
@@ -112,8 +113,8 @@ export function getContextEngines(settingData, mode) {
 }
 
 /**
- * 命中内容交给动作引擎的目标：链接标题、链接地址与图片地址各取对应内容，
- * 通用「复制」按命中类型决定复制图片本身还是文字；打开统一用地址；
+ * 命中内容交给动作引擎的目标：复制文字只取文字，复制图片只取图片，
+ * 链接标题、链接地址与图片地址各取对应内容；打开统一用地址；
  * 「选中链接标题」额外带上链接元素，交给动作执行方落到页面选区。
  * @param {'image' | 'link'} mode 命中类型
  * @param {string} action 动作类型
@@ -123,23 +124,22 @@ export function getContextEngines(settingData, mode) {
 export function contextActionTarget(mode, action, hit = {}) {
   const url = hit.url || '';
   const keyword = hit.keyword || url;
-  if (action === 'copyLinkText') return keyword;
+  if (action === 'copyLinkText' || action === 'copy') return keyword;
   if (action === 'copyLinkUrl' || action === 'copyImageUrl') return url || keyword;
   if (action === 'selectLinkText') return { text: keyword, url, element: hit.element || null };
-  if (action !== 'copy') return url || keyword;
-  if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
-  return keyword;
+  if (action === 'copyImage') return { text: url || keyword, url, image: url || keyword };
+  return url || keyword;
 }
 
 /**
- * 动作在某个关键词来源下是否有意义：链接标题/地址只属于链接，图片地址只属于图片，
- * 通用「复制」不再参与链接（链接复制已拆成标题与地址两项）。
+ * 动作在某个关键词来源下是否有意义：复制文字只用于划词与搜索框，复制图片只用于图片，
+ * 链接标题/地址与图片地址只属于各自的目标，打开在所有情景下都可用。
  * @param {'image' | 'link' | 'text' | 'input'} mode 关键词来源
  * @param {string} [action] 动作类型
  */
 export function isActionAvailableInMode(mode, action) {
-  if (action === 'copy') return mode !== 'link';
-  if (action === 'copyImageUrl') return mode === 'image';
+  if (action === 'copy') return mode === 'text' || mode === 'input';
+  if (action === 'copyImage' || action === 'copyImageUrl') return mode === 'image';
   if (action === 'copyLinkText' || action === 'copyLinkUrl' || action === 'selectLinkText') {
     return mode === 'link';
   }
@@ -219,8 +219,8 @@ export function contextActionEngines(engines, targets, t) {
       }
       list.push({
         ...engine,
-        // 图片模式下「复制」复制的是命中的图片，图标直接用这张图
-        ...(mode === 'image' && engine.action === 'copy'
+        // 复制图片时图标直接用命中的这张图，设置面板仍用动作默认图标
+        ...(mode === 'image' && engine.action === 'copyImage'
           ? { favicon: hit.url, faviconData: '' }
           : {}),
         name: contextActionLabel(mode, engine.action, engine.name, t),

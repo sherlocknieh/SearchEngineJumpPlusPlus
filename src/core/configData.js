@@ -15,6 +15,7 @@ export function isPlainObject(value) {
  */
 export const ACTION_ENGINE_DEFAULTS = {
   copy: '复制文字',
+  copyImage: '复制图片',
   copyImageUrl: '复制图片地址',
   copyLinkText: '复制链接标题',
   copyLinkUrl: '复制链接地址',

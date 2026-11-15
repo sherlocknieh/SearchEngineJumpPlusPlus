@@ -162,6 +162,11 @@
         "action": "copy"
       },
       {
+        "name": "复制图片",
+        "url": "",
+        "action": "copyImage"
+      },
+      {
         "name": "复制图片地址",
         "url": "",
         "action": "copyImageUrl"

@@ -71,7 +71,7 @@ src/main.js                 只做装配
     由 `resolveOpenMode` 统一判定（后台用 `GM_openInTab` 的 `active: false`），
     批量打开只把「当前页」提升为新标签页，后台选择保持后台；
     `$post$` 表单无法后台提交，后台打开时降级为新标签页
-  - 动作引擎：`action: 'copy' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open'`
+  - 动作引擎：`action: 'copy' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
 ## 长按 / 右键操作（图片搜图、链接操作）
@@ -95,7 +95,7 @@ src/main.js                 只做装配
   开启「跟随选区」时与划词条共用简洁/极简形态（极简下收起为图标），关闭时整条展开；
   点击外部/Escape 关闭，滚动时继续跟随命中的元素，跳转或「一键打开」后自动收起
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
-  图片模式「复制」复制图片本身（取不到时回退地址）、「打开链接」新标签打开图片；
+  图片模式「复制图片」复制图片本身（取不到时回退地址）、「打开链接」新标签打开图片；
   链接模式拆成「复制链接标题」「复制链接地址」两项，分别复制链接文字与 URL，「打开链接」新标签打开链接；
   「选中链接标题」把标题变成页面上的浏览器选区，浮层顺势从上下文操作条转为划词菜单
   （`linkAction.selectLinkTitle` → `selection.selectElementText`，优先选链接内的标题节点，

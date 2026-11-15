@@ -211,20 +211,30 @@ describe('动作引擎的上下文目标', () => {
     });
   });
 
-  it('复制对象里的文本内容', async () => {
+  it('复制文字只复制文字，图片目标交给复制图片处理', async () => {
     const target = { text: '标题\nhttps://a.test', url: 'https://a.test' };
     expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
     expect(writeText).toHaveBeenCalledWith('标题\nhttps://a.test');
+    // 带图片目标时复制文字也仍然只复制文字，不会写入图片
+    writeText.mockClear();
+    expect(
+      await performEngineAction(
+        { action: 'copy' },
+        { text: '文中文字', url: 'https://a.test', image: 'https://cdn.test/a.png' },
+      ),
+    ).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('文中文字');
+    expect(write).not.toHaveBeenCalled();
   });
 
-  it('图片可取时写入图片数据，取不到时回退到复制的文字', async () => {
+  it('复制图片可取时写入图片数据，取不到时回退到图片地址', async () => {
     const target = { text: 'https://cdn.test/a.png', image: 'https://cdn.test/a.png' };
     const originalFetch = globalThis.fetch;
     const OriginalItem = globalThis.ClipboardItem;
     try {
       // 不支持图片剪贴板时回退到复制地址
       globalThis.ClipboardItem = undefined;
-      expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
+      expect(await performEngineAction({ action: 'copyImage' }, target)).toBe(true);
       expect(writeText).toHaveBeenCalledWith('https://cdn.test/a.png');
 
       globalThis.ClipboardItem = class {
@@ -237,7 +247,7 @@ describe('动作引擎的上下文目标', () => {
         blob: async () => new Blob(['png'], { type: 'image/png' }),
       }));
       writeText.mockClear();
-      expect(await performEngineAction({ action: 'copy' }, target)).toBe(true);
+      expect(await performEngineAction({ action: 'copyImage' }, target)).toBe(true);
       expect(write).toHaveBeenCalledTimes(1);
       expect(writeText).not.toHaveBeenCalled();
     } finally {
