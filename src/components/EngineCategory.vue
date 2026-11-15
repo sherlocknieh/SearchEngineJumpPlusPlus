@@ -542,8 +542,8 @@ onBeforeUnmount(() => {
   height: 16px;
   margin: 0;
   object-fit: cover;
-  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */
-  translate: 0 0.75px;
+  /* 与引擎图标一致：跟随文字着墨中心下移半个像素，详见 EngineItem 的 .sej-engine-icon */
+  translate: 0 0.5px;
 }
 
 /*
@@ -555,8 +555,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   margin: 0;
-  /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */
-  translate: 0 0.75px;
+  translate: 0 0.5px;
 }
 
 /* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */
@@ -571,7 +570,7 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  translate: 0 0.75px;
+  translate: 0 0.5px;
 }
 
 /* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */

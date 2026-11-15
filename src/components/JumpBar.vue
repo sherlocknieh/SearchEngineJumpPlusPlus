@@ -12,11 +12,7 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import {
-  PLACEMENT_GAP,
-  placeAboveRect,
-  placeInsideRect,
-} from '../core/floatPlacement.js';
+import { PLACEMENT_GAP, placeAboveRect, placeInsideRect } from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -50,7 +46,7 @@ import {
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
-import { useScrollDrag } from '../composables/useScrollDrag.js';
+import { maxScrollLeft, useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
 import scriptIcon from '../assets/icon.svg?raw';
 import EngineItem from './EngineItem.vue';
@@ -176,24 +172,26 @@ function contextActionName(engine, target) {
 
 /** 按单一目标生成操作条目；图片+链接时按链接、图片顺序拼接结果 */
 function buildActionEngines(target, hit) {
-  return (data.engineList[BUILTIN_CATEGORY_KEY] || [])
-    .filter((engine) => !engine.disable && engine.action)
-    .filter((engine) => isActionAvailableInMode(target, engine.action))
-    // 纯图片链接没有标题，复制/选中标题与复制地址目标相同，省掉重复按钮
-    .filter(
-      (engine) =>
-        !['copyLinkText', 'selectLinkText'].includes(engine.action) || hit.keyword !== hit.url,
-    )
-    .map((engine) => ({
-      ...engine,
-      // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
-      ...(target === 'image' && engine.action === 'copy'
-        ? { favicon: hit.url, faviconData: '' }
-        : {}),
-      name: contextActionName(engine, target),
-      contextTarget: target,
-      hint: actionTargetHint(target, engine.action, hit),
-    }));
+  return (
+    (data.engineList[BUILTIN_CATEGORY_KEY] || [])
+      .filter((engine) => !engine.disable && engine.action)
+      .filter((engine) => isActionAvailableInMode(target, engine.action))
+      // 纯图片链接没有标题，复制/选中标题与复制地址目标相同，省掉重复按钮
+      .filter(
+        (engine) =>
+          !['copyLinkText', 'selectLinkText'].includes(engine.action) || hit.keyword !== hit.url,
+      )
+      .map((engine) => ({
+        ...engine,
+        // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
+        ...(target === 'image' && engine.action === 'copy'
+          ? { favicon: hit.url, faviconData: '' }
+          : {}),
+        name: contextActionName(engine, target),
+        contextTarget: target,
+        hint: actionTargetHint(target, engine.action, hit),
+      }))
+  );
 }
 
 const categories = computed(() => {
@@ -370,6 +368,40 @@ const PAGE_STEP_RATIO = 0.875;
 // 实测 Chrome 的 PageDown 动画约 150ms，而 behavior: 'smooth' 会按距离滚动约 600ms
 const PAGE_SCROLL_DURATION = 150;
 let scrollAnimRaf = 0;
+// 溢出提示的复测：内容或宽度变化后重判一次，见 startHintTracking
+let hintObserver = null;
+let hintMutations = null;
+
+/**
+ * 尺寸变化、条目增减都会改变溢出状态，两者都监听。
+ * 回调里直接量：ResizeObserver 本身就在布局之后触发，再叠一层 rAF
+ * 会被后台标签节流，残留的箭头要等下次交互才消失。
+ */
+function startHintTracking() {
+  const el = scrollEl.value;
+  if (!el || typeof ResizeObserver !== 'function') return;
+  const refresh = () => updateScrollHints();
+  hintObserver = new ResizeObserver(refresh);
+  hintObserver.observe(el);
+  Array.from(el.children).forEach((child) => hintObserver.observe(child));
+  if (typeof MutationObserver === 'function') {
+    hintMutations = new MutationObserver(() => {
+      const scroll = scrollEl.value;
+      if (!scroll) return;
+      Array.from(scroll.children).forEach((child) => hintObserver.observe(child));
+      refresh();
+    });
+    hintMutations.observe(el, { childList: true });
+  }
+  refresh();
+}
+
+function stopHintTracking() {
+  hintObserver?.disconnect();
+  hintMutations?.disconnect();
+  hintObserver = null;
+  hintMutations = null;
+}
 
 // 缓入缓出，接近系统分页滚动的加减速
 function easeInOutQuad(t) {
@@ -399,8 +431,8 @@ function animateScrollTo(el, target) {
 function scrollBar(direction) {
   const el = scrollEl.value;
   if (!el) return;
-  const maxScroll = el.scrollWidth - el.clientWidth;
-  if (maxScroll <= 0) return;
+  const maxScroll = maxScrollLeft(el);
+  if (!maxScroll) return;
   const step = direction * el.clientWidth * PAGE_STEP_RATIO;
   const target = Math.min(maxScroll, Math.max(0, el.scrollLeft + step));
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches) {
@@ -833,6 +865,9 @@ onMounted(async () => {
     constrainBarToViewport();
   }
   updateScrollHints();
+  // 图标模式靠过渡结束事件刷新提示，开启「减弱动态效果」时过渡被禁用、事件不会触发；
+  // 条目增减与横竖屏切换同样需要重判，统一交给观察器
+  startHintTracking();
   // 入场动画的 scale 会让首帧测量偏小，动画结束后重新校准
   scheduleConstrainCheck();
   window.addEventListener('resize', isFloat ? onFloatResize : onViewportResize);
@@ -880,6 +915,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerup', endScrollDrag);
   window.removeEventListener('pointercancel', endScrollDrag);
   cancelScrollAnim();
+  stopHintTracking();
   disposeScrollDrag();
   disposeViewport();
   stopStackSync();

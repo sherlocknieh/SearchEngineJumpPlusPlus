@@ -165,19 +165,19 @@ src/main.js                 只做装配
 
 ## 常见任务 → 先读哪些文件
 
-| 任务                | 阅读顺序                                                                                                       |
-| ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 任务                | 阅读顺序                                                                                                          |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | 改跳转条外观/交互   | `JumpBar.vue` → `composables/useBarViewport` / `useScrollDrag` / `useStackSync` → `components/EngineCategory.vue` |
-| 改设置面板          | `SettingPanel.vue` → 对应 `composables/useSettings*` → `components/styles/*.css`                               |
-| 加站点适配          | `data/sites/<站名>.js`（照抄 `bing.js`/`zhihu.js`）→ `core/applyRule.js`                                       |
-| 改跳转/取词         | `core/jump.js` → `core/selection.js` → `core/selectionGesture.js` → `JumpBar.getCurrentKeyword`                |
-| 改配置格式/导入导出 | `core/configSchema.js` → `configData.js` → `useConfigIO.js` → `configMerge.js`                                 |
-| 改存储/同步         | `core/storage.js` → `storageBackend.js` → `app/settingsSync.js`                                                |
-| 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                        |
-| 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                  |
-| 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                             |
-| 改长按/右键操作    | `app/contextMenu.js` → `core/contextAction.js` → `core/imageSearch.js` / `core/linkAction.js` → `JumpBar.vue` |
-| 发布                | `.dev/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                    |
+| 改设置面板          | `SettingPanel.vue` → 对应 `composables/useSettings*` → `components/styles/*.css`                                  |
+| 加站点适配          | `data/sites/<站名>.js`（照抄 `bing.js`/`zhihu.js`）→ `core/applyRule.js`                                          |
+| 改跳转/取词         | `core/jump.js` → `core/selection.js` → `core/selectionGesture.js` → `JumpBar.getCurrentKeyword`                   |
+| 改配置格式/导入导出 | `core/configSchema.js` → `configData.js` → `useConfigIO.js` → `configMerge.js`                                    |
+| 改存储/同步         | `core/storage.js` → `storageBackend.js` → `app/settingsSync.js`                                                   |
+| 改引擎链接解析      | `core/engineUrl.js` → `EngineEditDialog.vue` → `test/engineUrl.test.js`                                           |
+| 改图标获取          | `core/favicon.js` → `useEngineIcons` / `useEngineIconPreview`                                                     |
+| 改弹窗行为          | `composables/useModalA11y.js` + 对应 `*Dialog.vue`                                                                |
+| 改长按/右键操作     | `app/contextMenu.js` → `core/contextAction.js` → `core/imageSearch.js` / `core/linkAction.js` → `JumpBar.vue`     |
+| 发布                | `.dev/release.mjs`；构建入口 `vite.config.js`（userscript 元数据在这里）                                          |
 
 ## 测试索引（`test/`，纯 JS）
 
@@ -191,6 +191,10 @@ src/main.js                 只做装配
 ## 约定与坑
 
 - `%s` 是关键词占位符（可多次出现），不要做 URL 编码，否则替换逻辑失效
+- 判断跳转条是否横向溢出不要用 `scrollWidth - clientWidth`：两者分别是上/下取整的整数，
+  高 DPI 手机上内容放得下也会差出 1~2px，误露出箭头。用 `useScrollDrag` 的
+  `hasScrollOverflow` / `maxScrollLeft`（按子项小数宽度实测）；
+  提示还要在宽度/条目变化后重判，见 `JumpBar.startHintTracking`
 - 所有配置读写必须经过 `configSchema` / `configData`，避免多处解释不一致
 - 新增默认引擎：`src/data/engines.json`；新增站点适配：`src/data/sites/`
 - 内置分类（`actions` / `image`）不可删除、不提供分类编辑入口，`isBuiltinCategory` 统一判断；

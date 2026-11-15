@@ -90,8 +90,12 @@ const emit = defineEmits(['jump']);
   object-fit: cover;
   display: inline-block;
   margin: 0;
-  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */
-  translate: 0 0.75px;
+  /*
+   * 行盒居中后，文字着墨中心实际比 16px 图标槽中心低约 0.5px，图标跟随后才与文字齐平。
+   * 用 0.5px 而不是更细的值：2 倍屏上它正好是一个物理像素，不会因为条目落在半像素位置
+   * 而吸附到不同整像素上，导致对齐结果随页面位置跳动。
+   */
+  translate: 0 0.5px;
 }
 
 .sej-engine-icon:not([src]) {

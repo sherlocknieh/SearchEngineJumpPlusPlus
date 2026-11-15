@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1043
+// @version            2026.11.15.1449
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7608,6 +7608,37 @@
 		};
 	}
 	var WHEEL_LINE_HEIGHT = 16;
+	var OVERFLOW_TOLERANCE = .5;
+	var ROUNDING_SLACK = 2;
+	function measureContentWidth(el) {
+		const children = el.children;
+		if (!children.length || typeof getComputedStyle !== "function") return null;
+		const style = getComputedStyle(el);
+		let total = (parseFloat(style.paddingLeft) || 0) + (parseFloat(style.paddingRight) || 0);
+		const gap = parseFloat(style.columnGap) || 0;
+		let measured = false;
+		for (const child of children) {
+			const width = child.getBoundingClientRect().width;
+			if (width > 0) measured = true;
+			total += width;
+		}
+		if (!measured) return null;
+		return total + gap * (children.length - 1);
+	}
+	function hasScrollOverflow(el) {
+		const overflow = el.scrollWidth - el.clientWidth;
+		if (overflow <= 0) return false;
+		if (overflow > ROUNDING_SLACK) return true;
+		const content = measureContentWidth(el);
+		if (content === null) return true;
+		const rect = el.getBoundingClientRect();
+		const style = getComputedStyle(el);
+		return content - (rect.width - (parseFloat(style.borderLeftWidth) || 0) - (parseFloat(style.borderRightWidth) || 0)) > OVERFLOW_TOLERANCE;
+	}
+	function maxScrollLeft(el) {
+		if (!hasScrollOverflow(el)) return 0;
+		return Math.max(0, el.scrollWidth - el.clientWidth);
+	}
 	function useScrollDrag({ scrollEl, threshold = 6 }) {
 		let dragState = null;
 		let suppressClickUntil = 0;
@@ -7615,7 +7646,7 @@
 		function updateScrollHints() {
 			const el = scrollEl.value;
 			if (!el) return;
-			const maxScroll = el.scrollWidth - el.clientWidth;
+			const maxScroll = maxScrollLeft(el);
 			el.classList.toggle("sej-scroll-more-left", el.scrollLeft > 1);
 			el.classList.toggle("sej-scroll-more-right", el.scrollLeft < maxScroll - 1);
 		}
@@ -7630,7 +7661,7 @@
 			if (e.pointerType !== "mouse" || e.button !== 0) return;
 			suppressClickUntil = 0;
 			const el = scrollEl.value;
-			if (!el || el.scrollWidth <= el.clientWidth) return;
+			if (!el || !maxScrollLeft(el)) return;
 			el.classList.remove("sej-scroll-dragging");
 			dragState = {
 				pointerId: e.pointerId,
@@ -7677,8 +7708,8 @@
 		function onScrollWheel(e) {
 			const el = scrollEl.value;
 			if (!el || e.ctrlKey || e.metaKey) return;
-			const maxScroll = el.scrollWidth - el.clientWidth;
-			if (maxScroll <= 0) return;
+			const maxScroll = maxScrollLeft(el);
+			if (!maxScroll) return;
 			const raw = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
 			if (!raw) return;
 			const unit = e.deltaMode === 1 ? WHEEL_LINE_HEIGHT : e.deltaMode === 2 ? el.clientWidth : 1;
@@ -8063,7 +8094,7 @@
 		},
 		emits: ["jump"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-engine {\n  padding: 0 13px;\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 500;\n}\n\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */\n  translate: 0 0.75px;\n}\n\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n/* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */\n.sej-engine-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n.sej-engine-icon {\n  pointer-events: none;\n}\n");
+			addStyle("\n.sej-engine {\n  padding: 0 13px;\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 500;\n}\n\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n  /*\n   * 行盒居中后，文字着墨中心实际比 16px 图标槽中心低约 0.5px，图标跟随后才与文字齐平。\n   * 用 0.5px 而不是更细的值：2 倍屏上它正好是一个物理像素，不会因为条目落在半像素位置\n   * 而吸附到不同整像素上，导致对齐结果随页面位置跳动。\n   */\n  translate: 0 0.5px;\n}\n\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n/* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */\n.sej-engine-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n.sej-engine-icon {\n  pointer-events: none;\n}\n");
 			const props = __props;
 			const iconSrc = computed(() => props.showIcon ? getFaviconSrc(props.engine) : "");
 			const label = computed(() => localizeEngineName(props.engine.name));
@@ -8190,7 +8221,7 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n  /* 行盒居中会让图标比文字视觉中心高约 0.75px，向下补偿后才与文字齐平 */\n  translate: 0 0.75px;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  /* 与引擎图标一致，向下补偿行盒居中带来的视觉偏高 */\n  translate: 0 0.75px;\n}\n\n/* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n  translate: 0 0.75px;\n}\n\n/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n  /* 与引擎图标一致：跟随文字着墨中心下移半个像素，详见 EngineItem 的 .sej-engine-icon */\n  translate: 0 0.5px;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  translate: 0 0.5px;\n}\n\n/* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n  translate: 0 0.5px;\n}\n\n/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  padding: 0 10px;\n  gap: 8px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  padding: 4px;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const props = __props;
 			const emit = __emit;
 			const iconVisible = computed(() => props.showIcon || props.compact);
@@ -8785,6 +8816,32 @@
 				hideFloatBar();
 			}
 			let scrollAnimRaf = 0;
+			let hintObserver = null;
+			let hintMutations = null;
+			function startHintTracking() {
+				const el = scrollEl.value;
+				if (!el || typeof ResizeObserver !== "function") return;
+				const refresh = () => updateScrollHints();
+				hintObserver = new ResizeObserver(refresh);
+				hintObserver.observe(el);
+				Array.from(el.children).forEach((child) => hintObserver.observe(child));
+				if (typeof MutationObserver === "function") {
+					hintMutations = new MutationObserver(() => {
+						const scroll = scrollEl.value;
+						if (!scroll) return;
+						Array.from(scroll.children).forEach((child) => hintObserver.observe(child));
+						refresh();
+					});
+					hintMutations.observe(el, { childList: true });
+				}
+				refresh();
+			}
+			function stopHintTracking() {
+				hintObserver?.disconnect();
+				hintMutations?.disconnect();
+				hintObserver = null;
+				hintMutations = null;
+			}
 			function easeInOutQuad(t) {
 				return t < .5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2;
 			}
@@ -8809,8 +8866,8 @@
 			function scrollBar(direction) {
 				const el = scrollEl.value;
 				if (!el) return;
-				const maxScroll = el.scrollWidth - el.clientWidth;
-				if (maxScroll <= 0) return;
+				const maxScroll = maxScrollLeft(el);
+				if (!maxScroll) return;
 				const step = direction * el.clientWidth * PAGE_STEP_RATIO;
 				const target = Math.min(maxScroll, Math.max(0, el.scrollLeft + step));
 				if (window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches) {
@@ -9105,6 +9162,7 @@
 				if (isFloat) syncFloatPlacement();
 				else constrainBarToViewport();
 				updateScrollHints();
+				startHintTracking();
 				scheduleConstrainCheck();
 				window.addEventListener("resize", isFloat ? onFloatResize : onViewportResize);
 				window.addEventListener("pointermove", onWindowPointerMove, { passive: true });
@@ -9144,6 +9202,7 @@
 				window.removeEventListener("pointerup", endScrollDrag);
 				window.removeEventListener("pointercancel", endScrollDrag);
 				cancelScrollAnim();
+				stopHintTracking();
 				disposeScrollDrag();
 				disposeViewport();
 				stopStackSync();

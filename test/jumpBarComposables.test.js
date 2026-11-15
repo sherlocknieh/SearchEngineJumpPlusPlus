@@ -1,7 +1,11 @@
 // @vitest-environment happy-dom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ref } from 'vue';
-import { useScrollDrag } from '../src/composables/useScrollDrag.js';
+import {
+  hasScrollOverflow,
+  maxScrollLeft,
+  useScrollDrag,
+} from '../src/composables/useScrollDrag.js';
 import { useStackSync } from '../src/composables/useStackSync.js';
 
 function createScroller() {
@@ -21,6 +25,64 @@ function createScroller() {
   document.body.appendChild(el);
   return el;
 }
+
+// 内容宽度与滚动区宽度都按小数值给出：整数 scrollWidth/clientWidth 会把
+// 亚像素差异放大成 1~2px，判定需要看真实小数宽度
+function createMeasuredScroller({ contentWidth, viewWidth }) {
+  const el = document.createElement('div');
+  const item = document.createElement('span');
+  Object.defineProperty(item, 'getBoundingClientRect', {
+    value: () => ({
+      width: contentWidth,
+      height: 30,
+      left: 0,
+      right: contentWidth,
+      top: 0,
+      bottom: 30,
+    }),
+  });
+  el.appendChild(item);
+  Object.defineProperty(el, 'getBoundingClientRect', {
+    value: () => ({ width: viewWidth, height: 34, left: 0, right: viewWidth, top: 0, bottom: 34 }),
+  });
+  Object.defineProperty(el, 'scrollWidth', {
+    value: Math.ceil(contentWidth),
+    configurable: true,
+  });
+  Object.defineProperty(el, 'clientWidth', {
+    value: Math.floor(viewWidth),
+    configurable: true,
+  });
+  document.body.appendChild(el);
+  return el;
+}
+
+describe('hasScrollOverflow', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  it('亚像素级取整误差不算溢出', () => {
+    // 内容 200.4 落在 200.2 的可视区内：scrollWidth 201 - clientWidth 200 会误判溢出
+    const el = createMeasuredScroller({ contentWidth: 200.4, viewWidth: 200.2 });
+    expect(el.scrollWidth - el.clientWidth).toBeGreaterThan(0);
+    expect(hasScrollOverflow(el)).toBe(false);
+    expect(maxScrollLeft(el)).toBe(0);
+  });
+
+  it('真正超出容差才算溢出', () => {
+    const el = createMeasuredScroller({ contentWidth: 206, viewWidth: 200 });
+    expect(hasScrollOverflow(el)).toBe(true);
+    expect(maxScrollLeft(el)).toBe(6);
+  });
+
+  it('取整误差区间内仍按小数宽度判定', () => {
+    // 整数差只有 1px，但内容确实多出 0.6px，仍算溢出
+    const el = createMeasuredScroller({ contentWidth: 200.8, viewWidth: 200.2 });
+    expect(hasScrollOverflow(el)).toBe(true);
+    expect(maxScrollLeft(el)).toBe(1);
+  });
+});
 
 describe('useScrollDrag', () => {
   let el;
