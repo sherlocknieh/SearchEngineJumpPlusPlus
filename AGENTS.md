@@ -148,6 +148,10 @@ src/main.js                 只做装配
   文字/链接与锚点水平居中、图片居中；折叠模式收起时只露图标，与展开后的整条共用落点），
   跟随选区时由 JumpBar 写入内联坐标；
   滚动时重新量锚点矩形继续跟随，锚点消失（选区清空/图片移除）才回到顶部居中
+- 图标模式的展开宽度：`measureExpandedSize` 量到的是内容**自然宽度**（测量时解除
+  `max-width`），实际渲染受 `max-width: min(100%, 100vw - 8px)` 收窄。
+  定位用 `fitBarWidth` 把自然宽度收窄到视口可用宽度后再算中心；旋屏后由
+  `onFloatResize` → `refreshIconSize` 重新测量，否则会按旧宽度定位而把整条推出屏幕
 - `.dev/vueStyleToShadow.js`：把 SFC `<style>` 改写为 `addStyle()`（脚本在 Shadow Root 内，document 样式不生效）
 - 面板样式：`components/settingPanelStyles.js` 按 shell → list → footer → controls → dialogs 顺序拼接
 - `composables/useEventIsolation.js`：面板内的指针/键盘事件在 mask 处截断，避免触发页面自身监听器

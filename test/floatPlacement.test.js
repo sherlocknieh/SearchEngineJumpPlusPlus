@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { placeAboveRect, placeInsideRect } from '../src/core/floatPlacement.js';
+import { fitBarWidth, placeAboveRect, placeInsideRect } from '../src/core/floatPlacement.js';
 
 const viewport = { width: 1200, height: 800 };
 const bar = { width: 300, height: 32 };
@@ -75,5 +75,20 @@ describe('placeAboveRect 图片兜底', () => {
   it('顶部空间不足时翻到图片下方', () => {
     const rect = { top: 10, left: 300, right: 800, bottom: 100 };
     expect(placeAboveRect({ rect, bar, viewport }).top).toBe(100 + 6);
+  });
+});
+
+describe('fitBarWidth', () => {
+  it('放得下时保留自然宽度', () => {
+    expect(fitBarWidth(300, 412)).toBe(300);
+  });
+
+  it('窄视口下按可用宽度收窄', () => {
+    // 旋屏到 320 宽：524 的自然宽度必须收到 320 - 两侧留白
+    expect(fitBarWidth(524, 320)).toBe(320 - 12);
+  });
+
+  it('可用宽度为负时不返回负值', () => {
+    expect(fitBarWidth(300, 4)).toBe(0);
   });
 });

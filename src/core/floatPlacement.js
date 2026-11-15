@@ -77,3 +77,19 @@ export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
 
   return { top: Math.round(top), left: Math.round(left) };
 }
+
+/**
+ * 浮层条用于定位的宽度：自然宽度超出视口可用宽度时按可用宽度收窄。
+ *
+ * 图标模式先按内容量到自然宽度再定位，实际渲染仍受 max-width 限制，
+ * 因此旋屏到窄屏后必须按收窄后的宽度算中心，否则整条会被推出屏幕。
+ *
+ * @param {number} naturalWidth 量到的内容自然宽度
+ * @param {number} viewWidth 视口宽度
+ * @param {number} [gap] 与视口两侧边界的间距
+ * @returns {number} 定位用宽度
+ */
+export function fitBarWidth(naturalWidth, viewWidth, gap = PLACEMENT_GAP) {
+  const available = Math.max(0, (viewWidth ?? 0) - gap * 2);
+  return Math.min(Math.max(0, naturalWidth ?? 0), available);
+}

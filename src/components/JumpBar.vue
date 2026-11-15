@@ -12,7 +12,12 @@ import {
   HOST_ROLE_KEY,
   HOST_ROLE_MAIN,
 } from '../core/shadowDom.js';
-import { PLACEMENT_GAP, placeAboveRect, placeInsideRect } from '../core/floatPlacement.js';
+import {
+  fitBarWidth,
+  PLACEMENT_GAP,
+  placeAboveRect,
+  placeInsideRect,
+} from '../core/floatPlacement.js';
 import {
   getInputTarget,
   getInsertTarget,
@@ -529,6 +534,17 @@ function isInsideBar(e) {
   return isEventInsideUi(containerEl.value, e);
 }
 
+/**
+ * 图标模式展开后的定位宽度。
+ * 量到的是内容自然宽度，实际渲染受 max-width 限制（视口宽 - 两侧留白），
+ * 定位必须按收窄后的宽度算，否则旋屏到窄屏时整条会被推出屏幕。
+ * @param {number} viewportWidth 视口宽度
+ */
+function iconPlacementWidth(viewportWidth) {
+  const natural = iconFullSize?.width ?? containerEl.value?.getBoundingClientRect().width ?? 0;
+  return fitBarWidth(natural, viewportWidth);
+}
+
 /** 跟随模式下用选区/命中元素的矩形算出跳转条的视口坐标 */
 function syncFloatPlacement() {
   if (!isFloat) return;
@@ -540,8 +556,8 @@ function syncFloatPlacement() {
     // 图标模式在顶部也按左边定位：划词条把图标钉在视口顶部居中；
     // 图片条以整条中心为锚点，宽度向两侧对称展开，展开后仍居中
     if (iconMode.value && bar) {
-      const width = iconFullSize?.width ?? bar.getBoundingClientRect().width;
       const viewportWidth = document.documentElement.clientWidth;
+      const width = iconPlacementWidth(viewportWidth);
       if (isImageContext.value) {
         // 以视口中线为锚点，同时保证展开后的整条落在视口内
         const center = Math.max(
@@ -572,15 +588,15 @@ function syncFloatPlacement() {
     return;
   }
   const barRect = bar.getBoundingClientRect();
-  // 图标模式始终按展开后的整条尺寸定位，图标与搜索条因此共用同一落点，展开时不挪动
-  const barSize =
-    iconMode.value && iconFullSize
-      ? iconFullSize
-      : { width: barRect.width, height: barRect.height };
   const viewport = {
     width: document.documentElement.clientWidth,
     height: window.visualViewport?.height || window.innerHeight,
   };
+  // 图标模式始终按展开后的整条尺寸定位，图标与搜索条因此共用同一落点，展开时不挪动
+  const barSize =
+    iconMode.value && iconFullSize
+      ? { ...iconFullSize, width: iconPlacementWidth(viewport.width) }
+      : { width: barRect.width, height: barRect.height };
   // 折叠模式收起时只露图标：与展开后的整条共用同一落点，出现在目标正上方，
   // 展开时向两侧对称生长
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
@@ -820,9 +836,35 @@ function onFloatScroll(e) {
 }
 
 // 视口变化后重新收一次边界，避免跟随模式跑到屏幕外
-function onFloatResize() {
+async function onFloatResize() {
   onViewportResize();
+  // 展开宽度受视口收窄（max-width）影响，旋屏后必须重新量一次，
+  // 否则定位仍按旧宽度算中心，整条会被推出屏幕
+  if (iconMode.value && iconFullSize) await refreshIconSize();
   syncFloatPlacement();
+}
+
+/**
+ * 重新量图标模式展开后的整条尺寸。
+ * 测量期间锁住过渡并隐藏整条，拿到新的展开宽度后先写回 CSS 变量、再解除隐藏，
+ * 这样重新显示时已经按新宽度布局，不会先闪一下旧宽度。
+ */
+async function refreshIconSize() {
+  const bar = containerEl.value;
+  if (!bar) return iconFullSize;
+  bar.classList.add('sej-measuring', 'sej-icon-measure');
+  await nextTick();
+  const rect = bar.getBoundingClientRect();
+  if (rect.width > 0) {
+    iconFullSize = { width: rect.width, height: rect.height };
+    iconOpenWidth.value = rect.width;
+    iconOpenHeight.value = rect.height;
+    await nextTick();
+  }
+  bar.classList.remove('sej-icon-measure');
+  await nextTick();
+  bar.classList.remove('sej-measuring');
+  return iconFullSize;
 }
 
 onMounted(async () => {
@@ -1133,8 +1175,11 @@ onBeforeUnmount(() => {
   transition: none !important;
 }
 
+/* 量尺寸时锁住过渡并隐藏，避免已显示的搜索条闪一下展开态；
+   同时解除视口宽度上限，量到的是内容自然宽度，定位时再按可用宽度收窄 */
 #sej-container.sej-measuring.sej-icon-measure {
   width: max-content !important;
+  max-width: none !important;
 }
 
 /* 图标钉在左端圆内（与收起态整圆同心），展开/收起都不动；
