@@ -81,6 +81,7 @@ describe('动作引擎', () => {
     expect(isActionEngine({ action: 'copy' })).toBe(true);
     expect(isActionEngine({ action: 'copyLinkText' })).toBe(true);
     expect(isActionEngine({ action: 'copyLinkUrl' })).toBe(true);
+    expect(isActionEngine({ action: 'selectLinkText' })).toBe(true);
     expect(isActionEngine({ action: 'open' })).toBe(true);
     expect(isActionEngine({ action: 'unknown' })).toBe(false);
     expect(isActionEngine({ url: 'https://a.test' })).toBe(false);
@@ -102,6 +103,26 @@ describe('动作引擎', () => {
     expect(writeText).toHaveBeenLastCalledWith('示例标题');
     expect(await performEngineAction({ action: 'copyLinkUrl' }, target)).toBe(true);
     expect(writeText).toHaveBeenLastCalledWith('https://a.test/p');
+  });
+
+  it('选中链接标题时把标题文字变成页面选区', async () => {
+    const link = document.createElement('a');
+    link.href = 'https://a.test/p';
+    link.innerHTML = '<h3>示例标题</h3><span>站点名</span>';
+    document.body.appendChild(link);
+    const target = { text: '示例标题', url: link.href, element: link };
+
+    expect(await performEngineAction({ action: 'selectLinkText' }, target)).toBe(true);
+    expect(document.getSelection().toString()).toBe('示例标题');
+    link.remove();
+  });
+
+  it('没有链接元素或缺可选中文字时选中失败', async () => {
+    expect(await performEngineAction({ action: 'selectLinkText' }, '示例标题')).toBe(false);
+    const empty = document.createElement('a');
+    document.body.appendChild(empty);
+    expect(await performEngineAction({ action: 'selectLinkText' }, { element: empty })).toBe(false);
+    empty.remove();
   });
 
   it('把当前关键词当作链接打开', async () => {
@@ -139,6 +160,7 @@ describe('动作引擎', () => {
         { action: 'copyImageUrl' },
         { action: 'copyLinkText' },
         { action: 'copyLinkUrl' },
+        { action: 'selectLinkText' },
         { action: 'open' },
       ],
       'example.com',

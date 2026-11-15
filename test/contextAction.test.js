@@ -26,7 +26,8 @@ describe('resolveContextHit', () => {
     const hit = resolveContextHit(document.querySelector('img'));
     expect(hit.mode).toBe('image');
     expect(hit.url).toBe('https://cdn.test/a.png');
-    expect(hit.link).toEqual({ url: 'https://site.test/page', text: '' });
+    expect(hit.link).toMatchObject({ url: 'https://site.test/page', text: '' });
+    expect(hit.link.element).toBe(document.querySelector('a'));
   });
 
   it('只有链接引擎时按链接处理，不额外记录链接副本', () => {
@@ -84,19 +85,29 @@ describe('resolveContextHit', () => {
     const hit = resolveContextHit(overlay, () => true, { x: 50, y: 50 });
     expect(hit.mode).toBe('image');
     expect(hit.url).toBe('https://cdn.test/a.png');
-    expect(hit.link).toEqual({ url: 'https://site.test/page', text: '标题' });
+    expect(hit.link).toMatchObject({ url: 'https://site.test/page', text: '标题' });
   });
 });
 
 describe('contextLinkHit', () => {
   it('链接动作目标取链接文字与地址，没有文字时回退到地址', () => {
-    expect(
-      contextLinkHit({ link: { url: 'https://site.test/a', text: '标题' } }),
-    ).toEqual({ keyword: '标题', url: 'https://site.test/a' });
+    expect(contextLinkHit({ link: { url: 'https://site.test/a', text: '标题' } })).toEqual({
+      keyword: '标题',
+      url: 'https://site.test/a',
+      element: null,
+    });
     expect(contextLinkHit({ link: { url: 'https://site.test/a.png', text: '' } })).toEqual({
       keyword: 'https://site.test/a.png',
       url: 'https://site.test/a.png',
+      element: null,
     });
+  });
+
+  it('保留外层链接元素，选中链接标题才能落到页面选区', () => {
+    const element = { nodeType: 1 };
+    expect(
+      contextLinkHit({ link: { url: 'https://site.test/a', text: '标题', element } }).element,
+    ).toBe(element);
   });
 
   it('没有外层链接时返回 null', () => {
@@ -173,6 +184,15 @@ describe('contextActionTarget', () => {
     expect(contextActionTarget('link', 'open', hit)).toBe('https://site.test/a');
   });
 
+  it('选中链接标题带上链接元素，供动作执行方落下选区', () => {
+    const element = { nodeType: 1 };
+    expect(contextActionTarget('link', 'selectLinkText', { ...hit, element })).toEqual({
+      text: '示例标题',
+      url: 'https://site.test/a',
+      element,
+    });
+  });
+
   it('纯图片链接没有标题时标题与地址取同一段地址', () => {
     const url = 'https://site.test/a.png';
     expect(contextActionTarget('link', 'copyLinkText', { keyword: url, url })).toBe(url);
@@ -194,6 +214,7 @@ describe('isActionAvailableInMode', () => {
   it('链接复制拆成标题与地址，不再提供通用复制', () => {
     expect(isActionAvailableInMode('link', 'copyLinkText')).toBe(true);
     expect(isActionAvailableInMode('link', 'copyLinkUrl')).toBe(true);
+    expect(isActionAvailableInMode('link', 'selectLinkText')).toBe(true);
     expect(isActionAvailableInMode('link', 'copy')).toBe(false);
     expect(isActionAvailableInMode('link', 'copyImageUrl')).toBe(false);
   });
@@ -202,6 +223,7 @@ describe('isActionAvailableInMode', () => {
     expect(isActionAvailableInMode('image', 'copyImageUrl')).toBe(true);
     expect(isActionAvailableInMode('image', 'copyLinkUrl')).toBe(false);
     expect(isActionAvailableInMode('text', 'copyLinkText')).toBe(false);
+    expect(isActionAvailableInMode('text', 'selectLinkText')).toBe(false);
     expect(isActionAvailableInMode('input', 'copyImageUrl')).toBe(false);
   });
 
@@ -218,6 +240,7 @@ describe('contextActionHintKey', () => {
   it('不同情景下的复制动作各有提示', () => {
     expect(contextActionHintKey('link', 'copyLinkText')).toBe('action.hintCopyLinkTitle');
     expect(contextActionHintKey('link', 'copyLinkUrl')).toBe('action.hintCopyLinkUrl');
+    expect(contextActionHintKey('link', 'selectLinkText')).toBe('action.hintSelectLinkTitle');
     expect(contextActionHintKey('link', 'copy')).toBe('');
     expect(contextActionHintKey('image', 'copy')).toBe('action.hintCopyImage');
     expect(contextActionHintKey('link', 'open')).toBe('action.hintOpenLink');
@@ -277,6 +300,7 @@ describe('actionEngineHint', () => {
       'https://cdn.test/a.png',
     );
     expect(actionTargetHint('link', 'copyLinkText', hit)).toBe('示例标题');
+    expect(actionTargetHint('link', 'selectLinkText', hit)).toBe('示例标题');
     expect(actionTargetHint('link', 'copyLinkUrl', hit)).toBe('https://site.test/a');
     expect(actionTargetHint('link', 'open', hit)).toBe('https://site.test/a');
     expect(actionTargetHint('image', 'unknown', hit)).toBe('');

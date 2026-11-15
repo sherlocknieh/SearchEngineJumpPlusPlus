@@ -33,6 +33,23 @@ function isOwnUiSelection(selection) {
 }
 
 /**
+ * 把页面上某个元素内部的文字变成浏览器选区（右键链接「选中链接标题」用）。
+ * 选区落到真实 DOM 上，之后可以直接 Ctrl+C 或沿用系统操作；元素不可选时返回 false。
+ * @param {Element | null} el 要选中的元素
+ */
+export function selectElementText(el) {
+  if (!el || el.nodeType !== 1) return false;
+  const doc = el.ownerDocument || document;
+  const selection = typeof doc.getSelection === 'function' ? doc.getSelection() : null;
+  if (!selection) return false;
+  const range = doc.createRange();
+  range.selectNodeContents(el);
+  selection.removeAllRanges();
+  selection.addRange(range);
+  return Boolean(selection.toString().trim());
+}
+
+/**
  * 读取当前划词文本。
  * @param {{includeInput?: boolean, doc?: Document}} [options]
  *   includeInput 为 false 时忽略输入框等可编辑区域内的选区。

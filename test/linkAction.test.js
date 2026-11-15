@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { resolveLinkHit, resolveLinkUrl } from '../src/core/linkAction.js';
+import { resolveLinkHit, resolveLinkUrl, selectLinkTitle } from '../src/core/linkAction.js';
 
 function link(attrs = {}, text = '') {
   const el = document.createElement('a');
@@ -53,6 +53,26 @@ describe('resolveLinkHit', () => {
     a.innerHTML =
       '<h3>Test</h3><div><span>Wikipedia</span><cite>en.wikipedia.org › wiki › Test</cite></div>';
     expect(resolveLinkHit(a).text).toBe('Test');
+  });
+
+  it('选中链接标题时只选中标题节点，不含站点名与面包屑', () => {
+    const a = link({ href: 'https://en.wikipedia.org/wiki/Test' });
+    a.innerHTML =
+      '<h3>Test</h3><div><span>Wikipedia</span><cite>en.wikipedia.org › wiki › Test</cite></div>';
+    expect(selectLinkTitle(a)).toBe(true);
+    expect(document.getSelection().toString()).toBe('Test');
+  });
+
+  it('没有标题节点时选中整段链接文字', () => {
+    const a = link({ href: 'https://site.test/p' }, '  示例   链接  ');
+    expect(selectLinkTitle(a)).toBe(true);
+    expect(document.getSelection().toString()).toContain('示例');
+  });
+
+  it('不可选的链接返回 false', () => {
+    expect(selectLinkTitle(null)).toBe(false);
+    const a = link({ href: 'https://site.test/p' });
+    expect(selectLinkTitle(a)).toBe(false);
   });
 
   it('没有标题时回退到 aria-label', () => {

@@ -2,6 +2,7 @@ import { GM_openInTab } from '$';
 import { DEFAULT_OPEN_TARGET, normalizeEngineAction, normalizeDefaultOpenTarget } from './configData.js';
 import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
+import { selectLinkTitle } from './linkAction.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -46,22 +47,25 @@ export function isActionEngine(engine) {
 }
 
 /**
- * 动作引擎的目标内容：普通跳转只有一段文字，上下文操作条另有打开地址与可复制的图片。
- * @param {string | { text?: string, url?: string, image?: string }} target
+ * 动作引擎的目标内容：普通跳转只有一段文字，上下文操作条另有打开地址、
+ * 可复制的图片，以及「选中链接标题」需要的链接元素。
+ * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target
  */
 function normalizeActionTarget(target) {
-  if (typeof target === 'string') return { text: target, url: target, image: '' };
+  if (typeof target === 'string') return { text: target, url: target, image: '', element: null };
   const text = typeof target?.text === 'string' ? target.text : '';
   const url = typeof target?.url === 'string' && target.url ? target.url : text;
   const image = typeof target?.image === 'string' ? target.image : '';
-  return { text, url, image };
+  const element = target?.element || null;
+  return { text, url, image, element };
 }
 
 /**
  * 执行动作引擎，返回是否成功处理。
  * copy 优先复制图片本身，取不到时复制文字；copyLinkText 复制链接标题，
- * copyImageUrl / copyLinkUrl 复制地址；open 把目标地址当作链接打开。
- * @param {string | { text?: string, url?: string, image?: string }} target 复制/打开用的内容
+ * copyImageUrl / copyLinkUrl 复制地址；selectLinkText 选中页面上的链接标题；
+ * open 把目标地址当作链接打开。
+ * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target 复制/打开用的内容
  */
 export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
   const action = normalizeEngineAction(engine?.action);
@@ -72,6 +76,7 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
   }
   if (action === 'copyLinkText') return copyText(source.text);
   if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);
+  if (action === 'selectLinkText') return selectLinkTitle(source.element);
   if (action === 'open') {
     const url = findKeywordUrl(source.url);
     if (!url) return false;

@@ -17,6 +17,7 @@ const CONTEXT_ACTION_HINTS = {
   link: {
     copyLinkText: 'action.hintCopyLinkTitle',
     copyLinkUrl: 'action.hintCopyLinkUrl',
+    selectLinkText: 'action.hintSelectLinkTitle',
     open: 'action.hintOpenLink',
   },
   image: {
@@ -43,27 +44,32 @@ export const CONTEXT_MODES = {
  * @param {Element | null} target 按下事件的目标元素
  * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被链接/浮层盖住的图片
- * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string} | null} | null}
+ * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string, element: Element} | null} | null}
  */
 export function resolveContextHit(target, hasEngines = () => true, point = null) {
   const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target, undefined, point) : null;
   const link = hasEngines('link') ? CONTEXT_MODES.link.resolveHit(target) : null;
   if (image) {
-    return { mode: 'image', ...image, link: link ? { url: link.url, text: link.text } : null };
+    return {
+      mode: 'image',
+      ...image,
+      link: link ? { url: link.url, text: link.text, element: link.element } : null,
+    };
   }
   if (link) return { mode: 'link', ...link };
   return null;
 }
 
 /**
- * 图片外层链接的动作目标：复制沿用链接文字，打开使用链接地址。
- * @param {{link?: {url?: string, text?: string} | null}} hit 命中内容
- * @returns {{keyword: string, url: string} | null}
+ * 图片外层链接的动作目标：复制沿用链接文字，打开使用链接地址，
+ * 选中需要链接元素本身才能落到页面选区。
+ * @param {{link?: {url?: string, text?: string, element?: Element} | null}} hit 命中内容
+ * @returns {{keyword: string, url: string, element: Element | null} | null}
  */
 export function contextLinkHit(hit = {}) {
   const link = hit.link;
   if (!link?.url) return null;
-  return { keyword: link.text || link.url, url: link.url };
+  return { keyword: link.text || link.url, url: link.url, element: link.element || null };
 }
 
 /** 位移是否已超出长按允许的范围（滚动、拖拽时取消） */
@@ -85,17 +91,19 @@ export function getContextEngines(settingData, mode) {
 
 /**
  * 命中内容交给动作引擎的目标：链接标题、链接地址与图片地址各取对应内容，
- * 通用「复制」按命中类型决定复制图片本身还是文字；打开统一用地址。
+ * 通用「复制」按命中类型决定复制图片本身还是文字；打开统一用地址；
+ * 「选中链接标题」额外带上链接元素，交给动作执行方落到页面选区。
  * @param {'image' | 'link'} mode 命中类型
  * @param {string} action 动作类型
- * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
- * @returns {string | { text: string, url: string, image?: string }}
+ * @param {{keyword?: string, url?: string, element?: Element | null}} hit 命中的关键词与地址
+ * @returns {string | { text: string, url: string, image?: string, element?: Element | null }}
  */
 export function contextActionTarget(mode, action, hit = {}) {
   const url = hit.url || '';
   const keyword = hit.keyword || url;
   if (action === 'copyLinkText') return keyword;
   if (action === 'copyLinkUrl' || action === 'copyImageUrl') return url || keyword;
+  if (action === 'selectLinkText') return { text: keyword, url, element: hit.element || null };
   if (action !== 'copy') return url || keyword;
   if (mode === 'image') return { text: url || keyword, url, image: url || keyword };
   return keyword;
@@ -110,7 +118,9 @@ export function contextActionTarget(mode, action, hit = {}) {
 export function isActionAvailableInMode(mode, action) {
   if (action === 'copy') return mode !== 'link';
   if (action === 'copyImageUrl') return mode === 'image';
-  if (action === 'copyLinkText' || action === 'copyLinkUrl') return mode === 'link';
+  if (action === 'copyLinkText' || action === 'copyLinkUrl' || action === 'selectLinkText') {
+    return mode === 'link';
+  }
   return true;
 }
 

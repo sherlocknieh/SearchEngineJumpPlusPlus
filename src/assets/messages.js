@@ -116,8 +116,10 @@ export const messages = {
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
+    'action.selected': '已选中链接标题',
     'action.hintCopyLinkTitle': '复制链接标题',
     'action.hintCopyLinkUrl': '复制链接地址',
+    'action.hintSelectLinkTitle': '选中链接标题',
     'action.hintOpenLink': '打开链接',
     'action.hintCopyImage': '复制图片',
     'action.hintCopyImageUrl': '复制图片地址',
@@ -126,6 +128,7 @@ export const messages = {
     'action.hintCopyKeyword': '复制关键词',
     'action.hintWithTarget': '{action}：{target}',
     'action.copyFailed': '没有可复制的内容',
+    'action.selectFailed': '无法选中链接标题',
     'action.openFailed': '无法打开该内容',
 
     'config.warningLine1': '此处有更多的设置选项，自由度更高，',
@@ -276,8 +279,10 @@ export const messages = {
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',
+    'action.selected': 'Link title selected',
     'action.hintCopyLinkTitle': 'Copy link title',
     'action.hintCopyLinkUrl': 'Copy link address',
+    'action.hintSelectLinkTitle': 'Select link title',
     'action.hintOpenLink': 'Open link',
     'action.hintCopyImage': 'Copy image',
     'action.hintCopyImageUrl': 'Copy image URL',
@@ -286,6 +291,7 @@ export const messages = {
     'action.hintCopyKeyword': 'Copy keyword',
     'action.hintWithTarget': '{action}: {target}',
     'action.copyFailed': 'Nothing to copy',
+    'action.selectFailed': 'Unable to select the link title',
     'action.openFailed': 'Unable to open this content',
 
     'config.warningLine1': 'More advanced options are available here,',

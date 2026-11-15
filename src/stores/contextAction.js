@@ -12,7 +12,7 @@ export const contextAction = reactive({
   keyword: '',
   // 打开动作用的地址：图片链接或链接地址
   url: '',
-  // 图片外层链接：图片模式下列表额外提供链接的复制/打开，链接模式为 null
+  // 图片外层链接：图片模式下列表额外提供链接的复制/选中/打开，链接模式为 null
   link: null,
   // 命中的元素，跟随模式用它的矩形定位
   element: null,
@@ -24,7 +24,7 @@ export const contextAction = reactive({
  * @param {string} input.keyword 引擎关键词
  * @param {string} input.url 打开动作使用的地址
  * @param {Element | null} [input.element] 命中的元素，用于跟随定位
- * @param {{url: string, text: string} | null} [input.link] 图片外层链接，供链接动作使用
+ * @param {{url: string, text: string, element?: Element} | null} [input.link] 图片外层链接，供链接动作使用
  */
 export function openContextAction({ mode, keyword, url, element = null, link = null }) {
   contextAction.mode = mode;

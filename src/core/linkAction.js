@@ -4,6 +4,8 @@
  * 只接受浏览器能直接打开的协议；页内锚点与 javascript: 伪链接不接管，
  * 避免把当前页地址或脚本地址当成用户想操作的链接。
  */
+import { selectElementText } from './selection.js';
+
 const LINK_PROTOCOLS = /^(https?|mailto|tel):$/i;
 
 function toLinkUrl(raw, base) {
@@ -24,17 +26,34 @@ function collapse(value) {
 }
 
 /**
+ * 链接标题节点：优先链接里的标题元素，没有标题时退化为整段链接内容。
+ * 选中链接标题用它，避免把站点名、面包屑等附注一起选中。
+ */
+function linkTitleElement(link) {
+  const heading = link?.querySelector?.(HEADING_SELECTOR);
+  return heading || (link?.nodeType === 1 ? link : null);
+}
+
+/**
  * 链接可复制的文字：优先取链接内的标题，避免把站点名、面包屑等附注一起复制。
  * 没有标题时回退到 aria-label，再回退到整段文字。
  */
 function linkText(link) {
-  const heading = link.querySelector?.(HEADING_SELECTOR);
+  const heading = link?.querySelector?.(HEADING_SELECTOR);
   const candidates = [
     heading?.textContent,
-    link.getAttribute?.('aria-label'),
-    link.textContent,
+    link?.getAttribute?.('aria-label'),
+    link?.textContent,
   ];
   return candidates.map(collapse).find(Boolean) || '';
+}
+
+/**
+ * 选中链接标题：把标题文字变成页面上的浏览器选区，方便接着复制或继续系统操作。
+ * @param {Element | null} link 命中的 <a>/<area>
+ */
+export function selectLinkTitle(link) {
+  return selectElementText(linkTitleElement(link));
 }
 
 /**

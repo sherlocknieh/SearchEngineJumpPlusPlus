@@ -179,8 +179,11 @@ function buildActionEngines(target, hit) {
   return (data.engineList[BUILTIN_CATEGORY_KEY] || [])
     .filter((engine) => !engine.disable && engine.action)
     .filter((engine) => isActionAvailableInMode(target, engine.action))
-    // 纯图片链接没有标题，复制标题与复制地址内容相同，省掉重复按钮
-    .filter((engine) => engine.action !== 'copyLinkText' || hit.keyword !== hit.url)
+    // 纯图片链接没有标题，复制/选中标题与复制地址目标相同，省掉重复按钮
+    .filter(
+      (engine) =>
+        !['copyLinkText', 'selectLinkText'].includes(engine.action) || hit.keyword !== hit.url,
+    )
     .map((engine) => ({
       ...engine,
       // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
@@ -268,18 +271,21 @@ function getActionTarget(engine) {
   return getCurrentKeyword();
 }
 
+/** 动作完成后的提示文案：打开与选中各有自己的结果说明，其余按复制处理 */
+const ACTION_TOAST_KEYS = {
+  open: { ok: 'action.opened', fail: 'action.openFailed' },
+  selectLinkText: { ok: 'action.selected', fail: 'action.selectFailed' },
+};
+
+function actionToastKey(action, ok) {
+  const keys = ACTION_TOAST_KEYS[action] || { ok: 'action.copied', fail: 'action.copyFailed' };
+  return ok ? keys.ok : keys.fail;
+}
+
 async function onJump(engine) {
   if (isActionEngine(engine)) {
     const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
-    if (ok) {
-      showToast(
-        t(engine.action === 'open' ? 'action.opened' : 'action.copied'),
-      );
-    } else {
-      showToast(
-        t(engine.action === 'open' ? 'action.openFailed' : 'action.copyFailed'),
-      );
-    }
+    showToast(t(actionToastKey(engine.action, ok)));
     return;
   }
   const keyword = getCurrentKeyword();

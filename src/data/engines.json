@@ -176,6 +176,11 @@
         "action": "copyLinkUrl"
       },
       {
+        "name": "选中链接标题",
+        "url": "",
+        "action": "selectLinkText"
+      },
+      {
         "name": "打开",
         "url": "",
         "action": "open"

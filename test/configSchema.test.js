@@ -127,6 +127,7 @@ describe('normalizeConfig', () => {
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
+      { name: '选中链接标题', url: '', action: 'selectLinkText' },
     ]);
   });
 
@@ -145,6 +146,7 @@ describe('normalizeConfig', () => {
       'copyImageUrl',
       'copyLinkText',
       'copyLinkUrl',
+      'selectLinkText',
       'open',
     ]);
   });
@@ -173,6 +175,7 @@ describe('normalizeConfig', () => {
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
+      { name: '选中链接标题', url: '', action: 'selectLinkText' },
       { name: '打开', url: '', action: 'open' },
     ]);
   });
@@ -218,6 +221,7 @@ describe('normalizeConfig', () => {
       '复制图片地址',
       '复制链接标题',
       '复制链接地址',
+      '选中链接标题',
     ]);
   });
 
