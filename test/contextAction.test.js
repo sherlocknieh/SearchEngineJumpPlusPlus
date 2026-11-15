@@ -6,6 +6,7 @@ import {
   actionEngineHint,
   actionTargetHint,
   contextActionHintKey,
+  contextActionEngines,
   contextActionTarget,
   contextCategoryKey,
   contextLinkHit,
@@ -246,6 +247,85 @@ describe('isActionAvailableInMode', () => {
       expect(isActionAvailableInMode(mode, 'open')).toBe(true);
     }
     expect(isActionAvailableInMode('link', 'open')).toBe(true);
+  });
+});
+
+describe('contextActionEngines', () => {
+  const t = (key) => key;
+  const engines = [
+    { name: '复制图片地址', url: '', action: 'copyImageUrl' },
+    { name: '复制', url: '', action: 'copy' },
+    { name: '打开', url: '', action: 'open' },
+    { name: '复制链接标题', url: '', action: 'copyLinkText' },
+    { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
+    { name: '选中链接标题', url: '', action: 'selectLinkText' },
+  ];
+  const image = { keyword: 'https://cdn.test/a.png', url: 'https://cdn.test/a.png' };
+  const link = { keyword: '示例标题', url: 'https://site.test/a' };
+  const targets = [
+    { mode: 'image', hit: image },
+    { mode: 'link', hit: link },
+  ];
+
+  it('图片与外层链接的动作按设置顺序合并，图片目标排在链接目标之前', () => {
+    const list = contextActionEngines(engines, targets, t);
+    expect(list.map((engine) => engine.name)).toEqual([
+      'action.hintCopyImageUrl',
+      'action.hintCopyImage',
+      'action.hintOpenImage',
+      'action.hintOpenLink',
+      'action.hintCopyLinkTitle',
+      'action.hintCopyLinkUrl',
+      'action.hintSelectLinkTitle',
+    ]);
+    expect(list.map((engine) => engine.contextTarget)).toEqual([
+      'image',
+      'image',
+      'image',
+      'link',
+      'link',
+      'link',
+      'link',
+    ]);
+  });
+
+  it('调整设置里的顺序后浮层顺序随之变化', () => {
+    const reversed = engines.slice().reverse();
+    const list = contextActionEngines(reversed, targets, t);
+    expect(list.map((engine) => engine.name)).toEqual([
+      'action.hintSelectLinkTitle',
+      'action.hintCopyLinkUrl',
+      'action.hintCopyLinkTitle',
+      'action.hintOpenImage',
+      'action.hintOpenLink',
+      'action.hintCopyImage',
+      'action.hintCopyImageUrl',
+    ]);
+  });
+
+  it('纯图片链接不再重复给出复制/选中标题，复制图片用命中图片当图标', () => {
+    const list = contextActionEngines(engines, [{ mode: 'image', hit: image }, { mode: 'link', hit: image }], t);
+    expect(list.map((engine) => engine.name)).toEqual([
+      'action.hintCopyImageUrl',
+      'action.hintCopyImage',
+      'action.hintOpenImage',
+      'action.hintOpenLink',
+      'action.hintCopyLinkUrl',
+    ]);
+    expect(list.find((engine) => engine.action === 'copy').favicon).toBe(image.url);
+  });
+
+  it('跳过隐藏项与非动作引擎，目标为空时返回空数组', () => {
+    const list = contextActionEngines(
+      [
+        { name: '隐藏', url: '', action: 'copy', disable: true },
+        { name: '搜索引擎', url: 'https://a.test/?q=%s' },
+      ],
+      targets,
+      t,
+    );
+    expect(list).toEqual([]);
+    expect(contextActionEngines(engines, [], t)).toEqual([]);
   });
 });
 

@@ -4,7 +4,7 @@
   "selectionFollowPointer": false,
   "selectionCompact": false,
   "selectionIcon": false,
-  "clickCategoryJumpFirst": false,
+  "clickCategoryJumpFirst": true,
   "defaultOpenTarget": "_blank",
   "center": false,
   "engineCategories": [

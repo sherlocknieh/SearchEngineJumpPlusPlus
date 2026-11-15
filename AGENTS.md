@@ -101,7 +101,8 @@ src/main.js                 只做装配
   （`linkAction.selectLinkTitle` → `selection.selectElementText`，优先选链接内的标题节点，
   与复制标题认定的文字一致；`JumpBar.enterSelectionMode` 清掉命中状态并按新选区重设关键词与锚点）；
   动作是否出现由 `isActionAvailableInMode` 决定；纯图片链接没有标题时不再单列「复制链接标题」「选中链接标题」；
-  图片包在链接里时，「操作」分类内先列链接动作、再列图片动作；链接动作带 `contextTarget: 'link'`，
+  图片包在链接里时，「操作」分类内按设置里拖出的顺序排列，同一动作对图片与外层链接各出一条时图片在前
+  （`contextActionEngines`）；链接动作带 `contextTarget: 'link'`，
   链接模式的目标直接用命中状态，图片模式的外层链接目标改由 `contextLinkHit` 提供，
   外层链接地址与图片地址相同时该函数返回 null（链接动作与图片动作重复，不再列出）。上下文操作条里所有动作的名称都直接取 `contextActionHintKey`
   对应的文案（复制图片 / 打开链接等，单一图片或链接时同样如此），悬停提示改用

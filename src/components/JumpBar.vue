@@ -43,7 +43,8 @@ import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY } from '../core/configData.j
 import { findKeywordUrl } from '../core/engineUrl.js';
 import {
   actionTargetHint,
-  contextActionHintKey,
+  contextActionEngines,
+  contextActionLabel,
   contextActionTarget,
   contextLinkHit,
   isActionAvailableInMode,
@@ -171,33 +172,18 @@ const linkActionHit = computed(() =>
 );
 /** 动作名称直接说明操作与作用对象（如「复制图片」「复制选中的文字」） */
 function contextActionName(engine, target) {
-  const key = engine?.action ? contextActionHintKey(target, engine.action) : '';
-  return key ? t(key) : engine?.name || '';
+  return contextActionLabel(target, engine.action, engine.name, t);
 }
 
-/** 按单一目标生成操作条目；图片+链接时按链接、图片顺序拼接结果 */
-function buildActionEngines(target, hit) {
-  return (
-    (data.engineList[BUILTIN_CATEGORY_KEY] || [])
-      .filter((engine) => !engine.disable && engine.action)
-      .filter((engine) => isActionAvailableInMode(target, engine.action))
-      // 纯图片链接没有标题，复制/选中标题与复制地址目标相同，省掉重复按钮
-      .filter(
-        (engine) =>
-          !['copyLinkText', 'selectLinkText'].includes(engine.action) || hit.keyword !== hit.url,
-      )
-      .map((engine) => ({
-        ...engine,
-        // 运行时复制图片的图标直接使用命中图片，设置面板仍使用动作默认图标
-        ...(target === 'image' && engine.action === 'copy'
-          ? { favicon: hit.url, faviconData: '' }
-          : {}),
-        name: contextActionName(engine, target),
-        contextTarget: target,
-        hint: actionTargetHint(target, engine.action, hit),
-      }))
-  );
-}
+/** 上下文动作的目标：图片是主目标，外层链接随后，同一动作可能各出一条 */
+const contextActionTargets = computed(() => {
+  if (contextMode.value !== 'image') {
+    return [{ mode: 'link', hit: contextAction }];
+  }
+  const targets = [{ mode: 'image', hit: contextAction }];
+  if (linkActionHit.value) targets.push({ mode: 'link', hit: linkActionHit.value });
+  return targets;
+});
 
 const categories = computed(() => {
   const list = data.engineCategories
@@ -227,15 +213,11 @@ const categories = computed(() => {
         });
 
       if (contextActions) {
-        const primaryEngines =
-          contextMode.value === 'image'
-            ? buildActionEngines('image', contextAction)
-            : buildActionEngines('link', contextAction);
-        const linkEngines =
-          contextMode.value === 'image' && linkActionHit.value
-            ? buildActionEngines('link', linkActionHit.value)
-            : [];
-        engines = linkEngines.concat(primaryEngines);
+        engines = contextActionEngines(
+          data.engineList[BUILTIN_CATEGORY_KEY] || [],
+          contextActionTargets.value,
+          t,
+        );
       }
 
       return { name: localizeCategoryName(name, key), key, engines };

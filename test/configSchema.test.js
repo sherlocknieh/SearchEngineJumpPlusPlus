@@ -41,8 +41,8 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(true);
     expect(config.selectionCompact).toBe(false);
     expect(config.selectionIcon).toBe(false);
-    // 点击分类默认只展开面板，不直接搜索
-    expect(config.clickCategoryJumpFirst).toBe(false);
+    // 点击分类默认直接用第一个引擎搜索，展开面板便于换用其他引擎
+    expect(config.clickCategoryJumpFirst).toBe(true);
   });
 
   it('内置搜图分类，长按搜图无需开关', () => {
@@ -190,6 +190,30 @@ describe('normalizeConfig', () => {
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '选中链接标题', url: '', action: 'selectLinkText' },
       { name: '打开', url: '', action: 'open' },
+    ]);
+  });
+
+  it('补齐全部动作时保留用户已有顺序，缺的动作追加在末尾', () => {
+    const result = normalizeConfig(
+      {
+        engineCategories: [['操作', 'actions', true]],
+        engineList: {
+          actions: [
+            { name: '打开', action: 'open' },
+            { name: '复制', action: 'copy' },
+          ],
+        },
+      },
+      defaults,
+    );
+    // 设置面板据此始终列全所有可能的选项，同时不打断用户拖出的排序
+    expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
+      'open',
+      'copy',
+      'copyImageUrl',
+      'copyLinkText',
+      'copyLinkUrl',
+      'selectLinkText',
     ]);
   });
 

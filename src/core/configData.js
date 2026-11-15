@@ -11,15 +11,18 @@ export function isPlainObject(value) {
  * 非搜索类快捷动作：copy 复制命中的内容，copyImageUrl 复制图片地址，
  * copyLinkText 复制链接标题，copyLinkUrl 复制链接地址，
  * selectLinkText 选中页面上的链接标题，open 打开目标地址。
+ * 值是设置里的默认名称；清单本身即默认排序，配置缺项时按它补齐，设置面板因此始终列全。
  */
-export const ENGINE_ACTIONS = [
-  'copy',
-  'copyImageUrl',
-  'copyLinkText',
-  'copyLinkUrl',
-  'selectLinkText',
-  'open',
-];
+export const ACTION_ENGINE_DEFAULTS = {
+  copy: '复制',
+  copyImageUrl: '复制图片地址',
+  copyLinkText: '复制链接标题',
+  copyLinkUrl: '复制链接地址',
+  selectLinkText: '选中链接标题',
+  open: '打开',
+};
+
+export const ENGINE_ACTIONS = Object.keys(ACTION_ENGINE_DEFAULTS);
 
 /** 内置的快捷动作分类键名：始终存在，只能移动和隐藏 */
 export const BUILTIN_CATEGORY_KEY = 'actions';

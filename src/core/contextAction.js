@@ -32,6 +32,12 @@ const CONTEXT_ACTION_HINTS = {
 /** 提示里展示目标内容的长度上限，避免长标题把悬停提示撑得过宽 */
 export const HINT_TARGET_MAX = 80;
 
+/** 动作条目的名称：当前情景有自己的说法（复制图片 / 打开链接）时优先用它 */
+export function contextActionLabel(mode, action, fallback, t) {
+  const key = action ? contextActionHintKey(mode, action) : '';
+  return key ? t(key) : fallback || '';
+}
+
 /** 模式到命中解析与专属分类的映射 */
 export const CONTEXT_MODES = {
   image: { categoryKey: IMAGE_CATEGORY_KEY, resolveHit: resolveImageHit },
@@ -173,4 +179,40 @@ export function actionEngineHint(mode, action, hit = {}, t) {
 export function actionTargetHint(mode, action, hit = {}) {
   if (!contextActionHintKey(mode, action)) return '';
   return shortenHintTarget(hintTargetText(mode, action, hit));
+}
+
+/**
+ * 上下文操作条的动作条目：严格按配置里的顺序遍历「操作」分类，
+ * 每个动作对当前适用的每个目标各生成一条，因此设置面板拖出的排序直接决定浮层顺序。
+ * 图片模式下图片是主目标、外层链接排在它后面（同一动作同时适用时才各出一条）。
+ * @param {Array} engines 「操作」分类的引擎（配置顺序）
+ * @param {Array<{mode: string, hit: object}>} targets 命中的目标，图片模式为图片 + 可选的外层链接
+ * @param {(key: string, params?: object) => string} t 文案函数
+ */
+export function contextActionEngines(engines, targets, t) {
+  const list = [];
+  for (const engine of engines || []) {
+    if (engine.disable || !engine.action) continue;
+    for (const { mode, hit } of targets) {
+      if (!isActionAvailableInMode(mode, engine.action)) continue;
+      // 纯图片链接没有标题：复制标题、选中标题与复制地址目标相同，省掉重复条目
+      if (
+        (engine.action === 'copyLinkText' || engine.action === 'selectLinkText') &&
+        hit.keyword === hit.url
+      ) {
+        continue;
+      }
+      list.push({
+        ...engine,
+        // 图片模式下「复制」复制的是命中的图片，图标直接用这张图
+        ...(mode === 'image' && engine.action === 'copy'
+          ? { favicon: hit.url, faviconData: '' }
+          : {}),
+        name: contextActionLabel(mode, engine.action, engine.name, t),
+        contextTarget: mode,
+        hint: actionTargetHint(mode, engine.action, hit),
+      });
+    }
+  }
+  return list;
 }

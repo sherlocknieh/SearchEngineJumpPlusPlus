@@ -7,6 +7,7 @@
 import defaultConfig from '../data/engines.json';
 import { normalizeLanguage } from '../assets/i18n.js';
 import {
+  ACTION_ENGINE_DEFAULTS,
   BUILTIN_CATEGORY_KEY,
   DEFAULT_OPEN_TARGET,
   IMAGE_CATEGORY_KEY,
@@ -44,8 +45,8 @@ export function createDefaultConfig() {
     selectionCompact: false,
     // 划词条默认整条展开，不先收起成图标
     selectionIcon: false,
-    // 点击分类默认只展开面板，不直接触发第一个引擎
-    clickCategoryJumpFirst: false,
+    // 点击分类默认展开面板并用第一个引擎直接搜索当前关键词
+    clickCategoryJumpFirst: true,
     // 搜索条默认居中显示，优先于站点的横向对齐
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开
@@ -136,8 +137,12 @@ function ensureBuiltinActions(categories, engineList) {
 
   const engines = engineList[BUILTIN_CATEGORY_KEY] || [];
   const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
-  for (const engine of defaultConfig.engineList[BUILTIN_CATEGORY_KEY] || []) {
-    if (!presentActions.has(engine.action)) engines.push({ ...engine });
+  const defaultEngines = defaultConfig.engineList[BUILTIN_CATEGORY_KEY] || [];
+  // 按动作清单补齐：设置面板始终列出所有可能的动作，顺序与隐藏状态仍由用户决定
+  for (const [action, actionName] of Object.entries(ACTION_ENGINE_DEFAULTS)) {
+    if (presentActions.has(action)) continue;
+    const defaultEngine = defaultEngines.find((engine) => engine.action === action);
+    engines.push(defaultEngine ? { ...defaultEngine } : { name: actionName, url: '', action });
   }
   // 旧版默认名「打开链接」跟随新版改名，用户自定义的名称保持不变
   for (const engine of engines) {

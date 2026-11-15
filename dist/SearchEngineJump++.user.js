@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1641
+// @version            2026.11.15.1657
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5467,7 +5467,7 @@
 		selectionFollowPointer: false,
 		selectionCompact: false,
 		selectionIcon: false,
-		clickCategoryJumpFirst: false,
+		clickCategoryJumpFirst: true,
 		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
@@ -5928,14 +5928,15 @@
 	function isPlainObject(value) {
 		return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 	}
-	var ENGINE_ACTIONS = [
-		"copy",
-		"copyImageUrl",
-		"copyLinkText",
-		"copyLinkUrl",
-		"selectLinkText",
-		"open"
-	];
+	var ACTION_ENGINE_DEFAULTS = {
+		copy: "复制",
+		copyImageUrl: "复制图片地址",
+		copyLinkText: "复制链接标题",
+		copyLinkUrl: "复制链接地址",
+		selectLinkText: "选中链接标题",
+		open: "打开"
+	};
+	var ENGINE_ACTIONS = Object.keys(ACTION_ENGINE_DEFAULTS);
 	var BUILTIN_CATEGORY_KEY = "actions";
 	var IMAGE_CATEGORY_KEY = "image";
 	var BUILTIN_CATEGORY_KEYS = [BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY];
@@ -6028,7 +6029,7 @@
 			selectionFollowPointer: true,
 			selectionCompact: false,
 			selectionIcon: false,
-			clickCategoryJumpFirst: false,
+			clickCategoryJumpFirst: true,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
@@ -6071,7 +6072,16 @@
 		else if (defaultCategory && category[0] === LEGACY_ACTIONS_CATEGORY_NAME) category[0] = defaultCategory[0];
 		const engines = engineList["actions"] || [];
 		const presentActions = new Set(engines.map((engine) => engine.action).filter(Boolean));
-		for (const engine of engines_default.engineList["actions"] || []) if (!presentActions.has(engine.action)) engines.push({ ...engine });
+		const defaultEngines = engines_default.engineList["actions"] || [];
+		for (const [action, actionName] of Object.entries(ACTION_ENGINE_DEFAULTS)) {
+			if (presentActions.has(action)) continue;
+			const defaultEngine = defaultEngines.find((engine) => engine.action === action);
+			engines.push(defaultEngine ? { ...defaultEngine } : {
+				name: actionName,
+				url: "",
+				action
+			});
+		}
 		for (const engine of engines) if (engine.action === "open" && engine.name === "打开链接") engine.name = "打开";
 		engineList[BUILTIN_CATEGORY_KEY] = engines;
 	}
@@ -7411,6 +7421,10 @@
 			open: "action.hintOpenLink"
 		}
 	};
+	function contextActionLabel(mode, action, fallback, t) {
+		const key = action ? contextActionHintKey(mode, action) : "";
+		return key ? t(key) : fallback || "";
+	}
 	var CONTEXT_MODES = {
 		image: {
 			categoryKey: IMAGE_CATEGORY_KEY,
@@ -7498,6 +7512,27 @@
 	function actionTargetHint(mode, action, hit = {}) {
 		if (!contextActionHintKey(mode, action)) return "";
 		return shortenHintTarget(hintTargetText(mode, action, hit));
+	}
+	function contextActionEngines(engines, targets, t) {
+		const list = [];
+		for (const engine of engines || []) {
+			if (engine.disable || !engine.action) continue;
+			for (const { mode, hit } of targets) {
+				if (!isActionAvailableInMode(mode, engine.action)) continue;
+				if ((engine.action === "copyLinkText" || engine.action === "selectLinkText") && hit.keyword === hit.url) continue;
+				list.push({
+					...engine,
+					...mode === "image" && engine.action === "copy" ? {
+						favicon: hit.url,
+						faviconData: ""
+					} : {},
+					name: contextActionLabel(mode, engine.action, engine.name, t),
+					contextTarget: mode,
+					hint: actionTargetHint(mode, engine.action, hit)
+				});
+			}
+		}
+		return list;
 	}
 	var contextAction = reactive({
 		active: false,
@@ -8703,21 +8738,23 @@
 			});
 			const linkActionHit = computed(() => isContextAction.value ? contextLinkHit(contextAction) : null);
 			function contextActionName(engine, target) {
-				const key = engine?.action ? contextActionHintKey(target, engine.action) : "";
-				return key ? t(key) : engine?.name || "";
+				return contextActionLabel(target, engine.action, engine.name, t);
 			}
-			function buildActionEngines(target, hit) {
-				return (data.engineList["actions"] || []).filter((engine) => !engine.disable && engine.action).filter((engine) => isActionAvailableInMode(target, engine.action)).filter((engine) => !["copyLinkText", "selectLinkText"].includes(engine.action) || hit.keyword !== hit.url).map((engine) => ({
-					...engine,
-					...target === "image" && engine.action === "copy" ? {
-						favicon: hit.url,
-						faviconData: ""
-					} : {},
-					name: contextActionName(engine, target),
-					contextTarget: target,
-					hint: actionTargetHint(target, engine.action, hit)
-				}));
-			}
+			const contextActionTargets = computed(() => {
+				if (contextMode.value !== "image") return [{
+					mode: "link",
+					hit: contextAction
+				}];
+				const targets = [{
+					mode: "image",
+					hit: contextAction
+				}];
+				if (linkActionHit.value) targets.push({
+					mode: "link",
+					hit: linkActionHit.value
+				});
+				return targets;
+			});
 			const categories = computed(() => {
 				return data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => {
 					const actionMode = isContextAction.value ? contextMode.value : isSelectSearch.value ? "text" : "input";
@@ -8730,10 +8767,7 @@
 							hint: actionTargetHint(actionMode, engine.action, actionHintHit.value)
 						};
 					});
-					if (contextActions) {
-						const primaryEngines = contextMode.value === "image" ? buildActionEngines("image", contextAction) : buildActionEngines("link", contextAction);
-						engines = (contextMode.value === "image" && linkActionHit.value ? buildActionEngines("link", linkActionHit.value) : []).concat(primaryEngines);
-					}
+					if (contextActions) engines = contextActionEngines(data.engineList["actions"] || [], contextActionTargets.value, t);
 					return {
 						name: localizeCategoryName(name, key),
 						key,
