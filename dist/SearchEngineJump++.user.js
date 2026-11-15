@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1741
+// @version            2026.11.15.1743
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5637,14 +5637,14 @@
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
 			"action.selected": "已选中链接标题",
-			"action.whenCopy": "划词或搜索框内选中文字",
-			"action.whenCopyImage": "长按或右键图片",
-			"action.whenCopyImageUrl": "长按或右键图片",
-			"action.whenCopyLinkText": "长按或右键链接",
-			"action.whenCopyLinkUrl": "长按或右键链接",
-			"action.whenSelectLinkText": "长按或右键链接",
-			"action.whenOpen": "关键词是链接",
-			"action.whenOpenImage": "长按或右键图片",
+			"action.whenCopy": "划词，搜索框关键词",
+			"action.whenCopyImage": "长按图片，右键图片",
+			"action.whenCopyImageUrl": "长按图片，右键图片",
+			"action.whenCopyLinkText": "长按链接，右键链接",
+			"action.whenCopyLinkUrl": "长按链接，右键链接",
+			"action.whenSelectLinkText": "长按链接，右键链接",
+			"action.whenOpen": "关键词是链接，长按链接，右键链接",
+			"action.whenOpenImage": "长按图片，右键图片",
 			"action.effectCopy": "复制选中的文字",
 			"action.effectCopyImage": "复制图片",
 			"action.effectCopyImageUrl": "复制图片地址",
@@ -5798,14 +5798,14 @@
 			"action.copied": "Copied to clipboard",
 			"action.opened": "Opened",
 			"action.selected": "Link title selected",
-			"action.whenCopy": "Text selected in the page or a search box",
-			"action.whenCopyImage": "Long-press or right-click an image",
-			"action.whenCopyImageUrl": "Long-press or right-click an image",
-			"action.whenCopyLinkText": "Long-press or right-click a link",
-			"action.whenCopyLinkUrl": "Long-press or right-click a link",
-			"action.whenSelectLinkText": "Long-press or right-click a link",
-			"action.whenOpen": "Keyword is a link",
-			"action.whenOpenImage": "Long-press or right-click an image",
+			"action.whenCopy": "Selected text, keyword in a search box",
+			"action.whenCopyImage": "Long-press an image, right-click an image",
+			"action.whenCopyImageUrl": "Long-press an image, right-click an image",
+			"action.whenCopyLinkText": "Long-press a link, right-click a link",
+			"action.whenCopyLinkUrl": "Long-press a link, right-click a link",
+			"action.whenSelectLinkText": "Long-press a link, right-click a link",
+			"action.whenOpen": "Keyword is a link, long-press a link, right-click a link",
+			"action.whenOpenImage": "Long-press an image, right-click an image",
 			"action.effectCopy": "Copy the selected text",
 			"action.effectCopyImage": "Copy the image",
 			"action.effectCopyImageUrl": "Copy the image address",
