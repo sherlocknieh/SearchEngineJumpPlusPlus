@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1032
+// @version            2026.11.15.1037
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -8711,9 +8711,22 @@
 				};
 				return ok ? keys.ok : keys.fail;
 			}
+			function enterSelectionMode() {
+				const text = getSelectedText({ includeInput: data.selectSearchInInput });
+				if (!text) return false;
+				contextTarget.value = null;
+				contextMode.value = "";
+				isContextAction.value = false;
+				closeContextAction();
+				selectionText.value = text;
+				refreshAnchor(document.getSelection());
+				showFloatBar();
+				return true;
+			}
 			async function onJump(engine) {
 				if (isActionEngine(engine)) {
 					const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
+					if (ok && engine.action === "selectLinkText" && enterSelectionMode()) return;
 					showToast(t(actionToastKey(engine.action, ok)));
 					return;
 				}

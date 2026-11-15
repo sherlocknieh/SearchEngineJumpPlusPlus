@@ -282,9 +282,29 @@ function actionToastKey(action, ok) {
   return ok ? keys.ok : keys.fail;
 }
 
+/**
+ * 从上下文操作条顺势切到划词菜单：清掉链接命中状态，按刚选中的文字重新显示浮层，
+ * 选中标题后可以直接继续搜索或复制，而不用再划一次词。
+ */
+function enterSelectionMode() {
+  const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  if (!text) return false;
+  // 先摘下上下文锚点：关闭命中状态时监听据此判断已不是新的长按目标，不会再把浮层收起
+  contextTarget.value = null;
+  contextMode.value = '';
+  isContextAction.value = false;
+  closeContextAction();
+  selectionText.value = text;
+  refreshAnchor(document.getSelection());
+  showFloatBar();
+  return true;
+}
+
 async function onJump(engine) {
   if (isActionEngine(engine)) {
     const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
+    // 选中链接标题后顺势转成划词菜单，浮层的变化本身就是结果，不再额外提示
+    if (ok && engine.action === 'selectLinkText' && enterSelectionMode()) return;
     showToast(t(actionToastKey(engine.action, ok)));
     return;
   }

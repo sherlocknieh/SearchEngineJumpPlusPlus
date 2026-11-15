@@ -94,8 +94,9 @@ src/main.js                 只做装配
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
   图片模式「复制」复制图片本身（取不到时回退地址）、「打开」新标签打开图片；
   链接模式拆成「复制链接标题」「复制链接地址」两项，分别复制链接文字与 URL，「打开」新标签打开链接；
-  「选中链接标题」把标题变成页面上的浏览器选区（`linkAction.selectLinkTitle` →
-  `selection.selectElementText`，优先选链接内的标题节点，与复制标题认定的文字一致）；
+  「选中链接标题」把标题变成页面上的浏览器选区，浮层顺势从上下文操作条转为划词菜单
+  （`linkAction.selectLinkTitle` → `selection.selectElementText`，优先选链接内的标题节点，
+  与复制标题认定的文字一致；`JumpBar.enterSelectionMode` 清掉命中状态并按新选区重设关键词与锚点）；
   动作是否出现由 `isActionAvailableInMode` 决定；纯图片链接没有标题时不再单列「复制链接标题」「选中链接标题」；
   图片包在链接里时，「操作」分类内先列链接动作、再列图片动作；链接动作带 `contextTarget: 'link'`，
   链接模式的目标直接用命中状态，图片模式的外层链接目标改由 `contextLinkHit` 提供。上下文操作条里所有动作的名称都直接取 `contextActionHintKey`
