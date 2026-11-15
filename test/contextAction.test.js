@@ -30,6 +30,14 @@ describe('resolveContextHit', () => {
     expect(hit.link.element).toBe(document.querySelector('a'));
   });
 
+  it('链接地址与图片地址一致时，外层链接不产生链接动作', () => {
+    document.body.innerHTML =
+      '<a href="https://cdn.test/a.png"><img src="https://cdn.test/a.png"></a>';
+    const hit = resolveContextHit(document.querySelector('img'));
+    expect(hit.link).toMatchObject({ url: 'https://cdn.test/a.png' });
+    expect(contextLinkHit(hit)).toBeNull();
+  });
+
   it('只有链接引擎时按链接处理，不额外记录链接副本', () => {
     document.body.innerHTML =
       '<a href="https://site.test/page"><img src="https://cdn.test/a.png"></a>';
@@ -113,6 +121,11 @@ describe('contextLinkHit', () => {
   it('没有外层链接时返回 null', () => {
     expect(contextLinkHit({})).toBeNull();
     expect(contextLinkHit({ link: { url: '' } })).toBeNull();
+  });
+
+  it('外层链接就指向图片本身时不再提供链接动作', () => {
+    const url = 'https://cdn.test/a.png';
+    expect(contextLinkHit({ url, link: { url, text: '大图' } })).toBeNull();
   });
 });
 

@@ -63,12 +63,13 @@ export function resolveContextHit(target, hasEngines = () => true, point = null)
 /**
  * 图片外层链接的动作目标：复制沿用链接文字，打开使用链接地址，
  * 选中需要链接元素本身才能落到页面选区。
- * @param {{link?: {url?: string, text?: string, element?: Element} | null}} hit 命中内容
+ * 外层链接就指向图片本身时（常见于点图看大图），链接动作与图片动作完全重复，不再提供。
+ * @param {{url?: string, link?: {url?: string, text?: string, element?: Element} | null}} hit 命中内容
  * @returns {{keyword: string, url: string, element: Element | null} | null}
  */
 export function contextLinkHit(hit = {}) {
   const link = hit.link;
-  if (!link?.url) return null;
+  if (!link?.url || link.url === hit.url) return null;
   return { keyword: link.text || link.url, url: link.url, element: link.element || null };
 }
 
