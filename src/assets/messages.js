@@ -119,7 +119,7 @@ export const messages = {
     'engine.readImageFailed': '读取图片失败',
     'engine.required': '标题和链接必填',
     'engine.requiredAction': '标题必填',
-    'engine.actionWhen': '出现时机',
+    'engine.actionWhen': '触发条件',
     'engine.actionEffect': '操作',
 
     'action.copied': '已复制到剪贴板',
@@ -297,7 +297,7 @@ export const messages = {
     'engine.readImageFailed': 'Failed to read the image',
     'engine.required': 'Title and URL are required',
     'engine.requiredAction': 'Title is required',
-    'engine.actionWhen': 'When it appears',
+    'engine.actionWhen': 'Trigger',
     'engine.actionEffect': 'Action',
 
     'action.copied': 'Copied to clipboard',

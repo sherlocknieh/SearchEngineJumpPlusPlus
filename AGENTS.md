@@ -115,7 +115,7 @@ src/main.js                 只做装配
 - 悬停提示：`actionTargetHint(mode, action, hit)` 给出这次实际作用的目标内容，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
-- 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「出现时机 / 用法说明」，
+- 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「触发条件 / 操作」，
   编辑动作条目的弹窗标题为「编辑操作」，两段说明与名称、打开方式同构渲染成只读表单字段（暂不支持修改），
   设置列表悬停用 `actionEngineTip` 合成一行
 - 可见性：`isBarCategoryVisible(key, enabled, mode)` 决定分类是否上跳转条——

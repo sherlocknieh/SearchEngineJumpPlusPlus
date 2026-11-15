@@ -33,7 +33,7 @@ const ICON_SELECT =
 
 // 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
 const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : '';
-// 出现时机与用法说明来自动作定义；跟着语言切换重算
+// 触发条件与操作说明来自动作定义；跟着语言切换重算
 const actionInfo = computed(() => actionEngineInfo(initialAction, t));
 const dialogTitle = computed(() => {
   if (props.mode !== 'edit') return t('engine.addTitle');
@@ -197,7 +197,7 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
-    <!-- 动作条目：出现时机与用法说明，与其他字段同构；只读，暂不支持修改 -->
+    <!-- 动作条目：触发条件与操作，与其他字段同构；只读，暂不支持修改 -->
     <div v-if="actionInfo" class="sej-field">
       <span>{{ t('engine.actionWhen') }}</span>
       <input :value="actionInfo.when" readonly tabindex="-1" />

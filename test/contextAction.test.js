@@ -402,7 +402,7 @@ describe('contextActionEngines', () => {
 describe('actionEngineInfo', () => {
   const t = (key) => key;
 
-  it('每个动作都有出现时机与用法说明，且中英文文案齐全', () => {
+  it('每个动作都有触发条件与操作说明，且中英文文案齐全', () => {
     for (const action of ENGINE_ACTIONS) {
       const info = actionEngineInfo(action, t);
       expect(info).not.toBeNull();
@@ -415,7 +415,7 @@ describe('actionEngineInfo', () => {
     }
   });
 
-  it('悬停提示把出现时机与用法合成一行', () => {
+  it('悬停提示把触发条件与操作合成一行', () => {
     expect(actionEngineTip('copy', t)).toBe('action.tipLayout');
     expect(messages['zh-CN']['action.tipLayout']).toBeTruthy();
     expect(messages.en['action.tipLayout']).toBeTruthy();

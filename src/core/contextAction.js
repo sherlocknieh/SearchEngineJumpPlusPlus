@@ -16,7 +16,7 @@ export const LONG_PRESS_MOVE_TOLERANCE = 10;
 export const HINT_TARGET_MAX = 80;
 
 /**
- * 动作条目的说明：出现时机与用法说明分开写，
+ * 动作条目的说明：触发条件与操作分开写，
  * 设置面板的只读表单与悬停提示都从这里取，避免两处文案不一致。
  */
 const ACTION_ENGINE_INFO = {
@@ -41,7 +41,7 @@ export function actionEngineInfo(action, t) {
   return { when: t(info.when), effect: t(info.effect) };
 }
 
-/** 悬停提示用的单行说明：出现时机 + 用法 */
+/** 悬停提示用的单行说明：触发条件 + 操作 */
 export function actionEngineTip(action, t) {
   const info = actionEngineInfo(action, t);
   return info ? t('action.tipLayout', info) : '';
