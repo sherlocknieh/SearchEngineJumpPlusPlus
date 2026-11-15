@@ -124,7 +124,7 @@ export function hostFromUrl(raw) {
 // 1337x /search/<kw>/1/、海盗湾与 EZTV /search/<kw>、类义词典 /<kw>
 // ---------------------------------------------------------------------------
 
-// 通用关键词参数（仅在路径本身像搜索页时使用）
+// 通用关键词参数（仅在路径本身像搜索页时使用；高置信参数见 STRONG_KEYWORD_PARAMS）
 const GENERIC_KEYWORD_PARAMS = [
   'q',
   'query',
@@ -142,6 +142,10 @@ const GENERIC_KEYWORD_PARAMS = [
   // 识图站点（TinEye / SauceNAO 等）用 url 传图片链接
   'url',
 ];
+
+// 词形本身就是搜索语义的参数名：路径不是搜索页也认，
+// 用来覆盖 /en/gifs?search=<kw> 这类带语言前缀或非标准搜索路径的站点
+const STRONG_KEYWORD_PARAMS = ['search', 'search_query', 'searchterm', 'search_term', 'keyword', 'kw'];
 
 const GENERIC_SEARCH_PATH = /^\/(?:search|results?|web|find|word)\b/i;
 
@@ -227,7 +231,9 @@ function findKeywordParam(url) {
   if (GENERIC_SEARCH_PATH.test(url.pathname)) {
     return pickKeywordParam(url.searchParams, GENERIC_KEYWORD_PARAMS);
   }
-  return '';
+  // 路径不像搜索页时只放行词形明确的搜索参数，
+  // 歧义参数（q / query / k / word / text / url）仍必须有搜索页路径兜底
+  return pickKeywordParam(url.searchParams, STRONG_KEYWORD_PARAMS);
 }
 
 // 拆成「?之前」「查询串」「#之后」三段，替换时保留原始写法不做归一化

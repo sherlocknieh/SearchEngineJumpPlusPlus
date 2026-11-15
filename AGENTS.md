@@ -154,7 +154,8 @@ src/main.js                 只做装配
   - 模板解析：`analyzeSearchUrl(raw)` → `{ url, status }`，`status`：
     `ready`（已是 `%s`/`$post$`）、`replaced`（本次替换成功）、`manual`（未能自动替换，提示手动）、`plain`（空输入）
   - `searchTemplateFromUrl()` = `analyzeSearchUrl().url`
-  - 识别顺序：站点规则（`SITE_RULES`）→ 通用搜索路径 + 参数名 → 路径规则（`PATH_RULES`）
+  - 识别顺序：站点规则（`SITE_RULES`）→ 路径像搜索页时查通用参数名、否则只查高置信参数名
+    （`search`/`keyword`/`kw` 等，兼容 `/en/gifs?search=` 这类非标准路径）→ 路径规则（`PATH_RULES`）
 - `components/EngineEditDialog.vue`：仅在链接输入框失焦时套用，Toast 提示（`stores/ui.js showToast`）
 - 回归用例在 `test/engineUrl.test.js`，含「默认引擎模板往返解析」批量检查；新增默认引擎若解析不出会失败
 

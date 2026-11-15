@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1847
+// @version            2026.11.15.2155
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -6770,6 +6770,14 @@
 		"text",
 		"url"
 	];
+	var STRONG_KEYWORD_PARAMS = [
+		"search",
+		"search_query",
+		"searchterm",
+		"search_term",
+		"keyword",
+		"kw"
+	];
 	var GENERIC_SEARCH_PATH = /^\/(?:search|results?|web|find|word)\b/i;
 	var SITE_RULES = [
 		{
@@ -6967,7 +6975,7 @@
 			if (key) return key;
 		}
 		if (GENERIC_SEARCH_PATH.test(url.pathname)) return pickKeywordParam(url.searchParams, GENERIC_KEYWORD_PARAMS);
-		return "";
+		return pickKeywordParam(url.searchParams, STRONG_KEYWORD_PARAMS);
 	}
 	function splitUrlText(value) {
 		let rest = value;

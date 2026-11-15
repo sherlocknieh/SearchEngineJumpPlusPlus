@@ -249,6 +249,18 @@ describe('analyzeSearchUrl', () => {
     expect(analyzeSearchUrl('mailto:a@example.com').status).toBe('manual');
   });
 
+  it('路径不像搜索页时仍认高置信搜索参数', () => {
+    // 搜索页带语言前缀或用了非标准路径，参数名本身足以判定
+    expect(analyzeSearchUrl('https://www.sex.com/en/gifs?search=cats')).toEqual({
+      url: 'https://www.sex.com/en/gifs?search=%s',
+      status: 'replaced',
+    });
+    expect(analyzeSearchUrl('https://example.com/list?keyword=cats').status).toBe('replaced');
+    expect(analyzeSearchUrl('https://example.com/en/videos?search_query=cats').url).toBe(
+      'https://example.com/en/videos?search_query=%s',
+    );
+  });
+
   it('空输入返回 plain，不提示', () => {
     expect(analyzeSearchUrl('').status).toBe('plain');
     expect(analyzeSearchUrl('   ').status).toBe('plain');
