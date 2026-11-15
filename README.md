@@ -1,80 +1,80 @@
-# SearchEngineJumpPlusPlus 搜索引擎快捷跳转++
+# 🔎 SearchEngineJump++ 搜索引擎快捷跳转++
 
-多搜索引擎快捷跳转的最佳脚本, 现在焕然一新。
+> 🚀 Multi-engine quick jump, plus selection search, long-press / right-click actions and image search.
+> 多引擎快捷跳转，外加划词即搜、长按 / 右键操作与以图搜图。
 
-本项目 Fork 自 MUTED64 的 [SearchEngineJumpPlus](https://github.com/MUTED64/SearchEngineJumpPlus)。
-
-用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
-
-支持中英文界面, 默认跟随浏览器语言, 也可在设置面板中手动切换。
-
-安装地址:
+**Install / 安装**
 
 - https://github.com/sherlocknieh/SearchEngineJumpPlusPlus/raw/main/dist/SearchEngineJump++.user.js
 - https://greasyfork.org/zh-CN/scripts/602191-searchenginejump
 
-## 新版效果
+## 📷 Screenshots / 新版效果
 
-### 主界面
+### Jump bar / 主界面
 
-![主界面](dist/images/jumpbar.png)
+![Jump bar](dist/images/jumpbar.png)
 
-### 设置界面
+### Settings / 设置界面
 
-![设置界面](dist/images/settings.png)
+![Settings](dist/images/settings.png)
 
-## 新版特性
+## 🧭 Core / 核心
 
-- 触屏操作优化:
+**🧩 Jump bar / 跳转条** — Your engines in one categorized bar; one click switches engine and reruns the query.
+常用引擎按分类排成一条，点一下换引擎重搜当前关键词。
 
-  - 现在点击跳转条上的条目不再直接跳转, 而是显示悬浮面板;
-  - 面板末尾提供"一键打开", 点击即可同时打开该分类下的多个搜索引擎;
-  - 再次点击条目则收起面板;
-  - 默认点分类即用第一个搜索引擎搜索当前关键词, 同时在设置中可关掉「点击分类直接搜索」改为只展开面板;
-  - 窄屏下界面不会被遮挡, 可以正常显示;
+- ⚡ Open several engines at once / 一键打开
+- 🪟 New tab · background tab · same tab / 新标签页 · 后台标签页 · 当前页
 
-- 设置界面优化:
+**✂️ Selection search / 划词搜索** — Select text and the bar pops up.
+选中文字即弹出划词条。
 
-  - 支持更直观的拖动移动操作逻辑;
-  - 支持复制搜索引擎: 拖动搜索引擎到加号上放开时, 会在该分类下复制一个相同的搜索引擎;
-  - 每次发生修改后, 能自动保存配置;
-  - 支持一键导入/导出配置文件;
-  - 支持合并导入: 使用合并导入时不会清空现有引擎数据, 而是追加到现有的引擎列表中。
+- 🎯 Follows the selection while scrolling / 跟随选区，滚动时持续贴近
+- 🏷 Compact mode: icons only / 紧凑模式：只留图标
+- 🗂 Collapsed mode: one icon, expands on hover or click / 折叠模式：收成一个图标，悬停 / 点击展开
 
-- 引擎设置操作优化:
+**🖼 Image search / 图片搜图** — Long-press or right-click an image to search it.
+长按或右键图片即可搜图。
 
-  - 输入搜索引擎链接, 自动填写搜索引擎名称和图标链接;
-  - 自动解析搜索引擎链接, 把关键词替换为占位符, 例如 `https://www.google.com/search?q=关键词` -> `https://www.google.com/search?q=%s`;
-  - 多渠道图标获取: 支持从多方服务获取图标, 提高图标质量;
-  - 支持快捷动作: 内置「操作」分类提供"复制文字"、"复制图片"、"打开链接"与"打开图片", 默认显示;
-  - 内置「操作」分类默认存在、默认显示且不可删除, 分类本身不可编辑; 条目名称与排序就是跳转条/长按浮层里实际显示的条目, 改名或拖动后立即生效, 条目不可隐藏或删除;
-  - 点开操作条目可在「触发条件」里勾选它出现的场景（划词、搜索框关键词、长按/右键图片或链接、关键词是链接），取消全部勾选即关闭该操作;
+- 🧷 `<img>` · lazy-loaded `data-*` · CSS backgrounds / `<img>`、懒加载 `data-*`、CSS 背景图
+- 🖱 Native menu stays / 不拦截原生菜单
 
-- 图片搜图:
+**🔗 Link actions / 链接操作** — Long-press or right-click a link.
+长按或右键链接即可操作。
 
-  - 在图片上长按（桌面按住鼠标、手机长按）或右键即可用「搜图」分类的引擎搜索图片链接;
-  - 右键不拦截浏览器原生菜单, 跳转条与系统菜单同时出现;
-  - 复用独立的划词条：只显示「搜图」分类与开启显示的「操作」分类；图片外面还包着链接时，「操作」分类里同时列出图片与链接动作，以图标收起、悬停或点击图标展开，点外部 / Escape 收起，滚动时继续贴着图片;
-  - 支持 `<img>` 与背景图，懒加载图片会读取 `data-*` 上的真实地址; 图片被链接或标题浮层盖住时也能按按下位置找到图片;
-  - 「搜图」分类内置 Google Lens 与 Yandex Image, 可自行增删改; 该分类默认不隐藏, 默认排在「操作」之后, 顺序可拖动调整, 但不可编辑分类本身, 只出现在图片搜图条上, 不会占用普通跳转条;
+- 📋 Copy title or URL / 复制标题、地址
+- 🖱 Select the title / 选中标题
+- ↗️ Open the link / 打开链接
 
-- 链接操作:
+**🧱 Actions category / 操作分类** — Built-in copy text/image, copy link, open link/image.
+内置复制文字 / 图片、复制链接、打开链接 / 图片。
 
-  - 在链接上长按（桌面按住鼠标、手机长按）或右键即可复制链接标题、复制链接地址、选中链接标题或打开链接;
-  - 复用划词条：只显示「操作」分类，开启「跟随选区」时同样遵循简洁 / 折叠模式，点外部 / Escape 收起，滚动时继续贴着链接;
-  - 「复制链接标题」只复制链接文字，「复制链接地址」只复制链接 URL，「选中链接标题」把链接文字选中并顺势把浮层切换成划词菜单；纯图片链接没有标题时不再单列标题项;「打开链接」在新标签页打开链接;
-  - 右键同样不拦截浏览器原生菜单; 链接里包着图片时按图片搜图, 链接本身的复制/选中/打开与图片动作同在「操作」分类里, 用名称区分作用目标;
+- ✏️ Rename and reorder / 可改名、排序
+- 🎚 Toggle per trigger: selection, keyword, long-press / right-click / 按场景开关：划词、关键词、长按 / 右键
 
-- 划词搜索:
+## ⚙️ Setup / 配置
 
-  - 划词条独立出现, 不影响页面里原本的跳转条;
-  - 默认从页面顶部滑出; 开启「跟随选区」后出现在选中文字的正上方并与文字水平居中, 折叠模式下收起为同一位置的图标, 长按图片/链接时贴着目标出现, 滚动页面时继续贴着选区;
-  - 开启「折叠模式」后划词只在文字/链接正上方显示一个图标, 鼠标悬浮或点击图标才向两侧展开搜索条, 点页面其它位置收起;
-  - 点划词条上的引擎即可用选中文字搜索, 选择新文字会直接更新;
-  - 点页面其它位置或按 Escape 收起;
+- 📝 **Adding engines / 引擎录入** — Paste a URL to fill in name and icon, query becomes `%s` / 粘贴链接自动补全名称与图标，关键词转 `%s`
+- 🔀 **Order & duplicate / 排序与复制** — Drag to reorder, drop on ➕ to duplicate / 拖动排序，拖到 ➕ 复制一份
+- 💾 **Save & backup / 保存与备份** — Auto-save, import / export / merge, undoable deletes / 改动自动保存，导入 / 导出 / 合并，删除可撤销
+- 🌐 **UI / 界面** — Bilingual, adaptive dark theme, cross-tab sync / 中英双语，深色自适应，跨标签页同步
+- 📱 **Touch & narrow screens / 触屏与窄屏** — Drag the bar sideways when it overflows / 条过宽可横向拖动
 
-- 增加英文支持;
+## 🛠 Development / 开发指南
 
-## 开发指南
+See [README-dev.md](./README-dev.md) for the dev server, CSP debugging, build and release flow.
+开发环境、CSP 调试、构建与发布流程见 [README-dev.md](./README-dev.md)。
 
-[开发指南](/README-dev.md)
+## 🧬 Origin / 来源
+
+> Rebuilt with Vue 3 from MUTED64's SearchEngineJumpPlus, with numerous fixes and a much simpler, cleaner, faster UI. MIT licensed.
+> Vue 3 重构自 MUTED64 的 [SearchEngineJumpPlus](https://github.com/MUTED64/SearchEngineJumpPlus)，修复诸多问题并大幅简化、美化与优化。MIT 许可。
+
+Repo / 仓库: https://github.com/sherlocknieh/SearchEngineJumpPlusPlus
+
+---
+
+**🏷 Listing summary / 脚本摘要**
+
+🔎 Multi-engine jump bar with selection search, long-press and right-click actions, and image search. Vue 3 rebuild, bilingual UI.
+🔎 多引擎快捷跳转：划词即搜、长按 / 右键图片与链接、以图搜图。Vue3 重构，中英界面。
