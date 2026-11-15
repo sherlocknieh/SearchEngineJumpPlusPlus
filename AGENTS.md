@@ -108,10 +108,11 @@ src/main.js                 只做装配
   图片包在链接里时，「操作」分类内按设置里拖出的顺序排列，同一动作对图片与外层链接各出一条时图片在前
   （`contextActionEngines`）；链接动作带 `contextTarget: 'link'`，
   链接模式的目标直接用命中状态，图片模式的外层链接目标改由 `contextLinkHit` 提供，
-  外层链接地址与图片地址相同时该函数返回 null（链接动作与图片动作重复，不再列出）。上下文操作条里所有动作的名称都直接取 `contextActionHintKey`
-  对应的文案（复制图片 / 打开链接等，单一图片或链接时同样如此），悬停提示改用
-  `actionTargetHint` 只显示目标内容，不再重复动作名；划词条与内嵌条仍用 `actionEngineHint` 拼动作名
-- 悬停提示：`actionEngineHint(mode, action, hit, t)` 把动作说明与实际目标拼在一起，
+  外层链接地址与图片地址相同时该函数返回 null（链接动作与图片动作重复，不再列出）。
+  条目本身的名称、顺序、显隐全部取自「操作」分类的设置（`contextActionEngines` 不再按场景覆盖名称，
+  改名后浮层立即同步；只有「复制图片」在浮层里用命中的图片当图标），
+  悬停提示用 `actionTargetHint` 只显示这次实际作用的目标内容
+- 悬停提示：`actionTargetHint(mode, action, hit)` 给出这次实际作用的目标内容，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
 - 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「出现时机 / 用法说明」，

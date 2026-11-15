@@ -12,31 +12,8 @@ import { resolveLinkHit } from './linkAction.js';
 export const LONG_PRESS_MS = 450;
 export const LONG_PRESS_MOVE_TOLERANCE = 10;
 
-/** 动作引擎在各情景下的悬停提示文案；text 为划词条，input 为站点内嵌条的搜索框 */
-const CONTEXT_ACTION_HINTS = {
-  link: {
-    copyLinkText: 'action.hintCopyLinkTitle',
-    copyLinkUrl: 'action.hintCopyLinkUrl',
-    selectLinkText: 'action.hintSelectLinkTitle',
-    open: 'action.hintOpenLink',
-  },
-  image: {
-    copyImage: 'action.hintCopyImage',
-    copyImageUrl: 'action.hintCopyImageUrl',
-    openImage: 'action.hintOpenImage',
-  },
-  text: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
-  input: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
-};
-
 /** 提示里展示目标内容的长度上限，避免长标题把悬停提示撑得过宽 */
 export const HINT_TARGET_MAX = 80;
-
-/** 动作条目的名称：当前情景有自己的说法（复制图片 / 打开链接）时优先用它 */
-export function contextActionLabel(mode, action, fallback, t) {
-  const key = action ? contextActionHintKey(mode, action) : '';
-  return key ? t(key) : fallback || '';
-}
 
 /**
  * 动作条目的说明：出现时机与用法说明分开写，
@@ -164,15 +141,6 @@ export function isActionAvailableInMode(mode, action) {
   return mode !== 'image';
 }
 
-/**
- * 动作引擎的悬停提示键：同名动作在链接与图片情景下含义不同。
- * @param {'image' | 'link'} mode 命中类型
- * @param {string} action 动作类型
- */
-export function contextActionHintKey(mode, action) {
-  return CONTEXT_ACTION_HINTS[mode]?.[action] || '';
-}
-
 /** 提示里展示的目标内容：划词与搜索框都是「文字 + 可选地址」，其余沿用动作目标 */
 function hintTargetText(mode, action, hit) {
   if (mode === 'text' || mode === 'input') return (action === 'copy' ? hit.keyword : hit.url) || '';
@@ -189,40 +157,25 @@ function shortenHintTarget(value) {
 }
 
 /**
- * 动作引擎完整的悬停提示：说明这次到底复制或打开什么内容。
- * @param {'image' | 'link' | 'text' | 'input'} mode 命中情景：text 为划词条，input 为内嵌条搜索框
- * @param {string} action 动作类型
- * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
- * @param {(key: string, params?: object) => string} t 文案函数
- */
-export function actionEngineHint(mode, action, hit = {}, t) {
-  const key = contextActionHintKey(mode, action);
-  if (!key) return '';
-  const label = t(key);
-  const target = shortenHintTarget(hintTargetText(mode, action, hit));
-  return target ? t('action.hintWithTarget', { action: label, target }) : label;
-}
-
-/**
- * 条目名称已经说明动作（如「复制图片」）时，悬停提示只保留目标内容，不再重复动作说明。
+ * 动作引擎的悬停提示：只给这次实际作用的目标内容，
+ * 动作名与条目顺序都由设置里的「操作」分类决定。
  * @param {'image' | 'link'} mode 命中类型
  * @param {string} action 动作类型
  * @param {{keyword?: string, url?: string}} hit 命中的关键词与地址
  */
 export function actionTargetHint(mode, action, hit = {}) {
-  if (!contextActionHintKey(mode, action)) return '';
+  if (!isActionAvailableInMode(mode, action)) return '';
   return shortenHintTarget(hintTargetText(mode, action, hit));
 }
 
 /**
- * 上下文操作条的动作条目：严格按配置里的顺序遍历「操作」分类，
- * 每个动作对当前适用的每个目标各生成一条，因此设置面板拖出的排序直接决定浮层顺序。
+ * 上下文操作条的动作条目：条目本身（名称、图标、顺序、显隐）直接取设置里的「操作」分类，
+ * 浮层不再按场景覆盖名称，改名后外部立即跟着变。
  * 图片模式下图片是主目标、外层链接排在它后面（同一动作同时适用时才各出一条）。
  * @param {Array} engines 「操作」分类的引擎（配置顺序）
  * @param {Array<{mode: string, hit: object}>} targets 命中的目标，图片模式为图片 + 可选的外层链接
- * @param {(key: string, params?: object) => string} t 文案函数
  */
-export function contextActionEngines(engines, targets, t) {
+export function contextActionEngines(engines, targets) {
   const list = [];
   for (const engine of engines || []) {
     if (engine.disable || !engine.action) continue;
@@ -243,7 +196,6 @@ export function contextActionEngines(engines, targets, t) {
         ...(mode === 'image' && engine.action === 'copyImage'
           ? { favicon: hit.url, faviconData: '' }
           : {}),
-        name: contextActionLabel(mode, engine.action, engine.name, t),
         contextTarget: mode,
         hint: actionTargetHint(mode, engine.action, hit),
       });

@@ -44,7 +44,6 @@ import { findKeywordUrl } from '../core/engineUrl.js';
 import {
   actionTargetHint,
   contextActionEngines,
-  contextActionLabel,
   contextActionTarget,
   contextLinkHit,
   isActionAvailableInMode,
@@ -170,10 +169,6 @@ const actionHintHit = computed(() => {
 const linkActionHit = computed(() =>
   isContextAction.value ? contextLinkHit(contextAction) : null,
 );
-/** 动作名称直接说明操作与作用对象（如「复制图片」「复制文字」） */
-function contextActionName(engine, target) {
-  return contextActionLabel(target, engine.action, engine.name, t);
-}
 
 /** 上下文动作的目标：图片是主目标，外层链接随后，同一动作可能各出一条 */
 const contextActionTargets = computed(() => {
@@ -205,12 +200,11 @@ const categories = computed(() => {
       let engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action))
         .filter((engine) => !hidesOpenAction(engine))
-        // 同名动作用悬停提示说明当前情景下具体复制或打开什么内容
+        // 名称与顺序都来自「操作」分类的设置，这里只补悬停提示要展示的目标内容
         .map((engine) => {
           if (!engine.action) return engine;
           return {
             ...engine,
-            name: contextActionName(engine, actionMode),
             hint: actionTargetHint(actionMode, engine.action, actionHintHit.value),
           };
         });
@@ -219,7 +213,6 @@ const categories = computed(() => {
         engines = contextActionEngines(
           data.engineList[BUILTIN_CATEGORY_KEY] || [],
           contextActionTargets.value,
-          t,
         );
       }
 

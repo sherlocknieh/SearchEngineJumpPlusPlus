@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1719
+// @version            2026.11.15.1722
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5636,14 +5636,6 @@
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
 			"action.selected": "已选中链接标题",
-			"action.hintCopyLinkTitle": "复制链接标题",
-			"action.hintCopyLinkUrl": "复制链接地址",
-			"action.hintSelectLinkTitle": "选中链接标题",
-			"action.hintOpenLink": "打开链接",
-			"action.hintCopyImage": "复制图片",
-			"action.hintCopyImageUrl": "复制图片地址",
-			"action.hintOpenImage": "打开图片",
-			"action.hintCopyText": "复制文字",
 			"action.whenCopy": "划词或输入框内选中文字时",
 			"action.whenCopyImage": "长按或右键图片时",
 			"action.whenCopyImageUrl": "长按或右键图片时",
@@ -5661,7 +5653,6 @@
 			"action.whenOpenImage": "长按或右键图片时",
 			"action.effectOpenImage": "在新标签页打开图片地址",
 			"action.tipLayout": "{when}：{effect}",
-			"action.hintWithTarget": "{action}：{target}",
 			"action.copyFailed": "没有可复制的内容",
 			"action.selectFailed": "无法选中链接标题",
 			"action.openFailed": "无法打开该内容",
@@ -5805,14 +5796,6 @@
 			"action.copied": "Copied to clipboard",
 			"action.opened": "Opened",
 			"action.selected": "Link title selected",
-			"action.hintCopyLinkTitle": "Copy link title",
-			"action.hintCopyLinkUrl": "Copy link address",
-			"action.hintSelectLinkTitle": "Select link title",
-			"action.hintOpenLink": "Open link",
-			"action.hintCopyImage": "Copy image",
-			"action.hintCopyImageUrl": "Copy image URL",
-			"action.hintOpenImage": "Open image",
-			"action.hintCopyText": "Copy text",
 			"action.whenCopy": "When text is selected or a keyword is used in a search box",
 			"action.whenCopyImage": "On long-press or right-click of an image",
 			"action.whenCopyImageUrl": "On long-press or right-click of an image",
@@ -5830,7 +5813,6 @@
 			"action.whenOpenImage": "On long-press or right-click of an image",
 			"action.effectOpenImage": "Open the image address in a new tab",
 			"action.tipLayout": "{when}: {effect}",
-			"action.hintWithTarget": "{action}: {target}",
 			"action.copyFailed": "Nothing to copy",
 			"action.selectFailed": "Unable to select the link title",
 			"action.openFailed": "Unable to open this content",
@@ -5923,6 +5905,8 @@
 		知乎直答: "Zhihu Zhida",
 		复制文字: "Copy text",
 		复制图片: "Copy image",
+		复制图片地址: "Copy image URL",
+		选中链接标题: "Select link text",
 		打开图片: "Open image",
 		复制链接标题: "Copy link title",
 		复制链接地址: "Copy link address",
@@ -7482,31 +7466,6 @@
 		}
 		return null;
 	}
-	var CONTEXT_ACTION_HINTS = {
-		link: {
-			copyLinkText: "action.hintCopyLinkTitle",
-			copyLinkUrl: "action.hintCopyLinkUrl",
-			selectLinkText: "action.hintSelectLinkTitle",
-			open: "action.hintOpenLink"
-		},
-		image: {
-			copyImage: "action.hintCopyImage",
-			copyImageUrl: "action.hintCopyImageUrl",
-			openImage: "action.hintOpenImage"
-		},
-		text: {
-			copy: "action.hintCopyText",
-			open: "action.hintOpenLink"
-		},
-		input: {
-			copy: "action.hintCopyText",
-			open: "action.hintOpenLink"
-		}
-	};
-	function contextActionLabel(mode, action, fallback, t) {
-		const key = action ? contextActionHintKey(mode, action) : "";
-		return key ? t(key) : fallback || "";
-	}
 	var ACTION_ENGINE_INFO = {
 		copy: {
 			when: "action.whenCopy",
@@ -7624,9 +7583,6 @@
 		if (action === "copyLinkText" || action === "copyLinkUrl" || action === "selectLinkText") return mode === "link";
 		return mode !== "image";
 	}
-	function contextActionHintKey(mode, action) {
-		return CONTEXT_ACTION_HINTS[mode]?.[action] || "";
-	}
 	function hintTargetText(mode, action, hit) {
 		if (mode === "text" || mode === "input") return (action === "copy" ? hit.keyword : hit.url) || "";
 		const target = contextActionTarget(mode, action, hit);
@@ -7637,10 +7593,10 @@
 		return text.length > 80 ? `${text.slice(0, 79)}…` : text;
 	}
 	function actionTargetHint(mode, action, hit = {}) {
-		if (!contextActionHintKey(mode, action)) return "";
+		if (!isActionAvailableInMode(mode, action)) return "";
 		return shortenHintTarget(hintTargetText(mode, action, hit));
 	}
-	function contextActionEngines(engines, targets, t) {
+	function contextActionEngines(engines, targets) {
 		const list = [];
 		for (const engine of engines || []) {
 			if (engine.disable || !engine.action) continue;
@@ -7654,7 +7610,6 @@
 						favicon: hit.url,
 						faviconData: ""
 					} : {},
-					name: contextActionLabel(mode, engine.action, engine.name, t),
 					contextTarget: mode,
 					hint: actionTargetHint(mode, engine.action, hit)
 				});
@@ -8869,9 +8824,6 @@
 				};
 			});
 			const linkActionHit = computed(() => isContextAction.value ? contextLinkHit(contextAction) : null);
-			function contextActionName(engine, target) {
-				return contextActionLabel(target, engine.action, engine.name, t);
-			}
 			const contextActionTargets = computed(() => {
 				if (contextMode.value !== "image") return [{
 					mode: "link",
@@ -8897,11 +8849,10 @@
 						if (!engine.action) return engine;
 						return {
 							...engine,
-							name: contextActionName(engine, actionMode),
 							hint: actionTargetHint(actionMode, engine.action, actionHintHit.value)
 						};
 					});
-					if (contextActions) engines = contextActionEngines(data.engineList["actions"] || [], contextActionTargets.value, t);
+					if (contextActions) engines = contextActionEngines(data.engineList["actions"] || [], contextActionTargets.value);
 					return {
 						name: localizeCategoryName(name, key),
 						key,
