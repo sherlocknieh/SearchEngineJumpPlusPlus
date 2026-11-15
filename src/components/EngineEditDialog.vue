@@ -10,7 +10,7 @@ import {
 import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
 import { ENGINE_ACTIONS, normalizeEngineTarget } from '../core/configData.js';
-import { actionEngineTip } from '../core/contextAction.js';
+import { actionEngineInfo } from '../core/contextAction.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -33,6 +33,8 @@ const ICON_SELECT =
 
 // 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
 const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : '';
+// 出现时机与用法说明来自动作定义；跟着语言切换重算
+const actionInfo = computed(() => actionEngineInfo(initialAction, t));
 
 const form = reactive({
   name: props.initial.name || '',
@@ -166,8 +168,17 @@ function submit() {
     <div id="sej-engine-title" class="sej-dialog-title">
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
-    <!-- 动作条目没有链接可填，直接说明它在什么场景下出现、做什么 -->
-    <p v-if="initialAction" class="sej-dialog-note">{{ actionEngineTip(initialAction, t) }}</p>
+    <!-- 动作条目：出现时机与用法说明，先只读展示，暂不支持修改 -->
+    <div v-if="actionInfo" class="sej-action-info">
+      <div class="sej-action-row">
+        <span class="sej-action-key">{{ t('engine.actionWhen') }}</span>
+        <span class="sej-action-value">{{ actionInfo.when }}</span>
+      </div>
+      <div class="sej-action-row">
+        <span class="sej-action-key">{{ t('engine.actionEffect') }}</span>
+        <span class="sej-action-value">{{ actionInfo.effect }}</span>
+      </div>
+    </div>
     <!-- 引擎链接 -->
     <label v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.url') }}</span>

@@ -27,12 +27,32 @@
   margin-bottom: 16px;
 }
 
-/* 动作条目的用法说明：紧贴标题，弱于表单字段的视觉层级 */
-.sej-dialog-note {
-  margin: -10px 0 14px;
+/* 动作条目的只读说明：与表单字段同构，先只展示，暂不支持修改 */
+.sej-action-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: -6px 0 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--sej-surface-2);
   font-size: 12px;
   line-height: 1.5;
-  opacity: 0.65;
+}
+
+.sej-action-row {
+  display: flex;
+  gap: 8px;
+}
+
+.sej-action-key {
+  flex: 0 0 auto;
+  opacity: 0.6;
+}
+
+.sej-action-value {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .sej-field {

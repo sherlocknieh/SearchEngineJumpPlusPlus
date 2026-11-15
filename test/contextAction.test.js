@@ -4,6 +4,7 @@ import {
   HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
   actionEngineHint,
+  actionEngineInfo,
   actionEngineTip,
   actionTargetHint,
   contextActionHintKey,
@@ -348,19 +349,31 @@ describe('contextActionEngines', () => {
   });
 });
 
-describe('actionEngineTip', () => {
+describe('actionEngineInfo', () => {
   const t = (key) => key;
 
-  it('每个动作都有说明，且中英文文案齐全', () => {
+  it('每个动作都有出现时机与用法说明，且中英文文案齐全', () => {
     for (const action of ENGINE_ACTIONS) {
-      const key = actionEngineTip(action, t);
-      expect(key).toMatch(/^action\.tip/);
-      expect(messages['zh-CN'][key]).toBeTruthy();
-      expect(messages.en[key]).toBeTruthy();
+      const info = actionEngineInfo(action, t);
+      expect(info).not.toBeNull();
+      expect(info.when).toMatch(/^action\.when/);
+      expect(info.effect).toMatch(/^action\.effect/);
+      for (const key of [info.when, info.effect]) {
+        expect(messages['zh-CN'][key]).toBeTruthy();
+        expect(messages.en[key]).toBeTruthy();
+      }
     }
   });
 
+  it('悬停提示把出现时机与用法合成一行', () => {
+    expect(actionEngineTip('copy', t)).toBe('action.tipLayout');
+    expect(messages['zh-CN']['action.tipLayout']).toBeTruthy();
+    expect(messages.en['action.tipLayout']).toBeTruthy();
+  });
+
   it('未知动作没有说明', () => {
+    expect(actionEngineInfo('paste', t)).toBeNull();
+    expect(actionEngineInfo(undefined, t)).toBeNull();
     expect(actionEngineTip('paste', t)).toBe('');
     expect(actionEngineTip(undefined, t)).toBe('');
   });

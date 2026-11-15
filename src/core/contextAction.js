@@ -38,20 +38,35 @@ export function contextActionLabel(mode, action, fallback, t) {
   return key ? t(key) : fallback || '';
 }
 
-/** 设置面板里的动作说明：什么场景下出现、具体做什么 */
-const ACTION_ENGINE_TIPS = {
-  copy: 'action.tipCopy',
-  copyImage: 'action.tipCopyImage',
-  copyImageUrl: 'action.tipCopyImageUrl',
-  copyLinkText: 'action.tipCopyLinkText',
-  copyLinkUrl: 'action.tipCopyLinkUrl',
-  selectLinkText: 'action.tipSelectLinkText',
-  open: 'action.tipOpen',
+/**
+ * 动作条目的说明：出现时机与用法说明分开写，
+ * 设置面板的只读表单与悬停提示都从这里取，避免两处文案不一致。
+ */
+const ACTION_ENGINE_INFO = {
+  copy: { when: 'action.whenCopy', effect: 'action.effectCopy' },
+  copyImage: { when: 'action.whenCopyImage', effect: 'action.effectCopyImage' },
+  copyImageUrl: { when: 'action.whenCopyImageUrl', effect: 'action.effectCopyImageUrl' },
+  copyLinkText: { when: 'action.whenCopyLinkText', effect: 'action.effectCopyLinkText' },
+  copyLinkUrl: { when: 'action.whenCopyLinkUrl', effect: 'action.effectCopyLinkUrl' },
+  selectLinkText: { when: 'action.whenSelectLinkText', effect: 'action.effectSelectLinkText' },
+  open: { when: 'action.whenOpen', effect: 'action.effectOpen' },
 };
 
+/**
+ * 动作的只读说明：什么时候会出现、具体做什么。未知动作返回 null。
+ * @param {string} action 动作类型
+ * @param {(key: string, params?: object) => string} t 文案函数
+ */
+export function actionEngineInfo(action, t) {
+  const info = ACTION_ENGINE_INFO[action];
+  if (!info) return null;
+  return { when: t(info.when), effect: t(info.effect) };
+}
+
+/** 悬停提示用的单行说明：出现时机 + 用法 */
 export function actionEngineTip(action, t) {
-  const key = ACTION_ENGINE_TIPS[action];
-  return key ? t(key) : '';
+  const info = actionEngineInfo(action, t);
+  return info ? t('action.tipLayout', info) : '';
 }
 
 /** 模式到命中解析与专属分类的映射 */
