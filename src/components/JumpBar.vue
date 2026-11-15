@@ -39,8 +39,9 @@ import {
   isSelectionDrag,
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
-import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY } from '../core/configData.js';
+import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY } from '../core/configData.js';
 import { findKeywordUrl } from '../core/engineUrl.js';
+import { canSearchImage } from '../core/imageSearch.js';
 import {
   actionTargetHint,
   contextActionEngines,
@@ -180,14 +181,14 @@ const contextActionTargets = computed(() => {
   return targets;
 });
 
+/** 图片模式的关键词是图片地址：内联图片据此只保留收得下字节的识图引擎 */
+const imageKeyword = computed(() => (isImageContext.value ? contextAction.keyword : ''));
+
 const categories = computed(() => {
-  const contextModeValue = isContextAction.value ? contextMode.value : '';
-  // 内联 data: 缩略图没有可搜索地址，「搜图」分类无从下手
-  const imageSearchable = contextAction.searchable !== false;
   const list = data.engineCategories
     // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「操作」动作
     .filter(([, key, enabled]) =>
-      isBarCategoryVisible(key, enabled, contextModeValue, imageSearchable),
+      isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
     )
     .map(([name, key]) => {
       // 动作分类：名称与提示都按当前关键词的来源决定
@@ -200,6 +201,8 @@ const categories = computed(() => {
       let engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action))
         .filter((engine) => !hidesOpenAction(engine))
+        // 内联图片只能上传给支持上传的识图引擎，其余的搜不了这张图
+        .filter((engine) => key !== IMAGE_CATEGORY_KEY || canSearchImage(engine, imageKeyword.value))
         // 名称与顺序都来自「操作」分类的设置，这里只补悬停提示要展示的目标内容
         .map((engine) => {
           if (!engine.action) return engine;

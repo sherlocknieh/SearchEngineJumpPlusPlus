@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1722
+// @version            2026.11.15.1736
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5602,6 +5602,7 @@
 			"engine.label": "「{name}」",
 			"engine.addTitle": "添加搜索引擎",
 			"engine.editTitle": "编辑搜索引擎",
+			"engine.editActionTitle": "编辑操作",
 			"engine.url": "链接",
 			"engine.name": "标题",
 			"engine.iconSrc": "图标来源",
@@ -5762,6 +5763,7 @@
 			"engine.label": "“{name}”",
 			"engine.addTitle": "Add search engine",
 			"engine.editTitle": "Edit search engine",
+			"engine.editActionTitle": "Edit action",
 			"engine.url": "URL",
 			"engine.name": "Title",
 			"engine.iconSrc": "Icon source",
@@ -5977,10 +5979,10 @@
 			extras: []
 		}
 	};
-	function isBarCategoryVisible(key, enabled, contextMode = "", imageSearchable = true) {
+	function isBarCategoryVisible(key, enabled, contextMode = "") {
 		if (contextMode) {
 			const categories = CONTEXT_BAR_CATEGORIES[contextMode];
-			if (key === categories?.primary) return key !== "image" || imageSearchable;
+			if (key === categories?.primary) return true;
 			return Boolean(categories?.extras.includes(key) && enabled);
 		}
 		if (key === "image") return false;
@@ -7185,6 +7187,149 @@
 			element: link
 		};
 	}
+	var LAZY_SRC_ATTRS = [
+		"data-src",
+		"data-original",
+		"data-lazy-src",
+		"data-actualsrc"
+	];
+	var INLINE_IMAGE_RE = /^data:image\//i;
+	var MAX_BG_DEPTH = 4;
+	var MAX_IMAGE_DEPTH = 6;
+	var MIN_BG_SIZE = 32;
+	var BG_URL_RE = /url\((['"]?)(.*?)\1\)/g;
+	function toHttpUrl(raw, base) {
+		const value = typeof raw === "string" ? raw.trim() : "";
+		if (!value) return "";
+		try {
+			const url = new URL(value, base);
+			return /^https?:$/.test(url.protocol) ? url.href : "";
+		} catch (e) {
+			return "";
+		}
+	}
+	function imgUrl(img, base) {
+		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
+		if (primary) return primary;
+		for (const attr of LAZY_SRC_ATTRS) {
+			const url = toHttpUrl(img.getAttribute?.(attr), base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function inlineImageUrl(img) {
+		if ((img.naturalWidth || 0) < MIN_BG_SIZE || (img.naturalHeight || 0) < MIN_BG_SIZE) return "";
+		for (const raw of [img.currentSrc, img.getAttribute?.("src")]) {
+			const value = typeof raw === "string" ? raw.trim() : "";
+			if (INLINE_IMAGE_RE.test(value)) return value;
+		}
+		return "";
+	}
+	function isInlineImageAddress(value) {
+		return INLINE_IMAGE_RE.test(String(value ?? "").trim());
+	}
+	var IMAGE_UPLOAD_ENDPOINTS = [{
+		match: /^https:\/\/lens\.google\.com\/uploadbyurl/i,
+		action: "https://www.google.com/searchbyimage/upload",
+		field: "encoded_image"
+	}];
+	function imageUploadEndpoint(engine) {
+		const url = typeof engine?.url === "string" ? engine.url : "";
+		if (!url) return null;
+		return IMAGE_UPLOAD_ENDPOINTS.find((entry) => entry.match.test(url)) || null;
+	}
+	function canSearchImage(engine, keyword) {
+		if (!isInlineImageAddress(keyword)) return true;
+		return Boolean(imageUploadEndpoint(engine));
+	}
+	function buildImageUploadForm(endpoint, dataUrl) {
+		if (!endpoint?.action || !endpoint.field || typeof DataTransfer !== "function") return null;
+		const file = dataUrlToFile(dataUrl);
+		if (!file) return null;
+		const transfer = new DataTransfer();
+		transfer.items.add(file);
+		const input = document.createElement("input");
+		input.type = "file";
+		input.name = endpoint.field;
+		input.files = transfer.files;
+		const form = document.createElement("form");
+		form.method = "POST";
+		form.action = endpoint.action;
+		form.enctype = "multipart/form-data";
+		form.target = "_blank";
+		form.style.cssText = "display:none;";
+		form.appendChild(input);
+		return form;
+	}
+	function dataUrlToFile(dataUrl) {
+		const match = /^data:([^;,]+)(;base64)?,([\s\S]*)$/i.exec(String(dataUrl ?? "").trim());
+		if (!match) return null;
+		const [, type, base64, payload] = match;
+		try {
+			const binary = base64 ? atob(payload.replace(/\s/g, "")) : decodeURIComponent(payload);
+			const bytes = new Uint8Array(binary.length);
+			for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+			const ext = (type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
+			return new File([bytes], `image.${ext}`, { type });
+		} catch (e) {
+			return null;
+		}
+	}
+	function imageHit(img, base) {
+		const url = imgUrl(img, base) || inlineImageUrl(img);
+		return url ? {
+			url,
+			element: img
+		} : null;
+	}
+	function backgroundUrl(el, base) {
+		const value = getComputedStyle(el)?.backgroundImage;
+		if (!value || value === "none") return "";
+		for (const match of value.matchAll(BG_URL_RE)) {
+			const url = toHttpUrl(match[2], base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function coveredImage(target, point, base) {
+		const doc = target?.ownerDocument;
+		let el = target?.nodeType === 1 ? target : target?.parentElement;
+		for (let depth = 0; el && depth < MAX_IMAGE_DEPTH; depth += 1, el = el.parentElement) {
+			if (el === doc?.body || el === doc?.documentElement) break;
+			for (const image of el.querySelectorAll?.("img") || []) {
+				const rect = image.getBoundingClientRect?.();
+				if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
+				if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) continue;
+				const hit = imageHit(image, base);
+				if (hit) return hit;
+			}
+		}
+		return null;
+	}
+	function resolveImageHit(target, base = globalThis.location?.href, point = null) {
+		const img = typeof target?.closest === "function" ? target.closest("img") : null;
+		if (img) {
+			const hit = imageHit(img, base);
+			if (hit) return hit;
+		}
+		if (point) {
+			const covered = coveredImage(target, point, base);
+			if (covered) return covered;
+		}
+		const doc = target?.ownerDocument;
+		let el = target?.nodeType === 1 ? target : target?.parentElement;
+		for (let depth = 0; el && depth < MAX_BG_DEPTH; depth += 1, el = el.parentElement) {
+			if (el === doc?.body || el === doc?.documentElement) break;
+			const rect = el.getBoundingClientRect?.();
+			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
+			const url = backgroundUrl(el, base);
+			if (url) return {
+				url,
+				element: el
+			};
+		}
+		return null;
+	}
 	function extractKeyword(inputTarget) {
 		if (typeof inputTarget === "function") return inputTarget();
 		if (!inputTarget) return "";
@@ -7227,6 +7372,16 @@
 			element: target?.element || null
 		};
 	}
+	async function imageOpenUrl(raw) {
+		const value = String(raw ?? "").trim();
+		if (!/^data:image\//i.test(value)) return findKeywordUrl(value);
+		try {
+			const blob = await (await fetch(value)).blob();
+			return URL.createObjectURL(blob);
+		} catch (e) {
+			return "";
+		}
+	}
 	async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
 		const action = normalizeEngineAction(engine?.action);
 		const source = normalizeActionTarget(target);
@@ -7239,7 +7394,7 @@
 		if (action === "copyImageUrl" || action === "copyLinkUrl") return copyText(source.url);
 		if (action === "selectLinkText") return selectLinkTitle(source.element);
 		if (action === "open" || action === "openImage") {
-			const url = findKeywordUrl(source.url);
+			const url = action === "openImage" ? await imageOpenUrl(source.url) : findKeywordUrl(source.url);
 			if (!url) return false;
 			const mode = resolveOpenMode(engine, false, defaultTarget);
 			if (mode === "self") window.location.href = url;
@@ -7292,6 +7447,7 @@
 			performEngineAction(engine, keyword, settingData.defaultOpenTarget);
 			return true;
 		}
+		if (isInlineImageAddress(keyword)) return submitImageSearch(engine, keyword);
 		const result = prepareJump(engine, keyword);
 		const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 		if (result.type === "post") {
@@ -7304,6 +7460,15 @@
 		}
 		if (openInNewTab(result.url, mode !== "background")) return true;
 		window.open(result.url, "_blank");
+		return true;
+	}
+	function submitImageSearch(engine, dataUrl) {
+		const endpoint = imageUploadEndpoint(engine);
+		const form = endpoint ? buildImageUploadForm(endpoint, dataUrl) : null;
+		if (!form) return false;
+		document.body.appendChild(form);
+		form.submit();
+		form.remove();
 		return true;
 	}
 	function openAllEngines(engines, keyword, settingData = {}) {
@@ -7364,107 +7529,6 @@
 		target.addEventListener("pointercancel", onPointerEnd, true);
 		target.addEventListener("keydown", onKeyDown, true);
 		target.addEventListener("blur", onPointerEnd);
-	}
-	var LAZY_SRC_ATTRS = [
-		"data-src",
-		"data-original",
-		"data-lazy-src",
-		"data-actualsrc"
-	];
-	var INLINE_IMAGE_RE = /^data:image\//i;
-	var MAX_BG_DEPTH = 4;
-	var MAX_IMAGE_DEPTH = 6;
-	var MIN_BG_SIZE = 32;
-	var BG_URL_RE = /url\((['"]?)(.*?)\1\)/g;
-	function toHttpUrl(raw, base) {
-		const value = typeof raw === "string" ? raw.trim() : "";
-		if (!value) return "";
-		try {
-			const url = new URL(value, base);
-			return /^https?:$/.test(url.protocol) ? url.href : "";
-		} catch (e) {
-			return "";
-		}
-	}
-	function imgUrl(img, base) {
-		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
-		if (primary) return primary;
-		for (const attr of LAZY_SRC_ATTRS) {
-			const url = toHttpUrl(img.getAttribute?.(attr), base);
-			if (url) return url;
-		}
-		return "";
-	}
-	function inlineImageUrl(img) {
-		if ((img.naturalWidth || 0) < MIN_BG_SIZE || (img.naturalHeight || 0) < MIN_BG_SIZE) return "";
-		for (const raw of [img.currentSrc, img.getAttribute?.("src")]) {
-			const value = typeof raw === "string" ? raw.trim() : "";
-			if (INLINE_IMAGE_RE.test(value)) return value;
-		}
-		return "";
-	}
-	function imageHit(img, base) {
-		const url = imgUrl(img, base);
-		if (url) return {
-			url,
-			element: img,
-			searchable: true
-		};
-		const inline = inlineImageUrl(img);
-		return inline ? {
-			url: inline,
-			element: img,
-			searchable: false
-		} : null;
-	}
-	function backgroundUrl(el, base) {
-		const value = getComputedStyle(el)?.backgroundImage;
-		if (!value || value === "none") return "";
-		for (const match of value.matchAll(BG_URL_RE)) {
-			const url = toHttpUrl(match[2], base);
-			if (url) return url;
-		}
-		return "";
-	}
-	function coveredImage(target, point, base) {
-		const doc = target?.ownerDocument;
-		let el = target?.nodeType === 1 ? target : target?.parentElement;
-		for (let depth = 0; el && depth < MAX_IMAGE_DEPTH; depth += 1, el = el.parentElement) {
-			if (el === doc?.body || el === doc?.documentElement) break;
-			for (const image of el.querySelectorAll?.("img") || []) {
-				const rect = image.getBoundingClientRect?.();
-				if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
-				if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) continue;
-				const hit = imageHit(image, base);
-				if (hit) return hit;
-			}
-		}
-		return null;
-	}
-	function resolveImageHit(target, base = globalThis.location?.href, point = null) {
-		const img = typeof target?.closest === "function" ? target.closest("img") : null;
-		if (img) {
-			const hit = imageHit(img, base);
-			if (hit) return hit;
-		}
-		if (point) {
-			const covered = coveredImage(target, point, base);
-			if (covered) return covered;
-		}
-		const doc = target?.ownerDocument;
-		let el = target?.nodeType === 1 ? target : target?.parentElement;
-		for (let depth = 0; el && depth < MAX_BG_DEPTH; depth += 1, el = el.parentElement) {
-			if (el === doc?.body || el === doc?.documentElement) break;
-			const rect = el.getBoundingClientRect?.();
-			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
-			const url = backgroundUrl(el, base);
-			if (url) return {
-				url,
-				element: el,
-				searchable: true
-			};
-		}
-		return null;
 	}
 	var ACTION_ENGINE_INFO = {
 		copy: {
@@ -7578,10 +7642,12 @@
 		return url || keyword;
 	}
 	function isActionAvailableInMode(mode, action) {
+		if (action && !normalizeEngineAction(action)) return false;
 		if (action === "copy") return mode === "text" || mode === "input";
 		if (action === "copyImage" || action === "copyImageUrl" || action === "openImage") return mode === "image";
 		if (action === "copyLinkText" || action === "copyLinkUrl" || action === "selectLinkText") return mode === "link";
-		return mode !== "image";
+		if (action === "open") return mode !== "image";
+		return true;
 	}
 	function hintTargetText(mode, action, hit) {
 		if (mode === "text" || mode === "input") return (action === "copy" ? hit.keyword : hit.url) || "";
@@ -7602,7 +7668,6 @@
 			if (engine.disable || !engine.action) continue;
 			for (const { mode, hit } of targets) {
 				if (!isActionAvailableInMode(mode, engine.action)) continue;
-				if (engine.action === "openImage" && hit.searchable === false) continue;
 				if ((engine.action === "copyLinkText" || engine.action === "selectLinkText") && hit.keyword === hit.url) continue;
 				list.push({
 					...engine,
@@ -7622,15 +7687,13 @@
 		mode: "",
 		keyword: "",
 		url: "",
-		searchable: true,
 		link: null,
 		element: null
 	});
-	function openContextAction({ mode, keyword, url, searchable = true, element = null, link = null }) {
+	function openContextAction({ mode, keyword, url, element = null, link = null }) {
 		contextAction.mode = mode;
 		contextAction.keyword = keyword;
 		contextAction.url = url;
-		contextAction.searchable = searchable;
 		contextAction.link = link;
 		contextAction.element = element;
 		contextAction.active = true;
@@ -8839,13 +8902,12 @@
 				});
 				return targets;
 			});
+			const imageKeyword = computed(() => isImageContext.value ? contextAction.keyword : "");
 			const categories = computed(() => {
-				const contextModeValue = isContextAction.value ? contextMode.value : "";
-				const imageSearchable = contextAction.searchable !== false;
-				return data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, contextModeValue, imageSearchable)).map(([name, key]) => {
+				return data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => {
 					const actionMode = isContextAction.value ? contextMode.value : isSelectSearch.value ? "text" : "input";
 					const contextActions = key === "actions" && isContextAction.value;
-					let engines = (data.engineList[key] || []).filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action)).filter((engine) => !hidesOpenAction(engine)).map((engine) => {
+					let engines = (data.engineList[key] || []).filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action)).filter((engine) => !hidesOpenAction(engine)).filter((engine) => key !== "image" || canSearchImage(engine, imageKeyword.value)).map((engine) => {
 						if (!engine.action) return engine;
 						return {
 							...engine,
@@ -10794,7 +10856,7 @@
 		"/* 列表滚动容器：内容可能很长，滚动条贴住面板内边缘 */\n#sej-settings-body {\n  /* 列数随可用宽度自动增减：滚动条变宽或面板变窄时不会挤出空列 */\n  display: grid;\n  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));\n  flex: 1 1 auto;\n  align-content: start;\n  gap: 10px;\n  min-height: 0;\n  overflow-y: auto;\n  overflow-x: hidden;\n  /* 宿主页的滚动条样式会穿透 Shadow DOM 继承进来，显式复位保住自定义滚动条宽度 */\n  scrollbar-width: auto;\n  scrollbar-color: auto;\n  /* 让滚动条贴住面板内边缘，而不是停在内容区的内边距处 */\n  margin-top: 0;\n  margin-right: calc(var(--sej-panel-pad-x) * -1);\n  padding-top: 2px;\n  padding-right: var(--sej-panel-pad-x);\n  padding-bottom: 4px;\n}\n\n#sej-settings-body::-webkit-scrollbar {\n  width: 8px;\n}\n\n#sej-settings-body::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover);\n  border-radius: 4px;\n}\n\n/* 拖动排序：源元素隐藏但保留占位，目标位置只空出空白 */\n#settingLayer .sej-drag-placeholder,\n#settingLayer .sej-drag-placeholder * {\n  visibility: hidden !important;\n}\n\n#settingLayer .sejtitle:active,\n#settingLayer .sejcon > .drag:active {\n  cursor: grabbing;\n}\n\n.sej-drag-ghost {\n  position: fixed !important;\n  left: 0 !important;\n  top: 0 !important;\n  margin: 0 !important;\n  z-index: 200000200;\n  opacity: 1 !important;\n  pointer-events: none;\n  box-sizing: border-box;\n  overflow: hidden;\n  will-change: transform;\n}\n\n.sej-drag-ghost * {\n  pointer-events: none !important;\n}\n\n.sej-drag-ghost-engine {\n  border-radius: 8px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);\n}\n\n.sej-drag-ghost-category {\n  border: 1px solid var(--border-color-sej);\n  border-radius: 12px;\n  background: var(--background-setting-qxin);\n  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);\n}\n\n#settingLayer .sej-engine {\n  display: inline-flex;\n  align-items: center;\n  gap: 8px;\n  padding: 0 82px 0 8px;\n  width: 100%;\n  height: 30px;\n  box-sizing: border-box;\n  border-radius: 8px;\n  font-family: var(--sej-font-family);\n  font-size: 13px;\n  color: var(--font-color-qxin);\n  text-decoration: none;\n  white-space: nowrap;\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  cursor: pointer;\n}\n\n#settingLayer .sej-engine > span {\n  flex: 0 1 auto;\n  min-width: 0;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n.sejtitle {\n  text-align: left;\n  /* 左侧与引擎条目对齐，右侧避开编辑/删除/显隐按钮 */\n  padding: 5px 82px 5px 8px;\n  margin-bottom: 2px;\n  overflow: hidden;\n  white-space: nowrap;\n  text-overflow: ellipsis;\n  cursor: pointer;\n  position: relative;\n  font-size: 13px;\n  font-weight: 600;\n  line-height: 1.5;\n  border-radius: 8px;\n}\n\n/* 标题下方的细分隔线，用于和引擎条目区分 */\n.sejtitle::after {\n  content: '';\n  position: absolute;\n  left: 8px;\n  right: 8px;\n  bottom: 0;\n  height: 1px;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n#settingLayerMask [data-xin] {\n  margin: 1px 0;\n  border-radius: 8px;\n}\n\n.sejcon [data-xin] {\n  cursor: pointer;\n}\n\n/* 隐藏的条目：灰暗弱化，不抢眼，也不使用删除线 */\n#settingLayerMask [data-iqxindisabled='true'],\n[data-xin^='-'] {\n  background-color: transparent;\n  color: var(--font-color-qxin);\n  transition: background-color 0.12s ease-out;\n}\n\n#settingLayerMask [data-iqxindisabled='true'] > span,\n#settingLayerMask [data-iqxindisabled='true'] .sej-engine-icon,\n[data-xin^='-'] > .iqxin-pointer-events {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n/* 隐藏的分类：分类标题下的所有引擎一并灰暗，操作按钮保持可辨识 */\n.sej-category-hidden .sej-engine > span,\n.sej-category-hidden .sej-engine .sej-engine-icon,\n.sej-category-hidden .iqxin-additem {\n  opacity: 0.4;\n  filter: grayscale(1);\n}\n\n#settingLayerMask .sej-engine:hover {\n  background-color: var(--sej-surface-hover);\n}\n\n#settingLayerMask [data-iqxindisabled='true']:hover,\n[data-xin^='-']:hover {\n  background-color: transparent;\n}\n\n.sej-category-hidden .sej-engine:hover {\n  background-color: transparent;\n}\n\n#settingLayerMask label {\n  cursor: pointer;\n}\n\n#settingLayerMask .sej-engine-icon {\n  vertical-align: middle;\n}\n\n/* 窄屏下类别卡片收窄一档，仍占满可用宽度 */\n@media (max-width: 560px) {\n  #sej-settings-body {\n    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));\n  }\n}\n\n.iqxin-pointer-events,\n#settingLayer .sej-engine * {\n  pointer-events: none;\n}\n",
 		"#btnEle {\n  position: relative;\n  width: 100%;\n  margin-top: 10px;\n  background: transparent;\n  border-radius: 0;\n  flex: 0 0 auto;\n}\n\n#btnEle span {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  box-sizing: border-box;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  margin: 0;\n  color: var(--font-color-qxin);\n  padding: 4px 10px;\n  border-radius: 8px;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition:\n    background-color 0.12s ease-out,\n    border-color 0.12s ease-out,\n    color 0.12s ease-out,\n    opacity 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle label {\n  display: inline-flex;\n  align-items: center;\n  gap: 6px;\n  color: inherit;\n}\n\n#btnEle .sej-language-select {\n  appearance: none;\n  -webkit-appearance: none;\n  border: 1px solid var(--border-color-sej);\n  border-radius: 6px;\n  background: var(--sej-input-bg);\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 12px;\n  line-height: 1.4;\n  padding: 2px 4px;\n  margin-left: 2px;\n  cursor: pointer;\n  outline: none;\n}\n\n#btnEle .sej-language-select:focus-visible {\n  border-color: var(--sej-accent);\n}\n\n#btnEle span:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle a {\n  color: var(--font-color-qxin);\n  opacity: 0.7;\n  text-decoration: none;\n  font-family: inherit;\n  transition:\n    opacity 0.12s ease-out,\n    color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle a:hover {\n  opacity: 1;\n  color: var(--sej-accent);\n}\n\n#btnEle span:active,\n#btnEle a:active {\n  transform: scale(0.96);\n  opacity: 0.8;\n}\n\n#btnEle .feedback {\n  background: transparent;\n  border-color: transparent;\n  padding: 4px 6px;\n}\n\n#btnEle .feedback:hover {\n  background: transparent;\n  border-color: transparent;\n  color: var(--sej-accent);\n}\n\n#btnEle > div {\n  width: 100%;\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-start;\n  align-items: center;\n  gap: 8px;\n  box-sizing: border-box;\n}\n\n#btnEle > div.btnEleLayer {\n  flex-direction: column;\n  flex-wrap: nowrap;\n  align-items: stretch;\n  background: transparent;\n  border-radius: 0;\n  border-top: 1px solid var(--border-color-sej);\n  padding-top: 12px;\n  gap: 8px;\n}\n\n.sej-footer-options,\n.sej-footer-bar,\n.sej-footer-selects,\n.sej-footer-links,\n.sej-footer-actions {\n  display: flex;\n  align-items: center;\n  flex-wrap: wrap;\n  min-width: 0;\n}\n\n.sej-footer-options {\n  gap: 8px;\n}\n\n.sej-footer-bar {\n  gap: 8px 12px;\n}\n\n.sej-footer-selects {\n  gap: 8px;\n}\n\n/* 配置文件：齿轮入口与导入/导出合并为同一个容器 */\n#btnEle .sej-config-box {\n  display: inline-flex;\n  align-items: center;\n  min-height: 30px;\n  background: var(--sej-surface-2);\n  border: 1px solid transparent;\n  border-radius: 8px;\n  overflow: hidden;\n}\n\n#btnEle .sej-config-box button {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  gap: 6px;\n  min-height: 30px;\n  margin: 0;\n  padding: 4px 9px;\n  border: 0;\n  border-radius: 0;\n  background: transparent;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  line-height: 1.3;\n  white-space: nowrap;\n  cursor: pointer;\n  outline: none;\n  transition:\n    background-color 0.12s ease-out,\n    color 0.12s ease-out,\n    transform 0.1s ease-out;\n}\n\n#btnEle .sej-config-box .sej-config-open {\n  padding-left: 10px;\n}\n\n#btnEle .sej-config-box button:hover {\n  background: var(--sej-surface-hover);\n  color: var(--font-color-qxin);\n}\n\n#btnEle .sej-config-box button:active {\n  transform: scale(0.96);\n}\n\n#btnEle .sej-config-box button:focus-visible {\n  outline: 2px solid var(--sej-accent);\n  outline-offset: -2px;\n}\n\n#btnEle .sej-config-box svg {\n  flex: 0 0 auto;\n}\n\n#btnEle span.sej-config-sep {\n  flex: 0 0 auto;\n  width: 1px;\n  height: 16px;\n  min-height: 16px;\n  margin: 0;\n  padding: 0;\n  border: 0;\n  border-radius: 0;\n  background: var(--border-color-sej);\n  pointer-events: none;\n}\n\n.sej-footer-links {\n  gap: 0;\n  margin-left: auto;\n}\n\n.sej-footer-actions {\n  margin-left: 4px;\n}\n\n/* 底栏不参与内容区伸缩，并在窄屏下收紧 */\n#settingLayer #btnEle {\n  flex: 0 0 auto;\n}\n\n@media (max-width: 780px) {\n  #btnEle span {\n    font-size: 12px;\n    padding: 5px 8px;\n  }\n  #btnEle .sej-config-box button {\n    font-size: 12px;\n    padding: 5px 7px;\n  }\n  #btnEle .sej-config-box .sej-config-open {\n    padding-left: 8px;\n  }\n  #settingLayerMask {\n    /* 窄屏收紧外边距，给小屏让出可用空间 */\n    --sej-mask-pad: 8px;\n  }\n  #settingLayer {\n    --sej-panel-pad-x: 12px;\n  }\n}\n",
 		"#btnEle #xin-save {\n  position: relative;\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n#btnEle #xin-save:hover {\n  background: var(--sej-accent);\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n#btnEle #xin-save.sej-saving {\n  cursor: progress;\n  opacity: 0.6;\n  pointer-events: none;\n}\n\n#settingLayerMask input[type='checkbox'],\n#settingLayerMask input[type='radio'] {\n  appearance: none;\n  -webkit-appearance: none;\n  width: 16px;\n  height: 16px;\n  display: inline-block;\n  box-sizing: border-box;\n  vertical-align: -3px;\n  margin: 0 !important;\n  padding: 0;\n  position: relative;\n  border: 1.5px solid var(--sej-checkbox-border);\n  border-radius: 5px;\n  background: var(--sej-input-bg);\n  cursor: pointer;\n  transition:\n    background-color 0.12s ease-out,\n    border-color 0.12s ease-out;\n}\n\n#settingLayerMask input[type='checkbox']:before,\n#settingLayerMask input[type='radio']:before {\n  content: none;\n}\n\n#settingLayerMask input[type='checkbox']:checked,\n#settingLayerMask input[type='radio']:checked {\n  background: var(--sej-accent);\n  border-color: var(--sej-accent);\n}\n\n#settingLayerMask input[type='checkbox']:checked:after,\n#settingLayerMask input[type='radio']:checked:after {\n  content: '';\n  position: absolute;\n  left: 4px;\n  top: 1px;\n  width: 4px;\n  height: 8px;\n  border: solid var(--sej-accent-contrast);\n  border-width: 0 2px 2px 0;\n  background: none;\n  transform: rotate(45deg);\n}\n\n.iqxin-set-toggle {\n  opacity: 0.6;\n  position: absolute;\n  background: transparent;\n  /* 用上下外边距 auto 垂直居中，避免 transform 让按钮单独成为合成层 */\n  top: 0;\n  bottom: 0;\n  height: fit-content;\n  margin-top: auto;\n  margin-bottom: auto;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n  transition:\n    opacity 0.12s ease-out,\n    background-color 0.12s ease-out,\n    color 0.12s ease-out;\n  right: 6px;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n}\n\n.iqxin-set-toggle svg {\n  display: block;\n}\n\n.iqxin-set-toggle.iqxin-set-hidden {\n  opacity: 0.35;\n}\n\n.iqxin-set-toggle:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n/* 悬浮操作：右侧依次为编辑、删除、显隐按钮；没有删除按钮时编辑顺位到删除的位置 */\n.sej-hover-edit,\n.sej-hover-delete {\n  position: absolute;\n  display: inline-flex;\n  align-items: center;\n  color: var(--font-color-qxin);\n  opacity: 0;\n  pointer-events: none;\n  transition:\n    opacity 0.12s ease-out,\n    background-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.sej-hover-edit {\n  top: 0;\n  bottom: 0;\n  right: 54px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n}\n\n.sej-hover-delete {\n  top: 0;\n  bottom: 0;\n  right: 30px;\n  height: fit-content;\n  margin: auto 0;\n  padding: 3px;\n  border-radius: 6px;\n  cursor: pointer;\n}\n\n.sej-no-delete .sej-hover-edit {\n  right: 30px;\n}\n\n.sej-hover-edit svg,\n.sej-hover-delete svg {\n  display: block;\n}\n\n.sejtitle:hover .sej-hover-edit,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit {\n  opacity: 0.6;\n}\n\n.sejtitle:hover .sej-hover-delete,\n#settingLayer .sejcon > .drag:hover > .sej-hover-delete {\n  opacity: 0.6;\n  pointer-events: auto;\n}\n\n.sejtitle:hover .sej-hover-edit:hover,\n#settingLayer .sejcon > .drag:hover > .sej-hover-edit:hover {\n  opacity: 1;\n  background: var(--sej-surface-hover);\n}\n\n.sej-hover-delete:hover {\n  opacity: 1;\n  background: var(--sej-danger-weak, rgba(220, 53, 69, 0.12));\n  color: var(--sej-danger, #dc3545);\n}\n\nspan.iqxin-additem {\n  display: inline-block;\n  position: relative;\n  text-align: center;\n  width: 100%;\n  box-sizing: border-box;\n  margin: auto 0 2px;\n  padding: 5px 0;\n  border: 1px dashed currentColor;\n  border-radius: 8px;\n  color: var(--font-color-qxin);\n  opacity: 0.55;\n  cursor: pointer;\n  visibility: visible;\n  transition:\n    opacity 0.12s ease-out,\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\nspan.iqxin-additem:hover {\n  opacity: 1;\n  border-color: var(--sej-accent);\n  color: var(--sej-accent);\n}\n\nspan.iqxin-additem.sej-copy-target {\n  opacity: 1;\n  border-style: solid;\n  border-color: var(--sej-accent);\n  background: var(--sej-accent-weak);\n  color: var(--sej-accent);\n}\n\n.sej-copy-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  vertical-align: middle;\n  line-height: 1;\n}\n\n.sej-copy-icon svg {\n  display: block;\n  width: 14px;\n  height: 14px;\n}\n\n.sej-copy-hint {\n  position: absolute;\n  left: 50%;\n  bottom: calc(100% + 6px);\n  transform: translateX(-50%);\n  z-index: 5;\n  padding: 3px 8px;\n  border-radius: 6px;\n  background: rgba(20, 22, 26, 0.82);\n  color: #fff;\n  font-size: 12px;\n  line-height: 1.5;\n  white-space: nowrap;\n  pointer-events: none;\n}\n\n@keyframes sej-setting-mask-in {\n  from {\n    opacity: 0;\n  }\n}\n",
-		"/* ---------- 弹窗：引擎/分类编辑、配置编辑器 ---------- */\n\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition:\n    opacity 0.14s ease-out,\n    transform 0.14s ease-out;\n}\n\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n\n/* 动作条目的只读说明：与表单字段同构，先只展示，暂不支持修改 */\n.sej-action-info {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin: -6px 0 14px;\n  padding: 8px 10px;\n  border-radius: 8px;\n  background: var(--sej-surface-2);\n  font-size: 12px;\n  line-height: 1.5;\n}\n\n.sej-action-row {\n  display: flex;\n  gap: 8px;\n}\n\n.sej-action-key {\n  flex: 0 0 auto;\n  opacity: 0.6;\n}\n\n.sej-action-value {\n  flex: 1 1 auto;\n  min-width: 0;\n}\n\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n\n.sej-field > span {\n  opacity: 0.65;\n}\n\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n.sej-file-input {\n  display: none;\n}\n\n.sej-dialog-actions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out;\n}\n\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n}\n\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition:\n    background-color 0.12s ease-out,\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 单独占据操作栏左侧，其余按钮保持右对齐 */\n.sej-dialog-left {\n  margin-right: auto;\n}\n\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n"
+		"/* ---------- 弹窗：引擎/分类编辑、配置编辑器 ---------- */\n\n#newSearchBox,\n.sej-dialog-box {\n  position: fixed;\n  z-index: 200000100;\n  top: 50%;\n  left: 50%;\n  transform: translate(-50%, -50%);\n  width: min(400px, calc(100vw - 32px));\n  box-sizing: border-box;\n  padding: 20px;\n  background: var(--background-setting-qxin);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 14px;\n  box-shadow: var(--sej-shadow-menu);\n  color: var(--font-color-qxin);\n  margin: 0;\n  transition:\n    opacity 0.14s ease-out,\n    transform 0.14s ease-out;\n}\n\n.sej-dialog-title {\n  font-size: 15px;\n  font-weight: 600;\n  margin-bottom: 16px;\n}\n\n/* 只读说明字段：与普通输入框同构，弱化底色表示暂不支持修改 */\n#newSearchBox input[readonly],\n.sej-dialog-box input[readonly] {\n  background: var(--sej-surface-2);\n  cursor: default;\n}\n\n.sej-field {\n  display: flex;\n  flex-direction: column;\n  gap: 6px;\n  margin-bottom: 12px;\n  font-size: 12px;\n}\n\n.sej-field > span {\n  opacity: 0.65;\n}\n\n.sej-field-row {\n  display: flex;\n  align-items: center;\n  gap: 8px;\n}\n\n.sej-field-row input {\n  flex: 1 1 0;\n  width: auto;\n  min-width: 0;\n}\n\n.sej-file-input {\n  display: none;\n}\n\n.sej-dialog-actions {\n  display: flex;\n  flex-wrap: wrap;\n  justify-content: flex-end;\n  gap: 8px;\n  margin-top: 16px;\n}\n\n#newSearchBox input,\n.sej-dialog-box input {\n  width: 100%;\n  box-sizing: border-box;\n  border: 1px solid var(--border-color-sej);\n  padding: 7px 9px;\n  border-radius: 8px;\n  outline: none;\n  color: var(--font-color-qxin);\n  background: var(--sej-input-bg);\n  font-family: inherit;\n  font-size: 13px;\n  transition: border-color 0.12s ease-out;\n}\n\n#newSearchBox input:focus,\n.sej-dialog-box input:focus {\n  background: var(--sej-input-bg);\n  border-color: var(--sej-accent);\n}\n\n.addItemBoxBtn {\n  cursor: pointer;\n  background: var(--sej-btn-bg);\n  border: 1px solid var(--border-color-sej);\n  border-radius: 8px;\n  padding: 6px 14px;\n  color: var(--font-color-qxin);\n  font-family: inherit;\n  font-size: 13px;\n  transition:\n    background-color 0.12s ease-out,\n    border-color 0.12s ease-out,\n    color 0.12s ease-out;\n}\n\n.addItemBoxBtn:hover {\n  background: var(--sej-surface-hover);\n}\n\n.sej-dialog-danger {\n  margin-right: auto;\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n/* 单独占据操作栏左侧，其余按钮保持右对齐 */\n.sej-dialog-left {\n  margin-right: auto;\n}\n\n.sej-dialog-danger:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n\n.iqxin-closeBtn,\n.iqxin-enterBtn {\n  box-sizing: border-box;\n}\n\n.iqxin-enterBtn {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  font-weight: 600;\n}\n\n.iqxin-enterBtn:hover {\n  background: var(--sej-accent);\n  border-color: transparent;\n  color: var(--sej-accent-contrast);\n  opacity: 0.85;\n}\n\n.iqxin-closeBtn:hover {\n  background: var(--sej-danger-weak);\n  border-color: var(--sej-danger);\n  color: var(--sej-danger);\n}\n"
 	].join("");
 	var STEP_STATUS_TEXT = {
 		pending: "engine.stepPending",
@@ -11048,84 +11110,84 @@
 	};
 	var _hoisted_2$6 = {
 		key: 0,
-		class: "sej-action-info"
+		class: "sej-field"
 	};
-	var _hoisted_3$6 = { class: "sej-action-row" };
-	var _hoisted_4$6 = { class: "sej-action-key" };
-	var _hoisted_5$6 = { class: "sej-action-value" };
-	var _hoisted_6$5 = { class: "sej-action-row" };
-	var _hoisted_7$4 = { class: "sej-action-key" };
-	var _hoisted_8$3 = { class: "sej-action-value" };
-	var _hoisted_9$3 = {
+	var _hoisted_3$6 = ["placeholder", "disabled"];
+	var _hoisted_4$6 = { class: "sej-field" };
+	var _hoisted_5$6 = ["placeholder", "disabled"];
+	var _hoisted_6$5 = {
 		key: 1,
 		class: "sej-field"
 	};
-	var _hoisted_10$3 = ["placeholder", "disabled"];
-	var _hoisted_11$3 = { class: "sej-field" };
-	var _hoisted_12$2 = ["placeholder", "disabled"];
-	var _hoisted_13$2 = {
+	var _hoisted_7$4 = ["value"];
+	var _hoisted_8$3 = {
 		key: 2,
 		class: "sej-field"
 	};
-	var _hoisted_14$2 = { class: "sej-field-row" };
-	var _hoisted_15$2 = ["placeholder", "disabled"];
-	var _hoisted_16$1 = ["disabled"];
-	var _hoisted_17$1 = {
+	var _hoisted_9$3 = ["value"];
+	var _hoisted_10$3 = {
+		key: 3,
+		class: "sej-field"
+	};
+	var _hoisted_11$3 = { class: "sej-field-row" };
+	var _hoisted_12$2 = ["placeholder", "disabled"];
+	var _hoisted_13$2 = ["disabled"];
+	var _hoisted_14$2 = {
 		key: 0,
 		class: "sej-preview-steps"
 	};
-	var _hoisted_18$1 = [
+	var _hoisted_15$2 = [
 		"title",
 		"role",
 		"tabindex",
 		"onClick",
 		"onKeydown"
 	];
-	var _hoisted_19 = ["src"];
-	var _hoisted_20 = {
+	var _hoisted_16$1 = ["src"];
+	var _hoisted_17$1 = {
 		key: 1,
 		class: "sej-preview-dot"
 	};
-	var _hoisted_21 = ["href"];
-	var _hoisted_22 = {
+	var _hoisted_18$1 = ["href"];
+	var _hoisted_19 = {
 		key: 2,
 		class: "sej-preview-size"
 	};
-	var _hoisted_23 = {
+	var _hoisted_20 = {
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_24 = ["title"];
-	var _hoisted_25 = {
+	var _hoisted_21 = ["title"];
+	var _hoisted_22 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
-	var _hoisted_26 = ["href"];
-	var _hoisted_27 = {
-		key: 3,
-		class: "sej-field"
-	};
-	var _hoisted_28 = {
-		key: 0,
-		class: "sej-icon-size"
-	};
-	var _hoisted_29 = { class: "sej-data-line" };
-	var _hoisted_30 = ["placeholder", "disabled"];
-	var _hoisted_31 = ["disabled", "title"];
-	var _hoisted_32 = ["src"];
-	var _hoisted_33 = {
+	var _hoisted_23 = ["href"];
+	var _hoisted_24 = {
 		key: 4,
 		class: "sej-field"
 	};
-	var _hoisted_34 = ["disabled"];
-	var _hoisted_35 = ["title"];
-	var _hoisted_36 = { value: "_blank" };
-	var _hoisted_37 = { value: "_background" };
-	var _hoisted_38 = { value: "_self" };
-	var _hoisted_39 = { class: "sej-dialog-actions" };
-	var _hoisted_40 = ["disabled"];
-	var _hoisted_41 = ["disabled"];
-	var _hoisted_42 = ["disabled"];
+	var _hoisted_25 = {
+		key: 0,
+		class: "sej-icon-size"
+	};
+	var _hoisted_26 = { class: "sej-data-line" };
+	var _hoisted_27 = ["placeholder", "disabled"];
+	var _hoisted_28 = ["disabled", "title"];
+	var _hoisted_29 = ["src"];
+	var _hoisted_30 = {
+		key: 5,
+		class: "sej-field"
+	};
+	var _hoisted_31 = ["disabled"];
+	var _hoisted_32 = ["title"];
+	var _hoisted_33 = { value: "_blank" };
+	var _hoisted_34 = { value: "_background" };
+	var _hoisted_35 = { value: "_self" };
+	var _hoisted_36 = { class: "sej-dialog-actions" };
+	var _hoisted_37 = ["disabled"];
+	var _hoisted_38 = ["disabled"];
+	var _hoisted_39 = ["disabled"];
 	var ICON_SELECT = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>";
 	var _sfc_main$8 = {
 		__name: "EngineEditDialog",
@@ -11158,6 +11220,11 @@
 			const emit = __emit;
 			const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : "";
 			const actionInfo = computed(() => actionEngineInfo(initialAction, t));
+			const dialogTitle = computed(() => {
+				if (props.mode !== "edit") return t("engine.addTitle");
+				return initialAction ? t("engine.editActionTitle") : t("engine.editTitle");
+			});
+			const usesTarget = computed(() => !initialAction || ["open", "openImage"].includes(initialAction));
 			const form = reactive({
 				name: props.initial.name || "",
 				url: props.initial.url || "",
@@ -11233,36 +11300,45 @@
 					"aria-modal": "true",
 					"aria-labelledby": "sej-engine-title"
 				}, [
-					createBaseVNode("div", _hoisted_1$6, toDisplayString(__props.mode === "edit" ? unref(t)("engine.editTitle") : unref(t)("engine.addTitle")), 1),
-					actionInfo.value ? (openBlock(), createElementBlock("div", _hoisted_2$6, [createBaseVNode("div", _hoisted_3$6, [createBaseVNode("span", _hoisted_4$6, toDisplayString(unref(t)("engine.actionWhen")), 1), createBaseVNode("span", _hoisted_5$6, toDisplayString(actionInfo.value.when), 1)]), createBaseVNode("div", _hoisted_6$5, [createBaseVNode("span", _hoisted_7$4, toDisplayString(unref(t)("engine.actionEffect")), 1), createBaseVNode("span", _hoisted_8$3, toDisplayString(actionInfo.value.effect), 1)])])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("label", _hoisted_9$3, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.url")), 1), withDirectives(createBaseVNode("input", {
+					createBaseVNode("div", _hoisted_1$6, toDisplayString(dialogTitle.value), 1),
+					!unref(initialAction) ? (openBlock(), createElementBlock("label", _hoisted_2$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.url")), 1), withDirectives(createBaseVNode("input", {
 						ref_key: "urlInput",
 						ref: urlInput,
 						"onUpdate:modelValue": _cache[0] || (_cache[0] = ($event) => form.url = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
 						onBlur: applySearchTemplate
-					}, null, 40, _hoisted_10$3), [[vModelText, form.url]])])) : createCommentVNode("", true),
-					createBaseVNode("label", _hoisted_11$3, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
+					}, null, 40, _hoisted_3$6), [[vModelText, form.url]])])) : createCommentVNode("", true),
+					createBaseVNode("label", _hoisted_4$6, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.name")), 1), withDirectives(createBaseVNode("input", {
 						"onUpdate:modelValue": _cache[1] || (_cache[1] = ($event) => form.name = $event),
 						placeholder: unref(t)("common.required"),
 						disabled: __props.busy,
 						onInput: markTitleEdited
-					}, null, 40, _hoisted_12$2), [[vModelText, form.name]])]),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_13$2, [
+					}, null, 40, _hoisted_5$6), [[vModelText, form.name]])]),
+					actionInfo.value ? (openBlock(), createElementBlock("div", _hoisted_6$5, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.actionWhen")), 1), createBaseVNode("input", {
+						value: actionInfo.value.when,
+						readonly: "",
+						tabindex: "-1"
+					}, null, 8, _hoisted_7$4)])) : createCommentVNode("", true),
+					actionInfo.value ? (openBlock(), createElementBlock("div", _hoisted_8$3, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.actionEffect")), 1), createBaseVNode("input", {
+						value: actionInfo.value.effect,
+						readonly: "",
+						tabindex: "-1"
+					}, null, 8, _hoisted_9$3)])) : createCommentVNode("", true),
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_10$3, [
 						createBaseVNode("span", null, toDisplayString(unref(t)("engine.iconSrc")), 1),
-						createBaseVNode("div", _hoisted_14$2, [withDirectives(createBaseVNode("input", {
+						createBaseVNode("div", _hoisted_11$3, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[2] || (_cache[2] = ($event) => form.favicon = $event),
 							placeholder: unref(t)("common.optional"),
 							disabled: __props.busy,
 							onInput: markFaviconEdited
-						}, null, 40, _hoisted_15$2), [[vModelText, form.favicon]]), createBaseVNode("button", {
+						}, null, 40, _hoisted_12$2), [[vModelText, form.favicon]]), createBaseVNode("button", {
 							type: "button",
 							class: "sej-icon-preview-btn",
 							disabled: __props.busy || !unref(previewLoading) && !unref(canPreview),
 							onClick: _cache[3] || (_cache[3] = (...args) => unref(previewIcon) && unref(previewIcon)(...args))
-						}, toDisplayString(unref(previewLabel)), 9, _hoisted_16$1)]),
-						unref(previewSteps).length ? (openBlock(), createElementBlock("div", _hoisted_17$1, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(previewSteps), (step) => {
+						}, toDisplayString(unref(previewLabel)), 9, _hoisted_13$2)]),
+						unref(previewSteps).length ? (openBlock(), createElementBlock("div", _hoisted_14$2, [(openBlock(true), createElementBlock(Fragment, null, renderList(unref(previewSteps), (step) => {
 							return openBlock(), createElementBlock("div", {
 								key: step.url,
 								title: step.url,
@@ -11280,40 +11356,40 @@
 									class: "sej-preview-thumb",
 									src: step.data,
 									alt: ""
-								}, null, 8, _hoisted_19)) : (openBlock(), createElementBlock("span", _hoisted_20)),
+								}, null, 8, _hoisted_16$1)) : (openBlock(), createElementBlock("span", _hoisted_17$1)),
 								createBaseVNode("a", {
 									class: "sej-preview-url",
 									href: step.url,
 									target: "_blank",
 									rel: "noopener",
 									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
-								}, toDisplayString(step.url), 9, _hoisted_21),
-								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_22, toDisplayString(step.size), 1)) : createCommentVNode("", true),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_23, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+								}, toDisplayString(step.url), 9, _hoisted_18$1),
+								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_19, toDisplayString(step.size), 1)) : createCommentVNode("", true),
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_20, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_24)) : (openBlock(), createElementBlock("span", _hoisted_25, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
-							], 42, _hoisted_18$1);
+								}, null, 10, _hoisted_21)) : (openBlock(), createElementBlock("span", _hoisted_22, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+							], 42, _hoisted_15$2);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
 							class: "sej-preview-extractor",
 							href: unref(extractorUrl),
 							target: "_blank",
 							rel: "noopener"
-						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_26)) : createCommentVNode("", true)])) : createCommentVNode("", true)
+						}, toDisplayString(unref(t)("engine.tryExtractor")), 9, _hoisted_23)) : createCommentVNode("", true)])) : createCommentVNode("", true)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_27, [
-						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_28, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
-						createBaseVNode("div", _hoisted_29, [withDirectives(createBaseVNode("input", {
+					!unref(initialAction) ? (openBlock(), createElementBlock("div", _hoisted_24, [
+						createBaseVNode("span", null, [createTextVNode(toDisplayString(unref(t)("engine.iconData")) + " ", 1), unref(previewSize) ? (openBlock(), createElementBlock("em", _hoisted_25, toDisplayString(unref(previewSize)) + " " + toDisplayString(unref(t)("engine.iconDataCompressed")), 1)) : createCommentVNode("", true)]),
+						createBaseVNode("div", _hoisted_26, [withDirectives(createBaseVNode("input", {
 							"onUpdate:modelValue": _cache[5] || (_cache[5] = ($event) => isRef(previewData) ? previewData.value = $event : null),
 							class: "sej-data-input",
 							placeholder: unref(t)("engine.iconDataPlaceholder"),
 							disabled: __props.busy,
 							onInput: _cache[6] || (_cache[6] = (...args) => unref(markDataEdited) && unref(markDataEdited)(...args)),
 							onPaste: _cache[7] || (_cache[7] = (...args) => unref(pasteFaviconImage) && unref(pasteFaviconImage)(...args))
-						}, null, 40, _hoisted_30), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
+						}, null, 40, _hoisted_27), [[vModelText, unref(previewData)]]), createBaseVNode("button", {
 							type: "button",
 							class: normalizeClass(["sej-icon-preview-btn", { "sej-has-icon": unref(previewImage) }]),
 							disabled: __props.busy,
@@ -11324,7 +11400,7 @@
 							class: "sej-icon-preview",
 							src: unref(dataIconLink),
 							alt: ""
-						}, null, 8, _hoisted_32)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(unref(t)("engine.upload")), 1)], 64))], 10, _hoisted_31)]),
+						}, null, 8, _hoisted_29)) : (openBlock(), createElementBlock(Fragment, { key: 1 }, [createTextVNode(toDisplayString(unref(t)("engine.upload")), 1)], 64))], 10, _hoisted_28)]),
 						createBaseVNode("input", {
 							ref_key: "faviconFileInput",
 							ref: faviconFileInput,
@@ -11334,7 +11410,7 @@
 							onChange: _cache[9] || (_cache[9] = (...args) => unref(uploadFavicon) && unref(uploadFavicon)(...args))
 						}, null, 544)
 					])) : createCommentVNode("", true),
-					!unref(initialAction) || unref(initialAction) === "open" ? (openBlock(), createElementBlock("label", _hoisted_33, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
+					usesTarget.value ? (openBlock(), createElementBlock("label", _hoisted_30, [createBaseVNode("span", null, toDisplayString(unref(t)("engine.target")), 1), withDirectives(createBaseVNode("select", {
 						id: "iqxin-newTarget",
 						"onUpdate:modelValue": _cache[10] || (_cache[10] = ($event) => form.target = $event),
 						disabled: __props.busy
@@ -11342,29 +11418,29 @@
 						createBaseVNode("option", {
 							value: "",
 							title: unref(t)("engine.targetAutoTip")
-						}, toDisplayString(unref(t)("engine.targetAuto")), 9, _hoisted_35),
-						createBaseVNode("option", _hoisted_36, toDisplayString(unref(t)("engine.targetBlank")), 1),
-						createBaseVNode("option", _hoisted_37, toDisplayString(unref(t)("engine.targetBackground")), 1),
-						createBaseVNode("option", _hoisted_38, toDisplayString(unref(t)("engine.targetSelf")), 1)
-					], 8, _hoisted_34), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
-					createBaseVNode("div", _hoisted_39, [
+						}, toDisplayString(unref(t)("engine.targetAuto")), 9, _hoisted_32),
+						createBaseVNode("option", _hoisted_33, toDisplayString(unref(t)("engine.targetBlank")), 1),
+						createBaseVNode("option", _hoisted_34, toDisplayString(unref(t)("engine.targetBackground")), 1),
+						createBaseVNode("option", _hoisted_35, toDisplayString(unref(t)("engine.targetSelf")), 1)
+					], 8, _hoisted_31), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
+					createBaseVNode("div", _hoisted_36, [
 						__props.mode === "edit" && !unref(initialAction) ? (openBlock(), createElementBlock("button", {
 							key: 0,
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
 							onClick: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("delete"))
-						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_40)) : createCommentVNode("", true),
+						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_37)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
 							onClick: _cache[12] || (_cache[12] = ($event) => _ctx.$emit("cancel"))
-						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_41),
+						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_38),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",
 							disabled: __props.busy,
 							onClick: submit
-						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_42)
+						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_39)
 					])
 				], 512);
 			};
@@ -12638,7 +12714,6 @@
 				mode: hit.mode,
 				keyword: hit.text || hit.url,
 				url: hit.url,
-				searchable: hit.searchable !== false,
 				element: hit.element,
 				link: hit.link || null
 			});

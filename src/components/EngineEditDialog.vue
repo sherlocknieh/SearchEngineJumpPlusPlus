@@ -35,6 +35,12 @@ const ICON_SELECT =
 const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : '';
 // 出现时机与用法说明来自动作定义；跟着语言切换重算
 const actionInfo = computed(() => actionEngineInfo(initialAction, t));
+const dialogTitle = computed(() => {
+  if (props.mode !== 'edit') return t('engine.addTitle');
+  return initialAction ? t('engine.editActionTitle') : t('engine.editTitle');
+});
+// 动作里的「打开」类条目同样可以选打开方式
+const usesTarget = computed(() => !initialAction || ['open', 'openImage'].includes(initialAction));
 
 const form = reactive({
   name: props.initial.name || '',
@@ -164,20 +170,9 @@ function submit() {
     aria-modal="true"
     aria-labelledby="sej-engine-title"
   >
-    <!-- 弹窗标题 -->
+    <!-- 弹窗标题：编辑动作条目时说明这是操作而不是搜索引擎 -->
     <div id="sej-engine-title" class="sej-dialog-title">
-      {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
-    </div>
-    <!-- 动作条目：出现时机与用法说明，先只读展示，暂不支持修改 -->
-    <div v-if="actionInfo" class="sej-action-info">
-      <div class="sej-action-row">
-        <span class="sej-action-key">{{ t('engine.actionWhen') }}</span>
-        <span class="sej-action-value">{{ actionInfo.when }}</span>
-      </div>
-      <div class="sej-action-row">
-        <span class="sej-action-key">{{ t('engine.actionEffect') }}</span>
-        <span class="sej-action-value">{{ actionInfo.effect }}</span>
-      </div>
+      {{ dialogTitle }}
     </div>
     <!-- 引擎链接 -->
     <label v-if="!initialAction" class="sej-field">
@@ -202,6 +197,15 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
+    <!-- 动作条目：出现时机与用法说明，与其他字段同构；只读，暂不支持修改 -->
+    <div v-if="actionInfo" class="sej-field">
+      <span>{{ t('engine.actionWhen') }}</span>
+      <input :value="actionInfo.when" readonly tabindex="-1" />
+    </div>
+    <div v-if="actionInfo" class="sej-field">
+      <span>{{ t('engine.actionEffect') }}</span>
+      <input :value="actionInfo.effect" readonly tabindex="-1" />
+    </div>
     <!-- 图标地址 -->
     <div v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.iconSrc') }}</span>
@@ -340,8 +344,8 @@ function submit() {
         @change="uploadFavicon"
       />
     </div>
-    <!-- 打开方式 -->
-    <label v-if="!initialAction || initialAction === 'open'" class="sej-field">
+    <!-- 打开方式：搜索引擎与打开类动作都可以选 -->
+    <label v-if="usesTarget" class="sej-field">
       <!-- 字段名 -->
       <span>{{ t('engine.target') }}</span>
       <!-- 打开方式下拉：默认（跟随全局设置） / 新标签页 / 后台标签页 / 当前页 -->

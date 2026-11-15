@@ -8,6 +8,7 @@ import {
 import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
 import { selectLinkTitle } from './linkAction.js';
+import { buildImageUploadForm, imageUploadEndpoint, isInlineImageAddress } from './imageSearch.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -66,6 +67,23 @@ function normalizeActionTarget(target) {
 }
 
 /**
+ * 打开图片时的地址：http(s) 直接用；内联 data:image 转成同源 blob: 再打开。
+ * Chrome 拦截顶层导航到 data:（点开只会得到空白页），blob: 则能正常显示这张图。
+ * @param {string} raw 命中图片的地址
+ * @returns {Promise<string>} 可打开的地址；不可打开时返回空串
+ */
+async function imageOpenUrl(raw) {
+  const value = String(raw ?? '').trim();
+  if (!/^data:image\//i.test(value)) return findKeywordUrl(value);
+  try {
+    const blob = await (await fetch(value)).blob();
+    return URL.createObjectURL(blob);
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
  * 执行动作引擎，返回是否成功处理。
  * copy 复制文字，copyImage 复制图片本身（取不到时复制图片地址），
  * copyImageUrl / copyLinkUrl 复制地址，copyLinkText 复制链接标题，
@@ -84,7 +102,7 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
   if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);
   if (action === 'selectLinkText') return selectLinkTitle(source.element);
   if (action === 'open' || action === 'openImage') {
-    const url = findKeywordUrl(source.url);
+    const url = action === 'openImage' ? await imageOpenUrl(source.url) : findKeywordUrl(source.url);
     if (!url) return false;
     const mode = resolveOpenMode(engine, false, defaultTarget);
     if (mode === 'self') {
@@ -176,6 +194,9 @@ export function performJump(engine, keyword, settingData = {}, forceNewTab = fal
     return true;
   }
 
+  // 内联图片没有可供引擎服务器抓取的地址：把图片字节提交到引擎的上传入口
+  if (isInlineImageAddress(keyword)) return submitImageSearch(engine, keyword);
+
   const result = prepareJump(engine, keyword);
   const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 
@@ -192,6 +213,20 @@ export function performJump(engine, keyword, settingData = {}, forceNewTab = fal
 
   if (openInNewTab(result.url, mode !== 'background')) return true;
   window.open(result.url, '_blank');
+  return true;
+}
+
+/**
+ * 内联图片的识图跳转：表单把图片字节提交给引擎的上传入口，新标签页显示结果。
+ * 引擎没有上传入口时返回 false，调用方据此不提供这个条目。
+ */
+function submitImageSearch(engine, dataUrl) {
+  const endpoint = imageUploadEndpoint(engine);
+  const form = endpoint ? buildImageUploadForm(endpoint, dataUrl) : null;
+  if (!form) return false;
+  document.body.appendChild(form);
+  form.submit();
+  form.remove();
   return true;
 }
 

@@ -4,7 +4,7 @@
  * 每个模式只提供两件事：命中的元素如何解析成关键词、浮层显示哪个分类。
  * 长按手势、浮层呈现与关闭时机由调用方共用，模式之间只差这两项配置。
  */
-import { BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY } from './configData.js';
+import { BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY, normalizeEngineAction } from './configData.js';
 import { resolveImageHit } from './imageSearch.js';
 import { resolveLinkHit } from './linkAction.js';
 
@@ -59,7 +59,7 @@ export const CONTEXT_MODES = {
  * @param {Element | null} target 按下事件的目标元素
  * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被链接/浮层盖住的图片
- * @returns {{mode: 'image' | 'link', url: string, text?: string, searchable?: boolean, element: Element, link?: {url: string, text: string, element: Element} | null} | null}
+ * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string, element: Element} | null} | null}
  */
 export function resolveContextHit(target, hasEngines = () => true, point = null) {
   const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target, undefined, point) : null;
@@ -126,11 +126,14 @@ export function contextActionTarget(mode, action, hit = {}) {
 
 /**
  * 动作在某个关键词来源下是否有意义：复制文字只用于划词与搜索框，图片类动作只用于图片，
- * 链接标题/地址与图片地址只属于各自的目标，打开链接在链接与划词情景下可用。
+ * 链接标题/地址与图片地址只属于各自的目标，打开链接不用于图片（图片用打开图片）；
+ * 没有动作的普通搜索引擎在所有情景下都可用，图片模式里它们就是「搜图」。
  * @param {'image' | 'link' | 'text' | 'input'} mode 关键词来源
  * @param {string} [action] 动作类型
  */
 export function isActionAvailableInMode(mode, action) {
+  // 未知动作没有对应的复制/打开行为，任何情景下都不出现
+  if (action && !normalizeEngineAction(action)) return false;
   if (action === 'copy') return mode === 'text' || mode === 'input';
   if (action === 'copyImage' || action === 'copyImageUrl' || action === 'openImage') {
     return mode === 'image';
@@ -138,7 +141,8 @@ export function isActionAvailableInMode(mode, action) {
   if (action === 'copyLinkText' || action === 'copyLinkUrl' || action === 'selectLinkText') {
     return mode === 'link';
   }
-  return mode !== 'image';
+  if (action === 'open') return mode !== 'image';
+  return true;
 }
 
 /** 提示里展示的目标内容：划词与搜索框都是「文字 + 可选地址」，其余沿用动作目标 */
@@ -181,8 +185,6 @@ export function contextActionEngines(engines, targets) {
     if (engine.disable || !engine.action) continue;
     for (const { mode, hit } of targets) {
       if (!isActionAvailableInMode(mode, engine.action)) continue;
-      // 内联缩略图没有可导航的地址（data: 不能直接打开），只保留复制类动作
-      if (engine.action === 'openImage' && hit.searchable === false) continue;
       // 纯图片链接没有标题：复制标题、选中标题与复制地址目标相同，省掉重复条目
       if (
         (engine.action === 'copyLinkText' || engine.action === 'selectLinkText') &&

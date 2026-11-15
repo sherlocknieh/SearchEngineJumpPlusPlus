@@ -2,9 +2,8 @@
  * 长按图片搜图：从按下的位置取出图片链接。
  *
  * 图片链接直接作为关键词交给引擎模板（%s 会被 encodeURIComponent 编码），
- * 因此可搜索的地址只认 http(s)。Google 图片这类站点会把小尺寸缩略图直接内联成
- * data:image，这种图没有可供识图引擎使用的地址，但图片本身仍可复制，
- * 命中结果因此带上 searchable 标记，由调用方决定是否提供「搜图」。
+ * 目标是 http(s) 地址；Google 图片这类站点会把缩略图直接内联成 data:image，
+ * 这种图同样按图片处理（可复制、可打开），地址原样交给引擎。
  */
 
 // 懒加载站点常把真实地址放在 data-* 上，src 只是占位图
@@ -57,16 +56,84 @@ function inlineImageUrl(img) {
   return '';
 }
 
+/** 是否为内联图片地址（data:image）：引擎服务器取不到这种地址，只能上传字节 */
+export function isInlineImageAddress(value) {
+  return INLINE_IMAGE_RE.test(String(value ?? '').trim());
+}
+
 /**
- * 图片的命中结果：优先用可搜索的 http(s) 地址，其次退到内联图片自身。
- * searchable 为 false 时地址只够复制图片本身，识图引擎与「打开」都用不上。
- * @returns {{url: string, element: Element, searchable: boolean} | null}
+ * 识图引擎的上传入口：URL 模板只能把图片地址交给引擎，内联图片没有可抓取的地址，
+ * 改成用表单把图片字节提交过去，浏览器自己跟随跳转，不涉及跨域读取。
+ */
+const IMAGE_UPLOAD_ENDPOINTS = [
+  {
+    match: /^https:\/\/lens\.google\.com\/uploadbyurl/i,
+    action: 'https://www.google.com/searchbyimage/upload',
+    field: 'encoded_image',
+  },
+];
+
+/** 取引擎的上传入口；不支持上传的引擎返回 null */
+export function imageUploadEndpoint(engine) {
+  const url = typeof engine?.url === 'string' ? engine.url : '';
+  if (!url) return null;
+  return IMAGE_UPLOAD_ENDPOINTS.find((entry) => entry.match.test(url)) || null;
+}
+
+/** 该引擎能否搜这张图：http(s) 地址都行，内联图片只有带上传入口的引擎收得下 */
+export function canSearchImage(engine, keyword) {
+  if (!isInlineImageAddress(keyword)) return true;
+  return Boolean(imageUploadEndpoint(engine));
+}
+
+/**
+ * 把 data:image 地址解成上传用的表单（multipart，文件由字节直接生成）。
+ * 全程同步：动作仍在点击手势里完成，新标签页不会被浏览器拦截。
+ * @returns {HTMLFormElement | null} 解不出文件或环境不支持 DataTransfer 时返回 null
+ */
+export function buildImageUploadForm(endpoint, dataUrl) {
+  if (!endpoint?.action || !endpoint.field || typeof DataTransfer !== 'function') return null;
+  const file = dataUrlToFile(dataUrl);
+  if (!file) return null;
+  const transfer = new DataTransfer();
+  transfer.items.add(file);
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.name = endpoint.field;
+  input.files = transfer.files;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = endpoint.action;
+  form.enctype = 'multipart/form-data';
+  form.target = '_blank';
+  form.style.cssText = 'display:none;';
+  form.appendChild(input);
+  return form;
+}
+
+/** data:image 地址转成文件；base64 与百分号编码两种载荷都认 */
+function dataUrlToFile(dataUrl) {
+  const match = /^data:([^;,]+)(;base64)?,([\s\S]*)$/i.exec(String(dataUrl ?? '').trim());
+  if (!match) return null;
+  const [, type, base64, payload] = match;
+  try {
+    const binary = base64 ? atob(payload.replace(/\s/g, '')) : decodeURIComponent(payload);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    const ext = (type.split('/')[1] || 'png').replace(/[^a-z0-9]/gi, '');
+    return new File([bytes], `image.${ext}`, { type });
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * 图片的命中结果：优先用可搜索的 http(s) 地址，内联图退到自身的 data:image。
+ * @returns {{url: string, element: Element} | null}
  */
 function imageHit(img, base) {
-  const url = imgUrl(img, base);
-  if (url) return { url, element: img, searchable: true };
-  const inline = inlineImageUrl(img);
-  return inline ? { url: inline, element: img, searchable: false } : null;
+  const url = imgUrl(img, base) || inlineImageUrl(img);
+  return url ? { url, element: img } : null;
 }
 
 /** 取元素计算样式里的第一张背景图；渐变与 data: 图片会被忽略 */
@@ -117,8 +184,7 @@ function coveredImage(target, point, base) {
  * @param {Element | null} target 按下事件的目标元素
  * @param {string} [base] 相对地址的基准，默认当前页面
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被盖住的图片
- * @returns {{url: string, element: Element, searchable: boolean} | null}
- *   url 为内联 data:image 时 searchable 为 false，调用方据此隐藏「搜图」
+ * @returns {{url: string, element: Element} | null} url 可能是内联图片的 data:image
  */
 export function resolveImageHit(target, base = globalThis.location?.href, point = null) {
   const img = typeof target?.closest === 'function' ? target.closest('img') : null;
@@ -139,18 +205,7 @@ export function resolveImageHit(target, base = globalThis.location?.href, point 
     const rect = el.getBoundingClientRect?.();
     if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
     const url = backgroundUrl(el, base);
-    if (url) return { url, element: el, searchable: true };
+    if (url) return { url, element: el };
   }
   return null;
-}
-
-/**
- * 取按下位置对应的可搜索图片地址；内联 data:image 与背景图里的 data: 都返回空串。
- * @param {Element | null} target 按下事件的目标元素
- * @param {string} [base] 相对地址的基准，默认当前页面
- * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被盖住的图片
- */
-export function resolveImageUrl(target, base = globalThis.location?.href, point = null) {
-  const hit = resolveImageHit(target, base, point);
-  return hit?.searchable ? hit.url : '';
 }

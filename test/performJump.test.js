@@ -278,4 +278,29 @@ describe('动作引擎的上下文目标', () => {
       setParent: true,
     });
   });
+
+  it('内联图片打不开原地址时换成 blob: 再打开', async () => {
+    // Chrome 拦截顶层导航到 data:，打开图片要先转成同源 blob:
+    const data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
+    expect(await performEngineAction({ action: 'openImage' }, { url: data })).toBe(true);
+    const [url] = openInTab.mock.calls[0] || [];
+    expect(url?.startsWith('blob:')).toBe(true);
+  });
+
+  it('内联图片改为把字节上传给识图引擎', () => {
+    const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
+    const data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+    expect(
+      performJump({ url: 'https://lens.google.com/uploadbyurl?url=%s' }, data, {}),
+    ).toBe(true);
+    expect(submit).toHaveBeenCalledTimes(1);
+    // 表单用完即移除，不留在页面里
+    expect(document.querySelector('form')).toBeNull();
+    // 没有上传入口的引擎搜不了内联图片
+    expect(
+      performJump({ url: 'https://yandex.ru/images/search?rpt=imageview&url=%s' }, data, {}),
+    ).toBe(false);
+    expect(openInTab).not.toHaveBeenCalled();
+    submit.mockRestore();
+  });
 });

@@ -87,15 +87,15 @@ src/main.js                 只做装配
   图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`；
   按下目标不是 img 时按坐标向上找被链接/标题浮层盖住的图片，再向上 4 层找 `background-image`），
   链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）；
-  内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，但按自然尺寸排除
-  1x1 占位图，命中结果带 `searchable: false`：地址不能交给识图引擎，「搜图」分类不出现、
-  也不提供「打开图片」，只保留复制类动作
+  内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，按自然尺寸排除
+  1x1 占位图；引擎服务器抓不到这种地址，`canSearchImage` 只放行带上传入口的识图引擎
+  （`imageUploadEndpoint`：Google Lens），跳转时 `buildImageUploadForm` 把图片字节以表单 POST 过去；
+  「打开图片」把 `data:` 转成 `blob:` 再打开（顶层导航到 `data:` 会被 Chrome 拦成空白页）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；链接动作同样取「操作」分类配置，追加在同一分类内并标明作用目标；
   没有可用引擎时该模式不接管
-- 呈现：复用跳转条，`stores/contextAction.js` 提供
-  `{ active, mode, keyword, url, searchable, link, element }`；
+- 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, link, element }`；
   开启「跟随选区」时与划词条共用简洁/极简形态（极简下收起为图标），关闭时整条展开；
   点击外部/Escape 关闭，滚动时继续跟随命中的元素，跳转或「一键打开」后自动收起
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
@@ -116,10 +116,10 @@ src/main.js                 只做装配
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
 - 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「出现时机 / 用法说明」，
-  编辑动作条目的弹窗用 `actionEngineInfo` 渲染成只读表单（暂不支持修改），
+  编辑动作条目的弹窗标题为「编辑操作」，两段说明与名称、打开方式同构渲染成只读表单字段（暂不支持修改），
   设置列表悬停用 `actionEngineTip` 合成一行
-- 可见性：`isBarCategoryVisible(key, enabled, mode, imageSearchable)` 决定分类是否上跳转条——
-  图片模式显示「搜图」分类（`imageSearchable` 为 false 时隐藏），
+- 可见性：`isBarCategoryVisible(key, enabled, mode)` 决定分类是否上跳转条——
+  图片模式显示「搜图」分类（该图没有可用的识图引擎时整个分类不出现），
   并允许「操作」分类按显示开关出现；链接模式只显示「操作」；
   普通模式按显示开关决定且永不显示「搜图」分类；非上下文模式下「打开」只在当前
   关键词（选区或搜索框）含链接时出现

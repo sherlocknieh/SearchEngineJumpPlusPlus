@@ -1,6 +1,12 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { resolveImageHit, resolveImageUrl } from '../src/core/imageSearch.js';
+import {
+  buildImageUploadForm,
+  canSearchImage,
+  imageUploadEndpoint,
+  isInlineImageAddress,
+  resolveImageHit,
+} from '../src/core/imageSearch.js';
 
 function img(attrs = {}) {
   const el = document.createElement('img');
@@ -13,6 +19,11 @@ function setNaturalSize(el, size) {
   Object.defineProperty(el, 'naturalWidth', { value: size, configurable: true });
   Object.defineProperty(el, 'naturalHeight', { value: size, configurable: true });
   return el;
+}
+
+/** 测试基本只关心命中的地址 */
+function imageUrl(target, base, point) {
+  return resolveImageHit(target, base, point)?.url || '';
 }
 
 function box(style = {}, size = 120) {
@@ -32,13 +43,13 @@ function box(style = {}, size = 120) {
   return el;
 }
 
-describe('resolveImageUrl', () => {
+describe('resolveImageHit', () => {
   it('取图片的绝对地址，支持相对路径', () => {
     // 浏览器会把 src 解析成绝对地址，currentSrc 因此优先于原始属性
-    expect(resolveImageUrl(img({ src: '/a.png' }), 'https://site.test/post')).toBe(
+    expect(imageUrl(img({ src: '/a.png' }), 'https://site.test/post')).toBe(
       new URL('/a.png', document.baseURI).href,
     );
-    expect(resolveImageUrl(img({ src: 'https://cdn.test/a.png' }))).toBe('https://cdn.test/a.png');
+    expect(imageUrl(img({ src: 'https://cdn.test/a.png' }))).toBe('https://cdn.test/a.png');
   });
 
   it('src 是占位图时回退到懒加载属性', () => {
@@ -46,38 +57,32 @@ describe('resolveImageUrl', () => {
       src: 'data:image/gif;base64,R0lGOD',
       'data-src': 'https://cdn.test/real.jpg',
     });
-    expect(resolveImageUrl(el)).toBe('https://cdn.test/real.jpg');
+    expect(imageUrl(el)).toBe('https://cdn.test/real.jpg');
   });
 
   it('从图片内部元素向上找到 img', () => {
     const el = img({ src: 'https://cdn.test/a.png' });
     const inner = document.createElement('span');
     el.appendChild(inner);
-    expect(resolveImageUrl(inner)).toBe('https://cdn.test/a.png');
+    expect(imageUrl(inner)).toBe('https://cdn.test/a.png');
   });
 
   it('非图片或地址不可用时返回空串', () => {
-    expect(resolveImageUrl(document.createElement('div'))).toBe('');
-    expect(resolveImageUrl(null)).toBe('');
-    expect(resolveImageUrl(img({ src: 'data:image/png;base64,AAA' }))).toBe('');
-    expect(resolveImageUrl(img({ src: 'javascript:alert(1)' }))).toBe('');
+    expect(imageUrl(document.createElement('div'))).toBe('');
+    expect(imageUrl(null)).toBe('');
+    expect(imageUrl(img({ src: 'javascript:alert(1)' }))).toBe('');
   });
 
-  it('内联缩略图仍算图片命中，但没有可搜索地址', () => {
+  it('内联缩略图按图片命中，地址就是 data:image 自身', () => {
     // Google 图片把 92px 缩略图直接内联成 data: JPEG
     const inline = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
     const el = img({ src: inline });
     setNaturalSize(el, 92);
-    expect(resolveImageHit(el)).toEqual({ url: inline, element: el, searchable: false });
-    // 识图引擎无从下手，可搜索地址仍为空
-    expect(resolveImageUrl(el)).toBe('');
+    expect(resolveImageHit(el)).toEqual({ url: inline, element: el });
     // 懒加载属性里有真实地址时仍优先用它
     const lazy = img({ src: inline, 'data-src': 'https://cdn.test/real.jpg' });
     setNaturalSize(lazy, 92);
-    expect(resolveImageHit(lazy)).toMatchObject({
-      url: 'https://cdn.test/real.jpg',
-      searchable: true,
-    });
+    expect(imageUrl(lazy)).toBe('https://cdn.test/real.jpg');
   });
 
   it('内联的 1x1 占位图不算图片，继续交给背景图', () => {
@@ -85,35 +90,32 @@ describe('resolveImageUrl', () => {
     const el = img({ src: 'data:image/gif;base64,R0lGOD' });
     setNaturalSize(el, 1);
     card.appendChild(el);
-    expect(resolveImageHit(el)).toMatchObject({
-      url: 'https://cdn.test/cover.jpg',
-      searchable: true,
-    });
+    expect(imageUrl(el)).toBe('https://cdn.test/cover.jpg');
   });
 
   it('没有 img 时向上查找背景图容器', () => {
     const card = box({ backgroundImage: 'url("https://cdn.test/cover.jpg")' });
     const inner = document.createElement('span');
     card.appendChild(inner);
-    expect(resolveImageUrl(inner)).toBe('https://cdn.test/cover.jpg');
+    expect(imageUrl(inner)).toBe('https://cdn.test/cover.jpg');
   });
 
   it('忽略渐变、data: 背景图与过小的容器', () => {
     const gradient = box({ backgroundImage: 'linear-gradient(#fff, #000)' });
-    expect(resolveImageUrl(gradient)).toBe('');
+    expect(imageUrl(gradient)).toBe('');
 
     const inline = box({ backgroundImage: 'url("data:image/png;base64,AAA")' });
-    expect(resolveImageUrl(inline)).toBe('');
+    expect(imageUrl(inline)).toBe('');
 
     const tiny = box({ backgroundImage: 'url("https://cdn.test/icon.png")' }, 16);
-    expect(resolveImageUrl(tiny)).toBe('');
+    expect(imageUrl(tiny)).toBe('');
   });
 
-  it('img 地址不可用时继续向上找背景图', () => {
+  it('内联占位图没有可用地址时继续向上找背景图', () => {
     const card = box({ backgroundImage: 'url(https://cdn.test/cover.jpg)' });
     const el = img({ src: 'data:image/gif;base64,R0lGOD' });
     card.appendChild(el);
-    expect(resolveImageUrl(el)).toBe('https://cdn.test/cover.jpg');
+    expect(imageUrl(el)).toBe('https://cdn.test/cover.jpg');
   });
 
   it('按下的是盖住图片的链接或浮层时，按坐标找到下面的图片', () => {
@@ -139,10 +141,10 @@ describe('resolveImageUrl', () => {
     document.body.appendChild(figure);
 
     // 链接本身与盖在上面的标题链接都能按坐标找到图片
-    expect(resolveImageUrl(link, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
-    expect(resolveImageUrl(overlay, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
+    expect(imageUrl(link, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
+    expect(imageUrl(overlay, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
     // 坐标不在图片范围内时不去猜
-    expect(resolveImageUrl(overlay, undefined, { x: 200, y: 200 })).toBe('');
+    expect(imageUrl(overlay, undefined, { x: 200, y: 200 })).toBe('');
   });
 
   it('被链接盖住的内联缩略图同样按坐标命中', () => {
@@ -171,7 +173,6 @@ describe('resolveImageUrl', () => {
     expect(resolveImageHit(overlay, undefined, { x: 40, y: 40 })).toMatchObject({
       url: inline,
       element: image,
-      searchable: false,
     });
   });
 
@@ -191,6 +192,47 @@ describe('resolveImageUrl', () => {
     const inner = document.createElement('span');
     card.append(icon, inner);
     document.body.appendChild(card);
-    expect(resolveImageUrl(inner, undefined, { x: 8, y: 8 })).toBe('');
+    expect(imageUrl(inner, undefined, { x: 8, y: 8 })).toBe('');
+  });
+});
+
+describe('内联图片的识图方式', () => {
+  const lens = { name: 'Google Lens', url: 'https://lens.google.com/uploadbyurl?url=%s' };
+  const yandex = { name: 'Yandex Image', url: 'https://yandex.ru/images/search?rpt=imageview&url=%s' };
+  const inline = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
+
+  it('识别内联图片地址', () => {
+    expect(isInlineImageAddress(inline)).toBe(true);
+    expect(isInlineImageAddress('  data:image/jpeg;base64,AAA  ')).toBe(true);
+    expect(isInlineImageAddress('https://cdn.test/a.png')).toBe(false);
+    expect(isInlineImageAddress('')).toBe(false);
+    expect(isInlineImageAddress(null)).toBe(false);
+  });
+
+  it('只有带上传入口的引擎收得下内联图片', () => {
+    expect(imageUploadEndpoint(lens)).toMatchObject({ field: 'encoded_image' });
+    expect(imageUploadEndpoint(yandex)).toBeNull();
+    // http(s) 地址所有引擎都能用，不需要上传
+    expect(canSearchImage(yandex, 'https://cdn.test/a.png')).toBe(true);
+    expect(canSearchImage(lens, 'https://cdn.test/a.png')).toBe(true);
+    expect(canSearchImage(lens, inline)).toBe(true);
+    expect(canSearchImage(yandex, inline)).toBe(false);
+  });
+
+  it('把 data: 地址拼成 multipart 上传表单', () => {
+    const form = buildImageUploadForm(imageUploadEndpoint(lens), inline);
+    expect(form.method).toBe('POST');
+    expect(form.enctype).toBe('multipart/form-data');
+    expect(form.action).toBe('https://www.google.com/searchbyimage/upload');
+    const input = form.querySelector('input[type="file"]');
+    expect(input.name).toBe('encoded_image');
+    expect(input.files).toHaveLength(1);
+    expect(input.files[0].type).toBe('image/png');
+    expect(input.files[0].size).toBeGreaterThan(0);
+  });
+
+  it('地址解不出文件时不给表单', () => {
+    expect(buildImageUploadForm(imageUploadEndpoint(lens), 'data:image/png;base64,%%%')).toBeNull();
+    expect(buildImageUploadForm(null, inline)).toBeNull();
   });
 });

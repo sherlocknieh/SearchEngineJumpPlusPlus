@@ -442,15 +442,6 @@ describe('isBarCategoryVisible', () => {
     expect(isBarCategoryVisible('image', false, 'image')).toBe(true);
   });
 
-  it('内联缩略图没有可搜索地址时，搜图分类不出现', () => {
-    expect(isBarCategoryVisible('image', true, 'image', false)).toBe(false);
-    // 「操作」分类不受影响，复制图片仍可用
-    expect(isBarCategoryVisible('actions', true, 'image', false)).toBe(true);
-    // 链接模式与普通跳转条不看这个标记
-    expect(isBarCategoryVisible('actions', true, 'link', false)).toBe(true);
-    expect(isBarCategoryVisible('web', true, '', false)).toBe(true);
-  });
-
   it('操作分类在图片模式下按显示开关出现', () => {
     expect(isBarCategoryVisible('actions', true, 'image')).toBe(true);
     expect(isBarCategoryVisible('actions', false, 'image')).toBe(false);

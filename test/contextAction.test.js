@@ -70,7 +70,7 @@ describe('resolveContextHit', () => {
     expect(resolveContextHit(document.querySelector('p'))).toBeNull();
   });
 
-  it('内联缩略图同样按图片命中，只是没有可搜索地址', () => {
+  it('内联缩略图同样按图片命中，地址是 data:image 自身', () => {
     const inline = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
     document.body.innerHTML = `<a href="https://site.test/page"><img src="${inline}"></a>`;
     const image = document.querySelector('img');
@@ -80,8 +80,7 @@ describe('resolveContextHit', () => {
     const hit = resolveContextHit(image);
     expect(hit.mode).toBe('image');
     expect(hit.url).toBe(inline);
-    expect(hit.searchable).toBe(false);
-    // 外层链接仍是普通链接，动作照旧可用
+    // 外层链接仍是普通链接，链接动作照旧可用
     expect(hit.link).toMatchObject({ url: 'https://site.test/page' });
   });
 
@@ -319,17 +318,23 @@ describe('contextActionEngines', () => {
     ]);
   });
 
-  it('内联缩略图没有可打开地址，只保留复制类动作', () => {
+  it('没有动作的普通搜索引擎在所有模式下都可用（图片模式里就是搜图）', () => {
+    for (const mode of ['image', 'link', 'text', 'input']) {
+      expect(isActionAvailableInMode(mode, undefined)).toBe(true);
+    }
+  });
+
+  it('内联缩略图与普通图片一样，打开图片照常出现', () => {
     const inline = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
     const list = contextActionEngines(engines, [
-      { mode: 'image', hit: { keyword: inline, url: inline, searchable: false } },
+      { mode: 'image', hit: { keyword: inline, url: inline } },
       { mode: 'link', hit: link },
     ]);
     expect(list.map((engine) => engine.name)).toEqual([
       '复制图片地址',
       '复制图片',
-      // 图片没有可导航的地址，外层链接的「打开链接」照旧出现
       '打开链接',
+      '打开图片',
       '复制链接标题',
       '复制链接地址',
       '选中链接标题',
@@ -338,6 +343,7 @@ describe('contextActionEngines', () => {
       'image',
       'image',
       'link',
+      'image',
       'link',
       'link',
       'link',
