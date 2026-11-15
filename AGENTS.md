@@ -88,8 +88,8 @@ src/main.js                 只做装配
   按下目标不是 img 时按坐标向上找被链接/标题浮层盖住的图片，再向上 4 层找 `background-image`），
   链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）；
   内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，按自然尺寸排除
-  1x1 占位图；引擎服务器抓不到这种地址，`canSearchImage` 只放行带上传入口的识图引擎
-  （`imageUploadEndpoint`：Google Lens），跳转时 `buildImageUploadForm` 把图片字节以表单 POST 过去；
+  1x1 占位图；识图引擎靠 URL 取图，抓不到这种地址（Lens 的 `uploadbyurl` 回 “No image at the URL”，
+  从第三方站点把字节直传 google.com 又被 403 挡回），因此命中内联图片时不显示「搜图」分类；
   「打开图片」把 `data:` 转成 `blob:` 再打开（顶层导航到 `data:` 会被 Chrome 拦成空白页）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
@@ -119,7 +119,7 @@ src/main.js                 只做装配
   编辑动作条目的弹窗标题为「编辑操作」，两段说明与名称、打开方式同构渲染成只读表单字段（暂不支持修改），
   设置列表悬停用 `actionEngineTip` 合成一行
 - 可见性：`isBarCategoryVisible(key, enabled, mode)` 决定分类是否上跳转条——
-  图片模式显示「搜图」分类（该图没有可用的识图引擎时整个分类不出现），
+  图片模式显示「搜图」分类（没有可用识图引擎、或命中的是内联图片时整个分类不出现），
   并允许「操作」分类按显示开关出现；链接模式只显示「操作」；
   普通模式按显示开关决定且永不显示「搜图」分类；非上下文模式下「打开」只在当前
   关键词（选区或搜索框）含链接时出现

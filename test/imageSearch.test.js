@@ -1,12 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import {
-  buildImageUploadForm,
-  canSearchImage,
-  imageUploadEndpoint,
-  isInlineImageAddress,
-  resolveImageHit,
-} from '../src/core/imageSearch.js';
+import { isInlineImageAddress, resolveImageHit } from '../src/core/imageSearch.js';
 
 function img(attrs = {}) {
   const el = document.createElement('img');
@@ -196,43 +190,12 @@ describe('resolveImageHit', () => {
   });
 });
 
-describe('内联图片的识图方式', () => {
-  const lens = { name: 'Google Lens', url: 'https://lens.google.com/uploadbyurl?url=%s' };
-  const yandex = { name: 'Yandex Image', url: 'https://yandex.ru/images/search?rpt=imageview&url=%s' };
-  const inline = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
-
-  it('识别内联图片地址', () => {
-    expect(isInlineImageAddress(inline)).toBe(true);
+describe('内联图片地址识别', () => {
+  it('只把 data:image 认作内联图片', () => {
+    expect(isInlineImageAddress('data:image/png;base64,iVBORw0KGgo=')).toBe(true);
     expect(isInlineImageAddress('  data:image/jpeg;base64,AAA  ')).toBe(true);
     expect(isInlineImageAddress('https://cdn.test/a.png')).toBe(false);
     expect(isInlineImageAddress('')).toBe(false);
     expect(isInlineImageAddress(null)).toBe(false);
-  });
-
-  it('只有带上传入口的引擎收得下内联图片', () => {
-    expect(imageUploadEndpoint(lens)).toMatchObject({ field: 'encoded_image' });
-    expect(imageUploadEndpoint(yandex)).toBeNull();
-    // http(s) 地址所有引擎都能用，不需要上传
-    expect(canSearchImage(yandex, 'https://cdn.test/a.png')).toBe(true);
-    expect(canSearchImage(lens, 'https://cdn.test/a.png')).toBe(true);
-    expect(canSearchImage(lens, inline)).toBe(true);
-    expect(canSearchImage(yandex, inline)).toBe(false);
-  });
-
-  it('把 data: 地址拼成 multipart 上传表单', () => {
-    const form = buildImageUploadForm(imageUploadEndpoint(lens), inline);
-    expect(form.method).toBe('POST');
-    expect(form.enctype).toBe('multipart/form-data');
-    expect(form.action).toBe('https://www.google.com/searchbyimage/upload');
-    const input = form.querySelector('input[type="file"]');
-    expect(input.name).toBe('encoded_image');
-    expect(input.files).toHaveLength(1);
-    expect(input.files[0].type).toBe('image/png');
-    expect(input.files[0].size).toBeGreaterThan(0);
-  });
-
-  it('地址解不出文件时不给表单', () => {
-    expect(buildImageUploadForm(imageUploadEndpoint(lens), 'data:image/png;base64,%%%')).toBeNull();
-    expect(buildImageUploadForm(null, inline)).toBeNull();
   });
 });

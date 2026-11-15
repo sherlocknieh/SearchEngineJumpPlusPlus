@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1736
+// @version            2026.11.15.1738
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7187,149 +7187,6 @@
 			element: link
 		};
 	}
-	var LAZY_SRC_ATTRS = [
-		"data-src",
-		"data-original",
-		"data-lazy-src",
-		"data-actualsrc"
-	];
-	var INLINE_IMAGE_RE = /^data:image\//i;
-	var MAX_BG_DEPTH = 4;
-	var MAX_IMAGE_DEPTH = 6;
-	var MIN_BG_SIZE = 32;
-	var BG_URL_RE = /url\((['"]?)(.*?)\1\)/g;
-	function toHttpUrl(raw, base) {
-		const value = typeof raw === "string" ? raw.trim() : "";
-		if (!value) return "";
-		try {
-			const url = new URL(value, base);
-			return /^https?:$/.test(url.protocol) ? url.href : "";
-		} catch (e) {
-			return "";
-		}
-	}
-	function imgUrl(img, base) {
-		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
-		if (primary) return primary;
-		for (const attr of LAZY_SRC_ATTRS) {
-			const url = toHttpUrl(img.getAttribute?.(attr), base);
-			if (url) return url;
-		}
-		return "";
-	}
-	function inlineImageUrl(img) {
-		if ((img.naturalWidth || 0) < MIN_BG_SIZE || (img.naturalHeight || 0) < MIN_BG_SIZE) return "";
-		for (const raw of [img.currentSrc, img.getAttribute?.("src")]) {
-			const value = typeof raw === "string" ? raw.trim() : "";
-			if (INLINE_IMAGE_RE.test(value)) return value;
-		}
-		return "";
-	}
-	function isInlineImageAddress(value) {
-		return INLINE_IMAGE_RE.test(String(value ?? "").trim());
-	}
-	var IMAGE_UPLOAD_ENDPOINTS = [{
-		match: /^https:\/\/lens\.google\.com\/uploadbyurl/i,
-		action: "https://www.google.com/searchbyimage/upload",
-		field: "encoded_image"
-	}];
-	function imageUploadEndpoint(engine) {
-		const url = typeof engine?.url === "string" ? engine.url : "";
-		if (!url) return null;
-		return IMAGE_UPLOAD_ENDPOINTS.find((entry) => entry.match.test(url)) || null;
-	}
-	function canSearchImage(engine, keyword) {
-		if (!isInlineImageAddress(keyword)) return true;
-		return Boolean(imageUploadEndpoint(engine));
-	}
-	function buildImageUploadForm(endpoint, dataUrl) {
-		if (!endpoint?.action || !endpoint.field || typeof DataTransfer !== "function") return null;
-		const file = dataUrlToFile(dataUrl);
-		if (!file) return null;
-		const transfer = new DataTransfer();
-		transfer.items.add(file);
-		const input = document.createElement("input");
-		input.type = "file";
-		input.name = endpoint.field;
-		input.files = transfer.files;
-		const form = document.createElement("form");
-		form.method = "POST";
-		form.action = endpoint.action;
-		form.enctype = "multipart/form-data";
-		form.target = "_blank";
-		form.style.cssText = "display:none;";
-		form.appendChild(input);
-		return form;
-	}
-	function dataUrlToFile(dataUrl) {
-		const match = /^data:([^;,]+)(;base64)?,([\s\S]*)$/i.exec(String(dataUrl ?? "").trim());
-		if (!match) return null;
-		const [, type, base64, payload] = match;
-		try {
-			const binary = base64 ? atob(payload.replace(/\s/g, "")) : decodeURIComponent(payload);
-			const bytes = new Uint8Array(binary.length);
-			for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-			const ext = (type.split("/")[1] || "png").replace(/[^a-z0-9]/gi, "");
-			return new File([bytes], `image.${ext}`, { type });
-		} catch (e) {
-			return null;
-		}
-	}
-	function imageHit(img, base) {
-		const url = imgUrl(img, base) || inlineImageUrl(img);
-		return url ? {
-			url,
-			element: img
-		} : null;
-	}
-	function backgroundUrl(el, base) {
-		const value = getComputedStyle(el)?.backgroundImage;
-		if (!value || value === "none") return "";
-		for (const match of value.matchAll(BG_URL_RE)) {
-			const url = toHttpUrl(match[2], base);
-			if (url) return url;
-		}
-		return "";
-	}
-	function coveredImage(target, point, base) {
-		const doc = target?.ownerDocument;
-		let el = target?.nodeType === 1 ? target : target?.parentElement;
-		for (let depth = 0; el && depth < MAX_IMAGE_DEPTH; depth += 1, el = el.parentElement) {
-			if (el === doc?.body || el === doc?.documentElement) break;
-			for (const image of el.querySelectorAll?.("img") || []) {
-				const rect = image.getBoundingClientRect?.();
-				if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
-				if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) continue;
-				const hit = imageHit(image, base);
-				if (hit) return hit;
-			}
-		}
-		return null;
-	}
-	function resolveImageHit(target, base = globalThis.location?.href, point = null) {
-		const img = typeof target?.closest === "function" ? target.closest("img") : null;
-		if (img) {
-			const hit = imageHit(img, base);
-			if (hit) return hit;
-		}
-		if (point) {
-			const covered = coveredImage(target, point, base);
-			if (covered) return covered;
-		}
-		const doc = target?.ownerDocument;
-		let el = target?.nodeType === 1 ? target : target?.parentElement;
-		for (let depth = 0; el && depth < MAX_BG_DEPTH; depth += 1, el = el.parentElement) {
-			if (el === doc?.body || el === doc?.documentElement) break;
-			const rect = el.getBoundingClientRect?.();
-			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
-			const url = backgroundUrl(el, base);
-			if (url) return {
-				url,
-				element: el
-			};
-		}
-		return null;
-	}
 	function extractKeyword(inputTarget) {
 		if (typeof inputTarget === "function") return inputTarget();
 		if (!inputTarget) return "";
@@ -7447,7 +7304,6 @@
 			performEngineAction(engine, keyword, settingData.defaultOpenTarget);
 			return true;
 		}
-		if (isInlineImageAddress(keyword)) return submitImageSearch(engine, keyword);
 		const result = prepareJump(engine, keyword);
 		const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 		if (result.type === "post") {
@@ -7460,15 +7316,6 @@
 		}
 		if (openInNewTab(result.url, mode !== "background")) return true;
 		window.open(result.url, "_blank");
-		return true;
-	}
-	function submitImageSearch(engine, dataUrl) {
-		const endpoint = imageUploadEndpoint(engine);
-		const form = endpoint ? buildImageUploadForm(endpoint, dataUrl) : null;
-		if (!form) return false;
-		document.body.appendChild(form);
-		form.submit();
-		form.remove();
 		return true;
 	}
 	function openAllEngines(engines, keyword, settingData = {}) {
@@ -7529,6 +7376,102 @@
 		target.addEventListener("pointercancel", onPointerEnd, true);
 		target.addEventListener("keydown", onKeyDown, true);
 		target.addEventListener("blur", onPointerEnd);
+	}
+	var LAZY_SRC_ATTRS = [
+		"data-src",
+		"data-original",
+		"data-lazy-src",
+		"data-actualsrc"
+	];
+	var INLINE_IMAGE_RE = /^data:image\//i;
+	var MAX_BG_DEPTH = 4;
+	var MAX_IMAGE_DEPTH = 6;
+	var MIN_BG_SIZE = 32;
+	var BG_URL_RE = /url\((['"]?)(.*?)\1\)/g;
+	function toHttpUrl(raw, base) {
+		const value = typeof raw === "string" ? raw.trim() : "";
+		if (!value) return "";
+		try {
+			const url = new URL(value, base);
+			return /^https?:$/.test(url.protocol) ? url.href : "";
+		} catch (e) {
+			return "";
+		}
+	}
+	function imgUrl(img, base) {
+		const primary = toHttpUrl(img.currentSrc, base) || toHttpUrl(img.getAttribute?.("src"), base);
+		if (primary) return primary;
+		for (const attr of LAZY_SRC_ATTRS) {
+			const url = toHttpUrl(img.getAttribute?.(attr), base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function inlineImageUrl(img) {
+		if ((img.naturalWidth || 0) < MIN_BG_SIZE || (img.naturalHeight || 0) < MIN_BG_SIZE) return "";
+		for (const raw of [img.currentSrc, img.getAttribute?.("src")]) {
+			const value = typeof raw === "string" ? raw.trim() : "";
+			if (INLINE_IMAGE_RE.test(value)) return value;
+		}
+		return "";
+	}
+	function isInlineImageAddress(value) {
+		return INLINE_IMAGE_RE.test(String(value ?? "").trim());
+	}
+	function imageHit(img, base) {
+		const url = imgUrl(img, base) || inlineImageUrl(img);
+		return url ? {
+			url,
+			element: img
+		} : null;
+	}
+	function backgroundUrl(el, base) {
+		const value = getComputedStyle(el)?.backgroundImage;
+		if (!value || value === "none") return "";
+		for (const match of value.matchAll(BG_URL_RE)) {
+			const url = toHttpUrl(match[2], base);
+			if (url) return url;
+		}
+		return "";
+	}
+	function coveredImage(target, point, base) {
+		const doc = target?.ownerDocument;
+		let el = target?.nodeType === 1 ? target : target?.parentElement;
+		for (let depth = 0; el && depth < MAX_IMAGE_DEPTH; depth += 1, el = el.parentElement) {
+			if (el === doc?.body || el === doc?.documentElement) break;
+			for (const image of el.querySelectorAll?.("img") || []) {
+				const rect = image.getBoundingClientRect?.();
+				if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
+				if (point.x < rect.left || point.x > rect.right || point.y < rect.top || point.y > rect.bottom) continue;
+				const hit = imageHit(image, base);
+				if (hit) return hit;
+			}
+		}
+		return null;
+	}
+	function resolveImageHit(target, base = globalThis.location?.href, point = null) {
+		const img = typeof target?.closest === "function" ? target.closest("img") : null;
+		if (img) {
+			const hit = imageHit(img, base);
+			if (hit) return hit;
+		}
+		if (point) {
+			const covered = coveredImage(target, point, base);
+			if (covered) return covered;
+		}
+		const doc = target?.ownerDocument;
+		let el = target?.nodeType === 1 ? target : target?.parentElement;
+		for (let depth = 0; el && depth < MAX_BG_DEPTH; depth += 1, el = el.parentElement) {
+			if (el === doc?.body || el === doc?.documentElement) break;
+			const rect = el.getBoundingClientRect?.();
+			if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
+			const url = backgroundUrl(el, base);
+			if (url) return {
+				url,
+				element: el
+			};
+		}
+		return null;
 	}
 	var ACTION_ENGINE_INFO = {
 		copy: {
@@ -8902,12 +8845,12 @@
 				});
 				return targets;
 			});
-			const imageKeyword = computed(() => isImageContext.value ? contextAction.keyword : "");
+			const imageSearchable = computed(() => !(isImageContext.value && isInlineImageAddress(contextAction.keyword)));
 			const categories = computed(() => {
-				return data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "")).map(([name, key]) => {
+				return data.engineCategories.filter(([, key, enabled]) => isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : "") && !(key === "image" && !imageSearchable.value)).map(([name, key]) => {
 					const actionMode = isContextAction.value ? contextMode.value : isSelectSearch.value ? "text" : "input";
 					const contextActions = key === "actions" && isContextAction.value;
-					let engines = (data.engineList[key] || []).filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action)).filter((engine) => !hidesOpenAction(engine)).filter((engine) => key !== "image" || canSearchImage(engine, imageKeyword.value)).map((engine) => {
+					let engines = (data.engineList[key] || []).filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action)).filter((engine) => !hidesOpenAction(engine)).map((engine) => {
 						if (!engine.action) return engine;
 						return {
 							...engine,

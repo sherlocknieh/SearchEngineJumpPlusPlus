@@ -286,21 +286,4 @@ describe('动作引擎的上下文目标', () => {
     const [url] = openInTab.mock.calls[0] || [];
     expect(url?.startsWith('blob:')).toBe(true);
   });
-
-  it('内联图片改为把字节上传给识图引擎', () => {
-    const submit = vi.spyOn(HTMLFormElement.prototype, 'submit').mockImplementation(() => {});
-    const data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUg==';
-    expect(
-      performJump({ url: 'https://lens.google.com/uploadbyurl?url=%s' }, data, {}),
-    ).toBe(true);
-    expect(submit).toHaveBeenCalledTimes(1);
-    // 表单用完即移除，不留在页面里
-    expect(document.querySelector('form')).toBeNull();
-    // 没有上传入口的引擎搜不了内联图片
-    expect(
-      performJump({ url: 'https://yandex.ru/images/search?rpt=imageview&url=%s' }, data, {}),
-    ).toBe(false);
-    expect(openInTab).not.toHaveBeenCalled();
-    submit.mockRestore();
-  });
 });

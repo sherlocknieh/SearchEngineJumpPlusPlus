@@ -8,7 +8,6 @@ import {
 import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
 import { selectLinkTitle } from './linkAction.js';
-import { buildImageUploadForm, imageUploadEndpoint, isInlineImageAddress } from './imageSearch.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -194,9 +193,6 @@ export function performJump(engine, keyword, settingData = {}, forceNewTab = fal
     return true;
   }
 
-  // 内联图片没有可供引擎服务器抓取的地址：把图片字节提交到引擎的上传入口
-  if (isInlineImageAddress(keyword)) return submitImageSearch(engine, keyword);
-
   const result = prepareJump(engine, keyword);
   const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 
@@ -213,20 +209,6 @@ export function performJump(engine, keyword, settingData = {}, forceNewTab = fal
 
   if (openInNewTab(result.url, mode !== 'background')) return true;
   window.open(result.url, '_blank');
-  return true;
-}
-
-/**
- * 内联图片的识图跳转：表单把图片字节提交给引擎的上传入口，新标签页显示结果。
- * 引擎没有上传入口时返回 false，调用方据此不提供这个条目。
- */
-function submitImageSearch(engine, dataUrl) {
-  const endpoint = imageUploadEndpoint(engine);
-  const form = endpoint ? buildImageUploadForm(endpoint, dataUrl) : null;
-  if (!form) return false;
-  document.body.appendChild(form);
-  form.submit();
-  form.remove();
   return true;
 }
 
