@@ -458,7 +458,7 @@ onBeforeUnmount(() => {
         <!-- 紧凑模式没有引擎图标时用分类名首字兜底 -->
         <span v-else-if="compact" class="sej-category-glyph" aria-hidden="true">{{ glyph }}</span>
       </span>
-      <span v-if="!compact">{{ name }}</span>
+      <span v-if="!compact" class="sej-engine-label">{{ name }}</span>
     </a>
 
     <Teleport :to="dropRoot">
@@ -507,7 +507,7 @@ onBeforeUnmount(() => {
               <path d="M13.4 2.6 8.6 7.4" />
             </svg>
           </span>
-          <span>{{ t('jump.searchAll') }}</span>
+          <span class="sej-engine-label">{{ t('jump.searchAll') }}</span>
         </a>
       </div>
     </Teleport>
@@ -542,8 +542,6 @@ onBeforeUnmount(() => {
   height: 16px;
   margin: 0;
   object-fit: cover;
-  /* 与引擎图标一致：跟随文字着墨中心下移半个像素，详见 EngineItem 的 .sej-engine-icon */
-  translate: 0 0.5px;
 }
 
 /*
@@ -555,7 +553,6 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   margin: 0;
-  translate: 0 0.5px;
 }
 
 /* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */
@@ -570,7 +567,6 @@ onBeforeUnmount(() => {
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
-  translate: 0 0.5px;
 }
 
 /* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */

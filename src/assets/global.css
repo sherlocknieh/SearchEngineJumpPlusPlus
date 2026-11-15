@@ -81,3 +81,24 @@
 #sej-drop-lists {
   display: contents;
 }
+
+/*
+ * 引擎/分类条目的文字：图标按 16px 盒中心与文字行盒居中，可行盒里带着中文字形用不到的
+ * 下伸空间，且各平台字体（Noto/PingFang/厂商字体）的升部与降部比例不同，文字墨迹在行盒里
+ * 偏上多少就跟着变，固定像素补偿只在一个平台上准。这里按字体自己的 cap 高与基线裁掉
+ * 行盒多余留白，居中位置只跟字形有关，不再跟行盒度量走。
+ */
+.sej-engine-label {
+  text-box: trim-both cap alphabetic;
+}
+
+/* 不支持裁行盒的浏览器退回半像素补偿：各平台偏差在 1px 内，取中间值 */
+@supports not (text-box-trim: trim-both) {
+  .sej-engine-icon,
+  .sej-engine-glyph,
+  .sej-category-icon-img,
+  .sej-category-pin-icon,
+  .sej-category-glyph {
+    translate: 0 0.5px;
+  }
+}
