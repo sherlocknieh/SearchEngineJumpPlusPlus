@@ -10,6 +10,7 @@ import {
 import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
 import { ENGINE_ACTIONS, normalizeEngineTarget } from '../core/configData.js';
+import { actionEngineTip } from '../core/contextAction.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -165,6 +166,8 @@ function submit() {
     <div id="sej-engine-title" class="sej-dialog-title">
       {{ mode === 'edit' ? t('engine.editTitle') : t('engine.addTitle') }}
     </div>
+    <!-- 动作条目没有链接可填，直接说明它在什么场景下出现、做什么 -->
+    <p v-if="initialAction" class="sej-dialog-note">{{ actionEngineTip(initialAction, t) }}</p>
     <!-- 引擎链接 -->
     <label v-if="!initialAction" class="sej-field">
       <span>{{ t('engine.url') }}</span>

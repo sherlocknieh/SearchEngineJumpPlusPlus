@@ -1,6 +1,7 @@
 <script setup>
 import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName, t } from '../assets/i18n.js';
+import { actionEngineTip } from '../core/contextAction.js';
 import { COPY, EYE, EYE_OFF, PENCIL, TRASH } from '../assets/icons.js';
 
 defineProps({
@@ -14,6 +15,13 @@ defineProps({
   // 内置分类不提供类别编辑入口
   hideEdit: { type: Boolean, default: false },
 });
+
+// 动作条目没有链接和图标可讲，悬停时直接说明它在什么场景下出现、做什么
+function engineTitle(engine) {
+  const edit = t('settings.editEngine', { name: localizeEngineName(engine.name) });
+  const tip = actionEngineTip(engine.action, t);
+  return tip ? `${tip}\n${edit}` : edit;
+}
 
 const emit = defineEmits([
   'toggle-category',
@@ -78,7 +86,7 @@ const emit = defineEmits([
           'sej-drag-placeholder': dragCtx?.type === 'engine' && dragCtx.key === engine._id,
           'sej-no-delete': hideDelete && Boolean(engine.action),
         }"
-        :title="t('settings.editEngine', { name: localizeEngineName(engine.name) })"
+        :title="engineTitle(engine)"
         @pointerdown="emit('drag-start', $event, 'engine', ci, ei)"
         @click.stop="emit('edit-engine', ci, ei)"
       >

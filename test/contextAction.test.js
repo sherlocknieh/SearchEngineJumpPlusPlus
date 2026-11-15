@@ -4,6 +4,7 @@ import {
   HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
   actionEngineHint,
+  actionEngineTip,
   actionTargetHint,
   contextActionHintKey,
   contextActionEngines,
@@ -15,6 +16,8 @@ import {
   isLongPressMove,
   resolveContextHit,
 } from '../src/core/contextAction.js';
+import { ENGINE_ACTIONS } from '../src/core/configData.js';
+import { messages } from '../src/assets/messages.js';
 
 afterEach(() => {
   document.body.innerHTML = '';
@@ -326,6 +329,24 @@ describe('contextActionEngines', () => {
     );
     expect(list).toEqual([]);
     expect(contextActionEngines(engines, [], t)).toEqual([]);
+  });
+});
+
+describe('actionEngineTip', () => {
+  const t = (key) => key;
+
+  it('每个动作都有说明，且中英文文案齐全', () => {
+    for (const action of ENGINE_ACTIONS) {
+      const key = actionEngineTip(action, t);
+      expect(key).toMatch(/^action\.tip/);
+      expect(messages['zh-CN'][key]).toBeTruthy();
+      expect(messages.en[key]).toBeTruthy();
+    }
+  });
+
+  it('未知动作没有说明', () => {
+    expect(actionEngineTip('paste', t)).toBe('');
+    expect(actionEngineTip(undefined, t)).toBe('');
   });
 });
 

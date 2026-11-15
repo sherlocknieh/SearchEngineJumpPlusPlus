@@ -38,6 +38,21 @@ export function contextActionLabel(mode, action, fallback, t) {
   return key ? t(key) : fallback || '';
 }
 
+/** 设置面板里的动作说明：什么场景下出现、具体做什么 */
+const ACTION_ENGINE_TIPS = {
+  copy: 'action.tipCopy',
+  copyImageUrl: 'action.tipCopyImageUrl',
+  copyLinkText: 'action.tipCopyLinkText',
+  copyLinkUrl: 'action.tipCopyLinkUrl',
+  selectLinkText: 'action.tipSelectLinkText',
+  open: 'action.tipOpen',
+};
+
+export function actionEngineTip(action, t) {
+  const key = ACTION_ENGINE_TIPS[action];
+  return key ? t(key) : '';
+}
+
 /** 模式到命中解析与专属分类的映射 */
 export const CONTEXT_MODES = {
   image: { categoryKey: IMAGE_CATEGORY_KEY, resolveHit: resolveImageHit },

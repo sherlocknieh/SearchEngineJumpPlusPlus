@@ -27,6 +27,14 @@
   margin-bottom: 16px;
 }
 
+/* 动作条目的用法说明：紧贴标题，弱于表单字段的视觉层级 */
+.sej-dialog-note {
+  margin: -10px 0 14px;
+  font-size: 12px;
+  line-height: 1.5;
+  opacity: 0.65;
+}
+
 .sej-field {
   display: flex;
   flex-direction: column;
