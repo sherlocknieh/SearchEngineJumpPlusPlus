@@ -1,11 +1,11 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.2155
+// @version            2026.11.15.2217
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
-// @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
-// @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
-// @description:en     Fork of MUTED64's SearchEngineJumpPlus, rebuilt with Vue 3 with numerous fixes and a cleaner, faster UI.
+// @description        多引擎快捷跳转：划词即搜、长按/右键图片与链接、以图搜图，内置复制与打开操作；支持一键打开多个引擎、中英界面与配置导入导出。Vue3 重构。
+// @description:zh-CN  多引擎快捷跳转：划词即搜、长按/右键图片与链接、以图搜图，内置复制与打开操作；支持一键打开多个引擎、中英界面与配置导入导出。Vue3 重构。
+// @description:en     One-click engine switching with selection search, long-press/right-click actions on images and links, reverse image search, built-in copy/open actions, multi-engine open, bilingual UI and config import/export. Rebuilt with Vue 3.
 // @license            MIT
 // @icon               data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMiAzMiIgd2lkdGg9IjMyIiBoZWlnaHQ9IjMyIj4KICA8Y2lyY2xlIGN4PSIxNiIgY3k9IjE2IiByPSIxNiIgZmlsbD0iI0ZGRkZGRiIvPgogIDxwYXRoIGQ9Ik0xOC44IDE4LjggMjQuMiAyNC4yIiBzdHJva2U9IiM1RjYzNjgiIHN0cm9rZS13aWR0aD0iMy4yIiBzdHJva2UtbGluZWNhcD0icm91bmQiLz4KICA8ZyBmaWxsPSJub25lIiBzdHJva2Utd2lkdGg9IjMuMiIgdHJhbnNmb3JtPSJyb3RhdGUoLTkwIDEzLjUgMTMuNSkiPgogICAgPGNpcmNsZSBjeD0iMTMuNSIgY3k9IjEzLjUiIHI9IjcuMiIgc3Ryb2tlPSIjNDI4NUY0IiBzdHJva2UtZGFzaGFycmF5PSIxMS4zMSAzMy45MyIvPgogICAgPGNpcmNsZSBjeD0iMTMuNSIgY3k9IjEzLjUiIHI9IjcuMiIgc3Ryb2tlPSIjMzRBODUzIiBzdHJva2UtZGFzaGFycmF5PSIxMS4zMSAzMy45MyIKICAgICAgICAgICAgc3Ryb2tlLWRhc2hvZmZzZXQ9Ii0xMS4zMSIvPgogICAgPGNpcmNsZSBjeD0iMTMuNSIgY3k9IjEzLjUiIHI9IjcuMiIgc3Ryb2tlPSIjRkJCQzA1IiBzdHJva2UtZGFzaGFycmF5PSIxMS4zMSAzMy45MyIKICAgICAgICAgICAgc3Ryb2tlLWRhc2hvZmZzZXQ9Ii0yMi42MiIvPgogICAgPGNpcmNsZSBjeD0iMTMuNSIgY3k9IjEzLjUiIHI9IjcuMiIgc3Ryb2tlPSIjRUE0MzM1IiBzdHJva2UtZGFzaGFycmF5PSIxMS4zMSAzMy45MyIKICAgICAgICAgICAgc3Ryb2tlLWRhc2hvZmZzZXQ9Ii0zMy45MyIvPgogIDwvZz4KPC9zdmc+Cg==
 // @match              *://*/*
