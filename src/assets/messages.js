@@ -120,7 +120,7 @@ export const messages = {
     'engine.required': '标题和链接必填',
     'engine.requiredAction': '标题必填',
     'engine.actionWhen': '出现时机',
-    'engine.actionEffect': '用法说明',
+    'engine.actionEffect': '操作',
 
     'action.copied': '已复制到剪贴板',
     'action.opened': '已打开',
@@ -298,7 +298,7 @@ export const messages = {
     'engine.required': 'Title and URL are required',
     'engine.requiredAction': 'Title is required',
     'engine.actionWhen': 'When it appears',
-    'engine.actionEffect': 'What it does',
+    'engine.actionEffect': 'Action',
 
     'action.copied': 'Copied to clipboard',
     'action.opened': 'Opened',

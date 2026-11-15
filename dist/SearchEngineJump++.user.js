@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1739
+// @version            2026.11.15.1740
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5633,7 +5633,7 @@
 			"engine.required": "标题和链接必填",
 			"engine.requiredAction": "标题必填",
 			"engine.actionWhen": "出现时机",
-			"engine.actionEffect": "用法说明",
+			"engine.actionEffect": "操作",
 			"action.copied": "已复制到剪贴板",
 			"action.opened": "已打开",
 			"action.selected": "已选中链接标题",
@@ -5794,7 +5794,7 @@
 			"engine.required": "Title and URL are required",
 			"engine.requiredAction": "Title is required",
 			"engine.actionWhen": "When it appears",
-			"engine.actionEffect": "What it does",
+			"engine.actionEffect": "Action",
 			"action.copied": "Copied to clipboard",
 			"action.opened": "Opened",
 			"action.selected": "Link title selected",
