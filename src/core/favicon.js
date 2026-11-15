@@ -351,6 +351,8 @@ const ACTION_ICONS = {
   copyLinkText: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='4 7 4 4 20 4 20 7'/%3E%3Cline x1='9' y1='20' x2='15' y2='20'/%3E%3Cline x1='12' y1='4' x2='12' y2='20'/%3E%3C/svg%3E",
   // 选中标题用虚线选择框圈住两行文字，与复制标题的文字图标区分
   selectLinkText: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2' stroke-dasharray='3 3'/%3E%3Cline x1='7' y1='9' x2='17' y2='9'/%3E%3Cline x1='7' y1='14' x2='13' y2='14'/%3E%3C/svg%3E",
+  // 打开图片：图片框外带箭头，与打开链接的外链图标区分
+  openImage: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='7' width='14' height='14' rx='2'/%3E%3Ccircle cx='7.5' cy='11.5' r='1.2'/%3E%3Cpath d='m3 21 4.5-4.5 3 3 2-2 4.5 4.5'/%3E%3Cpath d='M15 3h6v6'/%3E%3Cpath d='M21 3 15 9'/%3E%3C/svg%3E",
   open: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23808080' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 3h6v6'/%3E%3Cpath d='M10 14 21 3'/%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3C/svg%3E",
 };
 

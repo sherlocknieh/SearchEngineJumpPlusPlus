@@ -21,6 +21,7 @@ export const ACTION_ENGINE_DEFAULTS = {
   copyLinkUrl: '复制链接地址',
   selectLinkText: '选中链接标题',
   open: '打开链接',
+  openImage: '打开图片',
 };
 
 export const ENGINE_ACTIONS = Object.keys(ACTION_ENGINE_DEFAULTS);
@@ -52,11 +53,15 @@ export const CONTEXT_BAR_CATEGORIES = {
  * @param {string} key 分类键名
  * @param {boolean} enabled 分类的显示开关
  * @param {string} [contextMode] 上下文操作模式（image / link），空串表示普通跳转条
+ * @param {boolean} [imageSearchable] 命中的图片是否带可搜索地址；内联 data: 缩略图只能复制
  */
-export function isBarCategoryVisible(key, enabled, contextMode = '') {
+export function isBarCategoryVisible(key, enabled, contextMode = '', imageSearchable = true) {
   if (contextMode) {
     const categories = CONTEXT_BAR_CATEGORIES[contextMode];
-    if (key === categories?.primary) return true;
+    if (key === categories?.primary) {
+      // 「搜图」把图片地址交给识图引擎，没有地址的内联图片不显示该分类
+      return key !== IMAGE_CATEGORY_KEY || imageSearchable;
+    }
     return Boolean(categories?.extras.includes(key) && enabled);
   }
   if (key === IMAGE_CATEGORY_KEY) return false;

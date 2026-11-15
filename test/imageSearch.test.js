@@ -1,10 +1,17 @@
 // @vitest-environment happy-dom
 import { describe, expect, it } from 'vitest';
-import { resolveImageUrl } from '../src/core/imageSearch.js';
+import { resolveImageHit, resolveImageUrl } from '../src/core/imageSearch.js';
 
 function img(attrs = {}) {
   const el = document.createElement('img');
   for (const [key, value] of Object.entries(attrs)) el.setAttribute(key, value);
+  return el;
+}
+
+/** happy-dom 不会解码图片，自然尺寸按需伪造：内联图靠它区分真实缩略图与占位图 */
+function setNaturalSize(el, size) {
+  Object.defineProperty(el, 'naturalWidth', { value: size, configurable: true });
+  Object.defineProperty(el, 'naturalHeight', { value: size, configurable: true });
   return el;
 }
 
@@ -54,6 +61,34 @@ describe('resolveImageUrl', () => {
     expect(resolveImageUrl(null)).toBe('');
     expect(resolveImageUrl(img({ src: 'data:image/png;base64,AAA' }))).toBe('');
     expect(resolveImageUrl(img({ src: 'javascript:alert(1)' }))).toBe('');
+  });
+
+  it('内联缩略图仍算图片命中，但没有可搜索地址', () => {
+    // Google 图片把 92px 缩略图直接内联成 data: JPEG
+    const inline = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+    const el = img({ src: inline });
+    setNaturalSize(el, 92);
+    expect(resolveImageHit(el)).toEqual({ url: inline, element: el, searchable: false });
+    // 识图引擎无从下手，可搜索地址仍为空
+    expect(resolveImageUrl(el)).toBe('');
+    // 懒加载属性里有真实地址时仍优先用它
+    const lazy = img({ src: inline, 'data-src': 'https://cdn.test/real.jpg' });
+    setNaturalSize(lazy, 92);
+    expect(resolveImageHit(lazy)).toMatchObject({
+      url: 'https://cdn.test/real.jpg',
+      searchable: true,
+    });
+  });
+
+  it('内联的 1x1 占位图不算图片，继续交给背景图', () => {
+    const card = box({ backgroundImage: 'url("https://cdn.test/cover.jpg")' });
+    const el = img({ src: 'data:image/gif;base64,R0lGOD' });
+    setNaturalSize(el, 1);
+    card.appendChild(el);
+    expect(resolveImageHit(el)).toMatchObject({
+      url: 'https://cdn.test/cover.jpg',
+      searchable: true,
+    });
   });
 
   it('没有 img 时向上查找背景图容器', () => {
@@ -108,6 +143,36 @@ describe('resolveImageUrl', () => {
     expect(resolveImageUrl(overlay, undefined, { x: 50, y: 50 })).toBe('https://cdn.test/a.png');
     // 坐标不在图片范围内时不去猜
     expect(resolveImageUrl(overlay, undefined, { x: 200, y: 200 })).toBe('');
+  });
+
+  it('被链接盖住的内联缩略图同样按坐标命中', () => {
+    const figure = document.createElement('figure');
+    const link = document.createElement('a');
+    link.href = 'https://site.test/page';
+    const inline = 'data:image/jpeg;base64,/9j/4AAQSkZJRg==';
+    const image = setNaturalSize(img({ src: inline }), 92);
+    image.getBoundingClientRect = () => ({
+      width: 92,
+      height: 92,
+      top: 0,
+      left: 0,
+      right: 92,
+      bottom: 92,
+      x: 0,
+      y: 0,
+    });
+    link.appendChild(image);
+    const overlay = document.createElement('a');
+    overlay.href = 'https://site.test/page';
+    overlay.textContent = '标题';
+    figure.append(link, overlay);
+    document.body.appendChild(figure);
+
+    expect(resolveImageHit(overlay, undefined, { x: 40, y: 40 })).toMatchObject({
+      url: inline,
+      element: image,
+      searchable: false,
+    });
   });
 
   it('按坐标兜底时忽略图标大小的小图', () => {

@@ -71,7 +71,7 @@ src/main.js                 只做装配
     由 `resolveOpenMode` 统一判定（后台用 `GM_openInTab` 的 `active: false`），
     批量打开只把「当前页」提升为新标签页，后台选择保持后台；
     `$post$` 表单无法后台提交，后台打开时降级为新标签页
-  - 动作引擎：`action: 'copy' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open'`
+  - 动作引擎：`action: 'copy' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open' | 'openImage'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 
 ## 长按 / 右键操作（图片搜图、链接操作）
@@ -86,16 +86,20 @@ src/main.js                 只做装配
 - 判定：`core/contextAction.js` 汇总模式配置与长按判定（`isLongPressMove` 位移超阈值取消）；
   图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`；
   按下目标不是 img 时按坐标向上找被链接/标题浮层盖住的图片，再向上 4 层找 `background-image`），
-  链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）
+  链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）；
+  内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，但按自然尺寸排除
+  1x1 占位图，命中结果带 `searchable: false`：地址不能交给识图引擎，「搜图」分类不出现、
+  也不提供「打开图片」，只保留复制类动作
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；链接动作同样取「操作」分类配置，追加在同一分类内并标明作用目标；
   没有可用引擎时该模式不接管
-- 呈现：复用跳转条，`stores/contextAction.js` 提供 `{ active, mode, keyword, url, link, element }`；
+- 呈现：复用跳转条，`stores/contextAction.js` 提供
+  `{ active, mode, keyword, url, searchable, link, element }`；
   开启「跟随选区」时与划词条共用简洁/极简形态（极简下收起为图标），关闭时整条展开；
   点击外部/Escape 关闭，滚动时继续跟随命中的元素，跳转或「一键打开」后自动收起
 - 动作目标：`contextActionTarget(mode, action, hit)` 统一决定复制内容与打开地址——
-  图片模式「复制图片」复制图片本身（取不到时回退地址）、「打开链接」新标签打开图片；
+  图片模式「复制图片」复制图片本身（取不到时回退地址）、「打开图片」新标签打开图片；
   链接模式拆成「复制链接标题」「复制链接地址」两项，分别复制链接文字与 URL，「打开链接」新标签打开链接；
   「选中链接标题」把标题变成页面上的浏览器选区，浮层顺势从上下文操作条转为划词菜单
   （`linkAction.selectLinkTitle` → `selection.selectElementText`，优先选链接内的标题节点，
@@ -113,7 +117,8 @@ src/main.js                 只做装配
 - 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「出现时机 / 用法说明」，
   编辑动作条目的弹窗用 `actionEngineInfo` 渲染成只读表单（暂不支持修改），
   设置列表悬停用 `actionEngineTip` 合成一行
-- 可见性：`isBarCategoryVisible` 决定分类是否上跳转条——图片模式显示「搜图」分类，
+- 可见性：`isBarCategoryVisible(key, enabled, mode, imageSearchable)` 决定分类是否上跳转条——
+  图片模式显示「搜图」分类（`imageSearchable` 为 false 时隐藏），
   并允许「操作」分类按显示开关出现；链接模式只显示「操作」；
   普通模式按显示开关决定且永不显示「搜图」分类；非上下文模式下「打开」只在当前
   关键词（选区或搜索框）含链接时出现

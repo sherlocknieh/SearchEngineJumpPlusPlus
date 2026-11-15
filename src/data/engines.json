@@ -190,6 +190,11 @@
         "name": "打开链接",
         "url": "",
         "action": "open"
+      },
+      {
+        "name": "打开图片",
+        "url": "",
+        "action": "openImage"
       }
     ],
     "download": [

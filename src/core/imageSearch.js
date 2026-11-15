@@ -2,11 +2,15 @@
  * 长按图片搜图：从按下的位置取出图片链接。
  *
  * 图片链接直接作为关键词交给引擎模板（%s 会被 encodeURIComponent 编码），
- * 因此这里只负责拿到可被识图引擎接受的 http(s) 地址。
+ * 因此可搜索的地址只认 http(s)。Google 图片这类站点会把小尺寸缩略图直接内联成
+ * data:image，这种图没有可供识图引擎使用的地址，但图片本身仍可复制，
+ * 命中结果因此带上 searchable 标记，由调用方决定是否提供「搜图」。
  */
 
 // 懒加载站点常把真实地址放在 data-* 上，src 只是占位图
 const LAZY_SRC_ATTRS = ['data-src', 'data-original', 'data-lazy-src', 'data-actualsrc'];
+// 内联图片（base64 或 SVG）本身就是可渲染的图片资源
+const INLINE_IMAGE_RE = /^data:image\//i;
 
 // 背景图向上查找的层数上限：再往外通常是整页背景，不是用户想搜的图
 const MAX_BG_DEPTH = 4;
@@ -38,6 +42,31 @@ function imgUrl(img, base) {
     if (url) return url;
   }
   return '';
+}
+
+/**
+ * 取 <img> 内联的 data:image 地址；懒加载属性里的真实地址优先，不算内联图。
+ * 尺寸按已解码的自然尺寸判断：懒加载站点常用 1x1 透明占位图，那不是用户想搜的图。
+ */
+function inlineImageUrl(img) {
+  if ((img.naturalWidth || 0) < MIN_BG_SIZE || (img.naturalHeight || 0) < MIN_BG_SIZE) return '';
+  for (const raw of [img.currentSrc, img.getAttribute?.('src')]) {
+    const value = typeof raw === 'string' ? raw.trim() : '';
+    if (INLINE_IMAGE_RE.test(value)) return value;
+  }
+  return '';
+}
+
+/**
+ * 图片的命中结果：优先用可搜索的 http(s) 地址，其次退到内联图片自身。
+ * searchable 为 false 时地址只够复制图片本身，识图引擎与「打开」都用不上。
+ * @returns {{url: string, element: Element, searchable: boolean} | null}
+ */
+function imageHit(img, base) {
+  const url = imgUrl(img, base);
+  if (url) return { url, element: img, searchable: true };
+  const inline = inlineImageUrl(img);
+  return inline ? { url: inline, element: img, searchable: false } : null;
 }
 
 /** 取元素计算样式里的第一张背景图；渐变与 data: 图片会被忽略 */
@@ -75,8 +104,8 @@ function coveredImage(target, point, base) {
       ) {
         continue;
       }
-      const url = imgUrl(image, base);
-      if (url) return { url, element: image };
+      const hit = imageHit(image, base);
+      if (hit) return hit;
     }
   }
   return null;
@@ -88,13 +117,14 @@ function coveredImage(target, point, base) {
  * @param {Element | null} target 按下事件的目标元素
  * @param {string} [base] 相对地址的基准，默认当前页面
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被盖住的图片
- * @returns {{url: string, element: Element} | null}
+ * @returns {{url: string, element: Element, searchable: boolean} | null}
+ *   url 为内联 data:image 时 searchable 为 false，调用方据此隐藏「搜图」
  */
 export function resolveImageHit(target, base = globalThis.location?.href, point = null) {
   const img = typeof target?.closest === 'function' ? target.closest('img') : null;
   if (img) {
-    const url = imgUrl(img, base);
-    if (url) return { url, element: img };
+    const hit = imageHit(img, base);
+    if (hit) return hit;
   }
 
   if (point) {
@@ -109,17 +139,18 @@ export function resolveImageHit(target, base = globalThis.location?.href, point 
     const rect = el.getBoundingClientRect?.();
     if (!rect || rect.width < MIN_BG_SIZE || rect.height < MIN_BG_SIZE) continue;
     const url = backgroundUrl(el, base);
-    if (url) return { url, element: el };
+    if (url) return { url, element: el, searchable: true };
   }
   return null;
 }
 
 /**
- * 取按下位置对应的图片地址；不是图片或地址不可用时返回空串。
+ * 取按下位置对应的可搜索图片地址；内联 data:image 与背景图里的 data: 都返回空串。
  * @param {Element | null} target 按下事件的目标元素
  * @param {string} [base] 相对地址的基准，默认当前页面
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被盖住的图片
  */
 export function resolveImageUrl(target, base = globalThis.location?.href, point = null) {
-  return resolveImageHit(target, base, point)?.url || '';
+  const hit = resolveImageHit(target, base, point);
+  return hit?.searchable ? hit.url : '';
 }

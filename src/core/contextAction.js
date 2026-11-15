@@ -23,7 +23,7 @@ const CONTEXT_ACTION_HINTS = {
   image: {
     copyImage: 'action.hintCopyImage',
     copyImageUrl: 'action.hintCopyImageUrl',
-    open: 'action.hintOpenImage',
+    openImage: 'action.hintOpenImage',
   },
   text: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
   input: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
@@ -50,6 +50,7 @@ const ACTION_ENGINE_INFO = {
   copyLinkUrl: { when: 'action.whenCopyLinkUrl', effect: 'action.effectCopyLinkUrl' },
   selectLinkText: { when: 'action.whenSelectLinkText', effect: 'action.effectSelectLinkText' },
   open: { when: 'action.whenOpen', effect: 'action.effectOpen' },
+  openImage: { when: 'action.whenOpenImage', effect: 'action.effectOpenImage' },
 };
 
 /**
@@ -81,7 +82,7 @@ export const CONTEXT_MODES = {
  * @param {Element | null} target 按下事件的目标元素
  * @param {(mode: 'image' | 'link') => boolean} [hasEngines] 该模式是否有可用引擎
  * @param {{x: number, y: number} | null} [point] 按下位置，用于识别被链接/浮层盖住的图片
- * @returns {{mode: 'image' | 'link', url: string, text?: string, element: Element, link?: {url: string, text: string, element: Element} | null} | null}
+ * @returns {{mode: 'image' | 'link', url: string, text?: string, searchable?: boolean, element: Element, link?: {url: string, text: string, element: Element} | null} | null}
  */
 export function resolveContextHit(target, hasEngines = () => true, point = null) {
   const image = hasEngines('image') ? CONTEXT_MODES.image.resolveHit(target, undefined, point) : null;
@@ -147,18 +148,20 @@ export function contextActionTarget(mode, action, hit = {}) {
 }
 
 /**
- * 动作在某个关键词来源下是否有意义：复制文字只用于划词与搜索框，复制图片只用于图片，
- * 链接标题/地址与图片地址只属于各自的目标，打开在所有情景下都可用。
+ * 动作在某个关键词来源下是否有意义：复制文字只用于划词与搜索框，图片类动作只用于图片，
+ * 链接标题/地址与图片地址只属于各自的目标，打开链接在链接与划词情景下可用。
  * @param {'image' | 'link' | 'text' | 'input'} mode 关键词来源
  * @param {string} [action] 动作类型
  */
 export function isActionAvailableInMode(mode, action) {
   if (action === 'copy') return mode === 'text' || mode === 'input';
-  if (action === 'copyImage' || action === 'copyImageUrl') return mode === 'image';
+  if (action === 'copyImage' || action === 'copyImageUrl' || action === 'openImage') {
+    return mode === 'image';
+  }
   if (action === 'copyLinkText' || action === 'copyLinkUrl' || action === 'selectLinkText') {
     return mode === 'link';
   }
-  return true;
+  return mode !== 'image';
 }
 
 /**
@@ -225,6 +228,8 @@ export function contextActionEngines(engines, targets, t) {
     if (engine.disable || !engine.action) continue;
     for (const { mode, hit } of targets) {
       if (!isActionAvailableInMode(mode, engine.action)) continue;
+      // 内联缩略图没有可导航的地址（data: 不能直接打开），只保留复制类动作
+      if (engine.action === 'openImage' && hit.searchable === false) continue;
       // 纯图片链接没有标题：复制标题、选中标题与复制地址目标相同，省掉重复条目
       if (
         (engine.action === 'copyLinkText' || engine.action === 'selectLinkText') &&

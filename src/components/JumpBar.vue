@@ -186,10 +186,13 @@ const contextActionTargets = computed(() => {
 });
 
 const categories = computed(() => {
+  const contextModeValue = isContextAction.value ? contextMode.value : '';
+  // 内联 data: 缩略图没有可搜索地址，「搜图」分类无从下手
+  const imageSearchable = contextAction.searchable !== false;
   const list = data.engineCategories
     // 普通跳转条永不显示「搜图」，上下文操作条只显示命中的分类与「操作」动作
     .filter(([, key, enabled]) =>
-      isBarCategoryVisible(key, enabled, isContextAction.value ? contextMode.value : ''),
+      isBarCategoryVisible(key, enabled, contextModeValue, imageSearchable),
     )
     .map(([name, key]) => {
       // 动作分类：名称与提示都按当前关键词的来源决定

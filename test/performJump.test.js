@@ -256,11 +256,23 @@ describe('动作引擎的上下文目标', () => {
     }
   });
 
-  it('打开对象目标用地址而不是显示文字', async () => {
+  it('打开链接与打开图片都用地址打开目标', async () => {
     expect(
       await performEngineAction({ action: 'open' }, { text: '标题', url: 'https://a.test/p' }),
     ).toBe(true);
     expect(openInTab).toHaveBeenCalledWith('https://a.test/p', {
+      active: true,
+      insert: true,
+      setParent: true,
+    });
+    openInTab.mockClear();
+    expect(
+      await performEngineAction(
+        { action: 'openImage' },
+        { text: 'https://cdn.test/a.png', url: 'https://cdn.test/a.png' },
+      ),
+    ).toBe(true);
+    expect(openInTab).toHaveBeenCalledWith('https://cdn.test/a.png', {
       active: true,
       insert: true,
       setParent: true,

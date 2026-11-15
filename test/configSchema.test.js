@@ -142,6 +142,7 @@ describe('normalizeConfig', () => {
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '选中链接标题', url: '', action: 'selectLinkText' },
       { name: '打开链接', url: 'https://ignored.test', action: 'open' },
+      { name: '打开图片', url: '', action: 'openImage' },
     ]);
   });
 
@@ -163,6 +164,7 @@ describe('normalizeConfig', () => {
       'copyLinkUrl',
       'selectLinkText',
       'open',
+      'openImage',
     ]);
   });
 
@@ -193,6 +195,7 @@ describe('normalizeConfig', () => {
       { name: '复制链接地址', url: '', action: 'copyLinkUrl' },
       { name: '选中链接标题', url: '', action: 'selectLinkText' },
       { name: '打开链接', url: '', action: 'open' },
+      { name: '打开图片', url: '', action: 'openImage' },
     ]);
   });
 
@@ -212,6 +215,7 @@ describe('normalizeConfig', () => {
     // 设置面板据此始终列全所有可能的选项，同时不打断用户拖出的排序
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
       'open',
+      'openImage',
       'copy',
       'copyImage',
       'copyImageUrl',
@@ -258,6 +262,7 @@ describe('normalizeConfig', () => {
     );
     expect(result.engineList.actions.map((engine) => engine.name)).toEqual([
       '打开链接',
+      '打开图片',
       '我的复制',
       '复制图片',
       '复制图片地址',
@@ -435,6 +440,15 @@ describe('isBarCategoryVisible', () => {
   it('搜图分类只在图片模式下出现，普通跳转条始终不显示', () => {
     expect(isBarCategoryVisible('image', true, '')).toBe(false);
     expect(isBarCategoryVisible('image', false, 'image')).toBe(true);
+  });
+
+  it('内联缩略图没有可搜索地址时，搜图分类不出现', () => {
+    expect(isBarCategoryVisible('image', true, 'image', false)).toBe(false);
+    // 「操作」分类不受影响，复制图片仍可用
+    expect(isBarCategoryVisible('actions', true, 'image', false)).toBe(true);
+    // 链接模式与普通跳转条不看这个标记
+    expect(isBarCategoryVisible('actions', true, 'link', false)).toBe(true);
+    expect(isBarCategoryVisible('web', true, '', false)).toBe(true);
   });
 
   it('操作分类在图片模式下按显示开关出现', () => {

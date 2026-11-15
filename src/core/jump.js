@@ -69,7 +69,7 @@ function normalizeActionTarget(target) {
  * 执行动作引擎，返回是否成功处理。
  * copy 复制文字，copyImage 复制图片本身（取不到时复制图片地址），
  * copyImageUrl / copyLinkUrl 复制地址，copyLinkText 复制链接标题，
- * selectLinkText 选中页面上的链接标题，open 把目标地址当作链接打开。
+ * selectLinkText 选中页面上的链接标题，open / openImage 把链接或图片地址打开。
  * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target 复制/打开用的内容
  */
 export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
@@ -83,7 +83,7 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
   if (action === 'copyLinkText') return copyText(source.text);
   if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);
   if (action === 'selectLinkText') return selectLinkTitle(source.element);
-  if (action === 'open') {
+  if (action === 'open' || action === 'openImage') {
     const url = findKeywordUrl(source.url);
     if (!url) return false;
     const mode = resolveOpenMode(engine, false, defaultTarget);
