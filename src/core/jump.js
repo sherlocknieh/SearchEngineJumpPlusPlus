@@ -1,5 +1,10 @@
 import { GM_openInTab } from '$';
-import { DEFAULT_OPEN_TARGET, normalizeEngineAction, normalizeDefaultOpenTarget } from './configData.js';
+import {
+  DEFAULT_OPEN_TARGET,
+  normalizeDefaultOpenTarget,
+  normalizeEngineAction,
+  normalizeEngineTarget,
+} from './configData.js';
 import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
 import { selectLinkTitle } from './linkAction.js';
@@ -80,10 +85,11 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
   if (action === 'open') {
     const url = findKeywordUrl(source.url);
     if (!url) return false;
-    if (shouldOpenInNewTab(engine, false, defaultTarget)) {
-      if (!openInNewTab(url)) window.open(url, '_blank');
-    } else {
+    const mode = resolveOpenMode(engine, false, defaultTarget);
+    if (mode === 'self') {
       window.location.href = url;
+    } else if (!openInNewTab(url, mode !== 'background')) {
+      window.open(url, '_blank');
     }
     return true;
   }
@@ -91,24 +97,45 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
 }
 
 /**
- * 是否在新标签页打开：引擎的打开方式优先，未设置时跟随全局默认。
+ * 打开方式的实际行为：self 留在当前页，active 切到新标签页，background 在后台新标签页打开。
+ * 引擎的打开方式优先，未设置时跟随全局默认；批量打开时把「当前页」提升为新标签页，
+ * 但后台打开保持后台，避免一键打开多个引擎时抢走焦点。
+ * @param {boolean} forceNewTab 批量打开多个引擎时必须避开当前页，否则会互相覆盖
+ * @param {string} defaultTarget 全局默认打开方式（_blank / _background / _self）
+ * @returns {'self' | 'active' | 'background'}
+ */
+export function resolveOpenMode(
+  engine,
+  forceNewTab = false,
+  defaultTarget = DEFAULT_OPEN_TARGET,
+) {
+  const target = normalizeEngineTarget(engine?.target) || normalizeDefaultOpenTarget(defaultTarget);
+  if (target === '_background') return 'background';
+  if (target === '_self') return forceNewTab ? 'active' : 'self';
+  return 'active';
+}
+
+/**
+ * 是否离开当前页打开。
  * @param {boolean} forceNewTab 批量打开多个引擎时必须强制新标签页，否则会互相覆盖
- * @param {string} defaultTarget 全局默认打开方式（_blank / _self）
+ * @param {string} defaultTarget 全局默认打开方式（_blank / _background / _self）
  */
 export function shouldOpenInNewTab(
   engine,
   forceNewTab = false,
   defaultTarget = DEFAULT_OPEN_TARGET,
 ) {
-  if (forceNewTab) return true;
-  const target = engine?.target || normalizeDefaultOpenTarget(defaultTarget);
-  return target !== '_self';
+  return resolveOpenMode(engine, forceNewTab, defaultTarget) !== 'self';
 }
 
-export function openInNewTab(url) {
+/**
+ * 新标签页打开；active 为 false 时交给脚本管理器放到后台，不切换当前标签页。
+ * GM_openInTab 的选项不被支持时退回前台打开，行为仍符合「离开当前页」的预期。
+ */
+export function openInNewTab(url, active = true) {
   if (!url) return false;
   try {
-    GM_openInTab(url, { active: true, insert: true, setParent: true });
+    GM_openInTab(url, { active, insert: true, setParent: true });
     return true;
   } catch (e) {
     try {
@@ -149,27 +176,29 @@ export function performJump(engine, keyword, settingData = {}, forceNewTab = fal
   }
 
   const result = prepareJump(engine, keyword);
-  const newTab = shouldOpenInNewTab(engine, forceNewTab, settingData.defaultOpenTarget);
+  const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 
   if (result.type === 'post') {
-    submitPostForm(result.action, result.field, result.value, newTab ? '_blank' : '_top');
+    // 表单提交无法在后台完成，后台打开降级为新标签页，避免当前页被结果覆盖
+    submitPostForm(result.action, result.field, result.value, mode === 'self' ? '_top' : '_blank');
     return true;
   }
 
-  if (newTab) {
-    if (openInNewTab(result.url)) return true;
-    window.open(result.url, '_blank');
+  if (mode === 'self') {
+    window.location.href = result.url;
     return true;
   }
 
-  window.location.href = result.url;
+  if (openInNewTab(result.url, mode !== 'background')) return true;
+  window.open(result.url, '_blank');
   return true;
 }
 
 /**
  * 一键打开分类下的全部引擎。
  * 复用 performJump，统一编码关键词并支持 $post$ 表单；
- * 批量打开会强制使用新标签页，避免引擎之间互相覆盖页面。
+ * 批量打开会把「当前页」提升为新标签页，避免引擎之间互相覆盖页面；
+ * 引擎选择的「后台标签页」保持后台，不抢走当前页焦点。
  * GM_openInTab 不可用时 performJump 会回退到 window.open，避免静默失败。
  */
 export function openAllEngines(engines, keyword, settingData = {}) {

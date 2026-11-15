@@ -9,7 +9,7 @@ import {
 } from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
-import { ENGINE_ACTIONS } from '../core/configData.js';
+import { ENGINE_ACTIONS, normalizeEngineTarget } from '../core/configData.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -38,10 +38,7 @@ const form = reactive({
   url: props.initial.url || '',
   favicon: props.initial.favicon || '',
   // 空值表示跟随全局的默认打开方式
-  target:
-    props.initial.target === '_self' || props.initial.target === '_blank'
-      ? props.initial.target
-      : '',
+  target: normalizeEngineTarget(props.initial.target),
 });
 
 const urlInput = ref(null);
@@ -333,10 +330,11 @@ function submit() {
     <label v-if="!initialAction || initialAction === 'open'" class="sej-field">
       <!-- 字段名 -->
       <span>{{ t('engine.target') }}</span>
-      <!-- 打开方式下拉：默认（跟随全局设置） / 新标签页 / 当前页 -->
+      <!-- 打开方式下拉：默认（跟随全局设置） / 新标签页 / 后台标签页 / 当前页 -->
       <select id="iqxin-newTarget" v-model="form.target" :disabled="busy">
         <option value="" :title="t('engine.targetAutoTip')">{{ t('engine.targetAuto') }}</option>
         <option value="_blank">{{ t('engine.targetBlank') }}</option>
+        <option value="_background">{{ t('engine.targetBackground') }}</option>
         <option value="_self">{{ t('engine.targetSelf') }}</option>
       </select>
     </label>

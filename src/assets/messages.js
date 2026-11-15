@@ -51,6 +51,7 @@ export const messages = {
     'settings.defaultOpenTarget': '默认打开方式',
     'settings.defaultOpenTargetTip': '引擎未显式指定打开方式时使用',
     'settings.defaultOpenTargetBlank': '新标签页',
+    'settings.defaultOpenTargetBackground': '后台标签页',
     'settings.defaultOpenTargetSelf': '当前页',
 
     'toast.autoSaveFailed': '自动保存失败：存储不可用，请用“配置文件”复制备份',
@@ -111,6 +112,7 @@ export const messages = {
     'engine.targetAuto': '默认',
     'engine.targetAutoTip': '跟随设置中的“默认打开方式”',
     'engine.targetBlank': '新标签页打开',
+    'engine.targetBackground': '后台标签页打开',
     'engine.targetSelf': '当前页打开',
     'engine.selectImage': '请选择图片文件',
     'engine.readImageFailed': '读取图片失败',
@@ -215,6 +217,7 @@ export const messages = {
     'settings.defaultOpenTarget': 'Default open in',
     'settings.defaultOpenTargetTip': 'Used when an engine has no open mode of its own',
     'settings.defaultOpenTargetBlank': 'New tab',
+    'settings.defaultOpenTargetBackground': 'Background tab',
     'settings.defaultOpenTargetSelf': 'Current tab',
 
     'toast.autoSaveFailed':
@@ -277,6 +280,7 @@ export const messages = {
     'engine.targetAuto': 'Default',
     'engine.targetAutoTip': 'Follow the default open mode in settings',
     'engine.targetBlank': 'New tab',
+    'engine.targetBackground': 'Background tab',
     'engine.targetSelf': 'Current tab',
     'engine.selectImage': 'Please select an image file',
     'engine.readImageFailed': 'Failed to read the image',

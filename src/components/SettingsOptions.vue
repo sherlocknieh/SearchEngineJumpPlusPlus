@@ -90,6 +90,7 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'defaultOpenTarget', $event.target.value)"
         >
           <option value="_blank">{{ t('settings.defaultOpenTargetBlank') }}</option>
+          <option value="_background">{{ t('settings.defaultOpenTargetBackground') }}</option>
           <option value="_self">{{ t('settings.defaultOpenTargetSelf') }}</option>
         </select>
       </label>

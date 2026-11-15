@@ -63,8 +63,11 @@ export function normalizeEngineAction(value) {
   return ENGINE_ACTIONS.includes(value) ? value : '';
 }
 
-/** 打开方式：_blank 新标签页，_self 当前页；引擎未设置时使用全局默认 */
-export const ENGINE_TARGETS = ['_blank', '_self'];
+/** 打开方式：_blank 新标签页，_background 后台标签页，_self 当前页；引擎未设置时使用全局默认 */
+export const ENGINE_TARGETS = ['_blank', '_background', '_self'];
+
+/** 后台打开：用 GM_openInTab 的 inactive 模式，不抢占当前页焦点 */
+export const BACKGROUND_OPEN_TARGET = '_background';
 
 /** 全局默认打开方式，默认新标签页 */
 export const DEFAULT_OPEN_TARGET = '_blank';

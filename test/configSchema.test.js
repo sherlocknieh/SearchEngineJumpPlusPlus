@@ -91,6 +91,9 @@ describe('normalizeConfig', () => {
     expect(normalizeConfig({ defaultOpenTarget: '_self' }, defaults).defaultOpenTarget).toBe(
       '_self',
     );
+    expect(
+      normalizeConfig({ defaultOpenTarget: '_background' }, defaults).defaultOpenTarget,
+    ).toBe('_background');
     expect(normalizeConfig({}, defaults).defaultOpenTarget).toBe('_blank');
   });
 

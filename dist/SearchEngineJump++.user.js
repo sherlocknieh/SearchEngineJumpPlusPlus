@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1509
+// @version            2026.11.15.1638
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5567,6 +5567,7 @@
 			"settings.defaultOpenTarget": "默认打开方式",
 			"settings.defaultOpenTargetTip": "引擎未显式指定打开方式时使用",
 			"settings.defaultOpenTargetBlank": "新标签页",
+			"settings.defaultOpenTargetBackground": "后台标签页",
 			"settings.defaultOpenTargetSelf": "当前页",
 			"toast.autoSaveFailed": "自动保存失败：存储不可用，请用“配置文件”复制备份",
 			"toast.autoSaved": "已保存",
@@ -5624,6 +5625,7 @@
 			"engine.targetAuto": "默认",
 			"engine.targetAutoTip": "跟随设置中的“默认打开方式”",
 			"engine.targetBlank": "新标签页打开",
+			"engine.targetBackground": "后台标签页打开",
 			"engine.targetSelf": "当前页打开",
 			"engine.selectImage": "请选择图片文件",
 			"engine.readImageFailed": "读取图片失败",
@@ -5716,6 +5718,7 @@
 			"settings.defaultOpenTarget": "Default open in",
 			"settings.defaultOpenTargetTip": "Used when an engine has no open mode of its own",
 			"settings.defaultOpenTargetBlank": "New tab",
+			"settings.defaultOpenTargetBackground": "Background tab",
 			"settings.defaultOpenTargetSelf": "Current tab",
 			"toast.autoSaveFailed": "Auto-save failed: storage unavailable. Use “Config file” to copy a backup.",
 			"toast.autoSaved": "Saved",
@@ -5773,6 +5776,7 @@
 			"engine.targetAuto": "Default",
 			"engine.targetAutoTip": "Follow the default open mode in settings",
 			"engine.targetBlank": "New tab",
+			"engine.targetBackground": "Background tab",
 			"engine.targetSelf": "Current tab",
 			"engine.selectImage": "Please select an image file",
 			"engine.readImageFailed": "Failed to read the image",
@@ -5960,7 +5964,11 @@
 	function normalizeEngineAction(value) {
 		return ENGINE_ACTIONS.includes(value) ? value : "";
 	}
-	var ENGINE_TARGETS = ["_blank", "_self"];
+	var ENGINE_TARGETS = [
+		"_blank",
+		"_background",
+		"_self"
+	];
 	var DEFAULT_OPEN_TARGET = "_blank";
 	function normalizeEngineTarget(value) {
 		return ENGINE_TARGETS.includes(value) ? value : "";
@@ -7175,22 +7183,24 @@
 		if (action === "open") {
 			const url = findKeywordUrl(source.url);
 			if (!url) return false;
-			if (shouldOpenInNewTab(engine, false, defaultTarget)) {
-				if (!openInNewTab(url)) window.open(url, "_blank");
-			} else window.location.href = url;
+			const mode = resolveOpenMode(engine, false, defaultTarget);
+			if (mode === "self") window.location.href = url;
+			else if (!openInNewTab(url, mode !== "background")) window.open(url, "_blank");
 			return true;
 		}
 		return false;
 	}
-	function shouldOpenInNewTab(engine, forceNewTab = false, defaultTarget = DEFAULT_OPEN_TARGET) {
-		if (forceNewTab) return true;
-		return (engine?.target || normalizeDefaultOpenTarget(defaultTarget)) !== "_self";
+	function resolveOpenMode(engine, forceNewTab = false, defaultTarget = DEFAULT_OPEN_TARGET) {
+		const target = normalizeEngineTarget(engine?.target) || normalizeDefaultOpenTarget(defaultTarget);
+		if (target === "_background") return "background";
+		if (target === "_self") return forceNewTab ? "active" : "self";
+		return "active";
 	}
-	function openInNewTab(url) {
+	function openInNewTab(url, active = true) {
 		if (!url) return false;
 		try {
 			_GM_openInTab(url, {
-				active: true,
+				active,
 				insert: true,
 				setParent: true
 			});
@@ -7225,17 +7235,17 @@
 			return true;
 		}
 		const result = prepareJump(engine, keyword);
-		const newTab = shouldOpenInNewTab(engine, forceNewTab, settingData.defaultOpenTarget);
+		const mode = resolveOpenMode(engine, forceNewTab, settingData.defaultOpenTarget);
 		if (result.type === "post") {
-			submitPostForm(result.action, result.field, result.value, newTab ? "_blank" : "_top");
+			submitPostForm(result.action, result.field, result.value, mode === "self" ? "_top" : "_blank");
 			return true;
 		}
-		if (newTab) {
-			if (openInNewTab(result.url)) return true;
-			window.open(result.url, "_blank");
+		if (mode === "self") {
+			window.location.href = result.url;
 			return true;
 		}
-		window.location.href = result.url;
+		if (openInNewTab(result.url, mode !== "background")) return true;
+		window.open(result.url, "_blank");
 		return true;
 	}
 	function openAllEngines(engines, keyword, settingData = {}) {
@@ -10957,7 +10967,7 @@
 		class: "sej-preview-state"
 	};
 	var _hoisted_17$1 = ["title"];
-	var _hoisted_18 = {
+	var _hoisted_18$1 = {
 		key: 5,
 		class: "sej-preview-state"
 	};
@@ -10981,11 +10991,12 @@
 	var _hoisted_27 = ["disabled"];
 	var _hoisted_28 = ["title"];
 	var _hoisted_29 = { value: "_blank" };
-	var _hoisted_30 = { value: "_self" };
-	var _hoisted_31 = { class: "sej-dialog-actions" };
-	var _hoisted_32 = ["disabled"];
+	var _hoisted_30 = { value: "_background" };
+	var _hoisted_31 = { value: "_self" };
+	var _hoisted_32 = { class: "sej-dialog-actions" };
 	var _hoisted_33 = ["disabled"];
 	var _hoisted_34 = ["disabled"];
+	var _hoisted_35 = ["disabled"];
 	var ICON_SELECT = "<svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\" aria-hidden=\"true\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"m8 12 3 3 5-6\"/></svg>";
 	var _sfc_main$8 = {
 		__name: "EngineEditDialog",
@@ -11021,7 +11032,7 @@
 				name: props.initial.name || "",
 				url: props.initial.url || "",
 				favicon: props.initial.favicon || "",
-				target: props.initial.target === "_self" || props.initial.target === "_blank" ? props.initial.target : ""
+				target: normalizeEngineTarget(props.initial.target)
 			});
 			const urlInput = ref(null);
 			const rootEl = ref(null);
@@ -11152,7 +11163,7 @@
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18$1, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -11202,26 +11213,27 @@
 							title: unref(t)("engine.targetAutoTip")
 						}, toDisplayString(unref(t)("engine.targetAuto")), 9, _hoisted_28),
 						createBaseVNode("option", _hoisted_29, toDisplayString(unref(t)("engine.targetBlank")), 1),
-						createBaseVNode("option", _hoisted_30, toDisplayString(unref(t)("engine.targetSelf")), 1)
+						createBaseVNode("option", _hoisted_30, toDisplayString(unref(t)("engine.targetBackground")), 1),
+						createBaseVNode("option", _hoisted_31, toDisplayString(unref(t)("engine.targetSelf")), 1)
 					], 8, _hoisted_27), [[vModelSelect, form.target]])])) : createCommentVNode("", true),
-					createBaseVNode("div", _hoisted_31, [
+					createBaseVNode("div", _hoisted_32, [
 						__props.mode === "edit" && !unref(initialAction) ? (openBlock(), createElementBlock("button", {
 							key: 0,
 							type: "button",
 							class: "addItemBoxBtn sej-dialog-danger",
 							disabled: __props.busy,
 							onClick: _cache[11] || (_cache[11] = ($event) => _ctx.$emit("delete"))
-						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_32)) : createCommentVNode("", true),
+						}, toDisplayString(unref(t)("common.delete")), 9, _hoisted_33)) : createCommentVNode("", true),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-closeBtn",
 							disabled: __props.busy,
 							onClick: _cache[12] || (_cache[12] = ($event) => _ctx.$emit("cancel"))
-						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_33),
+						}, toDisplayString(unref(t)("common.cancel")), 9, _hoisted_34),
 						createBaseVNode("button", {
 							class: "addItemBoxBtn iqxin-enterBtn",
 							disabled: __props.busy,
 							onClick: submit
-						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_34)
+						}, toDisplayString(__props.busy ? unref(t)("engine.fetching") : unref(t)("common.confirm")), 9, _hoisted_35)
 					])
 				], 512);
 			};
@@ -11781,7 +11793,8 @@
 	var _hoisted_14 = ["title"];
 	var _hoisted_15 = ["value"];
 	var _hoisted_16 = { value: "_blank" };
-	var _hoisted_17 = { value: "_self" };
+	var _hoisted_17 = { value: "_background" };
+	var _hoisted_18 = { value: "_self" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11848,7 +11861,11 @@
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
 						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14)
+					}, [
+						createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1),
+						createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetBackground")), 1),
+						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)
+					], 40, _hoisted_15)])], 8, _hoisted_14)
 				]);
 			};
 		}

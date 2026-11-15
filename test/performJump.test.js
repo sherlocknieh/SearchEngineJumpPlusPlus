@@ -41,6 +41,33 @@ describe('performJump', () => {
     performJump({ url: 'https://a.test/?q=%s' }, 'x', { defaultOpenTarget: '_blank' });
     expect(openInTab).toHaveBeenCalledTimes(1);
   });
+
+  it('后台打开时在新标签页里保持不激活', () => {
+    performJump({ url: 'https://a.test/?q=%s', target: '_background' }, 'x', {});
+    expect(openInTab).toHaveBeenCalledWith('https://a.test/?q=x', {
+      active: false,
+      insert: true,
+      setParent: true,
+    });
+  });
+
+  it('引擎未设置打开方式时跟随全局的后台默认', () => {
+    performJump({ url: 'https://a.test/?q=%s' }, 'x', { defaultOpenTarget: '_background' });
+    expect(openInTab).toHaveBeenCalledWith('https://a.test/?q=x', {
+      active: false,
+      insert: true,
+      setParent: true,
+    });
+  });
+
+  it('批量打开时后台引擎仍然后台', () => {
+    performJump({ url: 'https://a.test/?q=%s', target: '_background' }, 'x', {}, true);
+    expect(openInTab).toHaveBeenCalledWith('https://a.test/?q=x', {
+      active: false,
+      insert: true,
+      setParent: true,
+    });
+  });
 });
 
 describe('openAllEngines', () => {

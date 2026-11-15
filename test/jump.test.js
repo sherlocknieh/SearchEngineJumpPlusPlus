@@ -3,6 +3,7 @@ import {
   extractKeyword,
   encodeKeyword,
   prepareJump,
+  resolveOpenMode,
   shouldOpenInNewTab,
 } from '../src/core/jump.js';
 
@@ -61,5 +62,29 @@ describe('shouldOpenInNewTab', () => {
   it('引擎的打开方式优先于全局默认', () => {
     expect(shouldOpenInNewTab({ target: '_blank' }, false, '_self')).toBe(true);
     expect(shouldOpenInNewTab({ target: '_self' }, false, '_blank')).toBe(false);
+  });
+
+  it('后台打开也算离开当前页', () => {
+    expect(shouldOpenInNewTab({ target: '_background' }, false, '_self')).toBe(true);
+    expect(shouldOpenInNewTab({}, false, '_background')).toBe(true);
+  });
+});
+
+describe('resolveOpenMode', () => {
+  it('区分当前页、前台新标签与后台标签', () => {
+    expect(resolveOpenMode({ target: '_self' })).toBe('self');
+    expect(resolveOpenMode({ target: '_blank' })).toBe('active');
+    expect(resolveOpenMode({ target: '_background' })).toBe('background');
+  });
+
+  it('未设置时跟随全局默认', () => {
+    expect(resolveOpenMode({}, false, '_self')).toBe('self');
+    expect(resolveOpenMode({}, false, '_background')).toBe('background');
+    expect(resolveOpenMode({}, false, 'unknown')).toBe('active');
+  });
+
+  it('批量打开只把当前页提升为前台新标签，后台保持后台', () => {
+    expect(resolveOpenMode({ target: '_self' }, true)).toBe('active');
+    expect(resolveOpenMode({ target: '_background' }, true)).toBe('background');
   });
 });
