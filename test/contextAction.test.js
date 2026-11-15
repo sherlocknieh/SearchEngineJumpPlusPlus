@@ -372,7 +372,7 @@ describe('actionEngineHint', () => {
       'action.hintOpenLink：https://site.test/a',
     );
     expect(actionEngineHint('input', 'copy', hit, t)).toBe(
-      'action.hintCopyKeyword：示例标题',
+      'action.hintCopyText：示例标题',
     );
   });
 

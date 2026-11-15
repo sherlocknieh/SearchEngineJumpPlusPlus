@@ -26,7 +26,7 @@ const CONTEXT_ACTION_HINTS = {
     open: 'action.hintOpenImage',
   },
   text: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
-  input: { copy: 'action.hintCopyKeyword', open: 'action.hintOpenLink' },
+  input: { copy: 'action.hintCopyText', open: 'action.hintOpenLink' },
 };
 
 /** 提示里展示目标内容的长度上限，避免长标题把悬停提示撑得过宽 */

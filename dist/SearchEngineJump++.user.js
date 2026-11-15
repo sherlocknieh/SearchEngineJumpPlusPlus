@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1700
+// @version            2026.11.15.1702
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5642,7 +5642,6 @@
 			"action.hintCopyImageUrl": "复制图片地址",
 			"action.hintOpenImage": "打开图片",
 			"action.hintCopyText": "复制文字",
-			"action.hintCopyKeyword": "复制关键词",
 			"action.hintWithTarget": "{action}：{target}",
 			"action.copyFailed": "没有可复制的内容",
 			"action.selectFailed": "无法选中链接标题",
@@ -5793,7 +5792,6 @@
 			"action.hintCopyImageUrl": "Copy image URL",
 			"action.hintOpenImage": "Open image",
 			"action.hintCopyText": "Copy text",
-			"action.hintCopyKeyword": "Copy keyword",
 			"action.hintWithTarget": "{action}: {target}",
 			"action.copyFailed": "Nothing to copy",
 			"action.selectFailed": "Unable to select the link title",
@@ -7430,7 +7428,7 @@
 			open: "action.hintOpenLink"
 		},
 		input: {
-			copy: "action.hintCopyKeyword",
+			copy: "action.hintCopyText",
 			open: "action.hintOpenLink"
 		}
 	};
