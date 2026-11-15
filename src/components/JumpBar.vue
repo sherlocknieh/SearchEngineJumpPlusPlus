@@ -951,6 +951,7 @@ onBeforeUnmount(() => {
             :engines="category.engines"
             :show-icon="ui.categoryIcon"
             :compact="compactBar"
+            :click-jump-first="Boolean(data.clickCategoryJumpFirst)"
             @jump="onJump"
             @jump-all="onJumpAll(category.engines)"
           />

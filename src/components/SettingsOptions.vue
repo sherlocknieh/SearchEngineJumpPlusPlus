@@ -69,6 +69,18 @@ const emit = defineEmits(['update-option']);
           @change="emit('update-option', 'selectionIcon', $event.target.checked)"
       /></label>
     </span>
+    <span
+      id="xin-clickCategoryJumpFirst"
+      :title="t('settings.clickCategoryJumpFirstTip')"
+    >
+      <label
+        >{{ t('settings.clickCategoryJumpFirst')
+        }}<input
+          type="checkbox"
+          :checked="options.clickCategoryJumpFirst"
+          @change="emit('update-option', 'clickCategoryJumpFirst', $event.target.checked)"
+      /></label>
+    </span>
     <span id="xin-defaultOpenTarget" :title="t('settings.defaultOpenTargetTip')">
       <label
         >{{ t('settings.defaultOpenTarget') }}

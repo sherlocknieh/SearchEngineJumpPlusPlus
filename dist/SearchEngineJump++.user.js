@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1037
+// @version            2026.11.15.1043
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -5467,6 +5467,7 @@
 		selectionFollowPointer: false,
 		selectionCompact: false,
 		selectionIcon: false,
+		clickCategoryJumpFirst: false,
 		defaultOpenTarget: "_blank",
 		center: false,
 		engineCategories: [
@@ -5553,6 +5554,8 @@
 			"settings.selectionCompactTip": "划词搜索条只显示图标，不显示文字",
 			"settings.selectionIcon": "折叠模式",
 			"settings.selectionIconTip": "划词后只显示一个图标，鼠标悬浮时展开搜索条",
+			"settings.clickCategoryJumpFirst": "点击分类直接搜索",
+			"settings.clickCategoryJumpFirstTip": "点击分类展开面板的同时，直接用第一个搜索引擎搜索当前关键词",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.imageToggleHint": "长按/右键图片即可搜图；搜图引擎不会出现在文字搜索条，显示开关对它无效",
@@ -5700,6 +5703,8 @@
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
 			"settings.selectionIconTip": "Show a single icon above the selected text/link; hover it to expand the search bar",
+			"settings.clickCategoryJumpFirst": "Click category to search",
+			"settings.clickCategoryJumpFirstTip": "Clicking a category opens its list and searches with the first engine right away",
 			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.imageToggleHint": "Long-press or right-click an image to search; image engines never appear in the text search bar, so this switch has no effect",
@@ -6004,6 +6009,7 @@
 		"selectionFollowPointer",
 		"selectionCompact",
 		"selectionIcon",
+		"clickCategoryJumpFirst",
 		"defaultOpenTarget",
 		"language"
 	];
@@ -6014,6 +6020,7 @@
 			selectionFollowPointer: true,
 			selectionCompact: false,
 			selectionIcon: false,
+			clickCategoryJumpFirst: false,
 			center: false,
 			defaultOpenTarget: DEFAULT_OPEN_TARGET,
 			language: "auto",
@@ -8175,6 +8182,10 @@
 			compact: {
 				type: Boolean,
 				default: false
+			},
+			clickJumpFirst: {
+				type: Boolean,
+				default: false
 			}
 		},
 		emits: ["jump", "jumpAll"],
@@ -8389,6 +8400,7 @@
 					return;
 				}
 				pin();
+				if (props.clickJumpFirst && props.engines.length) emit("jump", props.engines[0]);
 			}
 			function onHoverLeave() {
 				hoverSuppressed = false;
@@ -8399,7 +8411,11 @@
 				emit("jumpAll");
 			}
 			function onTriggerKeydown() {
-				onTriggerClick();
+				if (pinned.value) {
+					unpin();
+					return;
+				}
+				pin();
 			}
 			function onEngineJump(engine) {
 				unpin();
@@ -9195,6 +9211,7 @@
 								engines: category.engines,
 								"show-icon": unref(ui).categoryIcon,
 								compact: compactBar.value,
+								"click-jump-first": Boolean(unref(data).clickCategoryJumpFirst),
 								onJump,
 								onJumpAll: ($event) => onJumpAll(category.engines)
 							}, null, 8, [
@@ -9202,6 +9219,7 @@
 								"engines",
 								"show-icon",
 								"compact",
+								"click-jump-first",
 								"onJumpAll"
 							]))], 64);
 						}), 128))], 544),
@@ -10837,11 +10855,11 @@
 		key: 2,
 		class: "sej-preview-size"
 	};
-	var _hoisted_16 = {
+	var _hoisted_16$1 = {
 		key: 3,
 		class: "sej-preview-state"
 	};
-	var _hoisted_17 = ["title"];
+	var _hoisted_17$1 = ["title"];
 	var _hoisted_18 = {
 		key: 5,
 		class: "sej-preview-state"
@@ -11032,12 +11050,12 @@
 									onClick: _cache[4] || (_cache[4] = withModifiers(() => {}, ["stop"]))
 								}, toDisplayString(step.url), 9, _hoisted_14$2),
 								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_15$2, toDisplayString(step.size), 1)) : createCommentVNode("", true),
-								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
+								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_16$1, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
 									title: step.url !== unref(pickedUrl) ? unref(t)("engine.stepUse") : unref(t)("engine.stepOk"),
 									innerHTML: ICON_SELECT
-								}, null, 10, _hoisted_17)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
+								}, null, 10, _hoisted_17$1)) : (openBlock(), createElementBlock("span", _hoisted_18, toDisplayString(unref(t)(unref(STEP_STATUS_TEXT)[step.status])), 1))
 							], 42, _hoisted_11$3);
 						}), 128)), unref(extractorUrl) ? (openBlock(), createElementBlock("a", {
 							key: 0,
@@ -11662,9 +11680,11 @@
 	var _hoisted_10 = ["title"];
 	var _hoisted_11 = ["checked"];
 	var _hoisted_12 = ["title"];
-	var _hoisted_13 = ["value"];
-	var _hoisted_14 = { value: "_blank" };
-	var _hoisted_15 = { value: "_self" };
+	var _hoisted_13 = ["checked"];
+	var _hoisted_14 = ["title"];
+	var _hoisted_15 = ["value"];
+	var _hoisted_16 = { value: "_blank" };
+	var _hoisted_17 = { value: "_self" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -11717,13 +11737,21 @@
 						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
 					}, null, 40, _hoisted_11)])], 8, _hoisted_10), [[vShow, __props.options.selectionFollowPointer]]),
 					createBaseVNode("span", {
+						id: "xin-clickCategoryJumpFirst",
+						title: unref(t)("settings.clickCategoryJumpFirstTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.clickCategoryJumpFirst")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.clickCategoryJumpFirst,
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "clickCategoryJumpFirst", $event.target.checked))
+					}, null, 40, _hoisted_13)])], 8, _hoisted_12),
+					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
-					}, [createBaseVNode("option", _hoisted_14, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_15, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_13)])], 8, _hoisted_12)
+						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+					}, [createBaseVNode("option", _hoisted_16, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1), createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)], 40, _hoisted_15)])], 8, _hoisted_14)
 				]);
 			};
 		}

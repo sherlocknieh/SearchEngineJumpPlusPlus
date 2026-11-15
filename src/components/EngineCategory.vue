@@ -20,6 +20,8 @@ const props = defineProps({
   showIcon: { type: Boolean, default: true },
   // 紧凑模式：只保留图标，文字收进悬停提示
   compact: { type: Boolean, default: false },
+  // 点击分类展开面板的同时，直接用第一个引擎搜索当前关键词
+  clickJumpFirst: { type: Boolean, default: false },
 });
 
 const emit = defineEmits(['jump', 'jumpAll']);
@@ -326,6 +328,9 @@ function onTriggerClick() {
     return;
   }
   pin();
+  // 开启「点击分类直接搜索」时，展开面板的同时用第一个引擎搜索当前关键词；
+  // 面板保持展开，方便继续换用其他引擎
+  if (props.clickJumpFirst && props.engines.length) emit('jump', props.engines[0]);
 }
 
 // 指针离开触发项：解除抑制状态，并安排延时收起
@@ -341,8 +346,13 @@ function onSearchAll() {
 }
 
 function onTriggerKeydown() {
-  // 面板展开时回车/空格收起，收起时作为普通触发键展开
-  onTriggerClick();
+  // 面板展开时回车/空格收起，收起时作为普通触发键展开；
+  // 键盘操作不触发「点击分类直接搜索」，避免误跳转
+  if (pinned.value) {
+    unpin();
+    return;
+  }
+  pin();
 }
 
 function onEngineJump(engine) {

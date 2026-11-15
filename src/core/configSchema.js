@@ -25,6 +25,7 @@ export const OPTION_KEYS = [
   'selectionFollowPointer',
   'selectionCompact',
   'selectionIcon',
+  'clickCategoryJumpFirst',
   'defaultOpenTarget',
   'language',
 ];
@@ -43,6 +44,8 @@ export function createDefaultConfig() {
     selectionCompact: false,
     // 划词条默认整条展开，不先收起成图标
     selectionIcon: false,
+    // 点击分类默认只展开面板，不直接触发第一个引擎
+    clickCategoryJumpFirst: false,
     // 搜索条默认居中显示，优先于站点的横向对齐
     center: false,
     // 引擎未单独设置打开方式时，默认在新标签页打开

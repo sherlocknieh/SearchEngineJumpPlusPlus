@@ -41,6 +41,8 @@ describe('createDefaultConfig', () => {
     expect(config.selectionFollowPointer).toBe(true);
     expect(config.selectionCompact).toBe(false);
     expect(config.selectionIcon).toBe(false);
+    // 点击分类默认只展开面板，不直接搜索
+    expect(config.clickCategoryJumpFirst).toBe(false);
   });
 
   it('内置搜图分类，长按搜图无需开关', () => {
@@ -62,6 +64,7 @@ describe('normalizeConfig', () => {
         selectSearchInInput: 'yes',
         selectionFollowPointer: 'yes',
         selectionCompact: 'yes',
+        clickCategoryJumpFirst: 'yes',
         language: 'fr',
         engineCategories: [],
       },
@@ -71,7 +74,14 @@ describe('normalizeConfig', () => {
     expect(result.selectSearchInInput).toBe(defaults.selectSearchInInput);
     expect(result.selectionFollowPointer).toBe(defaults.selectionFollowPointer);
     expect(result.selectionCompact).toBe(defaults.selectionCompact);
+    expect(result.clickCategoryJumpFirst).toBe(defaults.clickCategoryJumpFirst);
     expect(result.language).toBe('auto');
+  });
+
+  it('点击分类直接搜索的开关原样保留', () => {
+    expect(normalizeConfig({ clickCategoryJumpFirst: true }, defaults).clickCategoryJumpFirst).toBe(
+      true,
+    );
   });
 
   it('默认打开方式非法时回退新标签页，合法值原样保留', () => {
