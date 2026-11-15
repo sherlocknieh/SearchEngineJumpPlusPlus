@@ -12,11 +12,11 @@
 
 ### Jump bar / 主界面
 
-![Jump bar](dist/images/jumpbar.png)
+![Jump bar](demo/images/jumpbar.png)
 
 ### Settings / 设置界面
 
-![Settings](dist/images/settings.png)
+![Settings](demo/images/settings.png)
 
 ## 🧭 Core / 核心
 
