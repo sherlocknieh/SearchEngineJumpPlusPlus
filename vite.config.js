@@ -28,13 +28,11 @@ export default defineConfig({
         // dev 服务下插件会自动加 `server:` 前缀；调试构建显式同名，两套调试流程只占一条安装位
         name: devBundle ? 'server:SearchEngineJump++' : 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.15.2217',
+        version: '2026.11.15.2220',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
-          '': '多引擎快捷跳转：划词即搜、长按/右键图片与链接、以图搜图，内置复制与打开操作；支持一键打开多个引擎、中英界面与配置导入导出。Vue3 重构。',
-          'zh-CN':
-            '多引擎快捷跳转：划词即搜、长按/右键图片与链接、以图搜图，内置复制与打开操作；支持一键打开多个引擎、中英界面与配置导入导出。Vue3 重构。',
-          en: 'One-click engine switching with selection search, long-press/right-click actions on images and links, reverse image search, built-in copy/open actions, multi-engine open, bilingual UI and config import/export. Rebuilt with Vue 3.',
+          '': '多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制',
+          en: 'Quick multi-engine jump, selection search, right-click image search, and link title copy.',
         },
         license: 'MIT',
         icon, // 自动从 src/assets/icon.svg 读取图标
