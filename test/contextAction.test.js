@@ -3,19 +3,23 @@ import { afterEach, describe, expect, it } from 'vitest';
 import {
   HINT_TARGET_MAX,
   LONG_PRESS_MOVE_TOLERANCE,
-  actionEngineInfo,
+  actionEngineEffect,
   actionEngineTip,
   actionTargetHint,
   contextActionEngines,
   contextActionTarget,
   contextCategoryKey,
   contextLinkHit,
+  contextTriggerId,
   getContextEngines,
   isActionAvailableInMode,
+  isActionTriggered,
   isLongPressMove,
+  modeTriggerId,
   resolveContextHit,
+  triggerLabels,
 } from '../src/core/contextAction.js';
-import { ENGINE_ACTIONS } from '../src/core/configData.js';
+import { ACTION_TRIGGERS, ENGINE_ACTIONS, TRIGGER_KEYS } from '../src/core/configData.js';
 import { messages } from '../src/assets/messages.js';
 
 afterEach(() => {
@@ -179,21 +183,37 @@ describe('getContextEngines', () => {
     expect(engines.map((engine) => engine.name)).toEqual(['A']);
   });
 
-  it('链接模式取操作分类下启用的复制/打开动作', () => {
+  it('链接模式只取勾选了长按/右键链接的动作', () => {
     const engines = getContextEngines(
       {
         engineList: {
           actions: [
-            { name: '复制', url: '', action: 'copy' },
+            { name: '复制链接标题', url: '', action: 'copyLinkText' },
+            { name: '复制文字', url: '', action: 'copy' },
             { name: '打开', url: '', action: 'open' },
             { name: '隐藏', url: '', action: 'open', disable: true },
+            { name: '关闭了全部触发条件', url: '', action: 'copyLinkUrl', triggers: [] },
             { name: '空项', url: '' },
           ],
         },
       },
       'link',
     );
-    expect(engines.map((engine) => engine.name)).toEqual(['复制', '打开']);
+    expect(engines.map((engine) => engine.name)).toEqual(['复制链接标题', '打开']);
+  });
+
+  it('长按与右键分别按各自的触发条件接管', () => {
+    const settingData = {
+      engineList: {
+        actions: [
+          { name: '仅右键复制', url: '', action: 'copyLinkText', triggers: ['linkMenu'] },
+        ],
+      },
+    };
+    expect(getContextEngines(settingData, 'link', 'long')).toEqual([]);
+    expect(getContextEngines(settingData, 'link', 'menu').map((engine) => engine.name)).toEqual([
+      '仅右键复制',
+    ]);
   });
 
   it('缺少分类或模式未知时返回空数组', () => {
@@ -350,6 +370,25 @@ describe('contextActionEngines', () => {
     ]);
   });
 
+  it('触发条件决定条目是否出现：长按与右键分别生效', () => {
+    const menuOnly = engines.map((engine) =>
+      engine.action === 'copyImage' ? { ...engine, triggers: ['imageMenu'] } : engine,
+    );
+    expect(
+      contextActionEngines(menuOnly, targets, 'long').some((e) => e.action === 'copyImage'),
+    ).toBe(false);
+    expect(
+      contextActionEngines(menuOnly, targets, 'menu').some((e) => e.action === 'copyImage'),
+    ).toBe(true);
+    // 全部取消勾选等于关掉这个操作
+    const disabled = engines.map((engine) =>
+      engine.action === 'copyLinkText' ? { ...engine, triggers: [] } : engine,
+    );
+    expect(
+      contextActionEngines(disabled, targets, 'menu').some((e) => e.action === 'copyLinkText'),
+    ).toBe(false);
+  });
+
   it('调整设置里的顺序后浮层顺序随之变化，改名也直接生效', () => {
     const renamed = engines
       .slice()
@@ -399,32 +438,72 @@ describe('contextActionEngines', () => {
   });
 });
 
-describe('actionEngineInfo', () => {
+describe('动作说明与触发条件', () => {
   const t = (key) => key;
 
-  it('每个动作都有触发条件与操作说明，且中英文文案齐全', () => {
+  it('每个动作都有操作说明，且中英文文案齐全', () => {
     for (const action of ENGINE_ACTIONS) {
-      const info = actionEngineInfo(action, t);
-      expect(info).not.toBeNull();
-      expect(info.when).toMatch(/^action\.when/);
-      expect(info.effect).toMatch(/^action\.effect/);
-      for (const key of [info.when, info.effect]) {
-        expect(messages['zh-CN'][key]).toBeTruthy();
-        expect(messages.en[key]).toBeTruthy();
+      const key = actionEngineEffect(action, t);
+      expect(key).toMatch(/^action\.effect/);
+      expect(messages['zh-CN'][key]).toBeTruthy();
+      expect(messages.en[key]).toBeTruthy();
+    }
+  });
+
+  it('每个动作的默认触发条件都有对应文案', () => {
+    for (const action of ENGINE_ACTIONS) {
+      const triggers = ACTION_TRIGGERS[action];
+      expect(triggers.length).toBeGreaterThan(0);
+      for (const id of triggers) {
+        expect(TRIGGER_KEYS[id]).toBeTruthy();
+        expect(messages['zh-CN'][TRIGGER_KEYS[id]]).toBeTruthy();
+        expect(messages.en[TRIGGER_KEYS[id]]).toBeTruthy();
       }
     }
   });
 
-  it('悬停提示把触发条件与操作合成一行', () => {
-    expect(actionEngineTip('copy', t)).toBe('action.tipLayout');
-    expect(messages['zh-CN']['action.tipLayout']).toBeTruthy();
-    expect(messages.en['action.tipLayout']).toBeTruthy();
+  it('悬停提示把勾选的触发条件用斜杠连起来，再接操作', () => {
+    expect(actionEngineTip({ action: 'copy' }, t)).toBe(
+      'trigger.selection / trigger.input：action.effectCopy',
+    );
+    // 只勾一项、以及全部取消（操作关闭）时都有对应文案
+    expect(actionEngineTip({ action: 'copyImage', triggers: ['imageMenu'] }, t)).toBe(
+      'trigger.imageMenu：action.effectCopyImage',
+    );
+    expect(actionEngineTip({ action: 'copyImage', triggers: [] }, t)).toBe(
+      'action.effectCopyImage',
+    );
+  });
+
+  it('触发条件按勾选结果生效，普通搜索引擎不受限制', () => {
+    expect(isActionTriggered({ action: 'copy' }, 'selection')).toBe(true);
+    expect(isActionTriggered({ action: 'copy' }, 'imageLong')).toBe(false);
+    expect(isActionTriggered({ action: 'copyImage', triggers: [] }, 'imageLong')).toBe(false);
+    expect(isActionTriggered({ action: 'openImage', triggers: ['imageMenu'] }, 'imageLong')).toBe(
+      false,
+    );
+    expect(isActionTriggered({ name: 'Google', url: 'https://a.test/?q=%s' }, 'any')).toBe(true);
+  });
+
+  it('普通条按关键词来源、上下文条按手势给出触发条件', () => {
+    expect(modeTriggerId('text', 'copy')).toBe('selection');
+    expect(modeTriggerId('input', 'copy')).toBe('input');
+    expect(modeTriggerId('text', 'open')).toBe('keyword');
+    expect(modeTriggerId('image', 'copy')).toBe('');
+    expect(contextTriggerId('image', 'long')).toBe('imageLong');
+    expect(contextTriggerId('image', 'menu')).toBe('imageMenu');
+    expect(contextTriggerId('link', 'long')).toBe('linkLong');
+    expect(contextTriggerId('link', 'menu')).toBe('linkMenu');
+  });
+
+  it('触发条件的文案按勾选顺序拼接', () => {
+    expect(triggerLabels(['linkMenu', 'linkLong'], t)).toEqual(['trigger.linkMenu', 'trigger.linkLong']);
+    expect(triggerLabels([], t)).toEqual([]);
   });
 
   it('未知动作没有说明', () => {
-    expect(actionEngineInfo('paste', t)).toBeNull();
-    expect(actionEngineInfo(undefined, t)).toBeNull();
-    expect(actionEngineTip('paste', t)).toBe('');
+    expect(actionEngineEffect('paste', t)).toBe('');
+    expect(actionEngineTip({ action: 'paste' }, t)).toBe('');
     expect(actionEngineTip(undefined, t)).toBe('');
   });
 });

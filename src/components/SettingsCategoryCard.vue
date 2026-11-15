@@ -19,7 +19,7 @@ defineProps({
 // 动作条目没有链接和图标可讲，悬停时直接说明它在什么场景下出现、做什么
 function engineTitle(engine) {
   const edit = t('settings.editEngine', { name: localizeEngineName(engine.name) });
-  const tip = actionEngineTip(engine.action, t);
+  const tip = actionEngineTip(engine, t);
   return tip ? `${tip}\n${edit}` : edit;
 }
 

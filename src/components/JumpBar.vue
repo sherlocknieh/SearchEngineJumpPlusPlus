@@ -48,6 +48,8 @@ import {
   contextActionTarget,
   contextLinkHit,
   isActionAvailableInMode,
+  isActionTriggered,
+  modeTriggerId,
 } from '../core/contextAction.js';
 import { closeContextAction, contextAction } from '../stores/contextAction.js';
 import { showToast } from '../stores/ui.js';
@@ -204,6 +206,12 @@ const categories = computed(() => {
       const contextActions = key === BUILTIN_CATEGORY_KEY && isContextAction.value;
       let engines = (data.engineList[key] || [])
         .filter((engine) => !engine.disable && isActionAvailableInMode(actionMode, engine.action))
+        // 触发条件可在设置里逐项勾选；普通跳转条按当前关键词来源判断
+        .filter(
+          (engine) =>
+            isContextAction.value ||
+            isActionTriggered(engine, modeTriggerId(actionMode, engine.action)),
+        )
         .filter((engine) => !hidesOpenAction(engine))
         // 名称与顺序都来自「操作」分类的设置，这里只补悬停提示要展示的目标内容
         .map((engine) => {
@@ -218,6 +226,7 @@ const categories = computed(() => {
         engines = contextActionEngines(
           data.engineList[BUILTIN_CATEGORY_KEY] || [],
           contextActionTargets.value,
+          contextAction.source,
         );
       }
 

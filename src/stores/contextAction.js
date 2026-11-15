@@ -12,6 +12,8 @@ export const contextAction = reactive({
   keyword: '',
   // 打开动作用的地址：图片链接或链接地址
   url: '',
+  // 唤出浮层的手势：'long' 长按，'menu' 右键；触发条件据此区分
+  source: 'long',
   // 图片外层链接：图片模式下列表额外提供链接的复制/选中/打开，链接模式为 null
   link: null,
   // 命中的元素，跟随模式用它的矩形定位
@@ -23,13 +25,15 @@ export const contextAction = reactive({
  * @param {'image' | 'link'} input.mode 命中类型
  * @param {string} input.keyword 引擎关键词
  * @param {string} input.url 打开动作使用的地址
+ * @param {'long' | 'menu'} [input.source] 唤出浮层的手势，默认长按
  * @param {Element | null} [input.element] 命中的元素，用于跟随定位
  * @param {{url: string, text: string, element?: Element} | null} [input.link] 图片外层链接，供链接动作使用
  */
-export function openContextAction({ mode, keyword, url, element = null, link = null }) {
+export function openContextAction({ mode, keyword, url, source = 'long', element = null, link = null }) {
   contextAction.mode = mode;
   contextAction.keyword = keyword;
   contextAction.url = url;
+  contextAction.source = source;
   contextAction.link = link;
   contextAction.element = element;
   contextAction.active = true;

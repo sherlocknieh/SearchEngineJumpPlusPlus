@@ -104,7 +104,8 @@ src/main.js                 只做装配
   「选中链接标题」把标题变成页面上的浏览器选区，浮层顺势从上下文操作条转为划词菜单
   （`linkAction.selectLinkTitle` → `selection.selectElementText`，优先选链接内的标题节点，
   与复制标题认定的文字一致；`JumpBar.enterSelectionMode` 清掉命中状态并按新选区重设关键词与锚点）；
-  动作是否出现由 `isActionAvailableInMode` 决定；纯图片链接没有标题时不再单列「复制链接标题」「选中链接标题」；
+  动作是否出现先由 `isActionAvailableInMode`（场景是否适用）、再由触发条件 `isActionTriggered` 共同决定；
+  纯图片链接没有标题时不再单列「复制链接标题」「选中链接标题」；
   图片包在链接里时，「操作」分类内按设置里拖出的顺序排列，同一动作对图片与外层链接各出一条时图片在前
   （`contextActionEngines`）；链接动作带 `contextTarget: 'link'`，
   链接模式的目标直接用命中状态，图片模式的外层链接目标改由 `contextLinkHit` 提供，
@@ -115,9 +116,15 @@ src/main.js                 只做装配
 - 悬停提示：`actionTargetHint(mode, action, hit)` 给出这次实际作用的目标内容，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
-- 动作说明：`core/contextAction.js` 的 `ACTION_ENGINE_INFO` 统一给出「触发条件 / 操作」，
-  编辑动作条目的弹窗标题为「编辑操作」，两段说明与名称、打开方式同构渲染成只读表单字段（暂不支持修改），
-  设置列表悬停用 `actionEngineTip` 合成一行
+- 动作说明与触发条件：`core/contextAction.js` 的 `ACTION_ENGINE_EFFECTS` 给出「操作」文案（做什么）；
+  支持哪些触发条件、默认勾选哪些由 `configData.js` 的 `ACTION_TRIGGERS` 决定，
+  勾选结果存进引擎的 `triggers`（`normalizeEngineTriggers` 白名单校验，空数组表示整个操作关闭）。
+  设置弹窗标题为「编辑操作」：「触发条件」是可展开的勾选下拉（摘要用斜杠连接），
+  「操作」是只读字段；悬停提示由 `actionEngineTip(engine, t)` 用勾选项合成
+- 触发条件 id 与运行时的对应：普通条走 `modeTriggerId`（划词 `selection` / 搜索框 `input`，
+  打开链接用 `keyword`），上下文条走 `contextTriggerId`（图片/链接 × 长按 `long` / 右键 `menu`）；
+  手势来源由 `app/contextMenu.js` 写入 `contextAction.source`；`getContextEngines` 也按触发条件过滤，
+  全部关闭时该模式不再接管长按/右键
 - 可见性：`isBarCategoryVisible(key, enabled, mode)` 决定分类是否上跳转条——
   图片模式显示「搜图」分类（没有可用识图引擎、或命中的是内联图片时整个分类不出现），
   并允许「操作」分类按显示开关出现；链接模式只显示「操作」；

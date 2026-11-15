@@ -43,19 +43,19 @@ export function armContextMenu(ensureBoot) {
   }
 
   /** 图片优先作为主模式；包着图片的链接同时记下，供「操作」分类里的链接动作使用 */
-  function resolveHit(target, point) {
-    return resolveContextHit(target, hasEngines, point);
+  function resolveHit(target, source, point) {
+    return resolveContextHit(target, (mode) => hasEngines(mode, source), point);
   }
 
-  function hasEngines(mode) {
-    return getContextEngines(useSettings().settingData, mode).length > 0;
+  function hasEngines(mode, source) {
+    return getContextEngines(useSettings().settingData, mode, source).length > 0;
   }
 
   function onPointerDown(e) {
     // 只处理主键/单指；右键走 onContextMenu，与原生菜单并存
     if (e.button !== 0 || !e.isPrimary) return;
 
-    const hit = resolveHit(e.target, { x: e.clientX, y: e.clientY });
+    const hit = resolveHit(e.target, 'long', { x: e.clientX, y: e.clientY });
     if (!hit) return;
 
     startX = e.clientX;
@@ -66,7 +66,7 @@ export function armContextMenu(ensureBoot) {
       timer = 0;
       if (!pressed) return;
       suppressUntil = performance.now() + 800;
-      showContextAction(pressed);
+      showContextAction(pressed, 'long');
       pressed = null;
       // 触屏设备给一次轻震动，确认长按已生效
       navigator.vibrate?.(10);
@@ -79,13 +79,15 @@ export function armContextMenu(ensureBoot) {
   }
 
   /** 把命中的地址交给跳转条；先写状态再启动，挂载时才能进入对应模式 */
-  function showContextAction(hit) {
+  function showContextAction(hit, source) {
     if (!hit.url) return;
     openContextAction({
       mode: hit.mode,
       // 图片模式复制图片本身、打开图片地址；链接模式复制链接标题/地址、打开地址
       keyword: hit.text || hit.url,
       url: hit.url,
+      // 触发条件要区分长按与右键，动作条目据此决定是否出现
+      source,
       element: hit.element,
       link: hit.link || null,
     });
@@ -108,8 +110,8 @@ export function armContextMenu(ensureBoot) {
     // 跳转条自身的右键交给浏览器，避免在浮层里再弹一次
     const path = e.composedPath?.() || [];
     if (path.some((node) => isOwnHostNode(node))) return;
-    const hit = resolveHit(e.target, { x: e.clientX, y: e.clientY });
-    if (hit) showContextAction(hit);
+    const hit = resolveHit(e.target, 'menu', { x: e.clientX, y: e.clientY });
+    if (hit) showContextAction(hit, 'menu');
   }
 
   document.addEventListener('pointerdown', onPointerDown, true);

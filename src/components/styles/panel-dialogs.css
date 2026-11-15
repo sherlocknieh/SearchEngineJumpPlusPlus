@@ -34,6 +34,77 @@
   cursor: default;
 }
 
+/* 触发条件：折叠时是一行斜杠分隔的摘要，点开是可勾选的多选下拉 */
+.sej-trigger-field {
+  position: relative;
+}
+
+.sej-trigger-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 9px;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 8px;
+  background: var(--sej-input-bg);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease-out;
+}
+
+.sej-trigger-toggle:hover,
+.sej-trigger-toggle[aria-expanded='true'] {
+  border-color: var(--sej-accent);
+}
+
+.sej-trigger-summary {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.sej-trigger-caret {
+  flex: 0 0 auto;
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.sej-trigger-menu {
+  position: absolute;
+  z-index: 1;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  padding: 4px;
+  border: 1px solid var(--border-color-sej);
+  border-radius: 8px;
+  background: var(--background-setting-qxin);
+  box-shadow: var(--sej-shadow-menu);
+}
+
+.sej-trigger-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.sej-trigger-option:hover {
+  background: var(--sej-surface-2);
+}
+
+.sej-trigger-option input {
+  width: auto;
+  margin: 0;
+}
+
 .sej-field {
   display: flex;
   flex-direction: column;

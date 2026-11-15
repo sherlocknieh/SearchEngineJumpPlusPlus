@@ -280,6 +280,25 @@ describe('normalizeConfig', () => {
     expect(result.engineList.actions[0]).toEqual({ name: '打开', action: 'copy' });
   });
 
+  it('触发条件只保留该动作支持的项，并按固定顺序排列', () => {
+    const result = normalizeConfig(
+      {
+        engineList: {
+          actions: [
+            {
+              name: '复制图片',
+              action: 'copyImage',
+              triggers: ['linkMenu', 'imageMenu', 'imageMenu'],
+            },
+          ],
+        },
+      },
+      defaults,
+    );
+    const engine = result.engineList.actions.find((item) => item.action === 'copyImage');
+    expect(engine.triggers).toEqual(['imageMenu']);
+  });
+
   it('缺少 engineList 时按分类键回退默认引擎', () => {
     const result = normalizeConfig({ engineCategories: [['搜索', 'web', true]] }, defaults);
     expect(result.engineList.web).toEqual(defaults.engineList.web);
@@ -377,8 +396,28 @@ describe('serializeConfig', () => {
       // 空 url 的条目在面板阶段仍保留，交由编辑弹窗校验
       { name: 'B', url: '', target: '_blank' },
       { name: 'C', url: '', action: 'copy' },
+    ]);    expect(config.engineList.cat[0]).not.toHaveProperty('_id');
+  });
+
+  it('动作条目按勾选结果保存触发条件，未配置时不写字段', () => {
+    const config = serializeConfig({
+      options: {},
+      categories: [
+        {
+          name: '操作',
+          key: 'actions',
+          enabled: true,
+          engines: [
+            { name: '复制图片', url: '', action: 'copyImage', triggers: ['imageMenu'] },
+            { name: '复制文字', url: '', action: 'copy' },
+          ],
+        },
+      ],
+    });
+    expect(config.engineList.actions).toEqual([
+      { name: '复制图片', url: '', action: 'copyImage', triggers: ['imageMenu'] },
+      { name: '复制文字', url: '', action: 'copy' },
     ]);
-    expect(config.engineList.cat[0]).not.toHaveProperty('_id');
   });
 });
 

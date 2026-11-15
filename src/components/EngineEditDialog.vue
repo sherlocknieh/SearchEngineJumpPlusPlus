@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 import {
   analyzeSearchUrl,
   faviconFromUrl,
@@ -9,8 +9,8 @@ import {
 } from '../core/engineUrl.js';
 import { t } from '../assets/i18n.js';
 import { showToast } from '../stores/ui.js';
-import { ENGINE_ACTIONS, normalizeEngineTarget } from '../core/configData.js';
-import { actionEngineInfo } from '../core/contextAction.js';
+import { ACTION_TRIGGERS, ENGINE_ACTIONS, TRIGGER_KEYS, engineTriggers, normalizeEngineTarget } from '../core/configData.js';
+import { actionEngineEffect, triggerLabels } from '../core/contextAction.js';
 import { useModalA11y } from '../composables/useModalA11y.js';
 import { useEngineIconPreview } from '../composables/useEngineIconPreview.js';
 import { addStyle, HOST_ROLE_MAIN } from '../core/shadowDom.js';
@@ -33,14 +33,18 @@ const ICON_SELECT =
 
 // 快捷动作引擎没有链接与图标，编辑时只保留动作类型并允许改名称/打开方式
 const initialAction = ENGINE_ACTIONS.includes(props.initial.action) ? props.initial.action : '';
-// 触发条件与操作说明来自动作定义；跟着语言切换重算
-const actionInfo = computed(() => actionEngineInfo(initialAction, t));
+// 操作说明来自动作定义；跟着语言切换重算
+const actionEffect = computed(() => actionEngineEffect(initialAction, t));
 const dialogTitle = computed(() => {
   if (props.mode !== 'edit') return t('engine.addTitle');
   return initialAction ? t('engine.editActionTitle') : t('engine.editTitle');
 });
 // 动作里的「打开」类条目同样可以选打开方式
 const usesTarget = computed(() => !initialAction || ['open', 'openImage'].includes(initialAction));
+// 该动作支持哪些触发条件，勾选结果写回配置
+const triggerOptions = ACTION_TRIGGERS[initialAction] || [];
+const triggersOpen = ref(false);
+const triggerField = ref(null);
 
 const form = reactive({
   name: props.initial.name || '',
@@ -48,6 +52,7 @@ const form = reactive({
   favicon: props.initial.favicon || '',
   // 空值表示跟随全局的默认打开方式
   target: normalizeEngineTarget(props.initial.target),
+  triggers: engineTriggers(props.initial),
 });
 
 const urlInput = ref(null);
@@ -65,6 +70,27 @@ useModalA11y({
   closeOnOutsideClick: true,
   onClose: cancel,
 });
+
+// 触发条件的折叠摘要：斜杠分隔勾选项；全部取消时说明该操作已关闭
+const triggerSummary = computed(
+  () => triggerLabels(form.triggers, t).join(' / ') || t('engine.triggerNone'),
+);
+
+function toggleTrigger(id, checked) {
+  const picked = new Set(form.triggers);
+  if (checked) picked.add(id);
+  else picked.delete(id);
+  // 按固定顺序保存，避免勾选先后影响配置内容
+  form.triggers = triggerOptions.filter((option) => picked.has(option));
+}
+
+// 下拉菜单点外部收起；菜单在弹窗内部，点击其他字段也应关闭
+function onDocPointerDown(e) {
+  if (!triggersOpen.value) return;
+  const path = e.composedPath ? e.composedPath() : [];
+  if (path.includes(triggerField.value)) return;
+  triggersOpen.value = false;
+}
 
 const initialFavicon = (props.initial.favicon || '').trim();
 const siteHost = computed(() => hostFromUrl(form.url) || hostFromUrl(form.favicon));
@@ -143,7 +169,14 @@ watch(
   },
 );
 
-onMounted(() => urlInput.value?.focus());
+onMounted(() => {
+  urlInput.value?.focus();
+  document.addEventListener('pointerdown', onDocPointerDown, true);
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('pointerdown', onDocPointerDown, true);
+});
 
 function submit() {
   if (props.busy) return;
@@ -156,7 +189,7 @@ function submit() {
     favicon,
     faviconData: action ? '' : resolveFaviconData(favicon),
     target: form.target,
-    ...(action ? { action } : {}),
+    ...(action ? { action, triggers: [...form.triggers] } : {}),
   });
 }
 </script>
@@ -197,14 +230,38 @@ function submit() {
         @input="markTitleEdited"
       />
     </label>
-    <!-- 动作条目：触发条件与操作，与其他字段同构；只读，暂不支持修改 -->
-    <div v-if="actionInfo" class="sej-field">
+    <!-- 动作条目：触发条件可在下拉里勾选，勾选的场景才会出现 -->
+    <div v-if="initialAction" ref="triggerField" class="sej-field sej-trigger-field">
       <span>{{ t('engine.actionWhen') }}</span>
-      <input :value="actionInfo.when" readonly tabindex="-1" />
+      <button
+        type="button"
+        class="sej-trigger-toggle"
+        :aria-expanded="triggersOpen"
+        @click="triggersOpen = !triggersOpen"
+      >
+        <span class="sej-trigger-summary">{{ triggerSummary }}</span>
+        <span class="sej-trigger-caret" aria-hidden="true">▾</span>
+      </button>
+      <!-- 多选下拉：勾选/取消即开关该操作在对应场景下是否出现 -->
+      <div v-if="triggersOpen" class="sej-trigger-menu" role="group">
+        <label
+          v-for="id in triggerOptions"
+          :key="id"
+          class="sej-trigger-option"
+        >
+          <input
+            type="checkbox"
+            :checked="form.triggers.includes(id)"
+            @change="toggleTrigger(id, $event.target.checked)"
+          />
+          <span>{{ t(TRIGGER_KEYS[id]) }}</span>
+        </label>
+      </div>
     </div>
-    <div v-if="actionInfo" class="sej-field">
+    <!-- 操作：动作定义里的行为说明，只读 -->
+    <div v-if="initialAction" class="sej-field">
       <span>{{ t('engine.actionEffect') }}</span>
-      <input :value="actionInfo.effect" readonly tabindex="-1" />
+      <input :value="actionEffect" readonly tabindex="-1" />
     </div>
     <!-- 图标地址 -->
     <div v-if="!initialAction" class="sej-field">

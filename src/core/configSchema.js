@@ -17,6 +17,7 @@ import {
   normalizeDefaultOpenTarget,
   normalizeEngineAction,
   normalizeEngineTarget,
+  normalizeEngineTriggers,
 } from './configData.js';
 
 /** 布尔/枚举类顶层选项；其余字段均由引擎与分类派生 */
@@ -214,6 +215,9 @@ export function serializeEngine(raw) {
   if (action) engine.action = action;
   if (typeof raw.favicon === 'string') engine.favicon = raw.favicon;
   if (typeof raw.faviconData === 'string') engine.faviconData = raw.faviconData;
+  // 触发条件随动作条目一起保存；未配置时不写字段，运行时用动作默认值
+  const triggers = normalizeEngineTriggers(action, raw.triggers);
+  if (triggers) engine.triggers = triggers;
   // 保存显式选择的打开方式，未选择时默认新标签页
   const target = normalizeEngineTarget(raw.target);
   if (target) engine.target = target;

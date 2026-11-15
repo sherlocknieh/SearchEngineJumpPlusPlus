@@ -4,7 +4,13 @@
  * 每个模式只提供两件事：命中的元素如何解析成关键词、浮层显示哪个分类。
  * 长按手势、浮层呈现与关闭时机由调用方共用，模式之间只差这两项配置。
  */
-import { BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY, normalizeEngineAction } from './configData.js';
+import {
+  BUILTIN_CATEGORY_KEY,
+  IMAGE_CATEGORY_KEY,
+  TRIGGER_KEYS,
+  engineTriggers,
+  normalizeEngineAction,
+} from './configData.js';
 import { resolveImageHit } from './imageSearch.js';
 import { resolveLinkHit } from './linkAction.js';
 
@@ -15,36 +21,59 @@ export const LONG_PRESS_MOVE_TOLERANCE = 10;
 /** 提示里展示目标内容的长度上限，避免长标题把悬停提示撑得过宽 */
 export const HINT_TARGET_MAX = 80;
 
-/**
- * 动作条目的说明：触发条件与操作分开写，
- * 设置面板的只读表单与悬停提示都从这里取，避免两处文案不一致。
- */
-const ACTION_ENGINE_INFO = {
-  copy: { when: 'action.whenCopy', effect: 'action.effectCopy' },
-  copyImage: { when: 'action.whenCopyImage', effect: 'action.effectCopyImage' },
-  copyImageUrl: { when: 'action.whenCopyImageUrl', effect: 'action.effectCopyImageUrl' },
-  copyLinkText: { when: 'action.whenCopyLinkText', effect: 'action.effectCopyLinkText' },
-  copyLinkUrl: { when: 'action.whenCopyLinkUrl', effect: 'action.effectCopyLinkUrl' },
-  selectLinkText: { when: 'action.whenSelectLinkText', effect: 'action.effectSelectLinkText' },
-  open: { when: 'action.whenOpen', effect: 'action.effectOpen' },
-  openImage: { when: 'action.whenOpenImage', effect: 'action.effectOpenImage' },
+/** 动作条目的操作说明：设置里的只读表单与悬停提示共用 */
+const ACTION_ENGINE_EFFECTS = {
+  copy: 'action.effectCopy',
+  copyImage: 'action.effectCopyImage',
+  copyImageUrl: 'action.effectCopyImageUrl',
+  copyLinkText: 'action.effectCopyLinkText',
+  copyLinkUrl: 'action.effectCopyLinkUrl',
+  selectLinkText: 'action.effectSelectLinkText',
+  open: 'action.effectOpen',
+  openImage: 'action.effectOpenImage',
 };
 
-/**
- * 动作的只读说明：什么时候会出现、具体做什么。未知动作返回 null。
- * @param {string} action 动作类型
- * @param {(key: string, params?: object) => string} t 文案函数
- */
-export function actionEngineInfo(action, t) {
-  const info = ACTION_ENGINE_INFO[action];
-  if (!info) return null;
-  return { when: t(info.when), effect: t(info.effect) };
+/** 动作的具体操作（做什么）；未知动作返回空串 */
+export function actionEngineEffect(action, t) {
+  const key = ACTION_ENGINE_EFFECTS[action];
+  return key ? t(key) : '';
 }
 
-/** 悬停提示用的单行说明：触发条件 + 操作 */
-export function actionEngineTip(action, t) {
-  const info = actionEngineInfo(action, t);
-  return info ? t('action.tipLayout', info) : '';
+/** 触发条件的文案，顺序按引擎配置里的勾选顺序 */
+export function triggerLabels(triggers, t) {
+  return (triggers || []).map((id) => (TRIGGER_KEYS[id] ? t(TRIGGER_KEYS[id]) : id));
+}
+
+/** 引擎在该触发条件下是否要出现：普通搜索引擎（没有动作）不受触发条件限制 */
+export function isActionTriggered(engine, trigger) {
+  if (!engine?.action) return true;
+  return engineTriggers(engine).includes(trigger);
+}
+
+/**
+ * 普通跳转条当前的关键词来源对应的触发条件：
+ * 划词条取「划词」，站点内嵌条取「搜索框关键词」，打开链接额外要求关键词本身是链接。
+ * @param {'text' | 'input'} mode 关键词来源
+ * @param {string} [action] 动作类型
+ */
+export function modeTriggerId(mode, action) {
+  if (mode !== 'text' && mode !== 'input') return '';
+  if (action === 'open') return 'keyword';
+  return mode === 'text' ? 'selection' : 'input';
+}
+
+/** 上下文操作条命中的触发条件：图片/链接 × 长按/右键 */
+export function contextTriggerId(mode, source) {
+  const suffix = source === 'menu' ? 'Menu' : 'Long';
+  return (mode === 'image' ? 'image' : 'link') + suffix;
+}
+
+/** 悬停提示：勾选的触发条件 + 操作，未勾选任何触发条件时只说明操作 */
+export function actionEngineTip(engine, t) {
+  const labels = triggerLabels(engineTriggers(engine), t);
+  const effect = actionEngineEffect(engine?.action, t);
+  if (!effect) return '';
+  return labels.length ? `${labels.join(' / ')}：${effect}` : effect;
 }
 
 /** 模式到命中解析与专属分类的映射 */
@@ -98,11 +127,19 @@ export function contextCategoryKey(mode) {
   return CONTEXT_MODES[mode]?.categoryKey || '';
 }
 
-/** 模式对应的引擎：至少要有链接或快捷动作；全部隐藏时该模式不接管 */
-export function getContextEngines(settingData, mode) {
+/**
+ * 模式对应的引擎：至少要有链接或快捷动作，且勾选了当前手势的触发条件；
+ * 全部关闭时该模式不接管，不弹出空浮层。
+ * @param {object} settingData 设置数据
+ * @param {'image' | 'link'} mode 命中类型
+ * @param {'long' | 'menu'} [source] 唤出浮层的手势，默认长按
+ */
+export function getContextEngines(settingData, mode, source = 'long') {
   const list = settingData?.engineList?.[contextCategoryKey(mode)];
   if (!Array.isArray(list)) return [];
-  return list.filter((engine) => !engine.disable && (engine.url || engine.action));
+  return list
+    .filter((engine) => !engine.disable && (engine.url || engine.action))
+    .filter((engine) => isActionTriggered(engine, contextTriggerId(mode, source)));
 }
 
 /**
@@ -175,16 +212,19 @@ export function actionTargetHint(mode, action, hit = {}) {
 /**
  * 上下文操作条的动作条目：条目本身（名称、图标、顺序、显隐）直接取设置里的「操作」分类，
  * 浮层不再按场景覆盖名称，改名后外部立即跟着变。
+ * 只有勾选了当前触发条件（图片/链接 × 长按/右键）的条目才出现。
  * 图片模式下图片是主目标、外层链接排在它后面（同一动作同时适用时才各出一条）。
  * @param {Array} engines 「操作」分类的引擎（配置顺序）
  * @param {Array<{mode: string, hit: object}>} targets 命中的目标，图片模式为图片 + 可选的外层链接
+ * @param {'long' | 'menu'} [source] 唤出浮层的手势，默认长按
  */
-export function contextActionEngines(engines, targets) {
+export function contextActionEngines(engines, targets, source = 'long') {
   const list = [];
   for (const engine of engines || []) {
     if (engine.disable || !engine.action) continue;
     for (const { mode, hit } of targets) {
       if (!isActionAvailableInMode(mode, engine.action)) continue;
+      if (!isActionTriggered(engine, contextTriggerId(mode, source))) continue;
       // 纯图片链接没有标题：复制标题、选中标题与复制地址目标相同，省掉重复条目
       if (
         (engine.action === 'copyLinkText' || engine.action === 'selectLinkText') &&

@@ -26,6 +26,50 @@ export const ACTION_ENGINE_DEFAULTS = {
 
 export const ENGINE_ACTIONS = Object.keys(ACTION_ENGINE_DEFAULTS);
 
+/**
+ * 操作条目的触发条件：值为文案键，顺序即设置里的显示顺序。
+ * selection/input 是普通条的关键词来源，keyword 是「关键词本身是链接」，
+ * image* / link* 区分长按与右键（两者运行时是两条不同的事件路径）。
+ */
+export const TRIGGER_KEYS = {
+  selection: 'trigger.selection',
+  input: 'trigger.input',
+  keyword: 'trigger.keyword',
+  imageLong: 'trigger.imageLong',
+  imageMenu: 'trigger.imageMenu',
+  linkLong: 'trigger.linkLong',
+  linkMenu: 'trigger.linkMenu',
+};
+
+/** 每个动作可勾选的触发条件，同时也是默认勾选项；顺序即显示顺序 */
+export const ACTION_TRIGGERS = {
+  copy: ['selection', 'input'],
+  copyImage: ['imageLong', 'imageMenu'],
+  copyImageUrl: ['imageLong', 'imageMenu'],
+  copyLinkText: ['linkLong', 'linkMenu'],
+  copyLinkUrl: ['linkLong', 'linkMenu'],
+  selectLinkText: ['linkLong', 'linkMenu'],
+  open: ['keyword', 'linkLong', 'linkMenu'],
+  openImage: ['imageLong', 'imageMenu'],
+};
+
+/**
+ * 规范化触发条件：只保留该动作支持的项，并按固定顺序排列。
+ * 未配置（不是数组）时返回 null，表示沿用动作默认值；空数组表示用户全部取消。
+ */
+export function normalizeEngineTriggers(action, raw) {
+  const options = ACTION_TRIGGERS[action];
+  if (!options || !Array.isArray(raw)) return null;
+  const picked = new Set(raw);
+  return options.filter((id) => picked.has(id));
+}
+
+/** 引擎实际生效的触发条件：配置里没有时用动作默认值 */
+export function engineTriggers(engine) {
+  const normalized = normalizeEngineTriggers(engine?.action, engine?.triggers);
+  return normalized || ACTION_TRIGGERS[engine?.action] || [];
+}
+
 /** 内置的快捷动作分类键名：始终存在，只能移动和隐藏 */
 export const BUILTIN_CATEGORY_KEY = 'actions';
 
@@ -98,6 +142,9 @@ export function normalizeEngine(raw) {
   if (action) engine.action = action;
   // 搜索类引擎必须有 url；动作引擎只需要名称
   if (!engine.url && !action) return null;
+  // 触发条件只对动作条目有意义；未配置时不写字段，运行时按动作默认值处理
+  const triggers = normalizeEngineTriggers(action, raw.triggers);
+  if (triggers) engine.triggers = triggers;
   // 记录显式选择的打开方式，未选择时不写字段，跳转时再按站点决定
   const target = normalizeEngineTarget(raw.target);
   if (target) engine.target = target;
