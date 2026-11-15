@@ -170,7 +170,7 @@ const actionHintHit = computed(() => {
 const linkActionHit = computed(() =>
   isContextAction.value ? contextLinkHit(contextAction) : null,
 );
-/** 动作名称直接说明操作与作用对象（如「复制图片」「复制选中的文字」） */
+/** 动作名称直接说明操作与作用对象（如「复制图片」「复制文字」） */
 function contextActionName(engine, target) {
   return contextActionLabel(target, engine.action, engine.name, t);
 }
