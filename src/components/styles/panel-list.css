@@ -179,10 +179,15 @@
   vertical-align: middle;
 }
 
-/* 窄屏下类别卡片收窄一档，仍占满可用宽度 */
+/* 窄屏：列宽下限保持在能放下完整引擎名称的档位，宁可单列滚动也不把名字截成「Goo…」；
+   新增分类卡片不再撑满 140px 高，给列表让出空间 */
 @media (max-width: 560px) {
   #sej-settings-body {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .sej-add-category-card {
+    min-height: 64px;
   }
 }
 

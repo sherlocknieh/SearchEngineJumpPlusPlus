@@ -232,6 +232,30 @@ span.iqxin-additem.sej-copy-target {
   pointer-events: none;
 }
 
+/* 触屏没有真正的悬停，编辑/删除按钮永远出不来：右侧只给显隐按钮留位置，
+   引擎名称因此多出约 50px 可见宽度；编辑与删除改从各自的弹窗进入。
+   同时要求 any-hover 也无效，带鼠标的触屏设备仍保留悬停按钮 */
+@media (hover: none) and (any-hover: none) {
+  #settingLayer .sej-engine {
+    padding-right: 32px;
+  }
+
+  .sejtitle {
+    padding-right: 32px;
+  }
+
+  .sej-hover-edit,
+  .sej-hover-delete {
+    display: none;
+  }
+
+  /* 触屏点击目标放大到 26px，位置与上方预留的 32px 对齐 */
+  .iqxin-set-toggle {
+    right: 4px;
+    padding: 5px;
+  }
+}
+
 @keyframes sej-setting-mask-in {
   from {
     opacity: 0;

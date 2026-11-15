@@ -120,7 +120,6 @@
   gap: 8px;
 }
 
-.sej-footer-options,
 .sej-footer-bar,
 .sej-footer-selects,
 .sej-footer-links,
@@ -131,8 +130,68 @@
   min-width: 0;
 }
 
+/* 选项区：宽屏平铺；窄屏折叠成一个按钮，展开时才占高度 */
 .sej-footer-options {
+  display: flex;
+  flex-direction: column;
   gap: 8px;
+  min-width: 0;
+}
+
+.sej-options-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sej-options-toggle {
+  display: none;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: var(--sej-surface-2);
+  color: var(--font-color-qxin);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.3;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition:
+    background-color 0.12s ease-out,
+    color 0.12s ease-out,
+    transform 0.1s ease-out;
+}
+
+.sej-options-toggle:hover {
+  background: var(--sej-surface-hover);
+}
+
+.sej-options-toggle:active {
+  transform: scale(0.96);
+}
+
+.sej-options-toggle:focus-visible {
+  outline: 2px solid var(--sej-accent);
+  outline-offset: -2px;
+}
+
+.sej-options-toggle svg {
+  flex: 0 0 auto;
+}
+
+.sej-options-arrow {
+  transition: transform 0.12s ease-out;
+}
+
+.sej-options-arrow.is-open {
+  transform: rotate(180deg);
 }
 
 .sej-footer-bar {
@@ -239,11 +298,47 @@
   #btnEle .sej-config-box .sej-config-open {
     padding-left: 8px;
   }
+  .sej-options-toggle {
+    font-size: 12px;
+    padding: 5px 8px;
+  }
   #settingLayerMask {
     /* 窄屏收紧外边距，给小屏让出可用空间 */
     --sej-mask-pad: 8px;
   }
   #settingLayer {
     --sej-panel-pad-x: 12px;
+  }
+}
+
+/* 手机：底部选项收成一行按钮，关闭按钮并到配置文件同一行，只留一行链接，
+   尽量把高度让给引擎列表 */
+@media (max-width: 560px) {
+  .sej-options-toggle {
+    display: inline-flex;
+  }
+
+  .sej-options-list {
+    display: none;
+  }
+
+  .sej-options-list.is-open {
+    display: flex;
+  }
+
+  #btnEle > div.btnEleLayer {
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .sej-footer-actions {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .sej-footer-links {
+    order: 2;
+    flex-basis: 100%;
+    margin-left: 0;
   }
 }

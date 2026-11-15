@@ -59,6 +59,11 @@ src/main.js                 只做装配
 - `useDragSort` + `composables/drag/*` 拖拽排序（几何/FLIP/幽灵/自动滚动）
 - `useRemoteSettingsSync` 跨标签页草稿同步
 
+窄屏（≤560px）面板：列表固定单列，保证引擎名称完整；触屏且完全无法悬停
+（`hover: none` 且 `any-hover: none`）时隐藏用不上的编辑/删除按钮、收回它们预留的 82px，
+编辑与删除改从条目弹窗进入；选项区折叠成「选项」按钮（`SettingsOptions.vue` 的 `expanded`），
+底栏压到「配置文件 + 关闭」一行，高度让给列表。
+
 ## 跳转链路
 
 - 取词：`core/selection.js`（文档选区 + 输入框 `selectionStart/End`）
