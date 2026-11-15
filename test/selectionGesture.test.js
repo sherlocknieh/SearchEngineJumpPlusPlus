@@ -47,6 +47,18 @@ describe('selectionGesture', () => {
     target.dispatch('blur', {});
     expect(isPointerPressed()).toBe(false);
   });
+
+  it('触屏长按划词只补发 touchend/touchcancel 时也结束按下状态', () => {
+    // 浏览器接管长按划词手势后不再派发 pointerup，缺这一环按下状态会一直留着
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0, pointerType: 'touch' });
+    target.dispatch('touchend', {});
+    expect(isPointerPressed()).toBe(false);
+    target.dispatch('pointerdown', { button: 0, pointerType: 'touch' });
+    target.dispatch('touchcancel', {});
+    expect(isPointerPressed()).toBe(false);
+  });
 });
 
 describe('selectionGesture 操作序号', () => {

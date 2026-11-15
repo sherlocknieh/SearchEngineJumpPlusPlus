@@ -806,8 +806,10 @@ function settleOverlay(e) {
   pendingHide = false;
   if (!isSelectSearch.value || isContextAction.value) return;
   settledGesture = currentGestureId();
-  // 拖动产生了新选区，交给 onSelectionChange 更新内容与位置
-  if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
+  // 本次操作选出了新内容就保持显示（桌面拖动选区、触屏长按划词都算），
+  // 交给 onSelectionChange 更新内容与位置；触屏长按没有位移，不能按拖动判定
+  const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  if (text && text !== dismissedSelection) return;
   if (e && performance.now() < keepOverlayUntil) return;
   hideFloatBar();
 }
@@ -925,6 +927,10 @@ onMounted(async () => {
     // 部分站点/浏览器中 selectionchange 时机不稳定，补充鼠标与键盘事件兜底
     document.addEventListener('mouseup', onSelectionChange);
     document.addEventListener('keyup', onSelectionChange);
+    // 触屏长按划词由浏览器接管手势：选区在按住期间就确定了，之后没有抬起也没有新的
+    // selectionchange，只在 pointercancel/touchend 时按当前选区补判一次（须先于 settleOverlay）
+    document.addEventListener('pointercancel', onSelectionChange, true);
+    document.addEventListener('touchend', onSelectionChange, true);
     document.addEventListener('pointerup', settleOverlay, true);
     document.addEventListener('pointercancel', settleOverlay, true);
     document.addEventListener('pointerdown', onOverlayPointerDown, true);
@@ -941,6 +947,8 @@ onBeforeUnmount(() => {
   document.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('pointerup', settleOverlay, true);
   document.removeEventListener('pointercancel', settleOverlay, true);
+  document.removeEventListener('pointercancel', onSelectionChange, true);
+  document.removeEventListener('touchend', onSelectionChange, true);
   document.removeEventListener('selectionchange', onDocumentSelectionChange);
   document.removeEventListener('mouseup', onSelectionChange);
   document.removeEventListener('keyup', onSelectionChange);

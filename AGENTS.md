@@ -226,6 +226,10 @@ src/main.js                 只做装配
   `image` 分类缺失时由 `normalizeConfig` 补回并插在「操作」之后（默认配置里「操作」占首位），
   已有分类则保留用户拖拽出的排序；它始终视为显示、只出现在图片模式（`isBarCategoryVisible`）
 - 删除操作默认走 `useUndoDelete`（可撤销）
+- 触屏长按划词由浏览器接管手势：事件顺序是 `pointerdown → selectstart → contextmenu →
+  selectionchange → pointercancel`，没有 `pointerup`/`mouseup`，唯一那次 `selectionchange`
+  发生在指针仍按下期间。划词条与懒启动都必须额外在 `pointercancel`/`touchend` 时按当前选区
+  补判一次，只靠「松手后的 selectionchange」在手机上永远等不到
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
 - `pnpm dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉

@@ -98,11 +98,17 @@ function armLazyStart(includeInput) {
   // 部分站点/浏览器的 selectionchange 时机不稳定，补充鼠标与键盘兜底
   document.addEventListener('mouseup', onSelectionChange);
   document.addEventListener('keyup', onSelectionChange);
+  // 触屏长按划词：选区在手指按住期间就已确定，浏览器接管手势后不再有抬起与
+  // 后续选区变化，只有 pointercancel/touchend，这里按当前选区补判一次才能启动
+  document.addEventListener('pointercancel', onSelectionChange);
+  document.addEventListener('touchend', onSelectionChange);
 
   lazyListeners = () => {
     document.removeEventListener('selectionchange', onSelectionChange);
     document.removeEventListener('mouseup', onSelectionChange);
     document.removeEventListener('keyup', onSelectionChange);
+    document.removeEventListener('pointercancel', onSelectionChange);
+    document.removeEventListener('touchend', onSelectionChange);
   };
 }
 

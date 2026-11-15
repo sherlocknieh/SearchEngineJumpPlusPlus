@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name               SearchEngineJump++
 // @namespace          https://github.com/sherlocknieh/
-// @version            2026.11.15.1749
+// @version            2026.11.15.1831
 // @author             sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description        Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
 // @description:zh-CN  Fork 自 MUTED64 的 SearchEngineJumpPLus, 用 Vue3 重构, 修复诸多问题, 并进行了大幅简化,美化和优化。
@@ -7408,6 +7408,8 @@
 		target.addEventListener("pointermove", onPointerMove, true);
 		target.addEventListener("pointerup", onPointerEnd, true);
 		target.addEventListener("pointercancel", onPointerEnd, true);
+		target.addEventListener("touchend", onPointerEnd, true);
+		target.addEventListener("touchcancel", onPointerEnd, true);
 		target.addEventListener("keydown", onKeyDown, true);
 		target.addEventListener("blur", onPointerEnd);
 	}
@@ -9295,7 +9297,8 @@
 				pendingHide = false;
 				if (!isSelectSearch.value || isContextAction.value) return;
 				settledGesture = currentGestureId();
-				if (isSelectionDrag() && getSelectedText({ includeInput: data.selectSearchInInput })) return;
+				const text = getSelectedText({ includeInput: data.selectSearchInInput });
+				if (text && text !== dismissedSelection) return;
 				if (e && performance.now() < keepOverlayUntil) return;
 				hideFloatBar();
 			}
@@ -9377,6 +9380,8 @@
 					document.addEventListener("selectionchange", onDocumentSelectionChange);
 					document.addEventListener("mouseup", onSelectionChange);
 					document.addEventListener("keyup", onSelectionChange);
+					document.addEventListener("pointercancel", onSelectionChange, true);
+					document.addEventListener("touchend", onSelectionChange, true);
 					document.addEventListener("pointerup", settleOverlay, true);
 					document.addEventListener("pointercancel", settleOverlay, true);
 					document.addEventListener("pointerdown", onOverlayPointerDown, true);
@@ -9392,6 +9397,8 @@
 				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("pointerup", settleOverlay, true);
 				document.removeEventListener("pointercancel", settleOverlay, true);
+				document.removeEventListener("pointercancel", onSelectionChange, true);
+				document.removeEventListener("touchend", onSelectionChange, true);
 				document.removeEventListener("selectionchange", onDocumentSelectionChange);
 				document.removeEventListener("mouseup", onSelectionChange);
 				document.removeEventListener("keyup", onSelectionChange);
@@ -12808,10 +12815,14 @@
 		document.addEventListener("selectionchange", onSelectionChange);
 		document.addEventListener("mouseup", onSelectionChange);
 		document.addEventListener("keyup", onSelectionChange);
+		document.addEventListener("pointercancel", onSelectionChange);
+		document.addEventListener("touchend", onSelectionChange);
 		lazyListeners = () => {
 			document.removeEventListener("selectionchange", onSelectionChange);
 			document.removeEventListener("mouseup", onSelectionChange);
 			document.removeEventListener("keyup", onSelectionChange);
+			document.removeEventListener("pointercancel", onSelectionChange);
+			document.removeEventListener("touchend", onSelectionChange);
 		};
 	}
 	function disarmLazyStart() {

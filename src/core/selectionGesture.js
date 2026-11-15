@@ -71,6 +71,10 @@ export function trackSelectionPointer(target = window) {
   target.addEventListener('pointermove', onPointerMove, true);
   target.addEventListener('pointerup', onPointerEnd, true);
   target.addEventListener('pointercancel', onPointerEnd, true);
+  // 触屏长按划词由浏览器接管手势，部分浏览器不派发 pointerup/pointercancel，
+  // 只补发 touchend/touchcancel；缺了这一环，按下状态会一直留着
+  target.addEventListener('touchend', onPointerEnd, true);
+  target.addEventListener('touchcancel', onPointerEnd, true);
   target.addEventListener('keydown', onKeyDown, true);
   // 指针在窗口外松开时收不到 pointerup，失焦后同样视为结束
   target.addEventListener('blur', onPointerEnd);
