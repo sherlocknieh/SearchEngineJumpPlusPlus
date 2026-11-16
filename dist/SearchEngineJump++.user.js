@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.2125
+// @version         2026.11.16.2350
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -8018,6 +8018,102 @@
 			stop
 		};
 	}
+	var HOVER_TIP_KEY = Symbol("sejHoverTip");
+	var SHOW_DELAY_MS = 100;
+	var HIDE_DELAY_MS = 80;
+	function createHoverTip() {
+		const tip = reactive({
+			visible: false,
+			text: "",
+			anchor: null
+		});
+		let showTimer = 0;
+		let hideTimer = 0;
+		let listening = false;
+		function clearShow() {
+			clearTimeout(showTimer);
+			showTimer = 0;
+		}
+		function clearHide() {
+			clearTimeout(hideTimer);
+			hideTimer = 0;
+		}
+		function onViewportChange() {
+			conceal();
+		}
+		function listenViewport(on) {
+			if (on === listening) return;
+			listening = on;
+			if (on) {
+				window.addEventListener("scroll", onViewportChange, {
+					passive: true,
+					capture: true
+				});
+				window.addEventListener("resize", onViewportChange, { passive: true });
+				window.addEventListener("pointerdown", onViewportChange, {
+					passive: true,
+					capture: true
+				});
+				return;
+			}
+			window.removeEventListener("scroll", onViewportChange, true);
+			window.removeEventListener("resize", onViewportChange);
+			window.removeEventListener("pointerdown", onViewportChange, true);
+		}
+		function conceal() {
+			tip.visible = false;
+			tip.text = "";
+			tip.anchor = null;
+			listenViewport(false);
+		}
+		function reveal(anchor, text) {
+			tip.anchor = anchor;
+			tip.text = text;
+			tip.visible = true;
+			listenViewport(true);
+		}
+		function show(anchor, text, { immediate = false } = {}) {
+			if (!anchor || !text) {
+				hide({ immediate: true });
+				return;
+			}
+			clearHide();
+			if (tip.visible && tip.anchor === anchor && tip.text === text) return;
+			clearShow();
+			if (tip.visible || immediate) {
+				reveal(anchor, text);
+				return;
+			}
+			showTimer = setTimeout(() => {
+				showTimer = 0;
+				reveal(anchor, text);
+			}, SHOW_DELAY_MS);
+		}
+		function hide({ immediate = false } = {}) {
+			clearShow();
+			if (immediate || !tip.visible) {
+				clearHide();
+				conceal();
+				return;
+			}
+			clearHide();
+			hideTimer = setTimeout(() => {
+				hideTimer = 0;
+				conceal();
+			}, HIDE_DELAY_MS);
+		}
+		function dispose() {
+			clearShow();
+			clearHide();
+			conceal();
+		}
+		return {
+			tip,
+			show,
+			hide,
+			dispose
+		};
+	}
 	var icon_default = "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 32 32\" width=\"32\" height=\"32\">\n  <circle cx=\"16\" cy=\"16\" r=\"16\" fill=\"#FFFFFF\"/>\n  <path d=\"M18.8 18.8 24.2 24.2\" stroke=\"#5F6368\" stroke-width=\"3.2\" stroke-linecap=\"round\"/>\n  <g fill=\"none\" stroke-width=\"3.2\" transform=\"rotate(-90 13.5 13.5)\">\n    <circle cx=\"13.5\" cy=\"13.5\" r=\"7.2\" stroke=\"#4285F4\" stroke-dasharray=\"11.31 33.93\"/>\n    <circle cx=\"13.5\" cy=\"13.5\" r=\"7.2\" stroke=\"#34A853\" stroke-dasharray=\"11.31 33.93\"\n            stroke-dashoffset=\"-11.31\"/>\n    <circle cx=\"13.5\" cy=\"13.5\" r=\"7.2\" stroke=\"#FBBC05\" stroke-dasharray=\"11.31 33.93\"\n            stroke-dashoffset=\"-22.62\"/>\n    <circle cx=\"13.5\" cy=\"13.5\" r=\"7.2\" stroke=\"#EA4335\" stroke-dasharray=\"11.31 33.93\"\n            stroke-dashoffset=\"-33.93\"/>\n  </g>\n</svg>\n";
 	var ICON_TIMEOUT = 4e3;
 	var MAX_ICON_BYTES = 65536;
@@ -8321,7 +8417,7 @@
 		const { data } = await resolveFavicon(source);
 		return data || source;
 	}
-	var _hoisted_1$10 = ["title"];
+	var _hoisted_1$10 = ["aria-label"];
 	var _hoisted_2$9 = ["src"];
 	var _hoisted_3$9 = {
 		key: 1,
@@ -8332,7 +8428,11 @@
 		key: 2,
 		class: "sej-engine-label"
 	};
-	var _sfc_main$12 = {
+	var _hoisted_5$9 = {
+		key: 3,
+		class: "sej-engine-tip"
+	};
+	var _sfc_main$13 = {
 		__name: "EngineItem",
 		props: {
 			engine: {
@@ -8354,23 +8454,42 @@
 		},
 		emits: ["jump"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-engine {\n  padding: 0 13px;\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 500;\n}\n\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n}\n\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n/* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */\n.sej-engine-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n.sej-engine-icon {\n  pointer-events: none;\n}\n");
+			addStyle("\n.sej-engine {\n  padding: 0 13px;\n  transition:\n    background-color 0.08s ease-out,\n    opacity 0.08s ease-out;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  display: inline-flex;\n  gap: 8px;\n  align-items: center;\n  height: 2.6em;\n  box-sizing: border-box;\n  text-decoration: none !important;\n  color: var(--font-color-qxin) !important;\n  cursor: pointer;\n  white-space: nowrap;\n}\n\n#sej-container > .sej-engine,\n#sej-container .sej-category > .sej-engine {\n  height: 30px;\n  padding: 0 11px;\n  gap: 6px;\n  border-radius: var(--sej-radius-item, 999px);\n  font-weight: 500;\n}\n\n.sej-drop-list a:visited,\n.sej-drop-list a:hover,\n.sej-engine a:visited,\n.sej-engine a:hover,\n#sej-container a:link,\n#sej-container a:visited,\n#sej-container a:hover {\n  color: var(--font-color-qxin);\n}\n\n.sej-engine:hover {\n  background-color: var(--sej-hover-bg, var(--background-hover-color-qxin));\n}\n\n.sej-engine:active {\n  background-color: var(--sej-active-bg, rgba(0, 0, 0, 0.1));\n}\n\n#sej-container .sej-engine:focus-visible {\n  outline: 2px solid var(--sej-accent, #4285f4);\n  outline-offset: -2px;\n}\n\n.sej-engine-icon {\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  object-fit: cover;\n  display: inline-block;\n  margin: 0;\n}\n\n.sej-engine-icon:not([src]) {\n  display: none;\n}\n\n/* 触屏上动作条目的目标内容：像贴在该条目右侧的子菜单，过长时尾部省略 */\n.sej-engine-tip {\n  max-width: min(40vw, 200px);\n  padding: 1px 7px;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  color: inherit;\n  font-size: 11px;\n  font-weight: 400;\n  line-height: 1.5;\n  overflow: hidden;\n  text-overflow: ellipsis;\n  white-space: nowrap;\n}\n\n/* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */\n.sej-engine-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  flex: 0 0 auto;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n.sej-engine-icon {\n  pointer-events: none;\n}\n");
 			const props = __props;
 			const iconSrc = computed(() => props.showIcon ? getFaviconSrc(props.engine) : "");
 			const label = computed(() => localizeEngineName(props.engine.name));
 			const glyph = computed(() => Array.from(label.value)[0] || "");
 			const emit = __emit;
+			const hoverTip = inject(HOVER_TIP_KEY, null);
+			const tipText = computed(() => props.hint || (props.compact ? label.value : ""));
+			const isMobile = isMobileDevice();
+			const inlineTip = computed(() => isMobile ? props.hint : "");
+			function showTip(event) {
+				if (isMobile || !tipText.value) return;
+				hoverTip?.show(event.currentTarget, tipText.value, { immediate: event.type === "focus" });
+			}
+			function hideTip() {
+				hoverTip?.hide();
+			}
 			return (_ctx, _cache) => {
 				return openBlock(), createElementBlock("a", {
 					class: "sej-engine",
-					title: __props.hint || (__props.compact ? label.value : null),
+					"aria-label": __props.compact ? label.value : null,
+					onMouseenter: showTip,
+					onMouseleave: hideTip,
+					onFocus: showTip,
+					onBlur: hideTip,
 					onClick: _cache[0] || (_cache[0] = withModifiers(($event) => emit("jump", __props.engine), ["prevent", "stop"]))
-				}, [iconSrc.value ? (openBlock(), createElementBlock("img", {
-					key: 0,
-					class: "sej-engine-icon",
-					src: iconSrc.value,
-					alt: ""
-				}, null, 8, _hoisted_2$9)) : __props.compact ? (openBlock(), createElementBlock("span", _hoisted_3$9, toDisplayString(glyph.value), 1)) : createCommentVNode("", true), !__props.compact ? (openBlock(), createElementBlock("span", _hoisted_4$9, toDisplayString(label.value), 1)) : createCommentVNode("", true)], 8, _hoisted_1$10);
+				}, [
+					iconSrc.value ? (openBlock(), createElementBlock("img", {
+						key: 0,
+						class: "sej-engine-icon",
+						src: iconSrc.value,
+						alt: ""
+					}, null, 8, _hoisted_2$9)) : __props.compact ? (openBlock(), createElementBlock("span", _hoisted_3$9, toDisplayString(glyph.value), 1)) : createCommentVNode("", true),
+					!__props.compact ? (openBlock(), createElementBlock("span", _hoisted_4$9, toDisplayString(label.value), 1)) : createCommentVNode("", true),
+					inlineTip.value ? (openBlock(), createElementBlock("span", _hoisted_5$9, toDisplayString(inlineTip.value), 1)) : createCommentVNode("", true)
+				], 40, _hoisted_1$10);
 			};
 		}
 	};
@@ -8426,7 +8545,7 @@
 	}
 	var _hoisted_1$9 = [
 		"aria-expanded",
-		"title",
+		"aria-label",
 		"onKeydown"
 	];
 	var _hoisted_2$8 = {
@@ -8459,7 +8578,7 @@
 	var pinnedCategory = null;
 	var openCategory = null;
 	var anchorSeq = 0;
-	var _sfc_main$11 = {
+	var _sfc_main$12 = {
 		__name: "EngineCategory",
 		props: {
 			name: {
@@ -8506,6 +8625,14 @@
 				if (pinned.value) return t("jump.collapseList", { name: props.name });
 				return props.compact ? props.name : null;
 			});
+			const hoverTip = inject(HOVER_TIP_KEY, null);
+			function showTriggerTip(event) {
+				if (!triggerTitle.value) return;
+				hoverTip?.show(event.currentTarget, triggerTitle.value, { immediate: event.type === "focus" });
+			}
+			function hideTriggerTip() {
+				hoverTip?.hide();
+			}
 			const top = ref(supportsAnchorPositioning ? "" : "-10000px");
 			const left = ref(supportsAnchorPositioning ? "" : "0px");
 			const listPosition = ref("fixed");
@@ -8774,7 +8901,11 @@
 					tabindex: "0",
 					"aria-haspopup": "true",
 					"aria-expanded": shown.value,
-					title: triggerTitle.value,
+					"aria-label": __props.compact ? __props.name : null,
+					onMouseenter: showTriggerTip,
+					onMouseleave: hideTriggerTip,
+					onFocus: showTriggerTip,
+					onBlur: hideTriggerTip,
 					onClick: withModifiers(onTriggerClick, ["prevent", "stop"]),
 					onKeydown: [withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["enter"]), withKeys(withModifiers(onTriggerKeydown, ["prevent"]), ["space"])]
 				}, [iconVisible.value ? (openBlock(), createElementBlock("span", _hoisted_2$8, [pinned.value ? (openBlock(), createElementBlock("svg", _hoisted_3$8, [..._cache[2] || (_cache[2] = [
@@ -8806,7 +8937,7 @@
 					onMouseenter: _cache[0] || (_cache[0] = ($event) => show()),
 					onMouseleave: _cache[1] || (_cache[1] = ($event) => scheduleHide())
 				}, [(openBlock(true), createElementBlock(Fragment, null, renderList(__props.engines, (engine) => {
-					return openBlock(), createBlock(_sfc_main$12, {
+					return openBlock(), createBlock(_sfc_main$13, {
 						key: engine.name + engine.url,
 						engine,
 						hint: engine.hint || "",
@@ -8830,6 +8961,75 @@
 					createBaseVNode("path", { d: "M9.6 2.6h3.8v3.8" }),
 					createBaseVNode("path", { d: "M13.4 2.6 8.6 7.4" })
 				])], -1)), createBaseVNode("span", _hoisted_8$4, toDisplayString(unref(t)("jump.searchAll")), 1)], 40, _hoisted_7$5)) : createCommentVNode("", true)], 38)], 8, ["to"]))], 32);
+			};
+		}
+	};
+	var GAP = 6;
+	var VIEW_GAP = 8;
+	var _sfc_main$11 = {
+		__name: "HoverTip",
+		setup(__props) {
+			addStyle("\n.sej-hover-tip {\n  z-index: 100000000;\n  max-width: min(320px, calc(100vw - 16px));\n  padding: 6px 10px;\n  border-radius: var(--sej-radius-menu, 12px);\n  background: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  border: 1px solid var(--border-color-sej);\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  color: var(--font-color-qxin);\n  font-family: var(--sej-font-family);\n  font-size: 13px;\n  font-weight: 400;\n  line-height: 1.45;\n  text-align: left;\n  white-space: normal;\n  overflow-wrap: anywhere;\n  pointer-events: none;\n  user-select: none;\n}\n");
+			const tip = inject(HOVER_TIP_KEY, null)?.tip ?? null;
+			const role = inject(HOST_ROLE_KEY, HOST_ROLE_MAIN);
+			const dropRoot = getDropRoot(role);
+			const tipEl = ref(null);
+			const position = ref({
+				position: "fixed",
+				top: "-10000px",
+				left: "0px"
+			});
+			function resolveMode(anchor) {
+				const container = anchor.closest?.("#sej-container");
+				const containerPosition = container ? getComputedStyle(container).position : "";
+				if (containerPosition === "fixed" || containerPosition === "sticky") return "fixed";
+				if (getComputedStyle(getHost(role)).position === "static") return "fixed";
+				return "absolute";
+			}
+			function place() {
+				const anchor = tip?.anchor;
+				const el = tipEl.value;
+				if (!tip?.visible || !anchor?.isConnected || !el) return;
+				const anchorRect = anchor.getBoundingClientRect();
+				const box = el.getBoundingClientRect();
+				const mode = resolveMode(anchor);
+				let originLeft = 0;
+				let originTop = 0;
+				if (mode === "absolute") {
+					const host = getHost(role);
+					const hostRect = host.getBoundingClientRect();
+					originLeft = hostRect.left + host.clientLeft;
+					originTop = hostRect.top + host.clientTop;
+				}
+				const right = anchorRect.right + GAP;
+				const leftSide = anchorRect.left - GAP - box.width;
+				const preferred = right + box.width <= window.innerWidth - VIEW_GAP ? right : leftSide;
+				const maxLeft = Math.max(VIEW_GAP, window.innerWidth - VIEW_GAP - box.width);
+				const left = Math.min(Math.max(preferred, VIEW_GAP), maxLeft);
+				const centeredTop = anchorRect.top + (anchorRect.height - box.height) / 2;
+				const maxTop = Math.max(VIEW_GAP, window.innerHeight - VIEW_GAP - box.height);
+				position.value = {
+					position: mode,
+					top: `${Math.round(Math.min(Math.max(centeredTop, VIEW_GAP), maxTop) - originTop)}px`,
+					left: `${Math.round(left - originLeft)}px`
+				};
+			}
+			watch(() => [
+				tip?.visible,
+				tip?.text,
+				tip?.anchor
+			], () => {
+				if (tip?.visible) place();
+			}, { flush: "post" });
+			return (_ctx, _cache) => {
+				return openBlock(), createBlock(Teleport, { to: unref(dropRoot) }, [unref(tip)?.visible ? (openBlock(), createElementBlock("div", {
+					key: 0,
+					ref_key: "tipEl",
+					ref: tipEl,
+					class: "sej-hover-tip",
+					role: "tooltip",
+					style: normalizeStyle(position.value)
+				}, toDisplayString(unref(tip).text), 5)) : createCommentVNode("", true)], 8, ["to"]);
 			};
 		}
 	};
@@ -8880,6 +9080,8 @@
 			const props = __props;
 			const isFloat = props.role === HOST_ROLE_FLOAT;
 			provide(HOST_ROLE_KEY, props.role);
+			const hoverTip = createHoverTip();
+			provide(HOVER_TIP_KEY, hoverTip);
 			const settings = useSettings();
 			const data = settings.settingData;
 			const matchedRule = isFloat ? null : settings.getMatchedRule();
@@ -9509,6 +9711,7 @@
 				disposeScrollDrag();
 				disposeViewport();
 				stopStackSync();
+				hoverTip.dispose();
 			});
 			return (_ctx, _cache) => {
 				return ready.value ? (openBlock(), createElementBlock("div", {
@@ -9556,7 +9759,7 @@
 							onScrollPassive: _cache[3] || (_cache[3] = (...args) => unref(updateScrollHints) && unref(updateScrollHints)(...args))
 						}, [(openBlock(true), createElementBlock(Fragment, null, renderList(categories.value, (category) => {
 							return openBlock(), createElementBlock(Fragment, { key: category.key }, [unref(inlineStyleBlocked) ? (openBlock(), createElementBlock(Fragment, { key: 0 }, [!compactBar.value ? (openBlock(), createElementBlock("span", _hoisted_3$7, toDisplayString(category.name), 1)) : createCommentVNode("", true), (openBlock(true), createElementBlock(Fragment, null, renderList(category.engines, (engine) => {
-								return openBlock(), createBlock(_sfc_main$12, {
+								return openBlock(), createBlock(_sfc_main$13, {
 									key: engine.url + engine.name,
 									engine,
 									compact: compactBar.value,
@@ -9567,7 +9770,7 @@
 									"compact",
 									"hint"
 								]);
-							}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$11, {
+							}), 128))], 64)) : (openBlock(), createBlock(_sfc_main$12, {
 								key: 1,
 								name: category.name,
 								engines: category.engines,
@@ -9600,7 +9803,8 @@
 							onClick: _cache[5] || (_cache[5] = withModifiers(($event) => scrollBar(1), ["stop"]))
 						}, null, 8, _hoisted_5$7)
 					], 32),
-					createVNode(_sfc_main$10)
+					createVNode(_sfc_main$10),
+					createVNode(_sfc_main$11)
 				], 46, _hoisted_1$7)) : createCommentVNode("", true);
 			};
 		}

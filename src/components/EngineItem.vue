@@ -1,12 +1,14 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName } from '../assets/i18n.js';
+import { isMobileDevice } from '../core/configSchema.js';
+import { HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 
 const props = defineProps({
   engine: { type: Object, required: true },
   showIcon: { type: Boolean, default: true },
-  // 紧凑模式：只保留图标，文字收进悬停提示
+  // 紧凑模式：只保留图标，文字收进悬停提示；触屏上动作条目改为右侧常显
   compact: { type: Boolean, default: false },
   // 情景专属的悬停提示，优先于名称；为空时按紧凑模式回退到名称
   hint: { type: String, default: '' },
@@ -18,17 +20,40 @@ const label = computed(() => localizeEngineName(props.engine.name));
 const glyph = computed(() => Array.from(label.value)[0] || '');
 
 const emit = defineEmits(['jump']);
+
+// 提示内容由父级跳转条统一渲染，不再交给浏览器延迟弹出的原生 title
+const hoverTip = inject(HOVER_TIP_KEY, null);
+const tipText = computed(() => props.hint || (props.compact ? label.value : ''));
+
+// 触屏没有悬停：动作条目的目标内容直接跟在文字右侧，普通引擎不额外占位
+const isMobile = isMobileDevice();
+const inlineTip = computed(() => (isMobile ? props.hint : ''));
+
+// 键盘聚焦时立即显示，鼠标悬停则走短延迟，避免快速掠过时连续闪现
+function showTip(event) {
+  if (isMobile || !tipText.value) return;
+  hoverTip?.show(event.currentTarget, tipText.value, { immediate: event.type === 'focus' });
+}
+
+function hideTip() {
+  hoverTip?.hide();
+}
 </script>
 
 <template>
   <a
     class="sej-engine"
-    :title="hint || (compact ? label : null)"
+    :aria-label="compact ? label : null"
+    @mouseenter="showTip"
+    @mouseleave="hideTip"
+    @focus="showTip"
+    @blur="hideTip"
     @click.prevent.stop="emit('jump', engine)"
   >
     <img v-if="iconSrc" class="sej-engine-icon" :src="iconSrc" alt="" />
     <span v-else-if="compact" class="sej-engine-glyph" aria-hidden="true">{{ glyph }}</span>
     <span v-if="!compact" class="sej-engine-label">{{ label }}</span>
+    <span v-if="inlineTip" class="sej-engine-tip">{{ inlineTip }}</span>
   </a>
 </template>
 
@@ -94,6 +119,22 @@ const emit = defineEmits(['jump']);
 
 .sej-engine-icon:not([src]) {
   display: none;
+}
+
+/* 触屏上动作条目的目标内容：像贴在该条目右侧的子菜单，过长时尾部省略 */
+.sej-engine-tip {
+  max-width: min(40vw, 200px);
+  padding: 1px 7px;
+  border-radius: var(--sej-radius-menu, 12px);
+  border: 1px solid var(--border-color-sej);
+  background: var(--sej-bar-bg, var(--background-color-qxin));
+  color: inherit;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 紧凑模式没有图标时的首字兜底，占据与图标槽相同的 16px */
