@@ -27,7 +27,7 @@ export default defineConfig({
         // 调试构建用 server: 前缀，与正式版各占一个安装位、可共存
         name: devBundle ? 'server:SearchEngineJump++' : 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.16.2354',
+        version: '2026.11.16.2355',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': '多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制',

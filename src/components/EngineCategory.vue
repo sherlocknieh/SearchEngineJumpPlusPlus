@@ -612,7 +612,8 @@ onBeforeUnmount(() => {
   justify-content: flex-start;
   width: 100%;
   height: 30px;
-  padding: 0 10px;
+  /* 左右留白放进条目内部：悬停高亮铺满面板，文字仍与面板边缘保持原距离 */
+  padding: 0 14px;
   gap: 8px;
   /* 面板本身是矩形卡片，条目悬停也用矩形高亮，不再画成药丸 */
   border-radius: 0;
