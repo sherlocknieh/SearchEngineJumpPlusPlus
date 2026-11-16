@@ -16,6 +16,23 @@ export function extractKeyword(inputTarget) {
   return inputTarget.textContent || '';
 }
 
+/**
+ * 跳转条当前交给引擎的关键词：上下文操作条（图片/链接命中）优先，其次划词条，
+ * 最后才是站点内嵌的搜索框。
+ *
+ * 优先级看「这次是谁触发的」，而不是挂载时定下的来源：长按经常发生在划词条
+ * 已经挂载之后，此时选区是空的，再按选区取词等于引擎链接里没带上图片地址。
+ * @param {object} [sources]
+ * @param {string | null} [sources.contextKeyword] 上下文命中内容，非上下文模式为 null
+ * @param {string | null} [sources.selectionText] 选区文字，非划词条为 null
+ * @param {Element | (() => string) | null} [sources.inputTarget] 站点搜索框
+ */
+export function resolveBarKeyword({ contextKeyword = null, selectionText = null, inputTarget = null } = {}) {
+  if (contextKeyword !== null) return contextKeyword;
+  if (selectionText !== null) return selectionText;
+  return extractKeyword(inputTarget);
+}
+
 export function encodeKeyword(keyword) {
   return encodeURIComponent(keyword);
 }

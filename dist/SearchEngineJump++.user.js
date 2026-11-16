@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.15.2227
+// @version         2026.11.16.1339
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -7241,6 +7241,11 @@
 		if (inputTarget.nodeName === "INPUT") return inputTarget.value;
 		return inputTarget.textContent || "";
 	}
+	function resolveBarKeyword({ contextKeyword = null, selectionText = null, inputTarget = null } = {}) {
+		if (contextKeyword !== null) return contextKeyword;
+		if (selectionText !== null) return selectionText;
+		return extractKeyword(inputTarget);
+	}
 	function encodeKeyword(keyword) {
 		return encodeURIComponent(keyword);
 	}
@@ -8912,8 +8917,11 @@
 				return !findKeywordUrl(actionHintHit.value.keyword);
 			}
 			function getCurrentKeyword() {
-				if (isSelectSearch.value) return selectionText.value;
-				return extractKeyword(inputTarget);
+				return resolveBarKeyword({
+					contextKeyword: isContextAction.value ? contextAction.keyword : null,
+					selectionText: isSelectSearch.value ? selectionText.value : null,
+					inputTarget
+				});
 			}
 			function syncSearchInputKeyword() {
 				searchInputKeyword.value = extractKeyword(inputTarget);
@@ -9082,7 +9090,6 @@
 				contextMode.value = contextAction.mode;
 				contextTarget.value = contextAction.element;
 				isContextAction.value = true;
-				inputTarget = () => contextAction.keyword;
 				return true;
 			}
 			function initTargets() {

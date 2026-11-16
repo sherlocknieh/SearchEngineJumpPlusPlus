@@ -28,7 +28,7 @@ export default defineConfig({
         // dev 服务下插件会自动加 `server:` 前缀；调试构建显式同名，两套调试流程只占一条安装位
         name: devBundle ? 'server:SearchEngineJump++' : 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.15.2227',
+        version: '2026.11.16.1339',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': '多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制',

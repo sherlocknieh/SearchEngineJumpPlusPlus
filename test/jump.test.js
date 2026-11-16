@@ -3,6 +3,7 @@ import {
   extractKeyword,
   encodeKeyword,
   prepareJump,
+  resolveBarKeyword,
   resolveOpenMode,
   shouldOpenInNewTab,
 } from '../src/core/jump.js';
@@ -13,6 +14,25 @@ describe('extractKeyword', () => {
     expect(extractKeyword({ nodeName: 'INPUT', value: 'input' })).toBe('input');
     expect(extractKeyword({ textContent: 'text' })).toBe('text');
     expect(extractKeyword(null)).toBe('');
+  });
+});
+
+describe('resolveBarKeyword', () => {
+  it('长按图片发生在划词条已挂载之后仍取图片地址', () => {
+    // 划词条先挂载、选区随后被清空：上下文命中必须压过空的选区
+    expect(resolveBarKeyword({ contextKeyword: 'https://cdn.test/a.png', selectionText: '' })).toBe(
+      'https://cdn.test/a.png',
+    );
+  });
+
+  it('划词条优先于站点搜索框', () => {
+    expect(
+      resolveBarKeyword({ selectionText: '选中文字', inputTarget: { nodeName: 'INPUT', value: '框内' } }),
+    ).toBe('选中文字');
+  });
+
+  it('没有上下文与选区时取站点搜索框', () => {
+    expect(resolveBarKeyword({ inputTarget: { nodeName: 'INPUT', value: '框内' } })).toBe('框内');
   });
 });
 

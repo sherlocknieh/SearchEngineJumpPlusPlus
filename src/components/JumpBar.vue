@@ -27,6 +27,7 @@ import {
 } from '../core/applyRule.js';
 import {
   extractKeyword,
+  resolveBarKeyword,
   performJump,
   openAllEngines,
   isActionEngine,
@@ -243,9 +244,19 @@ function hidesOpenAction(engine) {
   return !findKeywordUrl(actionHintHit.value.keyword);
 }
 
+/**
+ * 当前要交给引擎的关键词。
+ *
+ * 上下文操作条与划词条共用同一个浮层实例，长按可能发生在划词条已挂载之后，
+ * 此时不能再依赖挂载时的关键词来源（inputTarget）：长按命中时以命中内容为准，
+ * 否则搜图会把空的选区当成关键词，引擎链接里等于没带上图片地址。
+ */
 function getCurrentKeyword() {
-  if (isSelectSearch.value) return selectionText.value;
-  return extractKeyword(inputTarget);
+  return resolveBarKeyword({
+    contextKeyword: isContextAction.value ? contextAction.keyword : null,
+    selectionText: isSelectSearch.value ? selectionText.value : null,
+    inputTarget,
+  });
 }
 
 /** 内嵌条的关键词随搜索框输入变化，动作引擎的提示据此展示将要复制/打开的内容 */
@@ -466,7 +477,8 @@ function initContextAction() {
   contextMode.value = contextAction.mode;
   contextTarget.value = contextAction.element;
   isContextAction.value = true;
-  inputTarget = () => contextAction.keyword;
+  // 关键词不记录在 inputTarget 上：getCurrentKeyword 直接按上下文模式取命中内容，
+  // 这样长按发生在划词条已挂载之后也能拿到图片/链接地址
   return true;
 }
 

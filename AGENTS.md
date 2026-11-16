@@ -67,6 +67,8 @@ src/main.js                 只做装配
 ## 跳转链路
 
 - 取词：`core/selection.js`（文档选区 + 输入框 `selectionStart/End`）
+- 关键词来源：`core/jump.js` 的 `resolveBarKeyword` 按「上下文命中 → 选区 → 站点搜索框」取；
+  长按常发生在划词条已挂载之后，不能沿用挂载时定下的来源，否则搜图链接里没有图片地址
 - 划词时机：`core/selectionGesture.js` 记录左键是否按住，拖动过程中不弹条，松手后才显示
 - 执行：`core/jump.js`
   - `prepareJump`：`%s` 全量替换为 `encodeURIComponent(关键词)`；`$post$` 走表单提交
