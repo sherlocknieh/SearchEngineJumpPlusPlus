@@ -83,23 +83,6 @@ function normalizeActionTarget(target) {
 }
 
 /**
- * 打开图片时的地址：http(s) 直接用；内联 data:image 转成同源 blob: 再打开。
- * Chrome 拦截顶层导航到 data:（点开只会得到空白页），blob: 则能正常显示这张图。
- * @param {string} raw 命中图片的地址
- * @returns {Promise<string>} 可打开的地址；不可打开时返回空串
- */
-async function imageOpenUrl(raw) {
-  const value = String(raw ?? '').trim();
-  if (!/^data:image\//i.test(value)) return findKeywordUrl(value);
-  try {
-    const blob = await (await fetch(value)).blob();
-    return URL.createObjectURL(blob);
-  } catch (e) {
-    return '';
-  }
-}
-
-/**
  * 执行动作引擎，返回是否成功处理。
  * copy 复制文字，copyImage 复制图片本身（取不到时复制图片地址），
  * copyImageUrl / copyLinkUrl 复制地址，copyLinkText 复制链接标题，
@@ -118,7 +101,9 @@ export async function performEngineAction(engine, target, defaultTarget = DEFAUL
   if (action === 'copyImageUrl' || action === 'copyLinkUrl') return copyText(source.url);
   if (action === 'selectLinkText') return selectLinkTitle(source.element);
   if (action === 'open' || action === 'openImage') {
-    const url = action === 'openImage' ? await imageOpenUrl(source.url) : findKeywordUrl(source.url);
+    // 打开图片直接用它自己的地址，内联 data:image 也原样交给浏览器
+    const url =
+      action === 'openImage' ? String(source.url ?? '').trim() : findKeywordUrl(source.url);
     if (!url) return false;
     const mode = resolveOpenMode(engine, false, defaultTarget);
     if (mode === 'self') {

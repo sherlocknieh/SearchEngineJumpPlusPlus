@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.1339
+// @version         2026.11.16.1347
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -7282,16 +7282,6 @@
 			element: target?.element || null
 		};
 	}
-	async function imageOpenUrl(raw) {
-		const value = String(raw ?? "").trim();
-		if (!/^data:image\//i.test(value)) return findKeywordUrl(value);
-		try {
-			const blob = await (await fetch(value)).blob();
-			return URL.createObjectURL(blob);
-		} catch (e) {
-			return "";
-		}
-	}
 	async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
 		const action = normalizeEngineAction(engine?.action);
 		const source = normalizeActionTarget(target);
@@ -7304,7 +7294,7 @@
 		if (action === "copyImageUrl" || action === "copyLinkUrl") return copyText(source.url);
 		if (action === "selectLinkText") return selectLinkTitle(source.element);
 		if (action === "open" || action === "openImage") {
-			const url = action === "openImage" ? await imageOpenUrl(source.url) : findKeywordUrl(source.url);
+			const url = action === "openImage" ? String(source.url ?? "").trim() : findKeywordUrl(source.url);
 			if (!url) return false;
 			const mode = resolveOpenMode(engine, false, defaultTarget);
 			if (mode === "self") window.location.href = url;

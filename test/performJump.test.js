@@ -279,11 +279,13 @@ describe('动作引擎的上下文目标', () => {
     });
   });
 
-  it('内联图片打不开原地址时换成 blob: 再打开', async () => {
-    // Chrome 拦截顶层导航到 data:，打开图片要先转成同源 blob:
+  it('内联图片直接打开自身的 data: 地址', async () => {
     const data = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8DwHwAFAAH/q842iQAAAABJRU5ErkJggg==';
     expect(await performEngineAction({ action: 'openImage' }, { url: data })).toBe(true);
-    const [url] = openInTab.mock.calls[0] || [];
-    expect(url?.startsWith('blob:')).toBe(true);
+    expect(openInTab).toHaveBeenCalledWith(data, {
+      active: true,
+      insert: true,
+      setParent: true,
+    });
   });
 });

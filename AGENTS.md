@@ -97,7 +97,7 @@ src/main.js                 只做装配
   内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，按自然尺寸排除
   1x1 占位图；识图引擎靠 URL 取图，抓不到这种地址（Lens 的 `uploadbyurl` 回 “No image at the URL”，
   从第三方站点把字节直传 google.com 又被 403 挡回），因此命中内联图片时不显示「搜图」分类；
-  「打开图片」把 `data:` 转成 `blob:` 再打开（顶层导航到 `data:` 会被 Chrome 拦成空白页）
+  「打开图片」直接把命中的图片地址交给浏览器（内联图片即 `data:image` 原样打开）
 - 引擎来源：`getContextEngines(settingData, mode)` 过滤隐藏项与空项；
   图片模式取「搜图」分类（`IMAGE_CATEGORY_KEY = 'image'`），链接模式取「操作」分类
   （复制 / 打开）；链接动作同样取「操作」分类配置，追加在同一分类内并标明作用目标；
