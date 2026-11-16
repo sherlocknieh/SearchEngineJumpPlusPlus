@@ -1,7 +1,7 @@
 import { getCSPNonce, resetCSPNonce } from './csp.js';
 
 // 开发脚本与正式版可能同时注入同一页面，用不同的宿主 id 共存。
-// VITE_SEJ_ROLE 供 `nub run dev:csp` 的构建产物使用：那是构建版，但角色仍是 dev
+// VITE_SEJ_ROLE 供 `nub run dev` 的调试构建使用：那是构建版，但角色仍是 dev
 export const INSTANCE_ROLE =
   import.meta.env.DEV || import.meta.env.VITE_SEJ_ROLE === 'dev' ? 'dev' : 'prod';
 
@@ -30,7 +30,7 @@ const TOAST_STACK_STEP = 43;
 
 /**
  * 本次脚本实例的身份标记。
- * 同一份脚本被重复安装（例如 dev 版与 dev:csp 版并存）时会创建同 id 的宿主，
+ * 同一份脚本被重复安装时会创建同 id 的宿主，
  * 用它区分“自己”和“另一份安装”，后者不再重复挂载。
  */
 const INSTANCE_OWNER = Math.random().toString(36).slice(2);

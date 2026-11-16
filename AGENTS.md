@@ -6,9 +6,8 @@
 ## 快速命令
 
 ```bash
-nub run dev            # 开发调试（浏览器打开 http://localhost:5173）
-nub run dev:csp        # 严格 CSP 站点的调试（watch 构建 + 本地服务，管理器直连拉取产物）
-                       # 两者安装的用户脚本都叫 server:SearchEngineJump++，管理器里只留一条
+nub run dev            # 调试（watch 构建自包含产物 + 本地服务，管理器直连拉取）
+                       # 安装的用户脚本叫 server:SearchEngineJump++，改完代码手动刷新
 nub run build          # 只重新构建 dist，不动版本号
 nub run lint           # ESLint
 nub run test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
@@ -33,7 +32,7 @@ src/main.js                 只做装配
 - **SPA 路由**：`app/urlChange.js` 监听 `urlchange`，规则未变且 `barMounted` 时不重建，只刷新 `settings.activeRule`。
 - **重启**：设置保存后 `SettingPanel.vue` → `lifecycle.restart()`（整棵 Vue 应用重建）。
 - **多实例**：开发版/正式版用不同 host id 共存，层叠偏移在 `core/shadowDom.js`；
-  调试脚本统一 `@name` 为 `server:SearchEngineJump++`，dev 与 dev:csp 共用一个安装位，
+  调试脚本统一 `@name` 为 `server:SearchEngineJump++`，重复安装共用这个安装位，
   同一角色被两个实例同时运行时，后启动的实例检测到同 id 宿主来自别的安装，直接跳过挂载。
 - **划词条独立**：`float` 宿主是独立 Vue 应用，划词/长按操作模式只影响它，站点内嵌条保持原位。
 
@@ -247,11 +246,9 @@ src/main.js                 只做装配
 - 双击/三击本身是在选词、选段：短句里三击选中的整行可能与双击选中的词完全相同，
   浮层收起判定不能只看「文本是否变化」。`selectionGesture.currentClickDetail()` ≥ 2 时
   松手一律不按「点空白」收起，否则短子评论（如「确实」）三击会被误判成上次点击的残留选区
-- `nub run dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
-  （控制台报 violates CSP）；这类站点改用 `nub run dev:csp`，产物输出到 `.dev/build/`，
-  由脚本管理器拉取执行，页面不加载外部脚本。调试脚本只在页面加载时取一次产物、不轮询，
-  改完代码手动刷新；Chrome 142+ 会把这次本地请求算在当前站点上，每个站点首次弹一次
-  「本地网络访问」授权，允许后不再提示
+- 调试只有 `nub run dev`：watch 构建自包含产物到 `.dev/build/`，由脚本管理器直连本地服务拉取，
+  页面不加载外部脚本，严格 CSP 的站点也能用；只在页面加载时取一次产物、不轮询，改完手动刷新。
+  Chrome 142+ 会把这次本地请求算在当前站点上，每个站点首次弹一次「本地网络访问」授权，允许后不再提示
 - 版本号、`dist/` 产物由 `nub run release` 统一生成，手动构建后不要把 dist 混进无关提交
 - 每次提交都必须发布新版：直接用 `nub run release "..." --push` 产生提交（升版本 → lint → test →
   build → 单提交 + tag → 推送），不要先 `git commit` 再补发布

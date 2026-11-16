@@ -1,10 +1,9 @@
 /**
- * 严格 CSP 站点的调试服务。
+ * 调试服务：本仓库唯一的 dev 入口（`nub run dev`）。
  *
- * 常规 `nub run dev` 靠页面加载 http://localhost:5173 的模块脚本，
- * 站点 CSP 的 script-src 不含该地址时脚本完全不运行。
- * 这里改成 watch 构建自包含产物，由脚本管理器直连本服务拉取并在自己的沙箱里执行：
- * 页面不加载任何外部脚本，因此不受站点 CSP 限制。
+ * watch 构建自包含产物到 .dev/build/，由脚本管理器直连本服务拉取、在自己的沙箱里执行：
+ * 页面不加载任何外部脚本，因此严格 CSP 的站点也能调试，也不依赖 Vite dev server。
+ * 脚本只在页面加载时取一次产物、不轮询，改完代码手动刷新。
  *
  * 构建时注入 VITE_SEJ_ROLE=dev，让实例角色落到 dev，宿主 id 与正式版互不冲突。
  */
@@ -21,7 +20,7 @@ function readPort() {
   const flag = process.argv.indexOf('--port');
   const value = flag > -1 ? process.argv[flag + 1] : process.env.SEJ_DEV_PORT;
   const port = Number(value);
-  // 默认避开常规 `nub run dev` 的 5173，两者可以同时开着
+  // 默认 5180（避开常见的 5173），可用 --port 或 SEJ_DEV_PORT 改
   return Number.isInteger(port) && port > 0 ? port : 5180;
 }
 
@@ -75,7 +74,7 @@ function loaderSource() {
       onerror() {
         if (warned) return;
         warned = true;
-        console.error('[SEJ dev] 无法连接 ' + ORIGIN + '，请确认 nub run dev:csp 已启动');
+        console.error('[SEJ dev] 无法连接 ' + ORIGIN + '，请确认 nub run dev 已启动');
       },
     });
   }

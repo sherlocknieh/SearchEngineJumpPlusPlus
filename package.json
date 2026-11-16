@@ -5,8 +5,7 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "vite",
-    "dev:csp": "node .dev/dev-csp.mjs",
+    "dev": "node .dev/dev.mjs",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
