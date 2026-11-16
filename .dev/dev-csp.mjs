@@ -9,7 +9,6 @@
  * 构建时注入 VITE_SEJ_ROLE=dev，让实例角色落到 dev，宿主 id 与正式版互不冲突。
  */
 import { spawn } from 'node:child_process';
-import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import path from 'node:path';
@@ -56,20 +55,16 @@ function readBundle() {
   return readFile(bundlePath, 'utf8');
 }
 
-function bundleHash(text) {
-  return createHash('sha1').update(text).digest('hex').slice(0, 12);
-}
-
 /**
  * 加载器：拉取产物后在脚本管理器沙箱内直接 eval。
+ * 只在页面加载时取一次最新产物，改完代码手动刷新页面即可；不轮询，
+ * 避免页面持续访问本地服务（Chrome 142+ 会对本地地址请求弹授权）。
  * 必须用直接 eval，间接 eval 会跑在全局作用域里而看不到 GM_*。
  */
 function loaderSource() {
   return `
 (() => {
   const ORIGIN = '${origin}';
-  const POLL_MS = 1500;
-  let version = '';
   let warned = false;
 
   function request(pathname, onload) {
@@ -85,21 +80,6 @@ function loaderSource() {
     });
   }
 
-  // 产物变化后整页刷新，替代 HMR
-  function watch() {
-    const readHash = (onload) =>
-      request('/__hash', (res) => onload(String(res.responseText || '').trim()));
-    readHash((value) => {
-      version = value;
-    });
-    setInterval(() => {
-      readHash((value) => {
-        if (!version || value === version) return;
-        location.reload();
-      });
-    }, POLL_MS);
-  }
-
   request('/sej.dev.js?t=' + Date.now(), (res) => {
     if (res.status !== 200) {
       console.error('[SEJ dev] 拉取调试产物失败：' + res.status);
@@ -111,9 +91,7 @@ function loaderSource() {
       eval(res.responseText + '\\n//# sourceURL=sej.dev.bundle.js');
     } catch (e) {
       console.error('[SEJ dev] 执行调试产物失败', e);
-      return;
     }
-    watch();
   });
 })();
 `;
@@ -129,7 +107,7 @@ const installHtml = `<!DOCTYPE html>
   <body>
     <h1>SearchEngineJump++ 调试脚本</h1>
     <p>点击安装 <a href="/install.user.js">install.user.js</a>（脚本名为 server:SearchEngineJump++，与正式版共存）。</p>
-    <p>安装后任意页面都会加载最新构建产物，产物变化时整页刷新。</p>
+    <p>安装后每次打开/刷新页面都会拉取最新构建产物；改完代码手动刷新即可。</p>
   </body>
 </html>`;
 
@@ -164,15 +142,10 @@ const server = createServer(async (req, res) => {
       res.end(`${text}\n\n${loaderSource()}`);
       return;
     }
-    if (pathname === '/sej.dev.js' || pathname === '/__hash') {
+    if (pathname === '/sej.dev.js') {
       const text = await readBundle();
-      res.writeHead(200, {
-        'content-type':
-          pathname === '/__hash'
-            ? 'text/plain; charset=utf-8'
-            : 'application/javascript; charset=utf-8',
-      });
-      res.end(pathname === '/__hash' ? bundleHash(text) : text);
+      res.writeHead(200, { 'content-type': 'application/javascript; charset=utf-8' });
+      res.end(text);
       return;
     }
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
@@ -193,7 +166,7 @@ server.on('error', (e) => {
 
 server.listen(port, '127.0.0.1', () => {
   console.log(`\n[SEJ dev] 调试脚本已就绪：${origin}/install.user.js`);
-  console.log('[SEJ dev] 首次安装后无需重装，改代码会自动重建并刷新页面\n');
+  console.log('[SEJ dev] 首次安装后无需重装，改完代码刷新页面即可\n');
   if (noOpen) return;
   // 直接打开安装地址，由脚本管理器接管并弹出安装框，不用再点页内链接
   openInBrowser(`${origin}/install.user.js`);
