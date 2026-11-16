@@ -252,4 +252,4 @@ src/main.js                 只做装配
   build → 单提交 + tag → 推送），不要先 `git commit` 再补发布
 - 发布前会跑 lint/test，改完先本地 `nub run test`
 - 包管理已切到 nub（`nub.lock` 仍是 pnpm v9 格式）：安装/新增依赖用 `nub install` / `nub add`，
-  执行本地 CLI 用 `nubx`；`pnpm` 在这个仓库会按 `devEngines` 直接拒绝执行
+  执行本地 CLI 用 `nubx`；`packageManager` 已指向 nub，`pnpm` 会被拦下（`ERR_PNPM_OTHER_PM_EXPECTED`）
