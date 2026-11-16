@@ -631,7 +631,8 @@ onBeforeUnmount(() => {
   top: -10000px;
   left: 0;
   min-width: 128px;
-  padding: 4px;
+  /* 上下留出面板内边距；左右不留白，条目悬停高亮可以铺满整个面板宽度 */
+  padding: 4px 0;
   box-sizing: border-box;
   text-align: left;
   font-size: 13px;
