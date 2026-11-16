@@ -15,7 +15,7 @@ const HIDE_DELAY_MS = 80;
  * 这里只维护「当前锚点 + 文案」，由 HoverTip 组件统一渲染并定位。
  */
 export function createHoverTip() {
-  const tip = reactive({ visible: false, text: '', anchor: null });
+  const tip = reactive({ visible: false, text: '', anchor: null, placement: 'right' });
   let showTimer = 0;
   let hideTimer = 0;
   let listening = false;
@@ -56,9 +56,10 @@ export function createHoverTip() {
     listenViewport(false);
   }
 
-  function reveal(anchor, text) {
+  function reveal(anchor, text, placement) {
     tip.anchor = anchor;
     tip.text = text;
+    tip.placement = placement;
     tip.visible = true;
     listenViewport(true);
   }
@@ -66,22 +67,30 @@ export function createHoverTip() {
   /**
    * 请求显示提示。
    * 已有提示时直接换到新条目，避免从一条移到下一条时重新等延迟。
+   * placement 决定提示落点：普通条目在右侧，分类图标在上方以免挡住相邻分类。
    */
-  function show(anchor, text, { immediate = false } = {}) {
+  function show(anchor, text, { immediate = false, placement = 'right' } = {}) {
     if (!anchor || !text) {
       hide({ immediate: true });
       return;
     }
     clearHide();
-    if (tip.visible && tip.anchor === anchor && tip.text === text) return;
+    if (
+      tip.visible &&
+      tip.anchor === anchor &&
+      tip.text === text &&
+      tip.placement === placement
+    ) {
+      return;
+    }
     clearShow();
     if (tip.visible || immediate) {
-      reveal(anchor, text);
+      reveal(anchor, text, placement);
       return;
     }
     showTimer = setTimeout(() => {
       showTimer = 0;
-      reveal(anchor, text);
+      reveal(anchor, text, placement);
     }, SHOW_DELAY_MS);
   }
 

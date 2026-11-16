@@ -71,7 +71,11 @@ const hoverTip = inject(HOVER_TIP_KEY, null);
 
 function showTriggerTip(event) {
   if (!triggerTitle.value) return;
-  hoverTip?.show(event.currentTarget, triggerTitle.value, { immediate: event.type === 'focus' });
+  // 分类图标排在一条水平线上，提示放到上方才不会挡住右侧相邻分类
+  hoverTip?.show(event.currentTarget, triggerTitle.value, {
+    immediate: event.type === 'focus',
+    placement: 'top',
+  });
 }
 
 function hideTriggerTip() {

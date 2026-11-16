@@ -41,6 +41,15 @@ describe('useHoverTip', () => {
     expect(hoverTip.tip.anchor).toBe(b);
   });
 
+  it('分类图标的提示放在上方，普通条目默认在右侧', () => {
+    const a = anchor();
+    const b = anchor();
+    hoverTip.show(a, '搜索', { immediate: true, placement: 'top' });
+    expect(hoverTip.tip.placement).toBe('top');
+    hoverTip.show(b, '复制文字');
+    expect(hoverTip.tip.placement).toBe('right');
+  });
+
   it('离开条目后留出宽限，相邻条目接管时不闪烁', () => {
     const a = anchor();
     const b = anchor();

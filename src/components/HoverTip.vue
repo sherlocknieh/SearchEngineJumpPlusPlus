@@ -30,8 +30,9 @@ function resolveMode(anchor) {
 }
 
 /**
- * 提示贴在锚点右侧并垂直居中；右侧空间不足时翻到左侧，左右与上下都收进视口。
- * 坐标按宿主的 padding box 换算，绝对定位时页面滚动由浏览器天然跟随。
+ * 提示默认贴在锚点右侧并垂直居中；右侧空间不足时翻到左侧，左右与上下都收进视口。
+ * 分类图标（placement 为 top）改在正上方居中，避免遮住同一行的相邻分类；
+ * 上方放不下时翻到下方。坐标按宿主的 padding box 换算，绝对定位时页面滚动天然跟随。
  */
 function place() {
   const anchor = tip?.anchor;
@@ -52,14 +53,25 @@ function place() {
     originTop = hostRect.top + host.clientTop;
   }
 
-  const right = anchorRect.right + GAP;
-  const leftSide = anchorRect.left - GAP - box.width;
-  const preferred = right + box.width <= window.innerWidth - VIEW_GAP ? right : leftSide;
   const maxLeft = Math.max(VIEW_GAP, window.innerWidth - VIEW_GAP - box.width);
-  const left = Math.min(Math.max(preferred, VIEW_GAP), maxLeft);
-  const centeredTop = anchorRect.top + (anchorRect.height - box.height) / 2;
   const maxTop = Math.max(VIEW_GAP, window.innerHeight - VIEW_GAP - box.height);
-  const top = Math.min(Math.max(centeredTop, VIEW_GAP), maxTop);
+  let left;
+  let top;
+
+  if (tip.placement === 'top') {
+    const centeredLeft = anchorRect.left + (anchorRect.width - box.width) / 2;
+    left = Math.min(Math.max(centeredLeft, VIEW_GAP), maxLeft);
+    const above = anchorRect.top - GAP - box.height;
+    const below = anchorRect.bottom + GAP;
+    top = above >= VIEW_GAP ? above : Math.min(below, maxTop);
+  } else {
+    const right = anchorRect.right + GAP;
+    const leftSide = anchorRect.left - GAP - box.width;
+    const preferred = right + box.width <= window.innerWidth - VIEW_GAP ? right : leftSide;
+    left = Math.min(Math.max(preferred, VIEW_GAP), maxLeft);
+    const centeredTop = anchorRect.top + (anchorRect.height - box.height) / 2;
+    top = Math.min(Math.max(centeredTop, VIEW_GAP), maxTop);
+  }
 
   position.value = {
     position: mode,
@@ -68,9 +80,9 @@ function place() {
   };
 }
 
-// 文案或锚点变化后先让新内容完成渲染再量尺寸，避免按旧宽度定位而偏出屏幕
+// 文案、锚点或落点变化后先让新内容完成渲染再量尺寸，避免按旧宽度定位而偏出屏幕
 watch(
-  () => [tip?.visible, tip?.text, tip?.anchor],
+  () => [tip?.visible, tip?.text, tip?.anchor, tip?.placement],
   () => {
     if (tip?.visible) place();
   },

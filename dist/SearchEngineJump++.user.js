@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.17.0001
+// @version         2026.11.17.0021
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -8025,7 +8025,8 @@
 		const tip = reactive({
 			visible: false,
 			text: "",
-			anchor: null
+			anchor: null,
+			placement: "right"
 		});
 		let showTimer = 0;
 		let hideTimer = 0;
@@ -8066,27 +8067,28 @@
 			tip.anchor = null;
 			listenViewport(false);
 		}
-		function reveal(anchor, text) {
+		function reveal(anchor, text, placement) {
 			tip.anchor = anchor;
 			tip.text = text;
+			tip.placement = placement;
 			tip.visible = true;
 			listenViewport(true);
 		}
-		function show(anchor, text, { immediate = false } = {}) {
+		function show(anchor, text, { immediate = false, placement = "right" } = {}) {
 			if (!anchor || !text) {
 				hide({ immediate: true });
 				return;
 			}
 			clearHide();
-			if (tip.visible && tip.anchor === anchor && tip.text === text) return;
+			if (tip.visible && tip.anchor === anchor && tip.text === text && tip.placement === placement) return;
 			clearShow();
 			if (tip.visible || immediate) {
-				reveal(anchor, text);
+				reveal(anchor, text, placement);
 				return;
 			}
 			showTimer = setTimeout(() => {
 				showTimer = 0;
-				reveal(anchor, text);
+				reveal(anchor, text, placement);
 			}, SHOW_DELAY_MS);
 		}
 		function hide({ immediate = false } = {}) {
@@ -8628,7 +8630,10 @@
 			const hoverTip = inject(HOVER_TIP_KEY, null);
 			function showTriggerTip(event) {
 				if (!triggerTitle.value) return;
-				hoverTip?.show(event.currentTarget, triggerTitle.value, { immediate: event.type === "focus" });
+				hoverTip?.show(event.currentTarget, triggerTitle.value, {
+					immediate: event.type === "focus",
+					placement: "top"
+				});
 			}
 			function hideTriggerTip() {
 				hoverTip?.hide();
@@ -9001,23 +9006,35 @@
 					originLeft = hostRect.left + host.clientLeft;
 					originTop = hostRect.top + host.clientTop;
 				}
-				const right = anchorRect.right + GAP;
-				const leftSide = anchorRect.left - GAP - box.width;
-				const preferred = right + box.width <= window.innerWidth - VIEW_GAP ? right : leftSide;
 				const maxLeft = Math.max(VIEW_GAP, window.innerWidth - VIEW_GAP - box.width);
-				const left = Math.min(Math.max(preferred, VIEW_GAP), maxLeft);
-				const centeredTop = anchorRect.top + (anchorRect.height - box.height) / 2;
 				const maxTop = Math.max(VIEW_GAP, window.innerHeight - VIEW_GAP - box.height);
+				let left;
+				let top;
+				if (tip.placement === "top") {
+					const centeredLeft = anchorRect.left + (anchorRect.width - box.width) / 2;
+					left = Math.min(Math.max(centeredLeft, VIEW_GAP), maxLeft);
+					const above = anchorRect.top - GAP - box.height;
+					const below = anchorRect.bottom + GAP;
+					top = above >= VIEW_GAP ? above : Math.min(below, maxTop);
+				} else {
+					const right = anchorRect.right + GAP;
+					const leftSide = anchorRect.left - GAP - box.width;
+					const preferred = right + box.width <= window.innerWidth - VIEW_GAP ? right : leftSide;
+					left = Math.min(Math.max(preferred, VIEW_GAP), maxLeft);
+					const centeredTop = anchorRect.top + (anchorRect.height - box.height) / 2;
+					top = Math.min(Math.max(centeredTop, VIEW_GAP), maxTop);
+				}
 				position.value = {
 					position: mode,
-					top: `${Math.round(Math.min(Math.max(centeredTop, VIEW_GAP), maxTop) - originTop)}px`,
+					top: `${Math.round(top - originTop)}px`,
 					left: `${Math.round(left - originLeft)}px`
 				};
 			}
 			watch(() => [
 				tip?.visible,
 				tip?.text,
-				tip?.anchor
+				tip?.anchor,
+				tip?.placement
 			], () => {
 				if (tip?.visible) place();
 			}, { flush: "post" });
