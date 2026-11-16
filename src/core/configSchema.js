@@ -25,6 +25,7 @@ export const OPTION_KEYS = [
   'center',
   'selectSearchInInput',
   'selectionFollowPointer',
+  'selectionBelow',
   'selectionCompact',
   'selectionIcon',
   'clickCategoryJumpFirst',
@@ -48,6 +49,8 @@ export function createDefaultConfig() {
     selectSearchInInput: true,
     // 划词条默认贴在选区旁，而不是从页面顶部滑出
     selectionFollowPointer: true,
+    // 划词条默认贴在选区上方，打开后改贴下方
+    selectionBelow: false,
     // 划词条默认完整显示，不隐藏文字
     selectionCompact: false,
     // 划词条默认整条展开，不先收起成图标

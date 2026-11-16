@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.2108
+// @version         2026.11.16.2114
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -5555,6 +5555,8 @@
 			"settings.selectSearchInInputTip": "在输入框内选中文字时允许弹出划词搜索条",
 			"settings.selectionFollowPointer": "跟随选区",
 			"settings.selectionFollowPointerTip": "划词搜索条出现在选中文字/图片/链接附近；关闭选项时搜索条置顶",
+			"settings.selectionBelow": "显示在文字下方",
+			"settings.selectionBelowTip": "划词搜索条贴在选中文字/链接下方；下方空间不足时仍放到上方",
 			"settings.selectionCompact": "紧凑模式",
 			"settings.selectionCompactTip": "划词搜索条只显示图标，不显示文字",
 			"settings.selectionIcon": "折叠模式",
@@ -5716,6 +5718,8 @@
 			"settings.selectSearchInInputTip": "Show the selection bar when text is selected inside an input",
 			"settings.selectionFollowPointer": "Follow selection",
 			"settings.selectionFollowPointerTip": "Show the selection bar above the selected text, centered on it, or next to the long-pressed image/link; otherwise it slides in from the top",
+			"settings.selectionBelow": "Below text",
+			"settings.selectionBelowTip": "Place the selection bar under the selected text/link; it moves above when there is not enough room below",
 			"settings.selectionCompact": "Compact mode",
 			"settings.selectionCompactTip": "Show icons only, without text, in the selection bar",
 			"settings.selectionIcon": "Minimal mode",
@@ -6080,6 +6084,7 @@
 		"center",
 		"selectSearchInInput",
 		"selectionFollowPointer",
+		"selectionBelow",
 		"selectionCompact",
 		"selectionIcon",
 		"clickCategoryJumpFirst",
@@ -6101,6 +6106,7 @@
 		return {
 			selectSearchInInput: true,
 			selectionFollowPointer: true,
+			selectionBelow: false,
 			selectionCompact: false,
 			selectionIcon: false,
 			clickCategoryJumpFirst: true,
@@ -6607,14 +6613,15 @@
 			left: Math.round(left)
 		};
 	}
-	function placeAboveRect({ rect, bar, viewport, gap = 6 }) {
+	function placeOutsideRect({ rect, bar, viewport, gap = 6, below = false }) {
 		const viewWidth = Math.max(0, viewport?.width ?? 0);
 		const viewHeight = Math.max(0, viewport?.height ?? 0);
 		const barWidth = Math.max(0, bar?.width ?? 0);
 		const barHeight = Math.max(0, bar?.height ?? 0);
 		const left = centeredLeft(rect, barWidth, viewWidth, gap);
 		const above = rect.top - gap - barHeight;
-		const candidate = above >= gap ? above : rect.bottom + gap;
+		const under = rect.bottom + gap;
+		const candidate = below ? under + barHeight <= viewHeight - gap ? under : above : above >= gap ? above : under;
 		const maxTop = Math.max(gap, viewHeight - gap - barHeight);
 		return {
 			top: Math.round(Math.min(Math.max(candidate, gap), maxTop)),
@@ -9237,14 +9244,15 @@
 					rect,
 					bar: barSize,
 					viewport
-				}) ?? placeAboveRect({
+				}) ?? placeOutsideRect({
 					rect,
 					bar: barSize,
 					viewport
-				}) : null) ?? placeAboveRect({
+				}) : null) ?? placeOutsideRect({
 					rect,
 					bar: barSize,
-					viewport
+					viewport,
+					below: Boolean(data.selectionBelow)
 				});
 				const center = left + barSize.width / 2;
 				bar.classList.remove("sej-top");
@@ -11214,8 +11222,8 @@
 		key: 1,
 		class: "sej-preview-dot"
 	};
-	var _hoisted_20 = ["href"];
-	var _hoisted_21 = {
+	var _hoisted_20$1 = ["href"];
+	var _hoisted_21$1 = {
 		key: 2,
 		class: "sej-preview-size"
 	};
@@ -11476,8 +11484,8 @@
 									target: "_blank",
 									rel: "noopener",
 									onClick: _cache[5] || (_cache[5] = withModifiers(() => {}, ["stop"]))
-								}, toDisplayString(step.url), 9, _hoisted_20),
-								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_21, toDisplayString(step.size), 1)) : createCommentVNode("", true),
+								}, toDisplayString(step.url), 9, _hoisted_20$1),
+								step.status === "ok" && step.size ? (openBlock(), createElementBlock("span", _hoisted_21$1, toDisplayString(step.size), 1)) : createCommentVNode("", true),
 								step.status === "failed" && step.reason ? (openBlock(), createElementBlock("span", _hoisted_22, toDisplayString(step.reason), 1)) : step.status === "ok" ? (openBlock(), createElementBlock("span", {
 									key: 4,
 									class: normalizeClass(["sej-preview-state sej-preview-icon", { "is-selected": step.url === unref(pickedUrl) }]),
@@ -12117,10 +12125,12 @@
 	var _hoisted_13 = ["title"];
 	var _hoisted_14 = ["checked"];
 	var _hoisted_15 = ["title"];
-	var _hoisted_16 = ["value"];
-	var _hoisted_17 = { value: "_blank" };
-	var _hoisted_18 = { value: "_background" };
-	var _hoisted_19 = { value: "_self" };
+	var _hoisted_16 = ["checked"];
+	var _hoisted_17 = ["title"];
+	var _hoisted_18 = ["value"];
+	var _hoisted_19 = { value: "_blank" };
+	var _hoisted_20 = { value: "_background" };
+	var _hoisted_21 = { value: "_self" };
 	var _sfc_main$3 = {
 		__name: "SettingsOptions",
 		props: { options: {
@@ -12139,7 +12149,7 @@
 					"aria-expanded": expanded.value,
 					onClick: _cache[0] || (_cache[0] = ($event) => expanded.value = !expanded.value)
 				}, [
-					_cache[9] || (_cache[9] = createStaticVNode("<svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 6h16M4 12h16M4 18h16\"></path><circle cx=\"9\" cy=\"6\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"15\" cy=\"12\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"8\" cy=\"18\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle></svg>", 1)),
+					_cache[10] || (_cache[10] = createStaticVNode("<svg width=\"15\" height=\"15\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><path d=\"M4 6h16M4 12h16M4 18h16\"></path><circle cx=\"9\" cy=\"6\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"15\" cy=\"12\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle><circle cx=\"8\" cy=\"18\" r=\"2\" fill=\"currentColor\" stroke=\"none\"></circle></svg>", 1)),
 					createTextVNode(" " + toDisplayString(unref(t)("settings.options")) + " ", 1),
 					(openBlock(), createElementBlock("svg", {
 						class: normalizeClass(["sej-options-arrow", { "is-open": expanded.value }]),
@@ -12152,7 +12162,7 @@
 						"stroke-linecap": "round",
 						"stroke-linejoin": "round",
 						"aria-hidden": "true"
-					}, [..._cache[8] || (_cache[8] = [createBaseVNode("path", { d: "m6 9 6 6 6-6" }, null, -1)])], 2))
+					}, [..._cache[9] || (_cache[9] = [createBaseVNode("path", { d: "m6 9 6 6 6-6" }, null, -1)])], 2))
 				], 8, _hoisted_2$1), createBaseVNode("div", {
 					id: "sej-options-list",
 					class: normalizeClass(["sej-options-list", { "is-open": expanded.value }])
@@ -12182,41 +12192,49 @@
 						onChange: _cache[3] || (_cache[3] = ($event) => emit("update-option", "selectionFollowPointer", $event.target.checked))
 					}, null, 40, _hoisted_8)])], 8, _hoisted_7),
 					withDirectives(createBaseVNode("span", {
+						id: "xin-selectionBelow",
+						title: unref(t)("settings.selectionBelowTip")
+					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionBelow")), 1), createBaseVNode("input", {
+						type: "checkbox",
+						checked: __props.options.selectionBelow,
+						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionBelow", $event.target.checked))
+					}, null, 40, _hoisted_10)])], 8, _hoisted_9), [[vShow, __props.options.selectionFollowPointer]]),
+					withDirectives(createBaseVNode("span", {
 						id: "xin-selectionCompact",
 						title: unref(t)("settings.selectionCompactTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionCompact")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectionCompact,
-						onChange: _cache[4] || (_cache[4] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
-					}, null, 40, _hoisted_10)])], 8, _hoisted_9), [[vShow, __props.options.selectionFollowPointer]]),
+						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "selectionCompact", $event.target.checked))
+					}, null, 40, _hoisted_12)])], 8, _hoisted_11), [[vShow, __props.options.selectionFollowPointer]]),
 					withDirectives(createBaseVNode("span", {
 						id: "xin-selectionIcon",
 						title: unref(t)("settings.selectionIconTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.selectionIcon")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.selectionIcon,
-						onChange: _cache[5] || (_cache[5] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
-					}, null, 40, _hoisted_12)])], 8, _hoisted_11), [[vShow, __props.options.selectionFollowPointer]]),
+						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "selectionIcon", $event.target.checked))
+					}, null, 40, _hoisted_14)])], 8, _hoisted_13), [[vShow, __props.options.selectionFollowPointer]]),
 					createBaseVNode("span", {
 						id: "xin-clickCategoryJumpFirst",
 						title: unref(t)("settings.clickCategoryJumpFirstTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.clickCategoryJumpFirst")), 1), createBaseVNode("input", {
 						type: "checkbox",
 						checked: __props.options.clickCategoryJumpFirst,
-						onChange: _cache[6] || (_cache[6] = ($event) => emit("update-option", "clickCategoryJumpFirst", $event.target.checked))
-					}, null, 40, _hoisted_14)])], 8, _hoisted_13),
+						onChange: _cache[7] || (_cache[7] = ($event) => emit("update-option", "clickCategoryJumpFirst", $event.target.checked))
+					}, null, 40, _hoisted_16)])], 8, _hoisted_15),
 					createBaseVNode("span", {
 						id: "xin-defaultOpenTarget",
 						title: unref(t)("settings.defaultOpenTargetTip")
 					}, [createBaseVNode("label", null, [createTextVNode(toDisplayString(unref(t)("settings.defaultOpenTarget")) + " ", 1), createBaseVNode("select", {
 						class: "sej-language-select",
 						value: __props.options.defaultOpenTarget,
-						onChange: _cache[7] || (_cache[7] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
+						onChange: _cache[8] || (_cache[8] = ($event) => emit("update-option", "defaultOpenTarget", $event.target.value))
 					}, [
-						createBaseVNode("option", _hoisted_17, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1),
-						createBaseVNode("option", _hoisted_18, toDisplayString(unref(t)("settings.defaultOpenTargetBackground")), 1),
-						createBaseVNode("option", _hoisted_19, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)
-					], 40, _hoisted_16)])], 8, _hoisted_15)
+						createBaseVNode("option", _hoisted_19, toDisplayString(unref(t)("settings.defaultOpenTargetBlank")), 1),
+						createBaseVNode("option", _hoisted_20, toDisplayString(unref(t)("settings.defaultOpenTargetBackground")), 1),
+						createBaseVNode("option", _hoisted_21, toDisplayString(unref(t)("settings.defaultOpenTargetSelf")), 1)
+					], 40, _hoisted_18)])], 8, _hoisted_17)
 				], 2)]);
 			};
 		}

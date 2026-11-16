@@ -1,8 +1,8 @@
 /**
  * 贴内容的浮层条定位计算。
  *
- * 文字/链接触发的跳转条放在锚点正上方、与锚点水平居中；折叠模式收起时只露图标，
- * 与展开后的整条共用同一落点；图片条优先放进图片内部顶部居中，
+ * 文字/链接触发的跳转条默认放在锚点正上方、与锚点水平居中，可改为优先放在下方；
+ * 折叠模式收起时只露图标，与展开后的整条共用同一落点；图片条优先放进图片内部顶部居中，
  * 图片尺寸不足时放到图片上方居中。放不下时都会收进视口，始终留出最小边距。
  */
 
@@ -22,7 +22,7 @@ function centeredLeft(rect, barWidth, viewWidth, gap) {
 
 /**
  * 把跳转条放进锚点矩形内部顶部居中。
- * 图片放不下时返回 null，调用方退回 placeAboveRect 的外部定位。
+ * 图片放不下时返回 null，调用方退回 placeOutsideRect 的外部定位。
  *
  * @param {object} options
  * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区或图片的视口矩形
@@ -52,16 +52,18 @@ export function placeInsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
 }
 
 /**
- * 把跳转条放到锚点矩形正上方；上方空间不足时翻到锚点下方。
+ * 把跳转条放到锚点矩形外侧：默认正上方，下方空间不足时翻到锚点下方；
+ * `below` 为真时优先放下方，下方放不下再翻回上方。
  *
  * @param {object} options
  * @param {{top:number, left:number, right:number, bottom:number}} options.rect 选区、链接或图片的视口矩形
  * @param {{width:number, height:number}} options.bar 跳转条实测尺寸
  * @param {{width:number, height:number}} options.viewport 视口尺寸
  * @param {number} [options.gap] 与锚点、视口边界的间距
+ * @param {boolean} [options.below] 是否优先放在锚点下方
  * @returns {{top:number, left:number}} 跳转条的视口坐标
  */
-export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
+export function placeOutsideRect({ rect, bar, viewport, gap = PLACEMENT_GAP, below = false }) {
   const viewWidth = Math.max(0, viewport?.width ?? 0);
   const viewHeight = Math.max(0, viewport?.height ?? 0);
   const barWidth = Math.max(0, bar?.width ?? 0);
@@ -69,9 +71,16 @@ export function placeAboveRect({ rect, bar, viewport, gap = PLACEMENT_GAP }) {
 
   const left = centeredLeft(rect, barWidth, viewWidth, gap);
 
-  // 上方放得下就放上方，否则翻到锚点下方；两种情况都收进视口
+  // 优先放在设置的一侧，那一侧放不下就翻到另一侧；两种情况都收进视口
   const above = rect.top - gap - barHeight;
-  const candidate = above >= gap ? above : rect.bottom + gap;
+  const under = rect.bottom + gap;
+  const candidate = below
+    ? under + barHeight <= viewHeight - gap
+      ? under
+      : above
+    : above >= gap
+      ? above
+      : under;
   const maxTop = Math.max(gap, viewHeight - gap - barHeight);
   const top = Math.min(Math.max(candidate, gap), maxTop);
 

@@ -39,6 +39,8 @@ describe('createDefaultConfig', () => {
     const config = createDefaultConfig();
     expect(config.selectSearchInInput).toBe(true);
     expect(config.selectionFollowPointer).toBe(true);
+    // 划词条默认贴在选区上方
+    expect(config.selectionBelow).toBe(false);
     expect(config.selectionCompact).toBe(false);
     expect(config.selectionIcon).toBe(false);
     // 点击分类默认直接用第一个引擎搜索，展开面板便于换用其他引擎

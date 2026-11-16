@@ -15,8 +15,8 @@ import {
 import {
   fitBarWidth,
   PLACEMENT_GAP,
-  placeAboveRect,
   placeInsideRect,
+  placeOutsideRect,
 } from '../core/floatPlacement.js';
 import {
   getInputTarget,
@@ -605,12 +605,20 @@ function syncFloatPlacement() {
   // 折叠模式收起时只露图标：与展开后的整条共用同一落点，出现在目标正上方，
   // 展开时向两侧对称生长
   // 图片条放进图片内部顶部居中，图片太小放不下时放到图片上方居中；
-  // 文字与链接触发的整条放在锚点正上方并水平居中
+  // 文字与链接触发的整条放在锚点外侧并水平居中，默认上方，
+  // 打开「显示在文字下方」后优先放下方
   const imagePlacement = isImageContext.value
     ? (placeInsideRect({ rect, bar: barSize, viewport }) ??
-      placeAboveRect({ rect, bar: barSize, viewport }))
+      placeOutsideRect({ rect, bar: barSize, viewport }))
     : null;
-  const placement = imagePlacement ?? placeAboveRect({ rect, bar: barSize, viewport });
+  const placement =
+    imagePlacement ??
+    placeOutsideRect({
+      rect,
+      bar: barSize,
+      viewport,
+      below: Boolean(data.selectionBelow),
+    });
   const { top, left } = placement;
   // 以整条中心为锚点：内容宽度变化时向两侧对称生长，中心始终对准目标
   const center = left + barSize.width / 2;

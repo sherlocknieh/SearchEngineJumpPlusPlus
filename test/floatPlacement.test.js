@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { fitBarWidth, placeAboveRect, placeInsideRect } from '../src/core/floatPlacement.js';
+import {
+  fitBarWidth,
+  placeInsideRect,
+  placeOutsideRect,
+} from '../src/core/floatPlacement.js';
 
 const viewport = { width: 1200, height: 800 };
 const bar = { width: 300, height: 32 };
@@ -8,26 +12,38 @@ function rect(top, right, bottom) {
   return { top, left: right - 100, right, bottom };
 }
 
-describe('placeAboveRect', () => {
+describe('placeOutsideRect', () => {
   it('默认与锚点水平居中', () => {
-    expect(placeAboveRect({ rect: rect(300, 500, 320), bar, viewport })).toEqual({
+    expect(placeOutsideRect({ rect: rect(300, 500, 320), bar, viewport })).toEqual({
       top: 300 - 6 - 32,
       left: 400 + (100 - 300) / 2,
     });
   });
 
   it('上方空间不足时翻到锚点下方', () => {
-    const result = placeAboveRect({ rect: rect(10, 500, 30), bar, viewport });
+    const result = placeOutsideRect({ rect: rect(10, 500, 30), bar, viewport });
     expect(result.top).toBe(30 + 6);
   });
 
   it('超出左右边界时收进视口', () => {
-    const result = placeAboveRect({ rect: rect(300, 1190, 320), bar, viewport });
+    const result = placeOutsideRect({ rect: rect(300, 1190, 320), bar, viewport });
     expect(result.left).toBe(1200 - 6 - 300);
   });
 
+  it('打开「显示在文字下方」后贴在锚点下方居中', () => {
+    expect(placeOutsideRect({ rect: rect(300, 500, 320), bar, viewport, below: true })).toEqual({
+      top: 320 + 6,
+      left: 400 + (100 - 300) / 2,
+    });
+  });
+
+  it('下方空间不足时翻回上方', () => {
+    const result = placeOutsideRect({ rect: rect(760, 500, 790), bar, viewport, below: true });
+    expect(result.top).toBe(760 - 6 - 32);
+  });
+
   it('窄视口下也不会出现负坐标', () => {
-    const result = placeAboveRect({
+    const result = placeOutsideRect({
       rect: rect(400, 200, 420),
       bar: { width: 900, height: 32 },
       viewport: { width: 320, height: 640 },
@@ -63,10 +79,10 @@ describe('placeInsideRect', () => {
   });
 });
 
-describe('placeAboveRect 图片兜底', () => {
+describe('placeOutsideRect 图片兜底', () => {
   it('图片上方居中', () => {
     const rect = { top: 300, left: 300, right: 800, bottom: 400 };
-    expect(placeAboveRect({ rect, bar, viewport })).toEqual({
+    expect(placeOutsideRect({ rect, bar, viewport })).toEqual({
       top: 300 - 6 - 32,
       left: 300 + (500 - 300) / 2,
     });
@@ -74,7 +90,7 @@ describe('placeAboveRect 图片兜底', () => {
 
   it('顶部空间不足时翻到图片下方', () => {
     const rect = { top: 10, left: 300, right: 800, bottom: 100 };
-    expect(placeAboveRect({ rect, bar, viewport }).top).toBe(100 + 6);
+    expect(placeOutsideRect({ rect, bar, viewport }).top).toBe(100 + 6);
   });
 });
 

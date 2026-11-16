@@ -88,6 +88,19 @@ const expanded = ref(false);
         /></label>
       </span>
       <span
+        id="xin-selectionBelow"
+        v-show="options.selectionFollowPointer"
+        :title="t('settings.selectionBelowTip')"
+      >
+        <label
+          >{{ t('settings.selectionBelow')
+          }}<input
+            type="checkbox"
+            :checked="options.selectionBelow"
+            @change="emit('update-option', 'selectionBelow', $event.target.checked)"
+        /></label>
+      </span>
+      <span
         id="xin-selectionCompact"
         v-show="options.selectionFollowPointer"
         :title="t('settings.selectionCompactTip')"

@@ -33,6 +33,9 @@ export const messages = {
     'settings.selectionFollowPointer': '跟随选区',
     'settings.selectionFollowPointerTip':
       '划词搜索条出现在选中文字/图片/链接附近；关闭选项时搜索条置顶',
+    'settings.selectionBelow': '显示在文字下方',
+    'settings.selectionBelowTip':
+      '划词搜索条贴在选中文字/链接下方；下方空间不足时仍放到上方',
     'settings.selectionCompact': '紧凑模式',
     'settings.selectionCompactTip': '划词搜索条只显示图标，不显示文字',
     'settings.selectionIcon': '折叠模式',
@@ -208,6 +211,9 @@ export const messages = {
     'settings.selectionFollowPointer': 'Follow selection',
     'settings.selectionFollowPointerTip':
       'Show the selection bar above the selected text, centered on it, or next to the long-pressed image/link; otherwise it slides in from the top',
+    'settings.selectionBelow': 'Below text',
+    'settings.selectionBelowTip':
+      'Place the selection bar under the selected text/link; it moves above when there is not enough room below',
     'settings.selectionCompact': 'Compact mode',
     'settings.selectionCompactTip': 'Show icons only, without text, in the selection bar',
     'settings.selectionIcon': 'Minimal mode',
