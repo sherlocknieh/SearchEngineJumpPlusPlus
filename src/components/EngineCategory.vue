@@ -12,7 +12,6 @@ import { getFaviconSrc } from '../core/favicon.js';
 import { getDropRoot, getHost, HOST_ROLE_KEY, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
 import { subscribePointer } from '../composables/sharedPointer.js';
-import { HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 import EngineItem from './EngineItem.vue';
 
 const props = defineProps({
@@ -60,23 +59,6 @@ const shown = ref(false);
 const active = ref(false);
 const pinned = ref(false);
 
-// 悬停提示：紧凑模式补回被隐藏的分类名，固定展开时提示如何收起
-const triggerTitle = computed(() => {
-  if (pinned.value) return t('jump.collapseList', { name: props.name });
-  return props.compact ? props.name : null;
-});
-
-// 提示由父级跳转条统一渲染，不使用带延迟的原生 title
-const hoverTip = inject(HOVER_TIP_KEY, null);
-
-function showTriggerTip(event) {
-  if (!triggerTitle.value) return;
-  hoverTip?.show(event.currentTarget, triggerTitle.value, { immediate: event.type === 'focus' });
-}
-
-function hideTriggerTip() {
-  hoverTip?.hide();
-}
 const top = ref(supportsAnchorPositioning ? '' : '-10000px');
 const left = ref(supportsAnchorPositioning ? '' : '0px');
 const listPosition = ref('fixed');
@@ -445,10 +427,6 @@ onBeforeUnmount(() => {
       aria-haspopup="true"
       :aria-expanded="shown"
       :aria-label="compact ? name : null"
-      @mouseenter="showTriggerTip"
-      @mouseleave="hideTriggerTip"
-      @focus="showTriggerTip"
-      @blur="hideTriggerTip"
       @click.prevent.stop="onTriggerClick"
       @keydown.enter.prevent="onTriggerKeydown"
       @keydown.space.prevent="onTriggerKeydown"

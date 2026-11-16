@@ -58,11 +58,9 @@ import { showToast } from '../stores/ui.js';
 import { useBarViewport } from '../composables/useBarViewport.js';
 import { maxScrollLeft, useScrollDrag } from '../composables/useScrollDrag.js';
 import { useStackSync } from '../composables/useStackSync.js';
-import { createHoverTip, HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 import scriptIcon from '../assets/icon.svg?raw';
 import EngineItem from './EngineItem.vue';
 import EngineCategory from './EngineCategory.vue';
-import HoverTip from './HoverTip.vue';
 import SettingButton from './SettingButton.vue';
 
 const props = defineProps({
@@ -73,9 +71,6 @@ const props = defineProps({
 const isFloat = props.role === HOST_ROLE_FLOAT;
 // 子组件（下拉面板等）据此在所属 Shadow Root 内取根节点
 provide(HOST_ROLE_KEY, props.role);
-// 引擎/分类条目的悬停提示共用本实例的一份状态，由 HoverTip 统一渲染
-const hoverTip = createHoverTip();
-provide(HOVER_TIP_KEY, hoverTip);
 
 const settings = useSettings();
 const data = settings.settingData;
@@ -999,7 +994,6 @@ onBeforeUnmount(() => {
   disposeScrollDrag();
   disposeViewport();
   stopStackSync();
-  hoverTip.dispose();
 });
 </script>
 
@@ -1091,8 +1085,6 @@ onBeforeUnmount(() => {
     </div>
 
     <SettingButton />
-    <!-- 引擎/分类条目的自绘悬停提示：Teleport 到宿主容器，不受跳转条 overflow 裁切 -->
-    <HoverTip />
   </div>
 </template><style>
 #sej-container {

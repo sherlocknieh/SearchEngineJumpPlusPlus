@@ -122,10 +122,8 @@ src/main.js                 只做装配
 - 悬停提示：`actionTargetHint(mode, action, hit)` 给出这次实际作用的目标内容，
   长按链接/图片、划词条、内嵌条搜索框共用同一套模板（超长目标截断到 `HINT_TARGET_MAX`）；
   内嵌条的搜索框关键词靠 `input`/`change` 事件同步进 `searchInputKeyword`
-- 提示呈现：`composables/useHoverTip.js` 维护单实例状态，`components/HoverTip.vue`
-  在条目右侧渲染与下拉面板同材质的提示卡（右侧放不下翻到左侧）；
-  悬停 100ms 出现、相邻条目间直接接管不闪烁，滚动/按下指针时收起；
-  触屏（`isMobileDevice`）无法悬停，动作条目的目标内容以子菜单样式小卡直接跟在文字右侧
+- 提示呈现：动作条目的目标内容（`hint`）以子菜单样式小卡直接跟在文字右侧常显，
+  桌面与触屏一致，不再依赖悬停浮层；条目名称、顺序、显隐仍全部取自「操作」分类设置
 - 动作说明与触发条件：`core/contextAction.js` 的 `ACTION_ENGINE_EFFECTS` 给出「操作」文案（做什么）；
   支持哪些触发条件、默认勾选哪些由 `configData.js` 的 `ACTION_TRIGGERS` 决定，
   勾选结果存进引擎的 `triggers`（`normalizeEngineTriggers` 白名单校验，空数组表示整个操作关闭）。
