@@ -42,6 +42,15 @@ const LEGACY_ACTION_NAMES = {
   打开: { action: 'open', name: ACTION_ENGINE_DEFAULTS.open },
 };
 
+/** 触屏手机/平板：主输入不能悬停且是粗指针，带鼠标的触屏笔记本仍算桌面 */
+function isMobileDevice() {
+  return (
+    typeof window !== 'undefined' &&
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia('(hover: none) and (pointer: coarse)').matches
+  );
+}
+
 /** 生成默认配置（每次返回新对象，调用方可安全修改） */
 export function createDefaultConfig() {
   return {
@@ -49,8 +58,8 @@ export function createDefaultConfig() {
     selectSearchInInput: true,
     // 划词条默认贴在选区旁，而不是从页面顶部滑出
     selectionFollowPointer: true,
-    // 划词条默认贴在选区上方，打开后改贴下方
-    selectionBelow: false,
+    // 划词条默认贴在选区上方；移动端没有悬停、文字更贴近视口边缘，改默认贴下方
+    selectionBelow: isMobileDevice(),
     // 划词条默认完整显示，不隐藏文字
     selectionCompact: false,
     // 划词条默认整条展开，不先收起成图标

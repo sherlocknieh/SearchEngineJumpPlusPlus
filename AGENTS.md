@@ -173,7 +173,7 @@ src/main.js                 只做装配
   子组件通过 `inject(HOST_ROLE_KEY)` 取所属宿主（`getDropRoot` / `getHost`）
 - `core/csp.js`：`getCSPNonce()` 取页面 nonce（只缓存成功结果），`isInlineStyleBlocked()` 探测内联样式是否被 CSP 拦截；宿主与规则注入据此选择样式注入方式
 - 划词条定位：`core/floatPlacement.js` 的 `placeOutsideRect`（默认锚点正上方，放不下翻到下方；
-  打开「显示在文字下方」后优先放下方，下方放不下再翻回上方；
+  打开「显示在文字下方」后优先放下方（移动端默认打开，`hover: none` + `pointer: coarse`），下方放不下再翻回上方；
   文字/链接与锚点水平居中、图片居中；折叠模式收起时只露图标，与展开后的整条共用落点），
   跟随选区时由 JumpBar 写入内联坐标；
   滚动时重新量锚点矩形继续跟随，锚点消失（选区清空/图片移除）才回到顶部居中

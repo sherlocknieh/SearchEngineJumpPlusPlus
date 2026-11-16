@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.2114
+// @version         2026.11.16.2117
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -6102,11 +6102,14 @@
 			name: ACTION_ENGINE_DEFAULTS.open
 		}
 	};
+	function isMobileDevice() {
+		return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(hover: none) and (pointer: coarse)").matches;
+	}
 	function createDefaultConfig() {
 		return {
 			selectSearchInInput: true,
 			selectionFollowPointer: true,
-			selectionBelow: false,
+			selectionBelow: isMobileDevice(),
 			selectionCompact: false,
 			selectionIcon: false,
 			clickCategoryJumpFirst: true,

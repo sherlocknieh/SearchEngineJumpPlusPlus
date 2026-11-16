@@ -47,6 +47,20 @@ describe('createDefaultConfig', () => {
     expect(config.clickCategoryJumpFirst).toBe(true);
   });
 
+  it('移动端默认显示在文字下方，桌面端默认在上方', () => {
+    const original = globalThis.window;
+    try {
+      globalThis.window = { matchMedia: (query) => ({ matches: query.includes('(hover: none)') }) };
+      expect(createDefaultConfig().selectionBelow).toBe(true);
+      // 带鼠标的触屏设备（能悬停）仍按桌面处理
+      globalThis.window = { matchMedia: () => ({ matches: false }) };
+      expect(createDefaultConfig().selectionBelow).toBe(false);
+    } finally {
+      if (original === undefined) delete globalThis.window;
+      else globalThis.window = original;
+    }
+  });
+
   it('内置搜图分类，长按搜图无需开关', () => {
     const config = createDefaultConfig();
     expect(config).not.toHaveProperty('imageSearch');
@@ -78,6 +92,20 @@ describe('normalizeConfig', () => {
     expect(result.selectionCompact).toBe(defaults.selectionCompact);
     expect(result.clickCategoryJumpFirst).toBe(defaults.clickCategoryJumpFirst);
     expect(result.language).toBe('auto');
+  });
+
+  it('旧配置缺少「显示在文字下方」时按设备补默认值，显式关闭则保留', () => {
+    const original = globalThis.window;
+    try {
+      globalThis.window = { matchMedia: () => ({ matches: true }) };
+      const mobileDefaults = createDefaultConfig();
+      expect(normalizeConfig({}, mobileDefaults).selectionBelow).toBe(true);
+      expect(normalizeConfig({ selectionBelow: false }, mobileDefaults).selectionBelow).toBe(false);
+      expect(normalizeConfig({ selectionBelow: true }, defaults).selectionBelow).toBe(true);
+    } finally {
+      if (original === undefined) delete globalThis.window;
+      else globalThis.window = original;
+    }
   });
 
   it('点击分类直接搜索的开关原样保留', () => {
