@@ -115,7 +115,7 @@
       {
         "name": "Google Lens",
         "url": "https://lens.google.com/uploadbyurl?url=%s",
-        "favicon": "https://www.google.com/favicon.ico"
+        "favicon": "https://upload.wikimedia.org/wikipedia/commons/d/d6/Google_Lens_Icon.svg"
       },
       {
         "name": "Yandex Image",
