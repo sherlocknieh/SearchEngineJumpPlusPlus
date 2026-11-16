@@ -1,7 +1,7 @@
 /**
  * 严格 CSP 站点的调试服务。
  *
- * 常规 `pnpm dev` 靠页面加载 http://localhost:5173 的模块脚本，
+ * 常规 `nub run dev` 靠页面加载 http://localhost:5173 的模块脚本，
  * 站点 CSP 的 script-src 不含该地址时脚本完全不运行。
  * 这里改成 watch 构建自包含产物，由脚本管理器直连本服务拉取并在自己的沙箱里执行：
  * 页面不加载任何外部脚本，因此不受站点 CSP 限制。
@@ -22,7 +22,7 @@ function readPort() {
   const flag = process.argv.indexOf('--port');
   const value = flag > -1 ? process.argv[flag + 1] : process.env.SEJ_DEV_PORT;
   const port = Number(value);
-  // 默认避开常规 `pnpm dev` 的 5173，两者可以同时开着
+  // 默认避开常规 `nub run dev` 的 5173，两者可以同时开着
   return Number.isInteger(port) && port > 0 ? port : 5180;
 }
 
@@ -30,7 +30,7 @@ const port = readPort();
 const origin = `http://127.0.0.1:${port}`;
 const noOpen = process.argv.includes('--no-open');
 
-/** 用系统默认浏览器打开安装页，和 `pnpm dev` 一样不落在 VS Code 内部浏览器里 */
+/** 用系统默认浏览器打开安装页，和 `nub run dev` 一样不落在 VS Code 内部浏览器里 */
 function openInBrowser(url) {
   const [command, args] =
     process.platform === 'darwin'
@@ -80,7 +80,7 @@ function loaderSource() {
       onerror() {
         if (warned) return;
         warned = true;
-        console.error('[SEJ dev] 无法连接 ' + ORIGIN + '，请确认 pnpm dev:csp 已启动');
+        console.error('[SEJ dev] 无法连接 ' + ORIGIN + '，请确认 nub run dev:csp 已启动');
       },
     });
   }

@@ -3,9 +3,9 @@
  * 发布脚本: 按系统日期时间生成版本号, 校验、构建、提交并打标签。
  *
  * 用法:
- *   pnpm release "feat: 支持 xxx"        # 正常发布
- *   pnpm release "fix: 修复 xxx" --push  # 发布并推送分支与标签
- *   pnpm release --dry-run               # 只打印将要使用的版本号
+ *   nub run release "feat: 支持 xxx"        # 正常发布
+ *   nub run release "fix: 修复 xxx" --push  # 发布并推送分支与标签
+ *   nub run release --dry-run               # 只打印将要使用的版本号
  *
  * 版本号格式为 YYYY.MM.DD.HHmm (本地时间), 若同一分钟内重复发布或系统时间回拨,
  * 会顺延到比当前版本更大的分钟, 保证版本号始终递增。
@@ -91,10 +91,10 @@ const nextConfig = configSource.replace(
 try {
   writeFileSync(CONFIG_PATH, nextConfig);
 
-  const pnpm = process.platform === 'win32' ? 'pnpm.cmd' : 'pnpm';
-  run(pnpm, ['lint'], '代码检查 (pnpm lint)');
-  run(pnpm, ['test'], '单元测试 (pnpm test)');
-  run(pnpm, ['build'], '构建产物 (pnpm build)');
+  const nub = process.platform === 'win32' ? 'nub.cmd' : 'nub';
+  run(nub, ['run', 'lint'], '代码检查 (nub run lint)');
+  run(nub, ['run', 'test'], '单元测试 (nub run test)');
+  run(nub, ['run', 'build'], '构建产物 (nub run build)');
 
   const distSource = readFileSync(DIST_PATH, 'utf8');
   const distVersion = distSource.match(/\/\/ @version\s+(\S+)/)?.[1];

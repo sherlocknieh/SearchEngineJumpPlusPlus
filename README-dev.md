@@ -2,17 +2,17 @@
 
 - 基本环境:
   - [Node.js](https://nodejs.org/)
-  - [pnpm](https://pnpm.io/installation)
+  - [nub](https://nubjs.com/)（包管理与脚本运行，已替代 pnpm）
 
-- 用到的库 (无需手动安装, `pnpm dev` 会自动安装):
+- 用到的库 (由 `nub install` 安装):
   - Vue3
   - [vite-plugin-monkey](https://github.com/lisonge/vite-plugin-monkey)
 
 - 开始调试
 
   ```bash
-  pnpm dev
-  pnpm dev --host
+  nub run dev
+  nub run dev --host
 
   # 浏览器打开 `http://localhost:5173` 可实时查看效果。
   # 使用 `--host` 将开发环境开放到外部网络，实现远程调试。
@@ -20,20 +20,20 @@
 
 - dev 版的注入方式与构建版不同：它往页面插入外部 module 脚本
   (`http://localhost:5173/__vite-plugin-monkey.entry.js`)。
-  管理器里装的是 `server:SearchEngineJump++`，和 `pnpm dev:csp` 同名，切换调试方式只会替换这一条。
+  管理器里装的是 `server:SearchEngineJump++`，和 `nub run dev:csp` 同名，切换调试方式只会替换这一条。
   站点 CSP 的 `script-src` 不含该地址时浏览器会直接拒绝加载，脚本完全不运行
   （控制台报 `Loading the script ... violates the following Content Security Policy directive`）。
 
-- 严格 CSP 站点用 `pnpm dev:csp` 调试
+- 严格 CSP 站点用 `nub run dev:csp` 调试
 
-  这套流程页面不加载任何外部脚本：`pnpm dev:csp` 一边 watch 构建自包含产物到 `.dev/build/`，
+  这套流程页面不加载任何外部脚本：`nub run dev:csp` 一边 watch 构建自包含产物到 `.dev/build/`，
   一边起本地服务（默认 `http://127.0.0.1:5180`，可用 `--port` 或 `SEJ_DEV_PORT` 改），
   由脚本管理器直接拉取产物并在自己的沙箱里执行，因此不受站点 CSP 限制。
 
   ```bash
-  pnpm dev:csp            # watch 构建 + 本地服务，并自动用系统默认浏览器打开安装页
-  pnpm dev:csp --port 5181
-  pnpm dev:csp --no-open  # 不自动开浏览器
+  nub run dev:csp            # watch 构建 + 本地服务，并自动用系统默认浏览器打开安装页
+  nub run dev:csp --port 5181
+  nub run dev:csp --no-open  # 不自动开浏览器
   ```
 
   1. 服务就绪后会自动用系统默认浏览器打开 `http://127.0.0.1:5180/install.user.js`
@@ -56,13 +56,13 @@
 
   ```bash
   # 一键发布: 升版本号 -> lint -> test -> build -> commit -> tag
-  pnpm release "feat: 本次改动说明"
+  nub run release "feat: 本次改动说明"
 
   # 发布并推送分支与标签到 origin
-  pnpm release "fix: 本次改动说明" --push
+  nub run release "fix: 本次改动说明" --push
 
   # 只预览将要使用的版本号, 不做任何修改
-  pnpm release --dry-run
+  nub run release --dry-run
   ```
 
   发布成功后, 源码、`vite.config.js` 中的版本号与 `dist/SearchEngineJump++.user.js`
@@ -71,13 +71,13 @@
   每次提交都必须走这条命令: 发布脚本本身就是提交入口, 不要先 `git commit` 再补发布。
   推送到远端时带上 `--push`, 让分支与标签同步。
 
-  单独执行 `pnpm build` 只重新构建产物, 不会改动版本号, 仅供调试或本地验证使用。
+  单独执行 `nub run build` 只重新构建产物, 不会改动版本号, 仅供调试或本地验证使用。
 
 - 代码检查与测试
   ```bash
-  pnpm lint          # ESLint
-  pnpm format        # Prettier 格式化
-  pnpm test          # Vitest 单元测试
+  nub run lint          # ESLint
+  nub run format        # Prettier 格式化
+  nub run test          # Vitest 单元测试
   ```
 
 ## 项目索引

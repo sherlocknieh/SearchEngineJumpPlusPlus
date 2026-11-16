@@ -6,7 +6,7 @@ import vueStyleToShadow from './.dev/vueStyleToShadow.js';
 
 const icon = `data:image/svg+xml;base64,${readFileSync(new URL('./src/assets/icon.svg', import.meta.url)).toString('base64')}`;
 
-// `pnpm dev:csp` 的调试构建：产物给脚本管理器直接拉取执行，不写进随源码提交的 dist
+// `nub run dev:csp` 的调试构建：产物给脚本管理器直接拉取执行，不写进随源码提交的 dist
 const devBundle = process.env.SEJ_DEV_BUNDLE === '1';
 
 // https://vite-plugin-monkey.pages.dev/zh/guide/configuration
@@ -28,7 +28,7 @@ export default defineConfig({
         // dev 服务下插件会自动加 `server:` 前缀；调试构建显式同名，两套调试流程只占一条安装位
         name: devBundle ? 'server:SearchEngineJump++' : 'SearchEngineJump++',
         namespace: 'https://github.com/sherlocknieh/',
-        version: '2026.11.16.1813',
+        version: '2026.11.16.1820',
         author: 'sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)',
         description: {
           '': '多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制',

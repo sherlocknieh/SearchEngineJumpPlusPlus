@@ -4,7 +4,7 @@ import globals from 'globals';
 
 export default [
   {
-    ignores: ['dist/**', '.dev/build/**', 'node_modules/**', 'pnpm-lock.yaml'],
+    ignores: ['dist/**', '.dev/build/**', 'node_modules/**', 'nub.lock'],
   },
   js.configs.recommended,
   ...pluginVue.configs['flat/essential'],

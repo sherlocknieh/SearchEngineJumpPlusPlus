@@ -6,13 +6,13 @@
 ## 快速命令
 
 ```bash
-pnpm dev            # 开发调试（浏览器打开 http://localhost:5173）
-pnpm dev:csp        # 严格 CSP 站点的调试（watch 构建 + 本地服务，管理器直连拉取产物）
-                    # 两者安装的用户脚本都叫 server:SearchEngineJump++，管理器里只留一条
-pnpm build          # 只重新构建 dist，不动版本号
-pnpm lint           # ESLint
-pnpm test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
-pnpm release "feat: xxx" --push   # 每次提交即发布：升版本 → lint → test → build → commit → tag → push
+nub run dev            # 开发调试（浏览器打开 http://localhost:5173）
+nub run dev:csp        # 严格 CSP 站点的调试（watch 构建 + 本地服务，管理器直连拉取产物）
+                       # 两者安装的用户脚本都叫 server:SearchEngineJump++，管理器里只留一条
+nub run build          # 只重新构建 dist，不动版本号
+nub run lint           # ESLint
+nub run test           # Vitest（happy-dom，仅测 JS 模块，不编译 .vue）
+nub run release "feat: xxx" --push   # 每次提交即发布：升版本 → lint → test → build → commit → tag → push
 
 # 版本号由 .dev/release.mjs 按系统时间生成，不要手改 vite.config.js
 ```
@@ -244,10 +244,12 @@ src/main.js                 只做装配
   Selection 钳制到宿主外层：`isCollapsed` 为 `true`、`getRangeAt(0)` 矩形归零，但 `toString()` 仍有文字。
   取词与定位统一走 `selection.js` 的 `getSelectionInfo`：折叠但有文字时回退到 `ShadowRoot.getSelection()`
   （Chrome 专有）拿真实选区；只看 `isCollapsed` 会把这类选区误判成「没选中」，跟随选区也会退回顶部
-- `pnpm dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
-  （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/build/`，
+- `nub run dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
+  （控制台报 violates CSP）；这类站点改用 `nub run dev:csp`，产物输出到 `.dev/build/`，
   由脚本管理器拉取执行，页面不加载外部脚本
-- 版本号、`dist/` 产物由 `pnpm release` 统一生成，手动构建后不要把 dist 混进无关提交
-- 每次提交都必须发布新版：直接用 `pnpm release "..." --push` 产生提交（升版本 → lint → test →
+- 版本号、`dist/` 产物由 `nub run release` 统一生成，手动构建后不要把 dist 混进无关提交
+- 每次提交都必须发布新版：直接用 `nub run release "..." --push` 产生提交（升版本 → lint → test →
   build → 单提交 + tag → 推送），不要先 `git commit` 再补发布
-- 发布前会跑 lint/test，改完先本地 `pnpm test`
+- 发布前会跑 lint/test，改完先本地 `nub run test`
+- 包管理已切到 nub（`nub.lock` 仍是 pnpm v9 格式）：安装/新增依赖用 `nub install` / `nub add`，
+  执行本地 CLI 用 `nubx`；`pnpm` 在这个仓库会按 `devEngines` 直接拒绝执行
