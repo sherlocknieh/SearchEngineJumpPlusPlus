@@ -19,7 +19,9 @@ function toLinkUrl(raw, base) {
   }
 }
 
-const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6';
+// role="heading" 是移动版 Google 搜索结果标题的写法（div + aria-level），
+// 不认它就会把标题和结果里的地址拼在一起
+const HEADING_SELECTOR = 'h1, h2, h3, h4, h5, h6, [role="heading"]';
 
 function collapse(value) {
   return (value || '').replace(/\s+/g, ' ').trim();

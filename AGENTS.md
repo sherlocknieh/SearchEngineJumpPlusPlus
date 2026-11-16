@@ -92,7 +92,8 @@ src/main.js                 只做装配
 - 判定：`core/contextAction.js` 汇总模式配置与长按判定（`isLongPressMove` 位移超阈值取消）；
   图片解析在 `core/imageSearch.js`（`<img>` 的 `currentSrc` → `src` → 懒加载 `data-*`；
   按下目标不是 img 时按坐标向上找被链接/标题浮层盖住的图片，再向上 4 层找 `background-image`），
-  链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`）；
+  链接解析在 `core/linkAction.js`（返回 `{ url, text, element }`；标题优先取链接内的
+  `h1~h6` 与 `[role="heading"]`——移动版 Google 搜索结果的标题是后者，不认它会把标题和地址拼在一起）；
   内联缩略图（`src` 本身就是 `data:image`，Google 图片常见）也算图片命中，按自然尺寸排除
   1x1 占位图；识图引擎靠 URL 取图，抓不到这种地址（Lens 的 `uploadbyurl` 回 “No image at the URL”，
   从第三方站点把字节直传 google.com 又被 403 挡回），因此命中内联图片时不显示「搜图」分类；

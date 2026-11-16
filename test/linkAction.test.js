@@ -63,6 +63,16 @@ describe('resolveLinkHit', () => {
     expect(document.getSelection().toString()).toBe('Test');
   });
 
+  it('移动版 Google 结果的 role="heading" 标题同样只取标题', () => {
+    const a = link({ href: 'https://www.example.com/' });
+    a.innerHTML =
+      '<div aria-level="3" role="heading"><div role="link"><span>Example Domain</span></div></div>' +
+      '<div><span>https://www.example.com</span></div>';
+    expect(resolveLinkHit(a).text).toBe('Example Domain');
+    expect(selectLinkTitle(a)).toBe(true);
+    expect(document.getSelection().toString()).toBe('Example Domain');
+  });
+
   it('没有标题节点时选中整段链接文字', () => {
     const a = link({ href: 'https://site.test/p' }, '  示例   链接  ');
     expect(selectLinkTitle(a)).toBe(true);
