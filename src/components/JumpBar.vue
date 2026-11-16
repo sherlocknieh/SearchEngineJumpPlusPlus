@@ -35,6 +35,7 @@ import {
 } from '../core/jump.js';
 import { getSelectedText, getSelectionInfo } from '../core/selection.js';
 import {
+  currentClickDetail,
   currentGestureId,
   isPointerPressed,
   isSelectionDrag,
@@ -822,6 +823,13 @@ function settleOverlay(e) {
   if (!pendingHide) return;
   pendingHide = false;
   if (!isSelectSearch.value || isContextAction.value) return;
+  // 双击/三击本身就是在选词选段：短句里三击选中的整行与双击选中的词可能完全相同，
+  // 不能因为文本没变就当成「点空白」收起，剩余显隐交给随后的事件重新判定
+  if (currentClickDetail() >= 2) {
+    dismissedGesture = -1;
+    settledGesture = currentGestureId();
+    return;
+  }
   settledGesture = currentGestureId();
   // 本次操作选出了新内容就保持显示（桌面拖动选区、触屏长按划词都算），
   // 交给 onSelectionChange 更新内容与位置；触屏长按没有位移，不能按拖动判定

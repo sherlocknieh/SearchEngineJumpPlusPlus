@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.1821
+// @version         2026.11.16.1844
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -7433,6 +7433,7 @@
 	var dragged = false;
 	var gestureId = 0;
 	var pointerStart = null;
+	var clickDetail = 0;
 	var trackedTargets = new WeakSet();
 	var DRAG_THRESHOLD$1 = 4;
 	function onPointerDown(event) {
@@ -7444,6 +7445,11 @@
 			y: event.clientY
 		};
 		gestureId += 1;
+		clickDetail = 0;
+	}
+	function onMouseDown(event) {
+		if (event.button !== 0) return;
+		clickDetail = event.detail || 0;
 	}
 	function onPointerMove(event) {
 		if (!pressed || dragged || !pointerStart) return;
@@ -7468,11 +7474,15 @@
 	function currentGestureId() {
 		return gestureId;
 	}
+	function currentClickDetail() {
+		return clickDetail;
+	}
 	function trackSelectionPointer(target = window) {
 		if (!target || trackedTargets.has(target)) return;
 		trackedTargets.add(target);
 		target.addEventListener("pointerdown", onPointerDown, true);
 		target.addEventListener("pointermove", onPointerMove, true);
+		target.addEventListener("mousedown", onMouseDown, true);
 		target.addEventListener("pointerup", onPointerEnd, true);
 		target.addEventListener("pointercancel", onPointerEnd, true);
 		target.addEventListener("touchend", onPointerEnd, true);
@@ -9368,6 +9378,11 @@
 				if (!pendingHide) return;
 				pendingHide = false;
 				if (!isSelectSearch.value || isContextAction.value) return;
+				if (currentClickDetail() >= 2) {
+					dismissedGesture = -1;
+					settledGesture = currentGestureId();
+					return;
+				}
 				settledGesture = currentGestureId();
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
 				if (text && text !== dismissedSelection) return;

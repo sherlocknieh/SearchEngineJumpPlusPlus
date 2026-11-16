@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  currentClickDetail,
   currentGestureId,
   isPointerPressed,
   isSelectionDrag,
@@ -88,6 +89,27 @@ describe('selectionGesture 操作序号', () => {
     const before = currentGestureId();
     target.dispatch('keydown', { key: 'ArrowRight' });
     expect(currentGestureId()).toBeGreaterThan(before);
+  });
+});
+
+describe('selectionGesture 连击次数', () => {
+  it('按下后按 mousedown 记录双击/三击', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0 });
+    target.dispatch('mousedown', { button: 0, detail: 3 });
+    expect(currentClickDetail()).toBe(3);
+  });
+
+  it('新的按下清掉上一次的连击次数，单点回到 1', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0 });
+    target.dispatch('mousedown', { button: 0, detail: 2 });
+    target.dispatch('pointerdown', { button: 0 });
+    expect(currentClickDetail()).toBe(0);
+    target.dispatch('mousedown', { button: 0, detail: 1 });
+    expect(currentClickDetail()).toBe(1);
   });
 });
 

@@ -12,6 +12,8 @@ let pressed = false;
 let dragged = false;
 let gestureId = 0;
 let pointerStart = null;
+// 本次按下的连击次数：双击/三击是在选词选段，不能当成「点空白」
+let clickDetail = 0;
 // 同一目标只注册一次，组件重建不会叠加监听器
 const trackedTargets = new WeakSet();
 // 超过该位移即视为拖动而非点击
@@ -24,6 +26,14 @@ function onPointerDown(event) {
   dragged = false;
   pointerStart = { x: event.clientX, y: event.clientY };
   gestureId += 1;
+  // pointerdown 的 detail 恒为 0，连击次数由随后的 mousedown 记录
+  clickDetail = 0;
+}
+
+// 连击次数只在 mousedown 上可靠
+function onMouseDown(event) {
+  if (event.button !== 0) return;
+  clickDetail = event.detail || 0;
 }
 
 function onPointerMove(event) {
@@ -62,6 +72,14 @@ export function currentGestureId() {
   return gestureId;
 }
 
+/**
+ * 本次按下的连击次数：1 单击、2 双击、3 三击。
+ * 双击/三击本身就是在选词、选段，收起判定不能把它当成点击空白。
+ */
+export function currentClickDetail() {
+  return clickDetail;
+}
+
 /** 开始跟踪页面上的左键拖动；同一目标重复调用不会叠加监听 */
 export function trackSelectionPointer(target = window) {
   if (!target || trackedTargets.has(target)) return;
@@ -69,6 +87,7 @@ export function trackSelectionPointer(target = window) {
   // 捕获阶段注册，站点在冒泡阶段拦截事件也不影响判断
   target.addEventListener('pointerdown', onPointerDown, true);
   target.addEventListener('pointermove', onPointerMove, true);
+  target.addEventListener('mousedown', onMouseDown, true);
   target.addEventListener('pointerup', onPointerEnd, true);
   target.addEventListener('pointercancel', onPointerEnd, true);
   // 触屏长按划词由浏览器接管手势，部分浏览器不派发 pointerup/pointercancel，

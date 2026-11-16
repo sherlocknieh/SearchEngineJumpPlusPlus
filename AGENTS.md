@@ -244,6 +244,9 @@ src/main.js                 只做装配
   Selection 钳制到宿主外层：`isCollapsed` 为 `true`、`getRangeAt(0)` 矩形归零，但 `toString()` 仍有文字。
   取词与定位统一走 `selection.js` 的 `getSelectionInfo`：折叠但有文字时回退到 `ShadowRoot.getSelection()`
   （Chrome 专有）拿真实选区；只看 `isCollapsed` 会把这类选区误判成「没选中」，跟随选区也会退回顶部
+- 双击/三击本身是在选词、选段：短句里三击选中的整行可能与双击选中的词完全相同，
+  浮层收起判定不能只看「文本是否变化」。`selectionGesture.currentClickDetail()` ≥ 2 时
+  松手一律不按「点空白」收起，否则短子评论（如「确实」）三击会被误判成上次点击的残留选区
 - `nub run dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
   （控制台报 violates CSP）；这类站点改用 `nub run dev:csp`，产物输出到 `.dev/build/`，
   由脚本管理器拉取执行，页面不加载外部脚本
