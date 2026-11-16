@@ -614,7 +614,8 @@ onBeforeUnmount(() => {
   height: 30px;
   padding: 0 10px;
   gap: 8px;
-  border-radius: var(--sej-radius-item, 999px);
+  /* 面板本身是矩形卡片，条目悬停也用矩形高亮，不再画成药丸 */
+  border-radius: 0;
   font-weight: 400;
 }
 
