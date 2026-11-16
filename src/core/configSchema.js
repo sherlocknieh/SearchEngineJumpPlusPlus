@@ -43,7 +43,7 @@ const LEGACY_ACTION_NAMES = {
 };
 
 /** 触屏手机/平板：主输入不能悬停且是粗指针，带鼠标的触屏笔记本仍算桌面 */
-function isMobileDevice() {
+export function isMobileDevice() {
   return (
     typeof window !== 'undefined' &&
     typeof window.matchMedia === 'function' &&

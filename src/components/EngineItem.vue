@@ -1,14 +1,16 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, inject } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
 import { localizeEngineName } from '../assets/i18n.js';
+import { isMobileDevice } from '../core/configSchema.js';
+import { HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 
 const props = defineProps({
   engine: { type: Object, required: true },
   showIcon: { type: Boolean, default: true },
-  // 紧凑模式：只保留图标；动作条目的目标内容仍在文字右侧常显
+  // 紧凑模式：只保留图标，文字收进悬停提示；触屏上动作条目改为右侧常显
   compact: { type: Boolean, default: false },
-  // 情景专属的提示内容，显示在动作条目右侧
+  // 情景专属的悬停提示，优先于名称；为空时按紧凑模式回退到名称
   hint: { type: String, default: '' },
 });
 
@@ -19,14 +21,33 @@ const glyph = computed(() => Array.from(label.value)[0] || '');
 
 const emit = defineEmits(['jump']);
 
-// 动作条目的目标内容直接跟在文字右侧常显，桌面与触屏一致，不再依赖悬停浮层
-const inlineTip = computed(() => props.hint);
+// 提示内容由父级跳转条统一渲染，不再交给浏览器延迟弹出的原生 title
+const hoverTip = inject(HOVER_TIP_KEY, null);
+const tipText = computed(() => props.hint || (props.compact ? label.value : ''));
+
+// 触屏没有悬停：动作条目的目标内容直接跟在文字右侧，普通引擎不额外占位
+const isMobile = isMobileDevice();
+const inlineTip = computed(() => (isMobile ? props.hint : ''));
+
+// 键盘聚焦时立即显示，鼠标悬停则走短延迟，避免快速掠过时连续闪现
+function showTip(event) {
+  if (isMobile || !tipText.value) return;
+  hoverTip?.show(event.currentTarget, tipText.value, { immediate: event.type === 'focus' });
+}
+
+function hideTip() {
+  hoverTip?.hide();
+}
 </script>
 
 <template>
   <a
     class="sej-engine"
     :aria-label="compact ? label : null"
+    @mouseenter="showTip"
+    @mouseleave="hideTip"
+    @focus="showTip"
+    @blur="hideTip"
     @click.prevent.stop="emit('jump', engine)"
   >
     <img v-if="iconSrc" class="sej-engine-icon" :src="iconSrc" alt="" />
@@ -100,7 +121,7 @@ const inlineTip = computed(() => props.hint);
   display: none;
 }
 
-/* 动作条目的目标内容：常显在文字右侧，像贴在该条目上的子菜单，过长时尾部省略 */
+/* 触屏上动作条目的目标内容：像贴在该条目右侧的子菜单，过长时尾部省略 */
 .sej-engine-tip {
   max-width: min(40vw, 200px);
   padding: 1px 7px;
