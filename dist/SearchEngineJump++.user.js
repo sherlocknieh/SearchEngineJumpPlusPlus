@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.16.1609
+// @version         2026.11.16.1813
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -7166,10 +7166,35 @@
 		if (typeof el.selectionStart !== "number" || typeof el.selectionEnd !== "number") return "";
 		return String(el.value ?? "").slice(el.selectionStart, el.selectionEnd);
 	}
+	function isOwnUiHost(host) {
+		return Boolean(host) && typeof host.matches === "function" && host.matches(HOST_SELECTOR);
+	}
 	function isOwnUiSelection(selection) {
-		const host = ((selection?.anchorNode)?.getRootNode?.())?.host;
-		if (!host || typeof host.matches !== "function") return false;
-		return host.matches(HOST_SELECTOR);
+		return isOwnUiHost(selection?.anchorNode?.getRootNode?.()?.host);
+	}
+	function findShadowSelection(doc = document) {
+		const anchor = (typeof doc?.getSelection === "function" ? doc.getSelection() : null)?.anchorNode;
+		const scope = anchor?.nodeType === 1 ? anchor : anchor?.parentElement ?? doc;
+		let hit = null;
+		const scan = (root) => {
+			if (hit || typeof root?.querySelectorAll !== "function") return;
+			for (const el of root.querySelectorAll("*")) {
+				const shadow = el.shadowRoot;
+				if (!shadow) continue;
+				const inner = shadow.getSelection?.();
+				if (inner && !inner.isCollapsed && inner.toString()) {
+					hit = {
+						selection: inner,
+						host: shadow.host
+					};
+					return;
+				}
+				scan(shadow);
+				if (hit) return;
+			}
+		};
+		scan(scope);
+		return hit;
 	}
 	function selectElementText(el) {
 		if (!el || el.nodeType !== 1) return false;
@@ -7182,17 +7207,50 @@
 		selection.addRange(range);
 		return Boolean(selection.toString().trim());
 	}
-	function getSelectedText({ includeInput = false, doc = document } = {}) {
+	function getSelectionInfo({ includeInput = false, doc = document } = {}) {
 		const active = doc.activeElement;
 		if (isEditableElement(active)) {
-			if (!includeInput) return "";
+			if (!includeInput) return {
+				text: "",
+				selection: null
+			};
 			const text = getElementSelectionText(active);
-			if (text) return text;
+			if (text) return {
+				text,
+				selection: null
+			};
 		}
 		const selection = typeof doc.getSelection === "function" ? doc.getSelection() : null;
-		if (!selection || selection.isCollapsed) return "";
-		if (isOwnUiSelection(selection)) return "";
-		return selection.toString();
+		if (!selection) return {
+			text: "",
+			selection: null
+		};
+		if (isOwnUiSelection(selection)) return {
+			text: "",
+			selection: null
+		};
+		let resolved = selection;
+		if (selection.isCollapsed && selection.toString()) {
+			const hit = findShadowSelection(doc);
+			if (hit) {
+				if (isOwnUiHost(hit.host)) return {
+					text: "",
+					selection: null
+				};
+				resolved = hit.selection;
+			}
+		}
+		const text = resolved.toString();
+		return text ? {
+			text,
+			selection: resolved
+		} : {
+			text: "",
+			selection: null
+		};
+	}
+	function getSelectedText(options) {
+		return getSelectionInfo(options).text;
 	}
 	var LINK_PROTOCOLS = /^(https?|mailto|tel):$/i;
 	function toLinkUrl(raw, base) {
@@ -9244,6 +9302,7 @@
 				iconExpanded.value = false;
 				barVisible.value = false;
 				shownKeyword = "";
+				activeSelection = null;
 				iconFullSize = null;
 				iconOpenHeight.value = 0;
 			}
@@ -9270,11 +9329,12 @@
 			let dismissedSelection = "";
 			let pendingHide = false;
 			let settledGesture = -1;
+			let activeSelection = null;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
 				if (isContextAction.value) return;
 				if (isPointerPressed()) return;
-				const text = getSelectedText({ includeInput: data.selectSearchInInput });
+				const { text, selection } = getSelectionInfo({ includeInput: data.selectSearchInInput });
 				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
 					if (text === dismissedSelection) return;
 					dismissedGesture = -1;
@@ -9286,7 +9346,8 @@
 					return;
 				}
 				selectionText.value = text;
-				refreshAnchor(document.getSelection());
+				activeSelection = selection;
+				refreshAnchor(selection);
 				showFloatBar();
 			}
 			function onOverlayPointerDown(e) {
@@ -9319,7 +9380,7 @@
 			function onFloatScroll(e) {
 				if (!isFloat || !anchorRect.value) return;
 				if (isInsideBar(e)) return;
-				refreshAnchor(document.getSelection());
+				refreshAnchor(activeSelection);
 				syncFloatPlacement();
 			}
 			async function onFloatResize() {

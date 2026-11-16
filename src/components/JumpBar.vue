@@ -33,7 +33,7 @@ import {
   isActionEngine,
   performEngineAction,
 } from '../core/jump.js';
-import { getSelectedText } from '../core/selection.js';
+import { getSelectedText, getSelectionInfo } from '../core/selection.js';
 import {
   currentGestureId,
   isPointerPressed,
@@ -715,6 +715,7 @@ function hideFloatBar() {
   iconExpanded.value = false;
   barVisible.value = false;
   shownKeyword = '';
+  activeSelection = null;
   iconFullSize = null;
   iconOpenHeight.value = 0;
 }
@@ -764,6 +765,8 @@ let dismissedSelection = '';
 let pendingHide = false;
 // 本次操作已由松手判定过显隐，之后迟到的空选区是拖动中间态，不再改变结果
 let settledGesture = -1;
+// 最近一次划词判定出的选区：Shadow DOM 内的选区在文档层拿不到范围，滚动跟随要复用它
+let activeSelection = null;
 
 function onSelectionChange(e) {
   if (!isSelectSearch.value) return;
@@ -772,8 +775,9 @@ function onSelectionChange(e) {
   if (isContextAction.value) return;
   // 仍在拖动选区就先不弹，等松手后按最终选区显示
   if (isPointerPressed()) return;
-  // 输入框内的选区默认忽略，可在设置面板中单独开启
-  const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  // 输入框内的选区默认忽略，可在设置面板中单独开启；
+  // Shadow DOM 内的选区回退到真实选区，否则只能拿到被钳制、矩形为零的文档选区
+  const { text, selection } = getSelectionInfo({ includeInput: data.selectSearchInInput });
   // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
   // 拖动选区或选区内容变了（三击选段等）属于重新划词，照常显示
   if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
@@ -789,7 +793,8 @@ function onSelectionChange(e) {
     return;
   }
   selectionText.value = text;
-  refreshAnchor(document.getSelection());
+  activeSelection = selection;
+  refreshAnchor(selection);
   showFloatBar();
 }
 
@@ -837,7 +842,7 @@ function onFloatScroll(e) {
   if (!isFloat || !anchorRect.value) return;
   // 跳转条自身的横向滚动不改变锚点位置，不参与跟随重算
   if (isInsideBar(e)) return;
-  refreshAnchor(document.getSelection());
+  refreshAnchor(activeSelection);
   syncFloatPlacement();
 }
 

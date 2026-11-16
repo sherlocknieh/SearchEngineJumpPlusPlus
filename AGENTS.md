@@ -240,6 +240,10 @@ src/main.js                 只做装配
   补判一次，只靠「松手后的 selectionchange」在手机上永远等不到
 - 站点用 `user-select: none` 禁止选字时（如 sex.com 的 `select-none md:select-auto`，窄视口整体不可选），
   浏览器压根不产生选区，脚本只能读到空文本；这类「划词没反应」先查目标元素的 `user-select` 计算值
+- 评论类组件把正文放进多层 open Shadow DOM 时（B站新版评论区 `bili-comments`），浏览器会把文档级
+  Selection 钳制到宿主外层：`isCollapsed` 为 `true`、`getRangeAt(0)` 矩形归零，但 `toString()` 仍有文字。
+  取词与定位统一走 `selection.js` 的 `getSelectionInfo`：折叠但有文字时回退到 `ShadowRoot.getSelection()`
+  （Chrome 专有）拿真实选区；只看 `isCollapsed` 会把这类选区误判成「没选中」，跟随选区也会退回顶部
 - `pnpm dev` 靠页面加载 `localhost:5173` 的模块脚本注入，严格 CSP 的站点会直接拦掉
   （控制台报 violates CSP）；这类站点改用 `pnpm dev:csp`，产物输出到 `.dev/build/`，
   由脚本管理器拉取执行，页面不加载外部脚本
