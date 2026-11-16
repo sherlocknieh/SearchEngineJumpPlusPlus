@@ -1435,8 +1435,22 @@ onBeforeUnmount(() => {
 #sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-left ~ .sej-scroll-hint-left,
 #sej-container > .sej-scroll-viewport > .sej-scroll.sej-scroll-more-right ~ .sej-scroll-hint-right {
   opacity: 1;
-  visibility: visible;
+  /* 跟随整条的可见性：浮层条关闭、量尺寸隐藏时箭头一起消失，
+     不能写成 visible，否则会压过容器自身的 visibility: hidden */
+  visibility: inherit;
   pointer-events: auto;
+}
+
+/*
+ * 图标收起时容器仍然可见，箭头要单独藏起来；滚动区这时还带着溢出标记，
+ * 不压住就会在图标旁留下一个孤立的箭头。选择器带上左右类名，特异性
+ * 才压得过上面的显示规则。
+ */
+#sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-hint.sej-scroll-hint-left,
+#sej-container.sej-icon-mode:not(.sej-icon-open) > .sej-scroll-hint.sej-scroll-hint-right {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
 }
 
 #sej-container > #setBtn {
