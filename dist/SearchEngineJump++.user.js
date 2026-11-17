@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.17.2127
+// @version         2026.11.17.2146
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -8495,6 +8495,42 @@
 			};
 		}
 	};
+	function dropListSpace({ triggerTop, triggerBottom, viewportHeight, gap = 2, padding = 8 }) {
+		const height = Math.max(0, viewportHeight ?? 0);
+		const spaceAbove = Math.max(0, triggerTop - gap - padding);
+		const spaceBelow = Math.max(0, height - padding - (triggerBottom + gap));
+		return {
+			spaceAbove,
+			spaceBelow,
+			maxHeight: Math.max(spaceAbove, spaceBelow)
+		};
+	}
+	function placeDropList({ triggerRect, list, viewport, origin = {
+		left: 0,
+		top: 0
+	}, gap = 2, padding = 8 }) {
+		const viewWidth = Math.max(0, viewport?.width ?? 0);
+		const viewHeight = Math.max(0, viewport?.height ?? 0);
+		const listWidth = Math.max(0, list?.width ?? 0);
+		const listHeight = Math.max(0, list?.height ?? 0);
+		const originLeft = origin?.left ?? 0;
+		const originTop = origin?.top ?? 0;
+		const { spaceAbove, spaceBelow } = dropListSpace({
+			triggerTop: triggerRect.top,
+			triggerBottom: triggerRect.bottom,
+			viewportHeight: viewHeight,
+			gap,
+			padding
+		});
+		const preferredLeft = triggerRect.left - originLeft - (listWidth - triggerRect.width) / 2;
+		const left = Math.max(padding - originLeft, Math.min(preferredLeft, viewWidth - listWidth - padding - originLeft));
+		const below = triggerRect.bottom - originTop + gap;
+		const above = triggerRect.top - originTop - listHeight - gap;
+		return {
+			top: listHeight > spaceBelow && spaceAbove > spaceBelow ? above : below,
+			left
+		};
+	}
 	var moveHandlers = new Set();
 	var downHandlers = new Set();
 	var pendingMove = null;
@@ -8606,14 +8642,14 @@
 		},
 		emits: ["jump", "jumpAll"],
 		setup(__props, { emit: __emit }) {
-			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n}\n\n/* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  /* 左右留白放进条目内部：悬停高亮铺满面板，文字仍与面板边缘保持原距离 */\n  padding: 0 14px;\n  gap: 8px;\n  /* 面板本身是矩形卡片，条目悬停也用矩形高亮，不再画成药丸 */\n  border-radius: 0;\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  /* 上下留出面板内边距；左右不留白，条目悬停高亮可以铺满整个面板宽度 */\n  padding: 4px 0;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  overflow: hidden;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
+			addStyle("\n.sej-category {\n  display: inline-flex;\n  align-items: center;\n  position: relative;\n}\n\n/*\n * 图标槽固定 16×16、不收缩、无外边距，与原 .sej-engine-icon 占位一致。\n * 分类触发项内的尺寸在这里定义，不再依赖 EngineItem 的样式是否已注入。\n */\n.sej-category-icon {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  flex: 0 0 auto;\n  pointer-events: none;\n}\n\n.sej-category-icon-img {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n  object-fit: cover;\n}\n\n/*\n * 已固定展开的分类用图钉图标替代引擎图标。\n * 与引擎图标共用同一 16px 槽与同一视觉尺度，不做贴文字缩字。\n */\n.sej-category-pin-icon {\n  display: block;\n  width: 16px;\n  height: 16px;\n  margin: 0;\n}\n\n/* 紧凑模式没有引擎图标时的首字兜底，与图标槽同尺寸 */\n.sej-category-glyph {\n  display: inline-flex;\n  align-items: center;\n  justify-content: center;\n  width: 16px;\n  height: 16px;\n  border-radius: 4px;\n  background: var(--sej-surface-2, rgba(127, 127, 127, 0.16));\n  font-size: 11px;\n  font-weight: 600;\n  line-height: 1;\n}\n\n/* 列表末尾的一键打开条目：与引擎条目同构，图标区用统一槽位对齐 */\n.sej-search-all-icon {\n  display: block;\n  width: 14px;\n  height: 14px;\n  margin: 0;\n  fill: none;\n  stroke: currentColor;\n  stroke-width: 1.8;\n  stroke-linecap: round;\n  stroke-linejoin: round;\n}\n\n.sej-drop-list > .sej-drop-list-search-all {\n  color: var(--sej-accent, #4285f4) !important;\n}\n\n.sej-engine.sej-drop-list-trigger-shown {\n  background-color: var(--trigger-shown-qxin);\n}\n\n.sej-drop-list > .sej-engine {\n  display: flex;\n  justify-content: flex-start;\n  width: 100%;\n  height: 30px;\n  /* 左右留白放进条目内部：悬停高亮铺满面板，文字仍与面板边缘保持原距离 */\n  padding: 0 14px;\n  gap: 8px;\n  /* 面板本身是矩形卡片，条目悬停也用矩形高亮，不再画成药丸 */\n  border-radius: 0;\n  font-weight: 400;\n}\n\n.sej-drop-list > .sej-engine + .sej-engine {\n  margin-top: 1px;\n}\n\n.sej-drop-list {\n  /* 默认 fixed；正常文档流下会切换为 absolute，相对 Shadow 宿主定位 */\n  position: fixed;\n  display: none;\n  opacity: 0.2;\n  top: -10000px;\n  left: 0;\n  min-width: 128px;\n  /* 上下留出面板内边距；左右不留白，条目悬停高亮可以铺满整个面板宽度 */\n  padding: 4px 0;\n  box-sizing: border-box;\n  text-align: left;\n  font-size: 13px;\n  font-family: var(--sej-font-family);\n  -webkit-font-smoothing: antialiased;\n  box-shadow: var(\n    --sej-shadow-menu,\n    0 2px 6px hsla(0, 0%, 0%, 0.06),\n    0 16px 40px -12px hsla(0, 0%, 0%, 0.3)\n  );\n  background-color: var(--sej-bar-bg, var(--background-color-qxin));\n  backdrop-filter: blur(20px) saturate(180%);\n  transition: opacity 0.08s ease-out;\n  animation: sej-drop-menu-in 0.1s ease-out;\n  /* 屏幕装不下整列时由面板自己滚动，条目不被视口裁掉 */\n  overflow-x: hidden;\n  overflow-y: auto;\n  overscroll-behavior: contain;\n  scrollbar-width: thin;\n  scrollbar-color: var(--sej-surface-hover, rgba(127, 127, 127, 0.4)) transparent;\n  border-radius: var(--sej-radius-menu, 12px);\n  border: 1px solid var(--border-color-sej);\n  user-select: none;\n}\n\n.sej-drop-list::-webkit-scrollbar {\n  width: 6px;\n}\n\n.sej-drop-list::-webkit-scrollbar-thumb {\n  background: var(--sej-surface-hover, rgba(127, 127, 127, 0.4));\n  border-radius: 3px;\n}\n\n/*\n * 支持 CSS Anchor Positioning 时，面板锚定到自己的分类触发项：\n * 位置、页面滚动跟随、横向钳制和上翻全部由浏览器计算，不走 JS 坐标。\n */\n.sej-drop-list.sej-drop-list-anchored {\n  top: anchor(bottom);\n  left: clamp(\n    calc(8px + var(--sej-half-width, 64px)),\n    anchor(center),\n    calc(100vw - 8px - var(--sej-half-width, 64px))\n  );\n  translate: -50% 0;\n  margin-top: 2px;\n  position-try-fallbacks: --sej-drop-above;\n}\n\n@position-try --sej-drop-above {\n  /* 下方空间不足时翻到触发项上方 */\n  top: auto;\n  bottom: anchor(top);\n  margin-top: 0;\n  margin-bottom: 2px;\n}\n\n@keyframes sej-drop-menu-in {\n  from {\n    opacity: 0;\n    transform: translateY(-4px) scale(0.98);\n  }\n}\n");
 			const props = __props;
 			const emit = __emit;
 			const iconVisible = computed(() => props.showIcon || props.compact);
 			const firstIconSrc = computed(() => iconVisible.value && props.engines[0] ? getFaviconSrc(props.engines[0]) : "");
 			const showSearchAll = computed(() => props.engines.some((engine) => engine.url));
 			const glyph = computed(() => Array.from(props.name)[0] || "");
-			const supportsAnchorPositioning = Boolean(typeof CSS !== "undefined" && CSS.supports?.("position-anchor: --sej-anchor") && CSS.supports?.("top: anchor(bottom)"));
+			const supportsAnchorPositioning = Boolean(typeof CSS !== "undefined" && CSS.supports?.("position-anchor: --sej-anchor") && CSS.supports?.("top: anchor(bottom)") && CSS.supports?.("position-try-fallbacks: --sej-drop-above"));
 			anchorSeq += 1;
 			const anchorId = `--sej-anchor-${anchorSeq}`;
 			const hostRole = inject(HOST_ROLE_KEY, HOST_ROLE_MAIN);
@@ -8640,6 +8676,7 @@
 			}
 			const top = ref(supportsAnchorPositioning ? "" : "-10000px");
 			const left = ref(supportsAnchorPositioning ? "" : "0px");
+			const maxHeight = ref("");
 			const listPosition = ref("fixed");
 			const halfWidth = ref("64px");
 			const anchorMode = ref(supportsAnchorPositioning);
@@ -8705,10 +8742,25 @@
 				if (getComputedStyle(getHost(hostRole)).position === "static") return "fixed";
 				return "absolute";
 			}
+			function applyMaxHeight(px) {
+				const value = `${Math.max(0, Math.round(px))}px`;
+				maxHeight.value = value;
+				if (listEl.value) listEl.value.style.maxHeight = value;
+			}
 			function measureAndPosition() {
 				const trigger = triggerEl.value;
 				const list = listEl.value;
 				if (!trigger || !list) return;
+				const rect = trigger.getBoundingClientRect();
+				const viewport = {
+					width: window.innerWidth,
+					height: window.innerHeight
+				};
+				applyMaxHeight(dropListSpace({
+					triggerTop: rect.top,
+					triggerBottom: rect.bottom,
+					viewportHeight: viewport.height
+				}).maxHeight);
 				if (anchorMode.value) {
 					listPosition.value = "fixed";
 					top.value = "";
@@ -8719,10 +8771,7 @@
 				const mode = getPositioningMode();
 				listPosition.value = mode;
 				if (list.style.position !== mode) list.style.position = mode;
-				const rect = trigger.getBoundingClientRect();
 				const listRect = list.getBoundingClientRect();
-				const listWidth = listRect.width;
-				const listHeight = listRect.height;
 				let originLeft = 0;
 				let originTop = 0;
 				if (mode === "absolute") {
@@ -8731,13 +8780,20 @@
 					originLeft = hostRect.left + host.clientLeft;
 					originTop = hostRect.top + host.clientTop;
 				}
-				const GAP = 2;
-				let posLeft = rect.left - originLeft - (listWidth - rect.width) / 2;
-				posLeft = Math.max(8 - originLeft, Math.min(posLeft, window.innerWidth - listWidth - 8 - originLeft));
-				let posTop = rect.bottom - originTop + GAP;
-				if (rect.bottom + GAP + listHeight > window.innerHeight - 8 && rect.top - listHeight - GAP > 8) posTop = rect.top - listHeight - GAP - originTop;
-				top.value = posTop + "px";
-				left.value = posLeft + "px";
+				const placed = placeDropList({
+					triggerRect: rect,
+					list: {
+						width: listRect.width,
+						height: listRect.height
+					},
+					viewport,
+					origin: {
+						left: originLeft,
+						top: originTop
+					}
+				});
+				top.value = placed.top + "px";
+				left.value = placed.left + "px";
 			}
 			let scrollEl = null;
 			function onScrollArea() {
@@ -8933,6 +8989,7 @@
 						"--sej-half-width": halfWidth.value,
 						top: top.value,
 						left: left.value,
+						maxHeight: maxHeight.value,
 						opacity: active.value ? 1 : .2,
 						pointerEvents: shown.value ? "auto" : "none",
 						transition: "opacity 0s",

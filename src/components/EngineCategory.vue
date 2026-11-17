@@ -11,6 +11,7 @@ import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue
 import { getFaviconSrc } from '../core/favicon.js';
 import { getDropRoot, getHost, HOST_ROLE_KEY, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
+import { dropListSpace, placeDropList } from '../core/dropListPlacement.js';
 import { subscribePointer } from '../composables/sharedPointer.js';
 import { HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 import EngineItem from './EngineItem.vue';
@@ -46,7 +47,9 @@ const glyph = computed(() => Array.from(props.name)[0] || '');
 const supportsAnchorPositioning = Boolean(
   typeof CSS !== 'undefined' &&
   CSS.supports?.('position-anchor: --sej-anchor') &&
-  CSS.supports?.('top: anchor(bottom)'),
+  CSS.supports?.('top: anchor(bottom)') &&
+  // 缺少 position-try 时无法上翻，矮屏下会被裁切；此时退回 JS 坐标更稳
+  CSS.supports?.('position-try-fallbacks: --sej-drop-above'),
 );
 anchorSeq += 1;
 const anchorId = `--sej-anchor-${anchorSeq}`;
@@ -84,6 +87,7 @@ function hideTriggerTip() {
 }
 const top = ref(supportsAnchorPositioning ? '' : '-10000px');
 const left = ref(supportsAnchorPositioning ? '' : '0px');
+const maxHeight = ref('');
 const listPosition = ref('fixed');
 const halfWidth = ref('64px');
 // 本次展开是否交给 CSS 锚点定位，决定见 refreshAnchorMode
@@ -185,13 +189,33 @@ function getPositioningMode() {
   return 'absolute';
 }
 
+// 高度上限要在量尺寸前同步写进元素：锚点定位靠压缩后的高度判断下方是否装得下，
+// Vue 绑定的样式要到下一次渲染才生效，直接写 DOM 才能让同一帧量到最终布局
+function applyMaxHeight(px) {
+  const value = `${Math.max(0, Math.round(px))}px`;
+  maxHeight.value = value;
+  if (listEl.value) listEl.value.style.maxHeight = value;
+}
+
 function measureAndPosition() {
   const trigger = triggerEl.value;
   const list = listEl.value;
   if (!trigger || !list) return;
 
+  const rect = trigger.getBoundingClientRect();
+  const viewport = { width: window.innerWidth, height: window.innerHeight };
+  // 屏幕矮于列表内容时压到上下两侧更宽裕的一侧，多出的条目在列表内部滚动
+  applyMaxHeight(
+    dropListSpace({
+      triggerTop: rect.top,
+      triggerBottom: rect.bottom,
+      viewportHeight: viewport.height,
+    }).maxHeight,
+  );
+
   if (anchorMode.value) {
-    // 位置由 CSS anchor()/position-try 计算，这里只同步用于视口钳制的半宽
+    // 位置由 CSS anchor()/position-try 计算：高度已按可用空间压住，
+    // 下方装不下时 position-try 会翻到上方；这里只同步用于视口钳制的半宽
     listPosition.value = 'fixed';
     top.value = '';
     left.value = '';
@@ -204,10 +228,7 @@ function measureAndPosition() {
   // 先同步切换定位方式，下面量到的宽高才是最终布局下的
   if (list.style.position !== mode) list.style.position = mode;
 
-  const rect = trigger.getBoundingClientRect();
   const listRect = list.getBoundingClientRect();
-  const listWidth = listRect.width;
-  const listHeight = listRect.height;
 
   // absolute 以宿主 padding box 为原点，fixed 以视口为原点
   let originLeft = 0;
@@ -219,21 +240,15 @@ function measureAndPosition() {
     originTop = hostRect.top + host.clientTop;
   }
 
-  const GAP = 2;
-  let posLeft = rect.left - originLeft - (listWidth - rect.width) / 2;
-  // 8px 视口留白换算到当前定位坐标系
-  posLeft = Math.max(
-    8 - originLeft,
-    Math.min(posLeft, window.innerWidth - listWidth - 8 - originLeft),
-  );
+  const placed = placeDropList({
+    triggerRect: rect,
+    list: { width: listRect.width, height: listRect.height },
+    viewport,
+    origin: { left: originLeft, top: originTop },
+  });
 
-  let posTop = rect.bottom - originTop + GAP;
-  if (rect.bottom + GAP + listHeight > window.innerHeight - 8 && rect.top - listHeight - GAP > 8) {
-    posTop = rect.top - listHeight - GAP - originTop;
-  }
-
-  top.value = posTop + 'px';
-  left.value = posLeft + 'px';
+  top.value = placed.top + 'px';
+  left.value = placed.left + 'px';
 }
 
 // 类别区横向滚动时让已展开的面板跟随触发项
@@ -495,6 +510,7 @@ onBeforeUnmount(() => {
           '--sej-half-width': halfWidth,
           top,
           left,
+          maxHeight,
           opacity: active ? 1 : 0.2,
           pointerEvents: shown ? 'auto' : 'none',
           transition: 'opacity 0s',
@@ -653,10 +669,24 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(20px) saturate(180%);
   transition: opacity 0.08s ease-out;
   animation: sej-drop-menu-in 0.1s ease-out;
-  overflow: hidden;
+  /* 屏幕装不下整列时由面板自己滚动，条目不被视口裁掉 */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--sej-surface-hover, rgba(127, 127, 127, 0.4)) transparent;
   border-radius: var(--sej-radius-menu, 12px);
   border: 1px solid var(--border-color-sej);
   user-select: none;
+}
+
+.sej-drop-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sej-drop-list::-webkit-scrollbar-thumb {
+  background: var(--sej-surface-hover, rgba(127, 127, 127, 0.4));
+  border-radius: 3px;
 }
 
 /*

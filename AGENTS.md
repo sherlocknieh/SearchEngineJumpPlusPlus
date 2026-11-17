@@ -193,7 +193,9 @@ src/main.js                 只做装配
 - 判断事件是否属于 UI 内用 `isEventInsideUi(el, e)`：下拉面板 Teleport 到 `#sej-drop-lists`，不在 `el` 子树内，只能按 Shadow Root 归属判断
 - 分类下拉面板定位：`EngineCategory.vue` 优先用 CSS Anchor Positioning（`anchor()` + `position-try-fallbacks`），
   但触发项到文档根之间只要有 `transform`/`translate` 等变换就退回 JS 坐标计算——Firefox 解析 `anchor()`
-  会忽略祖先变换，面板整体偏移（划词条靠内联 `translateX(-50%)` 居中，必走 JS 分支）
+  会忽略祖先变换，面板整体偏移（划词条靠内联 `translateX(-50%)` 居中，必走 JS 分支）。
+  垂直空间由 `core/dropListPlacement.js` 统一预算：屏幕装不下整列时把 `max-height`
+  压到上下两侧更宽裕的一侧，多出的条目在面板内部滚动，两种定位模式都据此翻到上方或留在下方
 
 ## UI 状态与提示
 
@@ -219,7 +221,7 @@ src/main.js                 只做装配
 
 ## 测试索引（`test/`，纯 JS）
 
-`applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder`
+`applyRule` `configMerge` `configSchema` `csp` `darkMode` `dragGeometry` `dragGhost` `dragOrder` `dropListPlacement`
 `engineUrl` `eventIsolation` `favicon` `floatPlacement` `imageSearch` `contextAction` `linkAction` `jump` `matchRule` `performJump` `selection` `sharedPointer`
 `selectionGesture` `shadowDom` `storage` `storageBackend` `ui` `urlChange` `useAutoSave` `useEngineIconPreview` `useEngineIcons`
 `useBarViewport` `useModalA11y` `vueStyleToShadow` `jumpBarComposables` `settingPanelComposables`
