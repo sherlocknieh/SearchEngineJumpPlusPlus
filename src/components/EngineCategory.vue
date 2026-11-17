@@ -21,8 +21,6 @@ const props = defineProps({
   showIcon: { type: Boolean, default: true },
   // 紧凑模式：只保留图标，文字收进悬停提示
   compact: { type: Boolean, default: false },
-  // 折叠模式下整条本身就收成一个图标，展开后不必再用提示补分类名
-  nameTip: { type: Boolean, default: true },
   // 点击分类展开面板的同时，直接用第一个引擎搜索当前关键词
   clickJumpFirst: { type: Boolean, default: false },
 });
@@ -62,10 +60,11 @@ const shown = ref(false);
 const active = ref(false);
 const pinned = ref(false);
 
-// 悬停提示：紧凑模式补回被隐藏的分类名，固定展开时提示如何收起
+// 悬停提示只用于固定展开的分类：点击后提示「收起列表」；
+// 紧凑模式只留图标，分类名不再额外浮出（下拉列表里已有名称）
 const triggerTitle = computed(() => {
   if (pinned.value) return t('jump.collapseList', { name: props.name });
-  return props.compact && props.nameTip ? props.name : null;
+  return null;
 });
 
 // 提示由父级跳转条统一渲染，不使用带延迟的原生 title
