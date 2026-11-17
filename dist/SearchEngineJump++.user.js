@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.17.0033
+// @version         2026.11.17.2123
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -8599,6 +8599,10 @@
 				type: Boolean,
 				default: false
 			},
+			nameTip: {
+				type: Boolean,
+				default: true
+			},
 			clickJumpFirst: {
 				type: Boolean,
 				default: false
@@ -8625,7 +8629,7 @@
 			const pinned = ref(false);
 			const triggerTitle = computed(() => {
 				if (pinned.value) return t("jump.collapseList", { name: props.name });
-				return props.compact ? props.name : null;
+				return props.compact && props.nameTip ? props.name : null;
 			});
 			const hoverTip = inject(HOVER_TIP_KEY, null);
 			function showTriggerTip(event) {
@@ -9793,6 +9797,7 @@
 								engines: category.engines,
 								"show-icon": unref(ui).categoryIcon,
 								compact: compactBar.value,
+								"name-tip": !iconMode.value,
 								"click-jump-first": Boolean(unref(data).clickCategoryJumpFirst),
 								onJump,
 								onJumpAll: ($event) => onJumpAll(category.engines)
@@ -9801,6 +9806,7 @@
 								"engines",
 								"show-icon",
 								"compact",
+								"name-tip",
 								"click-jump-first",
 								"onJumpAll"
 							]))], 64);
