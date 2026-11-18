@@ -39,6 +39,7 @@ import {
   currentGestureId,
   isPointerPressed,
   isSelectionDrag,
+  isSelectionGesture,
   trackSelectionPointer,
 } from '../core/selectionGesture.js';
 import { isBarCategoryVisible, BUILTIN_CATEGORY_KEY, IMAGE_CATEGORY_KEY } from '../core/configData.js';
@@ -779,6 +780,8 @@ let dismissedSelection = '';
 let pendingHide = false;
 // 本次操作已由松手判定过显隐，之后迟到的空选区是拖动中间态，不再改变结果
 let settledGesture = -1;
+// 收起时所在的输入操作：站点随后用脚本补设的选区不算重新划词，不再弹出
+let suppressedGesture = -1;
 // 最近一次划词判定出的选区：Shadow DOM 内的选区在文档层拿不到范围，滚动跟随要复用它
 let activeSelection = null;
 
@@ -795,6 +798,9 @@ function onSelectionChange(e) {
   // 本次操作里已收起划词条：同一次点击读到的残留选区不再重新弹出；
   // 拖动选区或选区内容变了（三击选段等）属于重新划词，照常显示
   if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
+    // 松手时已判定为点击空白：有些站点（思维导图）会紧接着用脚本把选区设到别处，
+    // 这不是用户划词，文本变了也不能把刚收起的浮层拉回来
+    if (suppressedGesture === currentGestureId()) return;
     if (text === dismissedSelection) return;
     dismissedGesture = -1;
   }
@@ -844,11 +850,17 @@ function settleOverlay(e) {
     return;
   }
   settledGesture = currentGestureId();
-  // 本次操作选出了新内容就保持显示（桌面拖动选区、触屏长按划词都算），
-  // 交给 onSelectionChange 更新内容与位置；触屏长按没有位移，不能按拖动判定
+  // 本次操作确实是用户在划词（拖动、双击/三击、触屏长按都会发 selectstart）就保持显示，
+  // 交给 onSelectionChange 更新内容与位置；哪怕选中的文字与之前相同，也要贴到新位置。
+  // 站点脚本设置的选区不触发 selectstart，不会被当成重新划词
   const text = getSelectedText({ includeInput: data.selectSearchInInput });
+  const userSelecting = isSelectionGesture() || isSelectionDrag();
+  if (text && userSelecting) return;
+  // 缺少 selectstart 的浏览器按文本变化兜底
   if (text && text !== dismissedSelection) return;
   if (e && performance.now() < keepOverlayUntil) return;
+  // 记下这次操作：站点在点击后补设选区（恢复编辑态、定位光标）时不再重新弹出
+  suppressedGesture = currentGestureId();
   hideFloatBar();
 }
 
@@ -952,7 +964,9 @@ onMounted(async () => {
   window.addEventListener('pointercancel', endScrollDrag);
 
   if (isFloat) {
-    document.addEventListener('pointerdown', onContextModePointerDown, true);
+    // 外部点击的判定放在 window 捕获：画布类站点常在 document/元素上拦截指针事件，
+    // 放这里才能保证「点空白收起」始终收到
+    window.addEventListener('pointerdown', onContextModePointerDown, true);
     document.addEventListener('keydown', onOverlayKeydown, true);
     document.addEventListener('mousemove', onIconMouseMove, { passive: true });
     window.addEventListener('scroll', onFloatScroll, true);
@@ -971,18 +985,18 @@ onMounted(async () => {
     document.addEventListener('touchend', onSelectionChange, true);
     document.addEventListener('pointerup', settleOverlay, true);
     document.addEventListener('pointercancel', settleOverlay, true);
-    document.addEventListener('pointerdown', onOverlayPointerDown, true);
+    window.addEventListener('pointerdown', onOverlayPointerDown, true);
   }
 });
 
 onBeforeUnmount(() => {
   document.removeEventListener('input', syncSearchInputKeyword, true);
   document.removeEventListener('change', syncSearchInputKeyword, true);
-  document.removeEventListener('pointerdown', onContextModePointerDown, true);
+  window.removeEventListener('pointerdown', onContextModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
   document.removeEventListener('mousemove', onIconMouseMove);
   window.removeEventListener('scroll', onFloatScroll, true);
-  document.removeEventListener('pointerdown', onOverlayPointerDown, true);
+  window.removeEventListener('pointerdown', onOverlayPointerDown, true);
   document.removeEventListener('pointerup', settleOverlay, true);
   document.removeEventListener('pointercancel', settleOverlay, true);
   document.removeEventListener('pointercancel', onSelectionChange, true);

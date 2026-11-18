@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.17.2146
+// @version         2026.11.18.2152
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -7444,6 +7444,7 @@
 	var gestureId = 0;
 	var pointerStart = null;
 	var clickDetail = 0;
+	var selectionStarted = -1;
 	var trackedTargets = new WeakSet();
 	var DRAG_THRESHOLD$1 = 4;
 	function onPointerDown(event) {
@@ -7471,6 +7472,9 @@
 		pressed = false;
 		pointerStart = null;
 	}
+	function onSelectStart() {
+		selectionStarted = gestureId;
+	}
 	function onKeyDown() {
 		gestureId += 1;
 		dragged = false;
@@ -7484,6 +7488,9 @@
 	function currentGestureId() {
 		return gestureId;
 	}
+	function isSelectionGesture() {
+		return selectionStarted === gestureId;
+	}
 	function currentClickDetail() {
 		return clickDetail;
 	}
@@ -7495,6 +7502,7 @@
 		target.addEventListener("mousedown", onMouseDown, true);
 		target.addEventListener("pointerup", onPointerEnd, true);
 		target.addEventListener("pointercancel", onPointerEnd, true);
+		target.addEventListener("selectstart", onSelectStart, true);
 		target.addEventListener("touchend", onPointerEnd, true);
 		target.addEventListener("touchcancel", onPointerEnd, true);
 		target.addEventListener("keydown", onKeyDown, true);
@@ -9626,6 +9634,7 @@
 			let dismissedSelection = "";
 			let pendingHide = false;
 			let settledGesture = -1;
+			let suppressedGesture = -1;
 			let activeSelection = null;
 			function onSelectionChange(e) {
 				if (!isSelectSearch.value) return;
@@ -9633,6 +9642,7 @@
 				if (isPointerPressed()) return;
 				const { text, selection } = getSelectionInfo({ includeInput: data.selectSearchInInput });
 				if (dismissedGesture === currentGestureId() && !isSelectionDrag()) {
+					if (suppressedGesture === currentGestureId()) return;
 					if (text === dismissedSelection) return;
 					dismissedGesture = -1;
 				}
@@ -9672,8 +9682,11 @@
 				}
 				settledGesture = currentGestureId();
 				const text = getSelectedText({ includeInput: data.selectSearchInInput });
+				const userSelecting = isSelectionGesture() || isSelectionDrag();
+				if (text && userSelecting) return;
 				if (text && text !== dismissedSelection) return;
 				if (e && performance.now() < keepOverlayUntil) return;
+				suppressedGesture = currentGestureId();
 				hideFloatBar();
 			}
 			function onDocumentSelectionChange() {
@@ -9744,7 +9757,7 @@
 				window.addEventListener("pointerup", endScrollDrag);
 				window.addEventListener("pointercancel", endScrollDrag);
 				if (isFloat) {
-					document.addEventListener("pointerdown", onContextModePointerDown, true);
+					window.addEventListener("pointerdown", onContextModePointerDown, true);
 					document.addEventListener("keydown", onOverlayKeydown, true);
 					document.addEventListener("mousemove", onIconMouseMove, { passive: true });
 					window.addEventListener("scroll", onFloatScroll, true);
@@ -9758,17 +9771,17 @@
 					document.addEventListener("touchend", onSelectionChange, true);
 					document.addEventListener("pointerup", settleOverlay, true);
 					document.addEventListener("pointercancel", settleOverlay, true);
-					document.addEventListener("pointerdown", onOverlayPointerDown, true);
+					window.addEventListener("pointerdown", onOverlayPointerDown, true);
 				}
 			});
 			onBeforeUnmount(() => {
 				document.removeEventListener("input", syncSearchInputKeyword, true);
 				document.removeEventListener("change", syncSearchInputKeyword, true);
-				document.removeEventListener("pointerdown", onContextModePointerDown, true);
+				window.removeEventListener("pointerdown", onContextModePointerDown, true);
 				document.removeEventListener("keydown", onOverlayKeydown, true);
 				document.removeEventListener("mousemove", onIconMouseMove);
 				window.removeEventListener("scroll", onFloatScroll, true);
-				document.removeEventListener("pointerdown", onOverlayPointerDown, true);
+				window.removeEventListener("pointerdown", onOverlayPointerDown, true);
 				document.removeEventListener("pointerup", settleOverlay, true);
 				document.removeEventListener("pointercancel", settleOverlay, true);
 				document.removeEventListener("pointercancel", onSelectionChange, true);

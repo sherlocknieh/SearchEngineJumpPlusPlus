@@ -4,6 +4,7 @@ import {
   currentGestureId,
   isPointerPressed,
   isSelectionDrag,
+  isSelectionGesture,
   trackSelectionPointer,
 } from '../src/core/selectionGesture.js';
 
@@ -89,6 +90,30 @@ describe('selectionGesture 操作序号', () => {
     const before = currentGestureId();
     target.dispatch('keydown', { key: 'ArrowRight' });
     expect(currentGestureId()).toBeGreaterThan(before);
+  });
+});
+
+describe('selectionGesture 划词凭据', () => {
+  it('selectstart 发生在本次操作里才说明用户在划词', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0 });
+    expect(isSelectionGesture()).toBe(false);
+    target.dispatch('selectstart', {});
+    expect(isSelectionGesture()).toBe(true);
+  });
+
+  it('新的操作开始后上一次的划词结论失效', () => {
+    const target = fakeTarget();
+    trackSelectionPointer(target);
+    target.dispatch('pointerdown', { button: 0 });
+    target.dispatch('selectstart', {});
+    target.dispatch('pointerup', { button: 0 });
+    // 同一次点击内松手不改变操作序号，结论仍然有效
+    expect(isSelectionGesture()).toBe(true);
+    // 站点用脚本设置选区（点击空白恢复编辑态）不会发 selectstart
+    target.dispatch('pointerdown', { button: 0 });
+    expect(isSelectionGesture()).toBe(false);
   });
 });
 

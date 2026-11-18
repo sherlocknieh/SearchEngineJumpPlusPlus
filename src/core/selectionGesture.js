@@ -14,6 +14,8 @@ let gestureId = 0;
 let pointerStart = null;
 // 本次按下的连击次数：双击/三击是在选词选段，不能当成「点空白」
 let clickDetail = 0;
+// 最近一次 selectstart 所属的操作序号：只有它匹配当前操作，才说明用户在真划词
+let selectionStarted = -1;
 // 同一目标只注册一次，组件重建不会叠加监听器
 const trackedTargets = new WeakSet();
 // 超过该位移即视为拖动而非点击
@@ -48,6 +50,12 @@ function onPointerEnd() {
   pointerStart = null;
 }
 
+// 拖动划词、双击/三击选词、触屏长按都会触发 selectstart；
+// 站点用脚本设置选区（思维导图点击空白后恢复编辑态）不会
+function onSelectStart() {
+  selectionStarted = gestureId;
+}
+
 // 键盘同样可能改变选区，按下即视为新的操作
 function onKeyDown() {
   gestureId += 1;
@@ -73,6 +81,14 @@ export function currentGestureId() {
 }
 
 /**
+ * 本次操作是否由用户发起划词（selectstart 是否发生在这次操作里）。
+ * 站点脚本设置选区不会触发 selectstart，据此区分「重新划词」与残留选区。
+ */
+export function isSelectionGesture() {
+  return selectionStarted === gestureId;
+}
+
+/**
  * 本次按下的连击次数：1 单击、2 双击、3 三击。
  * 双击/三击本身就是在选词、选段，收起判定不能把它当成点击空白。
  */
@@ -90,6 +106,7 @@ export function trackSelectionPointer(target = window) {
   target.addEventListener('mousedown', onMouseDown, true);
   target.addEventListener('pointerup', onPointerEnd, true);
   target.addEventListener('pointercancel', onPointerEnd, true);
+  target.addEventListener('selectstart', onSelectStart, true);
   // 触屏长按划词由浏览器接管手势，部分浏览器不派发 pointerup/pointercancel，
   // 只补发 touchend/touchcancel；缺了这一环，按下状态会一直留着
   target.addEventListener('touchend', onPointerEnd, true);
