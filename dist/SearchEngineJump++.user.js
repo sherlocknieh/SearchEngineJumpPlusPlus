@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.18.2152
+// @version         2026.11.18.2205
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -8623,6 +8623,10 @@
 	var _hoisted_8$4 = { class: "sej-engine-label" };
 	var pinnedCategory = null;
 	var openCategory = null;
+	var dropClosersByHost = new Map();
+	function closeCategoryDropLists(hostRole) {
+		dropClosersByHost.get(hostRole)?.();
+	}
 	var anchorSeq = 0;
 	var _sfc_main$12 = {
 		__name: "EngineCategory",
@@ -8841,6 +8845,7 @@
 				if (!triggerEl.value) return;
 				if (openCategory && openCategory !== hide) openCategory();
 				openCategory = hide;
+				dropClosersByHost.set(hostRole, closeDrop);
 				refreshAnchorMode();
 				shown.value = true;
 				setPageListeners(true);
@@ -8869,9 +8874,15 @@
 			function hide() {
 				cancelHide();
 				if (openCategory === hide) openCategory = null;
+				if (dropClosersByHost.get(hostRole) === closeDrop) dropClosersByHost.delete(hostRole);
 				active.value = false;
 				shown.value = false;
 				setPageListeners(false);
+			}
+			function closeDrop() {
+				hoverSuppressed = true;
+				if (pinned.value) unpin();
+				else hide();
 			}
 			function pin() {
 				if (pinnedCategory && pinnedCategory !== unpin) pinnedCategory();
@@ -8949,6 +8960,7 @@
 			});
 			onBeforeUnmount(() => {
 				if (openCategory === hide) openCategory = null;
+				if (dropClosersByHost.get(hostRole) === closeDrop) dropClosersByHost.delete(hostRole);
 				cancelHide();
 				unsubscribePointer?.();
 				unsubscribePointer = null;
@@ -9603,6 +9615,7 @@
 				} : null;
 			}
 			function hideFloatBar() {
+				closeCategoryDropLists(props.role);
 				showToken += 1;
 				iconExpanded.value = false;
 				barVisible.value = false;

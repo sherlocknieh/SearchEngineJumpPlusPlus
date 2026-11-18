@@ -196,6 +196,10 @@ src/main.js                 只做装配
   会忽略祖先变换，面板整体偏移（划词条靠内联 `translateX(-50%)` 居中，必走 JS 分支）。
   垂直空间由 `core/dropListPlacement.js` 统一预算：屏幕装不下整列时把 `max-height`
   压到上下两侧更宽裕的一侧，多出的条目在面板内部滚动，两种定位模式都据此翻到上方或留在下方
+- 面板锚在触发项上，收起浮层条时必须一并收起：`JumpBar.hideFloatBar()` 调
+  `EngineCategory` 导出的 `closeCategoryDropLists(role)`。否则触发项随浮层隐藏后锚点消失，
+  面板会悬在原处不消失（思维导图按 Esc 取消选中就是这样）。命中测试只覆盖指针，
+  键盘/选区变化收起的路径都要经过这里；固定态走 `unpin` 清掉 pinned，否则下次悬停关不掉
 
 ## UI 状态与提示
 

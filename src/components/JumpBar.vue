@@ -62,7 +62,7 @@ import { useStackSync } from '../composables/useStackSync.js';
 import { createHoverTip, HOVER_TIP_KEY } from '../composables/useHoverTip.js';
 import scriptIcon from '../assets/icon.svg?raw';
 import EngineItem from './EngineItem.vue';
-import EngineCategory from './EngineCategory.vue';
+import EngineCategory, { closeCategoryDropLists } from './EngineCategory.vue';
 import HoverTip from './HoverTip.vue';
 import SettingButton from './SettingButton.vue';
 
@@ -725,6 +725,9 @@ async function measureExpandedSize() {
 }
 
 function hideFloatBar() {
+  // 分类下拉锚在触发项上，触发项随浮层隐藏后失去锚点会悬在原处：
+  // 收起浮层时一并收起，Esc、选区消失、点空白各条路径都经过这里
+  closeCategoryDropLists(props.role);
   // 递增令牌取消排队中的显示，避免收起后被上一帧的显示重新拉起
   showToken += 1;
   iconExpanded.value = false;

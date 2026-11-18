@@ -2,6 +2,20 @@
 // 模块级共享，确保所有类别实例共用同一固定/展开状态
 let pinnedCategory = null;
 let openCategory = null;
+// 各宿主（内嵌条 / 划词条）当前展开的分类及其收起入口：
+// 收起浮层时只关自己那条，另一条上已固定的下拉不受影响
+const dropClosersByHost = new Map();
+
+/**
+ * 收起某个宿主上展开的分类下拉（悬停展开与点击固定都算）。
+ * 跳转条整体收起时调用：面板锚在触发项上，触发项随浮层一起隐藏后
+ * 面板会失去锚点、悬在原处不消失（思维导图里按 Esc 取消选中就会这样）。
+ * @param {string} hostRole 宿主角色，见 HOST_ROLE_KEY
+ */
+export function closeCategoryDropLists(hostRole) {
+  dropClosersByHost.get(hostRole)?.();
+}
+
 // 每个分类的下拉面板都需要一个在本 Shadow Root 内唯一的锚点名称
 let anchorSeq = 0;
 </script>
@@ -301,6 +315,7 @@ async function show() {
   // 同一时间只保留一个悬停展开的面板，避免多行布局下叠加
   if (openCategory && openCategory !== hide) openCategory();
   openCategory = hide;
+  dropClosersByHost.set(hostRole, closeDrop);
   // 先定好定位方式再显示，避免面板先按错误坐标系闪一帧
   refreshAnchorMode();
   shown.value = true;
@@ -334,9 +349,20 @@ function scheduleHide(path) {
 function hide() {
   cancelHide();
   if (openCategory === hide) openCategory = null;
+  if (dropClosersByHost.get(hostRole) === closeDrop) dropClosersByHost.delete(hostRole);
   active.value = false;
   shown.value = false;
   setPageListeners(false);
+}
+
+/**
+ * 面板被外部收起（跳转条整体隐藏）时的统一入口。
+ * 固定态必须走 unpin：只 hide 会留下 pinned，之后悬停就变成关不掉的常驻面板。
+ */
+function closeDrop() {
+  hoverSuppressed = true;
+  if (pinned.value) unpin();
+  else hide();
 }
 
 // 点击类别固定下拉面板，再次点击收起；固定后不再响应指针离开
@@ -443,6 +469,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (openCategory === hide) openCategory = null;
+  if (dropClosersByHost.get(hostRole) === closeDrop) dropClosersByHost.delete(hostRole);
   cancelHide();
   unsubscribePointer?.();
   unsubscribePointer = null;
