@@ -23,6 +23,7 @@ let anchorSeq = 0;
 <script setup>
 import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref } from 'vue';
 import { getFaviconSrc } from '../core/favicon.js';
+import { isActionEngine } from '../core/jump.js';
 import { getDropRoot, getHost, HOST_ROLE_KEY, HOST_ROLE_MAIN } from '../core/shadowDom.js';
 import { t } from '../assets/i18n.js';
 import { dropListSpace, placeDropList } from '../core/dropListPlacement.js';
@@ -383,12 +384,18 @@ function unpin() {
 function onTriggerClick() {
   // 已固定时再次点击触发项只收起面板，一键打开改由列表末尾的条目承担
   if (pinned.value) {
+    // 操作类（复制 / 打开 / 选中）没有新标签页这种明显反馈，再点只收起很容易
+    // 被当成「点了没反应」：固定展开后仍执行第一个操作，收起改由点击面板外部完成
+    if (props.clickJumpFirst && props.engines.length && isActionEngine(props.engines[0])) {
+      emit('jump', props.engines[0]);
+      return;
+    }
     unpin();
     return;
   }
   pin();
   // 开启「点击分类直接搜索」时，展开面板的同时用第一个引擎搜索当前关键词；
-  // 面板保持展开，方便继续换用其他引擎
+  // 「操作」分类同样直接执行第一个操作；面板保持展开，方便继续换用其他引擎
   if (props.clickJumpFirst && props.engines.length) emit('jump', props.engines[0]);
 }
 

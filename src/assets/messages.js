@@ -42,7 +42,7 @@ export const messages = {
     'settings.selectionIconTip': '划词后只显示一个图标，鼠标悬浮时展开搜索条',
     'settings.clickCategoryJumpFirst': '点击分类直接搜索',
     'settings.clickCategoryJumpFirstTip':
-      '点击分类展开面板的同时，直接用第一个搜索引擎搜索当前关键词',
+      '点击分类展开面板的同时，直接用第一个引擎搜索当前关键词；「操作」分类会直接执行第一个操作',
     'settings.center': '搜索条居中',
     'settings.centerTip': '搜索条始终居中显示',
     'settings.imageToggleHint':
@@ -221,7 +221,7 @@ export const messages = {
       'Show a single icon above the selected text/link; hover it to expand the search bar',
     'settings.clickCategoryJumpFirst': 'Click category to search',
     'settings.clickCategoryJumpFirstTip':
-      'Clicking a category opens its list and searches with the first engine right away',
+      'Clicking a category opens its list and runs the first engine right away; the Actions category runs its first action',
     'settings.center': 'Center search bar',
     'settings.centerTip': 'Always center the jump bar',
     'settings.imageToggleHint':

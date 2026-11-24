@@ -79,6 +79,10 @@ src/main.js                 只做装配
     `$post$` 表单无法后台提交，后台打开时降级为新标签页
   - 动作引擎：`action: 'copy' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open' | 'openImage'`
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
+- 点击分类直接搜索（`clickCategoryJumpFirst`）：`EngineCategory.onTriggerClick` 展开面板时把分类
+  第一个引擎交给 `jump`，「操作」分类同样直接执行（`JumpBar.onJump` → `performEngineAction`）；
+  操作类面板固定后再点触发项仍会再执行一次（只收起会像「点了没反应」），收起改点面板外部，
+  普通搜索引擎仍按「再次点击收起」
 
 ## 长按 / 右键操作（图片搜图、链接操作）
 

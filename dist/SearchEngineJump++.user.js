@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name            SearchEngineJump++
 // @namespace       https://github.com/sherlocknieh/
-// @version         2026.11.18.2205
+// @version         2026.11.24.2225
 // @author          sherlocknieh & MUTED64 & iqxin & 锐经 & NLF(初始作者)
 // @description     多引擎快捷跳转 + 划词搜索 + 右键搜图 + 链接标题复制
 // @description:en  Quick multi-engine jump, selection search, right-click image search, and link title copy.
@@ -5562,7 +5562,7 @@
 			"settings.selectionIcon": "折叠模式",
 			"settings.selectionIconTip": "划词后只显示一个图标，鼠标悬浮时展开搜索条",
 			"settings.clickCategoryJumpFirst": "点击分类直接搜索",
-			"settings.clickCategoryJumpFirstTip": "点击分类展开面板的同时，直接用第一个搜索引擎搜索当前关键词",
+			"settings.clickCategoryJumpFirstTip": "点击分类展开面板的同时，直接用第一个引擎搜索当前关键词；「操作」分类会直接执行第一个操作",
 			"settings.center": "搜索条居中",
 			"settings.centerTip": "搜索条始终居中显示",
 			"settings.imageToggleHint": "长按/右键图片即可搜图；搜图引擎不会出现在文字搜索条，显示开关对它无效",
@@ -5725,7 +5725,7 @@
 			"settings.selectionIcon": "Minimal mode",
 			"settings.selectionIconTip": "Show a single icon above the selected text/link; hover it to expand the search bar",
 			"settings.clickCategoryJumpFirst": "Click category to search",
-			"settings.clickCategoryJumpFirstTip": "Clicking a category opens its list and searches with the first engine right away",
+			"settings.clickCategoryJumpFirstTip": "Clicking a category opens its list and runs the first engine right away; the Actions category runs its first action",
 			"settings.center": "Center search bar",
 			"settings.centerTip": "Always center the jump bar",
 			"settings.imageToggleHint": "Long-press or right-click an image to search; image engines never appear in the text search bar, so this switch has no effect",
@@ -8898,6 +8898,10 @@
 			}
 			function onTriggerClick() {
 				if (pinned.value) {
+					if (props.clickJumpFirst && props.engines.length && isActionEngine(props.engines[0])) {
+						emit("jump", props.engines[0]);
+						return;
+					}
 					unpin();
 					return;
 				}
