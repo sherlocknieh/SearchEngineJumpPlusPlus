@@ -128,9 +128,11 @@ export const messages = {
     'engine.triggerNone': '未启用',
 
     'action.copied': '已复制到剪贴板',
+    'action.cut': '已剪切到剪贴板',
     'action.opened': '已打开',
     'action.selected': '已选中链接标题',
     'action.effectCopy': '复制选中的文字',
+    'action.effectCut': '剪切输入框里选中的文字',
     'action.effectCopyImage': '复制图片',
     'action.effectCopyImageUrl': '复制图片地址',
     'action.effectCopyLinkText': '复制链接文字',
@@ -146,6 +148,7 @@ export const messages = {
     'trigger.linkLong': '长按链接',
     'trigger.linkMenu': '右键链接',
     'action.copyFailed': '没有可复制的内容',
+    'action.cutFailed': '没有可剪切的内容',
     'action.selectFailed': '无法选中链接标题',
     'action.openFailed': '无法打开该内容',
 
@@ -309,9 +312,11 @@ export const messages = {
     'engine.triggerNone': 'Disabled',
 
     'action.copied': 'Copied to clipboard',
+    'action.cut': 'Cut to clipboard',
     'action.opened': 'Opened',
     'action.selected': 'Link title selected',
     'action.effectCopy': 'Copy the selected text',
+    'action.effectCut': 'Cut the selected text in the input box',
     'action.effectCopyImage': 'Copy the image',
     'action.effectCopyImageUrl': 'Copy the image address',
     'action.effectCopyLinkText': 'Copy the link text',
@@ -327,6 +332,7 @@ export const messages = {
     'trigger.linkLong': 'Long-press a link',
     'trigger.linkMenu': 'Right-click a link',
     'action.copyFailed': 'Nothing to copy',
+    'action.cutFailed': 'Nothing to cut',
     'action.selectFailed': 'Unable to select the link title',
     'action.openFailed': 'Unable to open this content',
 
@@ -400,6 +406,7 @@ export const DEFAULT_ENGINE_NAMES = {
   阿里千问: 'Qwen',
   知乎直答: 'Zhihu Zhida',
   复制文字: 'Copy text',
+  剪切文字: 'Cut text',
   复制图片: 'Copy image',
   复制图片地址: 'Copy image URL',
   选中链接标题: 'Select link text',

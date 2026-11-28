@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   findShadowSelection,
+  getEditableSelection,
   getElementSelectionText,
   getSelectedText,
   getSelectionInfo,
@@ -113,6 +114,48 @@ describe('getSelectedText', () => {
     expect(getSelectedText({ includeInput: true, doc: doc(editable, 'editable text') })).toBe(
       'editable text',
     );
+  });
+});
+
+describe('getEditableSelection', () => {
+  it('输入框内选中文字时返回删除所需的起点与终点', () => {
+    const el = input('abcdef', 2, 4);
+    expect(getEditableSelection({ doc: doc(el) })).toEqual({
+      text: 'cd',
+      element: el,
+      start: 2,
+      end: 4,
+    });
+  });
+
+  it('没有选区、页面普通文字或非可编辑元素都不可剪切', () => {
+    expect(getEditableSelection({ doc: doc(input('abcdef', 3, 3)) })).toBeNull();
+    expect(getEditableSelection({ doc: doc(null, 'page text') })).toBeNull();
+    expect(getEditableSelection({ doc: doc({ nodeType: 1, tagName: 'DIV' }, 'page text') })).toBeNull();
+  });
+
+  it('only 限定选区必须属于指定输入框', () => {
+    const el = input('abcdef', 0, 1);
+    expect(getEditableSelection({ doc: doc(el), only: el })).toMatchObject({ text: 'a' });
+    expect(getEditableSelection({ doc: doc(el), only: input('x', 0, 1) })).toBeNull();
+  });
+
+  it('contenteditable 用文档选区里的真实 Range', () => {
+    const editable = { nodeType: 1, tagName: 'DIV', isContentEditable: true };
+    const range = { cloneRange: () => 'cloned-range' };
+    const editableDoc = {
+      activeElement: editable,
+      getSelection: () => ({
+        isCollapsed: false,
+        rangeCount: 1,
+        toString: () => '富文本',
+        getRangeAt: () => range,
+      }),
+    };
+    expect(getEditableSelection({ doc: editableDoc })).toEqual({
+      text: '富文本',
+      range: 'cloned-range',
+    });
   });
 });
 

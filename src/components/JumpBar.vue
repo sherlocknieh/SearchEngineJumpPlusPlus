@@ -33,7 +33,7 @@ import {
   isActionEngine,
   performEngineAction,
 } from '../core/jump.js';
-import { getSelectedText, getSelectionInfo } from '../core/selection.js';
+import { getSelectedText, getSelectionInfo, getEditableSelection } from '../core/selection.js';
 import {
   currentClickDetail,
   currentGestureId,
@@ -157,6 +157,61 @@ let insertTarget = null;
 let insertPosition = 'beforeend';
 let resolvedStyle = '';
 
+// 「剪切」只作用于可编辑内容：记下这次划词/搜索框里选中的范围，点条目时按它删除
+let cutSource = null;
+// 指针已按在跳转条上：随后输入框失焦引起的选区变化不再清空待剪切内容
+let cutPinned = false;
+// 供条目显隐与悬停提示使用的选区文字，没有可剪切内容时「剪切」不出现
+const cutText = ref('');
+
+/** 本次关键词对应的输入框：内嵌条只剪站点搜索框里的选区 */
+function keywordInputElement() {
+  if (isFloat) return null;
+  return typeof inputTarget === 'function' ? inputTarget() : inputTarget;
+}
+
+/** 读取当前可剪切的选区；内嵌条限制在站点搜索框内 */
+function readCutSource() {
+  if (isFloat) return getEditableSelection();
+  const el = keywordInputElement();
+  return el?.nodeType === 1 ? getEditableSelection({ only: el }) : null;
+}
+
+/** 选区变化后刷新可剪切内容；指针按在跳转条期间保持按下前记下的选区 */
+function refreshCutSource() {
+  if (cutPinned) return;
+  const source = readCutSource();
+  cutSource = source;
+  cutText.value = source?.text || '';
+}
+
+/**
+ * 指针按在跳转条上时先记下输入框选区：
+ * 按下的默认行为会让输入框失焦，之后的 selectionchange 已经读不到这段选区。
+ */
+function pinCutSource() {
+  cutPinned = true;
+  cutSource = readCutSource();
+  cutText.value = cutSource?.text || '';
+}
+
+function clearCutSource() {
+  cutPinned = false;
+  cutSource = null;
+  cutText.value = '';
+}
+
+/** 按下位置决定是否沿用记下的选区；点在条外说明这次不再剪切 */
+function onWindowBarPointerDown(e) {
+  if (!ready.value) return;
+  if (isInsideBar(e)) {
+    pinCutSource();
+    return;
+  }
+  cutPinned = false;
+  refreshCutSource();
+}
+
 // 浮层条的定位坐标与图标展开宽度共用同一个 style 绑定
 const barStyle = computed(() => {
   const style = { ...floatStyle.value };
@@ -221,12 +276,18 @@ const categories = computed(() => {
             isActionTriggered(engine, modeTriggerId(actionMode, engine.action)),
         )
         .filter((engine) => !hidesOpenAction(engine))
+        // 「剪切」只在选区落在输入框/可编辑区域时有意义，没有可剪内容就不显示
+        .filter((engine) => engine.action !== 'cut' || Boolean(cutText.value))
         // 名称与顺序都来自「操作」分类的设置，这里只补悬停提示要展示的目标内容
         .map((engine) => {
           if (!engine.action) return engine;
+          const hit =
+            engine.action === 'cut'
+              ? { keyword: cutText.value, url: '' }
+              : actionHintHit.value;
           return {
             ...engine,
-            hint: actionTargetHint(actionMode, engine.action, actionHintHit.value),
+            hint: actionTargetHint(actionMode, engine.action, hit),
           };
         });
 
@@ -281,13 +342,19 @@ function getActionTarget(engine) {
     }
     return contextActionTarget(contextAction.mode, engine?.action, contextAction);
   }
+  // 剪切必须带上可编辑选区，只给文字的话不知道从哪个输入框删
+  if (engine?.action === 'cut') {
+    const cut = cutSource || readCutSource();
+    if (cut) return { text: cut.text, cut };
+  }
   return getCurrentKeyword();
 }
 
-/** 动作完成后的提示文案：打开与选中各有自己的结果说明，其余按复制处理 */
+/** 动作完成后的提示文案：打开、选中与剪切各有自己的结果说明，其余按复制处理 */
 const ACTION_TOAST_KEYS = {
   open: { ok: 'action.opened', fail: 'action.openFailed' },
   selectLinkText: { ok: 'action.selected', fail: 'action.selectFailed' },
+  cut: { ok: 'action.cut', fail: 'action.cutFailed' },
 };
 
 function actionToastKey(action, ok) {
@@ -308,6 +375,7 @@ function enterSelectionMode() {
   isContextAction.value = false;
   closeContextAction();
   selectionText.value = text;
+  refreshCutSource();
   refreshAnchor(document.getSelection());
   showFloatBar();
   return true;
@@ -316,6 +384,12 @@ function enterSelectionMode() {
 async function onJump(engine) {
   if (isActionEngine(engine)) {
     const ok = await performEngineAction(engine, getActionTarget(engine), data.defaultOpenTarget);
+    // 剪切后选区已经折叠，条目随之下线；复制失败时保留选区方便重试
+    if (ok && engine.action === 'cut') {
+      // 划词条没有可展示的关键词了，直接收起；内嵌条留在原位等站点同步搜索框
+      if (isFloat) hideFloatBar();
+      else clearCutSource();
+    }
     // 选中链接标题后顺势转成划词菜单，浮层的变化本身就是结果，不再额外提示
     if (ok && engine.action === 'selectLinkText' && enterSelectionMode()) return;
     showToast(t(actionToastKey(engine.action, ok)));
@@ -736,6 +810,7 @@ function hideFloatBar() {
   activeSelection = null;
   iconFullSize = null;
   iconOpenHeight.value = 0;
+  clearCutSource();
 }
 
 // 当前显示的关键词：用于区分「新选区」与「同一条搜索条的重复显示」
@@ -817,6 +892,8 @@ function onSelectionChange(e) {
   }
   selectionText.value = text;
   activeSelection = selection;
+  // 只有落在输入框/可编辑区域里的选区才允许剪切，页面普通文字不出现「剪切」
+  refreshCutSource();
   refreshAnchor(selection);
   showFloatBar();
 }
@@ -930,6 +1007,11 @@ onMounted(async () => {
     syncSearchInputKeyword();
     document.addEventListener('input', syncSearchInputKeyword, true);
     document.addEventListener('change', syncSearchInputKeyword, true);
+    // 搜索框里的选区变化决定「剪切」是否出现：鼠标划选、键盘选中、输入后折叠各一条路径
+    document.addEventListener('selectionchange', refreshCutSource, true);
+    document.addEventListener('select', refreshCutSource, true);
+    document.addEventListener('keyup', refreshCutSource, true);
+    refreshCutSource();
   }
   // 上下文模式下由长按触发，挂载后按图标模式量好展开尺寸再显示
   if (isContextAction.value) {
@@ -965,6 +1047,8 @@ onMounted(async () => {
   });
   window.addEventListener('pointerup', endScrollDrag);
   window.addEventListener('pointercancel', endScrollDrag);
+  // 点条目前先记下输入框选区：按下的默认行为会让输入框失焦，之后读不到这段选区
+  window.addEventListener('pointerdown', onWindowBarPointerDown, true);
 
   if (isFloat) {
     // 外部点击的判定放在 window 捕获：画布类站点常在 document/元素上拦截指针事件，
@@ -995,6 +1079,10 @@ onMounted(async () => {
 onBeforeUnmount(() => {
   document.removeEventListener('input', syncSearchInputKeyword, true);
   document.removeEventListener('change', syncSearchInputKeyword, true);
+  document.removeEventListener('selectionchange', refreshCutSource, true);
+  document.removeEventListener('select', refreshCutSource, true);
+  document.removeEventListener('keyup', refreshCutSource, true);
+  window.removeEventListener('pointerdown', onWindowBarPointerDown, true);
   window.removeEventListener('pointerdown', onContextModePointerDown, true);
   document.removeEventListener('keydown', onOverlayKeydown, true);
   document.removeEventListener('mousemove', onIconMouseMove);

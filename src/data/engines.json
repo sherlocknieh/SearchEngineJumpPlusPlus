@@ -162,6 +162,11 @@
         "action": "copy"
       },
       {
+        "name": "剪切文字",
+        "url": "",
+        "action": "cut"
+      },
+      {
         "name": "复制图片",
         "url": "",
         "action": "copyImage"

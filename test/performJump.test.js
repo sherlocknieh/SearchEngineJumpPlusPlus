@@ -106,6 +106,7 @@ describe('动作引擎', () => {
 
   it('识别各类复制与打开动作', () => {
     expect(isActionEngine({ action: 'copy' })).toBe(true);
+    expect(isActionEngine({ action: 'cut' })).toBe(true);
     expect(isActionEngine({ action: 'copyLinkText' })).toBe(true);
     expect(isActionEngine({ action: 'copyLinkUrl' })).toBe(true);
     expect(isActionEngine({ action: 'selectLinkText' })).toBe(true);
@@ -118,6 +119,51 @@ describe('动作引擎', () => {
     expect(await performEngineAction({ action: 'copy' }, 'hello')).toBe(true);
     expect(writeText).toHaveBeenCalledWith('hello');
     expect(openInTab).not.toHaveBeenCalled();
+  });
+
+  it('剪切输入框里选中的文字：先写入剪贴板，再从输入框删除', async () => {
+    const el = document.createElement('input');
+    el.value = 'hello world';
+    document.body.appendChild(el);
+    el.focus();
+    el.setSelectionRange(6, 11);
+    const onInput = vi.fn();
+    el.addEventListener('input', onInput);
+
+    const target = { text: 'world', cut: { text: 'world', element: el, start: 6, end: 11 } };
+    expect(await performEngineAction({ action: 'cut' }, target)).toBe(true);
+    expect(writeText).toHaveBeenCalledWith('world');
+    expect(el.value).toBe('hello ');
+    expect(el.selectionStart).toBe(6);
+    // 站点靠 input 事件同步受控输入框的内容
+    expect(onInput).toHaveBeenCalled();
+    el.remove();
+  });
+
+  it('复制失败时不删除输入框内容', async () => {
+    const el = document.createElement('input');
+    el.value = 'hello world';
+    document.body.appendChild(el);
+    writeText.mockRejectedValueOnce(new Error('denied'));
+    const target = { text: 'world', cut: { text: 'world', element: el, start: 6, end: 11 } };
+    expect(await performEngineAction({ action: 'cut' }, target)).toBe(false);
+    expect(el.value).toBe('hello world');
+    el.remove();
+  });
+
+  it('记录之后内容已变时不再按旧位置剪切', async () => {
+    const el = document.createElement('input');
+    el.value = 'hello brave world';
+    document.body.appendChild(el);
+    const target = { text: 'world', cut: { text: 'world', element: el, start: 6, end: 11 } };
+    expect(await performEngineAction({ action: 'cut' }, target)).toBe(false);
+    expect(el.value).toBe('hello brave world');
+    el.remove();
+  });
+
+  it('没有可剪切选区时返回 false', async () => {
+    expect(await performEngineAction({ action: 'cut' }, 'hello')).toBe(false);
+    expect(writeText).not.toHaveBeenCalled();
   });
 
   it('没有可复制内容时返回 false', async () => {

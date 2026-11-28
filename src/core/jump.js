@@ -8,6 +8,7 @@ import {
 import { findKeywordUrl } from './engineUrl.js';
 import { copyImage, copyText } from './clipboard.js';
 import { selectLinkTitle } from './linkAction.js';
+import { removeEditableSelection } from './selection.js';
 
 export function extractKeyword(inputTarget) {
   if (typeof inputTarget === 'function') return inputTarget();
@@ -70,29 +71,39 @@ export function isActionEngine(engine) {
 
 /**
  * 动作引擎的目标内容：普通跳转只有一段文字，上下文操作条另有打开地址、
- * 可复制的图片，以及「选中链接标题」需要的链接元素。
- * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target
+ * 可复制的图片，以及「选中链接标题」需要的链接元素；
+ * 「剪切」额外带上可编辑选区（输入框 start/end 或 contenteditable 的 Range）。
+ * @param {string | { text?: string, url?: string, image?: string, element?: Element | null, cut?: object | null }} target
  */
 function normalizeActionTarget(target) {
-  if (typeof target === 'string') return { text: target, url: target, image: '', element: null };
+  if (typeof target === 'string') {
+    return { text: target, url: target, image: '', element: null, cut: null };
+  }
   const text = typeof target?.text === 'string' ? target.text : '';
   const url = typeof target?.url === 'string' && target.url ? target.url : text;
   const image = typeof target?.image === 'string' ? target.image : '';
   const element = target?.element || null;
-  return { text, url, image, element };
+  const cut = target?.cut && typeof target.cut === 'object' ? target.cut : null;
+  return { text, url, image, element, cut };
 }
 
 /**
  * 执行动作引擎，返回是否成功处理。
- * copy 复制文字，copyImage 复制图片本身（取不到时复制图片地址），
+ * copy 复制文字，cut 剪切输入框里选中的文字（复制后删除），
+ * copyImage 复制图片本身（取不到时复制图片地址），
  * copyImageUrl / copyLinkUrl 复制地址，copyLinkText 复制链接标题，
  * selectLinkText 选中页面上的链接标题，open / openImage 把链接或图片地址打开。
- * @param {string | { text?: string, url?: string, image?: string, element?: Element | null }} target 复制/打开用的内容
+ * @param {string | { text?: string, url?: string, image?: string, element?: Element | null, cut?: object | null }} target 复制/打开用的内容
  */
 export async function performEngineAction(engine, target, defaultTarget = DEFAULT_OPEN_TARGET) {
   const action = normalizeEngineAction(engine?.action);
   const source = normalizeActionTarget(target);
   if (action === 'copy') return copyText(source.text);
+  if (action === 'cut') {
+    // 先确认写进剪贴板再删除：复制失败时不能把输入框里的内容弄丢
+    if (!source.cut?.text || !(await copyText(source.cut.text))) return false;
+    return removeEditableSelection(source.cut);
+  }
   if (action === 'copyImage') {
     if (source.image && (await copyImage(source.image))) return true;
     return copyText(source.url || source.text);

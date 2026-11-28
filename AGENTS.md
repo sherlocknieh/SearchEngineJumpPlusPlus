@@ -77,7 +77,13 @@ src/main.js                 只做装配
     由 `resolveOpenMode` 统一判定（后台用 `GM_openInTab` 的 `active: false`），
     批量打开只把「当前页」提升为新标签页，后台选择保持后台；
     `$post$` 表单无法后台提交，后台打开时降级为新标签页
-  - 动作引擎：`action: 'copy' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open' | 'openImage'`
+  - 动作引擎：`action: 'copy' | 'cut' | 'copyImage' | 'copyImageUrl' | 'copyLinkText' | 'copyLinkUrl' | 'selectLinkText' | 'open' | 'openImage'`
+  - 「剪切」只对可编辑选区生效：`core/selection.js` 的 `getEditableSelection` 记录输入框的
+    `selectionStart/End`（contenteditable 记 Range），`removeEditableSelection` 先复制到剪贴板再删除，
+    输入框用原生 setter 写回并补发 `input`/`change`（React 等受控组件才会同步）；
+    页面普通文字删不掉，划词条只在输入框/contenteditable 里出现「剪切」，
+    站点内嵌条只剪自己搜索框里的选区。指针按在跳转条上时先记下选区
+    （`JumpBar.pinCutSource`），否则按下导致输入框失焦后就读不到了
 - 当前站点适配：`data/matchRule.js` 按 host 建索引 → `JumpBar` 决定输入框与插入点
 - 点击分类直接搜索（`clickCategoryJumpFirst`）：`EngineCategory.onTriggerClick` 展开面板时把分类
   第一个引擎交给 `jump`，「操作」分类同样直接执行（`JumpBar.onJump` → `performEngineAction`）；

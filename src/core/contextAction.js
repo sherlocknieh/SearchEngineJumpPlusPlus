@@ -24,6 +24,7 @@ export const HINT_TARGET_MAX = 80;
 /** 动作条目的操作说明：设置里的只读表单与悬停提示共用 */
 const ACTION_ENGINE_EFFECTS = {
   copy: 'action.effectCopy',
+  cut: 'action.effectCut',
   copyImage: 'action.effectCopyImage',
   copyImageUrl: 'action.effectCopyImageUrl',
   copyLinkText: 'action.effectCopyLinkText',
@@ -171,7 +172,7 @@ export function contextActionTarget(mode, action, hit = {}) {
 export function isActionAvailableInMode(mode, action) {
   // 未知动作没有对应的复制/打开行为，任何情景下都不出现
   if (action && !normalizeEngineAction(action)) return false;
-  if (action === 'copy') return mode === 'text' || mode === 'input';
+  if (action === 'copy' || action === 'cut') return mode === 'text' || mode === 'input';
   if (action === 'copyImage' || action === 'copyImageUrl' || action === 'openImage') {
     return mode === 'image';
   }
@@ -184,7 +185,10 @@ export function isActionAvailableInMode(mode, action) {
 
 /** 提示里展示的目标内容：划词与搜索框都是「文字 + 可选地址」，其余沿用动作目标 */
 function hintTargetText(mode, action, hit) {
-  if (mode === 'text' || mode === 'input') return (action === 'copy' ? hit.keyword : hit.url) || '';
+  if (mode === 'text' || mode === 'input') {
+    const wantsText = action === 'copy' || action === 'cut';
+    return (wantsText ? hit.keyword : hit.url) || '';
+  }
   const target = contextActionTarget(mode, action, hit);
   return typeof target === 'string' ? target : target?.text || '';
 }

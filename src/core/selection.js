@@ -130,3 +130,144 @@ export function getSelectionInfo({ includeInput = false, doc = document } = {}) 
 export function getSelectedText(options) {
   return getSelectionInfo(options).text;
 }
+
+/**
+ * 当前可剪切的选区：只认可编辑内容（页面普通文字删不掉，剪切没有意义）。
+ * 输入框/文本域用自身的 selectionStart/End，contenteditable 用文档选区里的真实 Range。
+ * @param {{doc?: Document, only?: Element | null}} [options]
+ *   only 限定选区必须属于该元素（站点内嵌条只剪自己的搜索框）
+ * @returns {{text: string, element: Element, start: number, end: number} |
+ *   {text: string, range: Range} | null}
+ */
+export function getEditableSelection({ doc = document, only = null } = {}) {
+  const active = doc?.activeElement;
+  if (!isEditableElement(active)) return null;
+  if (only && active !== only && !only.contains?.(active)) return null;
+
+  if (typeof active.selectionStart === 'number' && typeof active.selectionEnd === 'number') {
+    const start = active.selectionStart;
+    const end = active.selectionEnd;
+    if (end <= start) return null;
+    const text = String(active.value ?? '').slice(start, end);
+    return text ? { text, element: active, start, end } : null;
+  }
+
+  // contenteditable 没有 selectionStart，选区仍在文档 Selection 上
+  let selection = typeof doc.getSelection === 'function' ? doc.getSelection() : null;
+  if (!selection || isOwnUiSelection(selection)) return null;
+  if (selection.isCollapsed && selection.toString()) {
+    const hit = findShadowSelection(doc);
+    if (!hit || isOwnUiHost(hit.host)) return null;
+    selection = hit.selection;
+  }
+  if (selection.isCollapsed || !selection.rangeCount || typeof selection.getRangeAt !== 'function') {
+    return null;
+  }
+  const text = selection.toString();
+  if (!text) return null;
+  try {
+    return { text, range: selection.getRangeAt(0).cloneRange() };
+  } catch (e) {
+    return null;
+  }
+}
+
+/** 最近的 contenteditable 宿主，用于在删除后把 input 事件发给真正可编辑的元素 */
+function editableHost(node) {
+  let el = node?.nodeType === 1 ? node : (node?.parentElement ?? null);
+  while (el) {
+    if (el.isContentEditable) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+/** 通知站点输入内容已变：受控输入框（React 等）靠原生 setter + input 事件同步状态 */
+function dispatchEditableInput(el, inputType) {
+  if (!el?.dispatchEvent) return;
+  const init = { bubbles: true, composed: true, inputType };
+  const event =
+    typeof InputEvent === 'function'
+      ? new InputEvent('input', init)
+      : new Event('input', { bubbles: true });
+  el.dispatchEvent(event);
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/**
+ * 用原生 setter 写回输入框的值：直接给 el.value 赋值时，
+ * React 的 value tracker 看不到变化，随后补发的 input 事件会被当成没改过。
+ */
+function setInputValue(el, value) {
+  const ctor =
+    el.tagName === 'TEXTAREA' ? globalThis.HTMLTextAreaElement : globalThis.HTMLInputElement;
+  const setter = ctor && Object.getOwnPropertyDescriptor(ctor.prototype, 'value')?.set;
+  if (setter) setter.call(el, value);
+  else el.value = value;
+}
+
+/**
+ * 删除 getEditableSelection 记下的选区，返回是否删除成功。
+ * 输入框按记录的 start/end 截掉文字并触发 input/change；
+ * contenteditable 先恢复选区再交给 execCommand，站点自己的编辑历史与事件都能接上。
+ * @param {{element?: Element, start?: number, end?: number, range?: Range, text?: string} | null} source
+ * @param {Document} [doc]
+ */
+export function removeEditableSelection(source, doc = document) {
+  if (!source) return false;
+
+  if (source.element) {
+    const el = source.element;
+    if (!el.isConnected) return false;
+    const value = String(el.value ?? '');
+    const start = Math.max(0, Math.min(source.start, value.length));
+    const end = Math.max(start, Math.min(source.end, value.length));
+    if (end <= start) return false;
+    // 记录之后内容被站点改写或用户继续输入过，就不按旧位置删，避免剪错文字
+    if (value.slice(start, end) !== source.text) return false;
+    setInputValue(el, value.slice(0, start) + value.slice(end));
+    try {
+      el.focus({ preventScroll: true });
+    } catch (e) {
+      // 输入框不可聚焦时跳过，只改内容
+    }
+    try {
+      el.setSelectionRange?.(start, start);
+    } catch (e) {
+      // 不支持 setSelectionRange 的输入框类型
+    }
+    dispatchEditableInput(el, 'deleteByCut');
+    return true;
+  }
+
+  const range = source.range;
+  if (!range || !range.startContainer?.isConnected) return false;
+  const host = editableHost(range.commonAncestorContainer ?? range.startContainer);
+  const selection = typeof doc?.getSelection === 'function' ? doc.getSelection() : null;
+  try {
+    host?.focus?.({ preventScroll: true });
+  } catch (e) {
+    // 富文本编辑器可能拒绝聚焦，选区仍可用 Range 删除
+  }
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(range);
+  }
+  let handled;
+  try {
+    handled = Boolean(doc.execCommand?.('delete'));
+  } catch (e) {
+    handled = false;
+  }
+  if (!handled) {
+    // execCommand 不可用时退回 Range 删除，并补发 input 事件让站点同步内容
+    range.deleteContents();
+    if (selection) {
+      selection.removeAllRanges();
+      selection.addRange(range);
+    }
+    dispatchEditableInput(host || doc.body, 'deleteByCut');
+  }
+  return true;
+}
+

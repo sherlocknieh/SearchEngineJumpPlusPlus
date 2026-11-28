@@ -8,13 +8,15 @@ export function isPlainObject(value) {
 }
 
 /**
- * 非搜索类快捷动作：copy 复制命中的内容，copyImageUrl 复制图片地址，
+ * 非搜索类快捷动作：copy 复制命中的内容，cut 剪切输入框里选中的内容，
+ * copyImageUrl 复制图片地址，
  * copyLinkText 复制链接标题，copyLinkUrl 复制链接地址，
  * selectLinkText 选中页面上的链接标题，open 打开目标地址。
  * 值是设置里的默认名称；清单本身即默认排序，配置缺项时按它补齐，设置面板因此始终列全。
  */
 export const ACTION_ENGINE_DEFAULTS = {
   copy: '复制文字',
+  cut: '剪切文字',
   copyImage: '复制图片',
   copyImageUrl: '复制图片地址',
   copyLinkText: '复制链接标题',
@@ -44,6 +46,7 @@ export const TRIGGER_KEYS = {
 /** 每个动作可勾选的触发条件，同时也是默认勾选项；顺序即显示顺序 */
 export const ACTION_TRIGGERS = {
   copy: ['selection', 'input'],
+  cut: ['selection', 'input'],
   copyImage: ['imageLong', 'imageMenu'],
   copyImageUrl: ['imageLong', 'imageMenu'],
   copyLinkText: ['linkLong', 'linkMenu'],

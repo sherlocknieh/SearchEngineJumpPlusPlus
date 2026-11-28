@@ -166,6 +166,7 @@ describe('normalizeConfig', () => {
     );
     expect(result.engineList.actions).toEqual([
       { name: '复制文字', action: 'copy' },
+      { name: '剪切文字', url: '', action: 'cut' },
       { name: '复制图片', url: '', action: 'copyImage' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
@@ -188,6 +189,7 @@ describe('normalizeConfig', () => {
     expect(result.engineCategories[1].slice(0, 2)).toEqual(['搜图', 'image']);
     expect(result.engineList.actions.map((engine) => engine.action)).toEqual([
       'copy',
+      'cut',
       'copyImage',
       'copyImageUrl',
       'copyLinkText',
@@ -219,6 +221,7 @@ describe('normalizeConfig', () => {
     ]);
     expect(result.engineList.actions).toEqual([
       { name: '我的复制', action: 'copy', disable: true },
+      { name: '剪切文字', url: '', action: 'cut' },
       { name: '复制图片', url: '', action: 'copyImage' },
       { name: '复制图片地址', url: '', action: 'copyImageUrl' },
       { name: '复制链接标题', url: '', action: 'copyLinkText' },
@@ -247,6 +250,7 @@ describe('normalizeConfig', () => {
       'open',
       'openImage',
       'copy',
+      'cut',
       'copyImage',
       'copyImageUrl',
       'copyLinkText',
@@ -294,6 +298,7 @@ describe('normalizeConfig', () => {
       '打开链接',
       '打开图片',
       '我的复制',
+      '剪切文字',
       '复制图片',
       '复制图片地址',
       '复制链接标题',

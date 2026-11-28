@@ -269,6 +269,11 @@ describe('isActionAvailableInMode', () => {
     expect(isActionAvailableInMode('input', 'copy')).toBe(true);
     expect(isActionAvailableInMode('image', 'copy')).toBe(false);
     expect(isActionAvailableInMode('link', 'copy')).toBe(false);
+    // 剪切同样只在能删除内容的划词/搜索框情景出现
+    expect(isActionAvailableInMode('text', 'cut')).toBe(true);
+    expect(isActionAvailableInMode('input', 'cut')).toBe(true);
+    expect(isActionAvailableInMode('image', 'cut')).toBe(false);
+    expect(isActionAvailableInMode('link', 'cut')).toBe(false);
     expect(isActionAvailableInMode('link', 'copyLinkText')).toBe(true);
     expect(isActionAvailableInMode('link', 'copyLinkUrl')).toBe(true);
     expect(isActionAvailableInMode('link', 'selectLinkText')).toBe(true);
@@ -515,6 +520,8 @@ describe('actionTargetHint', () => {
     expect(actionTargetHint('image', 'copyImage', { url: 'https://cdn.test/a.png' })).toBe(
       'https://cdn.test/a.png',
     );
+    expect(actionTargetHint('text', 'cut', { keyword: '待剪切文字', url: '' })).toBe('待剪切文字');
+    expect(actionTargetHint('input', 'cut', { keyword: '待剪切文字', url: '' })).toBe('待剪切文字');
     expect(actionTargetHint('link', 'copyLinkText', hit)).toBe('示例标题');
     expect(actionTargetHint('link', 'selectLinkText', hit)).toBe('示例标题');
     expect(actionTargetHint('link', 'copyLinkUrl', hit)).toBe('https://site.test/a');
